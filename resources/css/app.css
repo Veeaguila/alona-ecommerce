@@ -1,0 +1,61 @@
+/* Tailwind entrypoint shared by every Inertia page. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --zellora-brand: #4f46e5;
+    --zellora-brand-dark: #3730a3;
+    --zellora-surface: #ffffff;
+    --zellora-surface-alt: #f8fafc;
+    --zellora-border: #e2e8f0;
+    --zellora-text: #0f172a;
+    --zellora-muted: #64748b;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: #f8fafc;
+    color: var(--zellora-text);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.zellora-brand {
+    color: var(--zellora-brand);
+}
+
+.zellora-header {
+    border-color: var(--zellora-border);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+}
+
+.zellora-panel {
+    background: var(--zellora-surface);
+    border: 1px solid var(--zellora-border);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.zellora-button-primary {
+    background: var(--zellora-brand);
+    color: white;
+}
+
+.zellora-button-primary:hover {
+    background: var(--zellora-brand-dark);
+}
+
+.zellora-link {
+    color: var(--zellora-muted);
+}
+
+.zellora-link:hover {
+    color: var(--zellora-brand);
+}
