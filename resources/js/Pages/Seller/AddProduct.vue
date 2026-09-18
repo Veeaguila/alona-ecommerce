@@ -286,10 +286,7 @@ onBeforeUnmount(() => {
                     @submit.prevent="submit()"
                 >
 
-                    <!-- ================================================= -->
                     <!-- BASIC INFORMATION -->
-                    <!-- ================================================= -->
-
                     <section
                         class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
                     >
@@ -327,9 +324,7 @@ onBeforeUnmount(() => {
                                         Basic Information
                                     </h2>
 
-                                    <p
-                                        class="mt-0.5 text-xs text-[#64748B]"
-                                    >
+                                    <p class="mt-0.5 text-xs text-[#64748B]">
                                         Provide the basic details of your product.
                                     </p>
                                 </div>
@@ -374,13 +369,19 @@ onBeforeUnmount(() => {
 
                                 <select
                                     id="category"
-                                    v-model="form.category_id"
+                                    v-model.number="form.category_id"
                                     class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                 >
                                     <option value="">
                                         Select category
                                     </option>
 
+                                    <!--
+                                        IMPORTANT:
+                                        Categories come directly from the database
+                                        through SellerProductController.
+                                        No hard-coded marketplace categories here.
+                                    -->
                                     <option
                                         v-for="category in props.categories"
                                         :key="category.id"
@@ -396,20 +397,23 @@ onBeforeUnmount(() => {
                                 >
                                     {{ form.errors.category_id }}
                                 </p>
+
+                                <p
+                                    v-if="props.categories.length === 0"
+                                    class="mt-1.5 text-[11px] text-[#E85D5D]"
+                                >
+                                    No active categories are currently available.
+                                </p>
                             </div>
 
                             <!-- PRICING -->
                             <div>
                                 <div class="mb-4">
-                                    <h3
-                                        class="text-sm font-bold text-[#1F2937]"
-                                    >
+                                    <h3 class="text-sm font-bold text-[#1F2937]">
                                         Product Pricing
                                     </h3>
 
-                                    <p
-                                        class="mt-0.5 text-[11px] text-[#64748B]"
-                                    >
+                                    <p class="mt-0.5 text-[11px] text-[#64748B]">
                                         Set the regular price and optional discounted
                                         selling price.
                                     </p>
@@ -511,11 +515,7 @@ onBeforeUnmount(() => {
                                         stroke="currentColor"
                                         stroke-width="1.8"
                                     >
-                                        <circle
-                                            cx="12"
-                                            cy="12"
-                                            r="9"
-                                        />
+                                        <circle cx="12" cy="12" r="9" />
                                         <path
                                             d="M12 8v4M12 16h.01"
                                             stroke-linecap="round"
@@ -679,10 +679,7 @@ onBeforeUnmount(() => {
                         </div>
                     </section>
 
-                    <!-- ================================================= -->
                     <!-- PRODUCT VARIANTS -->
-                    <!-- ================================================= -->
-
                     <section
                         class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
                     >
@@ -823,15 +820,11 @@ onBeforeUnmount(() => {
                                         class="mb-4 flex items-center justify-between gap-3"
                                     >
                                         <div>
-                                            <p
-                                                class="text-xs font-bold text-[#1F2937]"
-                                            >
+                                            <p class="text-xs font-bold text-[#1F2937]">
                                                 Variant {{ index + 1 }}
                                             </p>
 
-                                            <p
-                                                class="mt-0.5 text-[10px] text-[#94A3B8]"
-                                            >
+                                            <p class="mt-0.5 text-[10px] text-[#94A3B8]">
                                                 Set the color, size, and available stock.
                                             </p>
                                         </div>
@@ -967,15 +960,11 @@ onBeforeUnmount(() => {
                             >
                                 <div class="flex items-center justify-between gap-4">
                                     <div>
-                                        <p
-                                            class="text-xs font-bold text-[#087F8C]"
-                                        >
+                                        <p class="text-xs font-bold text-[#087F8C]">
                                             Total Stock
                                         </p>
 
-                                        <p
-                                            class="mt-0.5 text-[10px] text-[#16845A]"
-                                        >
+                                        <p class="mt-0.5 text-[10px] text-[#16845A]">
                                             Automatically calculated from all variants.
                                         </p>
                                     </div>
@@ -993,17 +982,13 @@ onBeforeUnmount(() => {
                                 v-if="form.variants.length > 0"
                                 class="mt-3 flex items-center justify-between rounded-xl border border-[#E5E7EB] bg-white px-4 py-3"
                             >
-                                <span
-                                    class="text-[11px] font-semibold text-[#64748B]"
-                                >
+                                <span class="text-[11px] font-semibold text-[#64748B]">
                                     {{ form.variants.length }}
                                     variant{{ form.variants.length === 1 ? '' : 's' }}
                                     added
                                 </span>
 
-                                <span
-                                    class="text-[10px] font-medium text-[#94A3B8]"
-                                >
+                                <span class="text-[10px] font-medium text-[#94A3B8]">
                                     Stock updates automatically
                                 </span>
                             </div>
@@ -1017,10 +1002,7 @@ onBeforeUnmount(() => {
                         </div>
                     </section>
 
-                    <!-- ================================================= -->
                     <!-- PRODUCT IMAGES -->
-                    <!-- ================================================= -->
-
                     <section
                         class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
                     >
@@ -1046,11 +1028,7 @@ onBeforeUnmount(() => {
                                                 height="16"
                                                 rx="2"
                                             />
-                                            <circle
-                                                cx="8.5"
-                                                cy="9"
-                                                r="1.5"
-                                            />
+                                            <circle cx="8.5" cy="9" r="1.5" />
                                             <path
                                                 d="M21 15l-4.5-4.5L8 19"
                                                 stroke-linecap="round"
@@ -1097,7 +1075,6 @@ onBeforeUnmount(() => {
                                             class="h-36 w-full object-cover sm:h-40"
                                         />
 
-                                        <!-- MAIN PHOTO -->
                                         <div
                                             v-if="index === 0"
                                             class="absolute left-2 top-2 rounded-full bg-[#087F8C] px-2.5 py-1 text-[9px] font-bold text-white"
@@ -1105,7 +1082,6 @@ onBeforeUnmount(() => {
                                             MAIN PHOTO
                                         </div>
 
-                                        <!-- REMOVE -->
                                         <button
                                             type="button"
                                             @click="removeImage(index)"
@@ -1164,9 +1140,7 @@ onBeforeUnmount(() => {
                                             </svg>
                                         </div>
 
-                                        <p
-                                            class="mt-2 text-xs font-bold text-[#475569]"
-                                        >
+                                        <p class="mt-2 text-xs font-bold text-[#475569]">
                                             Add Another Photo
                                         </p>
 
@@ -1246,11 +1220,7 @@ onBeforeUnmount(() => {
                                             height="16"
                                             rx="2"
                                         />
-                                        <circle
-                                            cx="8.5"
-                                            cy="9"
-                                            r="1.5"
-                                        />
+                                        <circle cx="8.5" cy="9" r="1.5" />
                                         <path
                                             d="M21 15l-4.5-4.5L8 19"
                                             stroke-linecap="round"
@@ -1259,21 +1229,15 @@ onBeforeUnmount(() => {
                                     </svg>
                                 </div>
 
-                                <p
-                                    class="mt-3 text-sm font-bold text-[#475569]"
-                                >
+                                <p class="mt-3 text-sm font-bold text-[#475569]">
                                     Click to upload product photos
                                 </p>
 
-                                <p
-                                    class="mt-1 text-xs text-[#64748B]"
-                                >
+                                <p class="mt-1 text-xs text-[#64748B]">
                                     You can select multiple photos at once.
                                 </p>
 
-                                <p
-                                    class="mt-1 text-[10px] text-[#94A3B8]"
-                                >
+                                <p class="mt-1 text-[10px] text-[#94A3B8]">
                                     JPG, PNG, or WebP · Maximum 5MB per image · Up to 10 photos
                                 </p>
 
@@ -1323,10 +1287,7 @@ onBeforeUnmount(() => {
                         </div>
                     </section>
 
-                    <!-- ================================================= -->
                     <!-- LISTING STATUS -->
-                    <!-- ================================================= -->
-
                     <section
                         class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
                     >
@@ -1407,10 +1368,7 @@ onBeforeUnmount(() => {
                         </div>
                     </section>
 
-                    <!-- ================================================= -->
                     <!-- ACTION BAR -->
-                    <!-- ================================================= -->
-
                     <div
                         class="rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 shadow-sm"
                     >
@@ -1418,15 +1376,11 @@ onBeforeUnmount(() => {
                             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div>
-                                <p
-                                    class="text-xs font-bold text-[#1F2937]"
-                                >
+                                <p class="text-xs font-bold text-[#1F2937]">
                                     Ready to list your product?
                                 </p>
 
-                                <p
-                                    class="mt-0.5 text-[11px] text-[#94A3B8]"
-                                >
+                                <p class="mt-0.5 text-[11px] text-[#94A3B8]">
                                     Save it as a draft or submit it for admin approval.
                                 </p>
                             </div>
@@ -1562,11 +1516,8 @@ onBeforeUnmount(() => {
                                 stroke="currentColor"
                                 stroke-width="1.8"
                             >
-                                <circle
-                                    cx="12"
-                                    cy="12"
-                                    r="9"
-                                />
+                                <circle cx="12" cy="12" r="9" />
+
                                 <path
                                     d="M12 8v4M12 16h.01"
                                     stroke-linecap="round"
@@ -1574,15 +1525,11 @@ onBeforeUnmount(() => {
                             </svg>
 
                             <div>
-                                <p
-                                    class="text-xs font-bold text-[#DC2626]"
-                                >
+                                <p class="text-xs font-bold text-[#DC2626]">
                                     Please check the highlighted fields.
                                 </p>
 
-                                <p
-                                    class="mt-0.5 text-[11px] text-[#E85D5D]"
-                                >
+                                <p class="mt-0.5 text-[11px] text-[#E85D5D]">
                                     Correct the errors above and try again.
                                 </p>
                             </div>

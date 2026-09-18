@@ -86,74 +86,86 @@ const products = computed(() => {
         return []
     }
 
-    return props.products.map(product => {
-        const numericPrice = Number(product.price ?? 0)
-        const numericOldPrice = Number(product.old_price ?? 0)
+    return props.products
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
 
-        const soldCount = Number(
-            product.sold_count ??
-            product.sales_count ??
-            product.order_items_count ??
-            product.total_sold ??
-            0
-        )
-
-        return {
-            ...product,
-
-            name:
-                product.name ??
-                product.title ??
-                'Product',
-
-            category:
-                product.category?.name ??
-                product.category_name ??
-                'Product',
-
-            price: `₱${numericPrice.toLocaleString()}`,
-
-            oldPrice:
-                numericOldPrice > 0
-                    ? `₱${numericOldPrice.toLocaleString()}`
-                    : null,
-
-            numericPrice,
-
-            numericOldPrice,
-
-            reviews: Number(
-                product.reviews_count ??
-                product.review_count ??
-                product.reviews ??
+            const soldCount = Number(
+                product.sold_count ??
+                product.sales_count ??
+                product.order_items_count ??
+                product.total_sold ??
                 0
-            ),
+            )
 
-            rating: Number(
-                product.rating ??
-                product.average_rating ??
-                product.reviews_avg_rating ??
-                0
-            ),
+            return {
+                ...product,
 
-            image: imageUrl(
-                product.image_path ??
-                product.image ??
-                product.image_url ??
-                product.thumbnail ??
-                product.photo
-            ),
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
 
-            description:
-                product.description ?? '',
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
 
-            soldCount,
+                categorySlug:
+                    product.category?.slug ??
+                    product.category_slug ??
+                    slugify(
+                        product.category?.name ??
+                        product.category_name ??
+                        ''
+                    ),
 
-            isSale:
-                numericOldPrice > 0 &&
-                numericOldPrice > numericPrice,
-        }
-    })
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                description:
+                    product.description ?? '',
+
+                soldCount,
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
 })
 
 /*
@@ -171,6 +183,7 @@ const recentlyViewed = computed(() => {
         .filter(product => product && product.id)
         .map(product => {
             const numericPrice = Number(product.price ?? 0)
+
             const numericOldPrice = Number(
                 product.old_price ?? 0
             )
@@ -344,139 +357,6 @@ const categoryPictures = {
 
 /*
 |--------------------------------------------------------------------------
-| EXACT CATEGORIES FROM YOUR SCREENSHOTS
-|--------------------------------------------------------------------------
-*/
-
-const fixedCategories = [
-    {
-        name: "Men's Apparel",
-        slug: 'mens-apparel',
-    },
-
-    {
-        name: 'Mobiles & Gadgets',
-        slug: 'mobiles-gadgets',
-    },
-
-    {
-        name: 'Mobiles Accessories',
-        slug: 'mobiles-accessories',
-    },
-
-    {
-        name: 'Home Entertainment',
-        slug: 'home-entertainment',
-    },
-
-    {
-        name: "Babies & Kids",
-        slug: 'babies-kids',
-    },
-
-    {
-        name: 'Home & Living',
-        slug: 'home-living',
-    },
-
-    {
-        name: 'Groceries',
-        slug: 'groceries',
-    },
-
-    {
-        name: 'Toys, Games & Collectibles',
-        slug: 'toys-games-collectibles',
-    },
-
-    {
-        name: "Women's Bags",
-        slug: 'womens-bags',
-    },
-
-    {
-        name: 'Women Accessories',
-        slug: 'women-accessories',
-    },
-
-    {
-        name: "Women's Apparel",
-        slug: 'womens-apparel',
-    },
-
-    {
-        name: 'Health & Personal Care',
-        slug: 'health-personal-care',
-    },
-
-    {
-        name: 'Makeup & Fragrances',
-        slug: 'makeup-fragrances',
-    },
-
-    {
-        name: 'Home Appliances',
-        slug: 'home-appliances',
-    },
-
-    {
-        name: 'Laptops & Computers',
-        slug: 'laptops-computers',
-    },
-
-    {
-        name: 'Cameras',
-        slug: 'cameras',
-    },
-
-    {
-        name: 'Sports & Travel',
-        slug: 'sports-travel',
-    },
-
-    {
-        name: "Men's Bags & Accessories",
-        slug: 'mens-bags-accessories',
-    },
-
-    {
-        name: "Men's Shoes",
-        slug: 'mens-shoes',
-    },
-
-    {
-        name: 'Motors',
-        slug: 'motors',
-    },
-
-    {
-        name: "Women's Shoes",
-        slug: 'womens-shoes',
-    },
-
-    {
-        name: 'Pet Care',
-        slug: 'pet-care',
-    },
-
-    {
-        name: 'Audio',
-        slug: 'audio',
-    },
-
-    {
-        name: 'Hobbies & Stationery',
-        slug: 'hobbies-stationery',
-    },
-
-    {
-        name: 'Gaming',
-        slug: 'gaming',
-    },
-]
-
-/*
-|--------------------------------------------------------------------------
 | Category Colors
 |--------------------------------------------------------------------------
 */
@@ -547,6 +427,10 @@ const categoryIcons = {
 |--------------------------------------------------------------------------
 | Backend Category Lookup
 |--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| The database is now the ONLY source of category names/slugs/IDs.
+|
 */
 
 const backendCategoryMap = computed(() => {
@@ -557,20 +441,27 @@ const backendCategoryMap = computed(() => {
     }
 
     props.categories.forEach(category => {
+        if (!category) {
+            return
+        }
+
         const name =
-            category?.name ??
-            category?.title ??
+            category.name ??
+            category.title ??
             ''
 
         const slug =
-            category?.slug ??
+            category.slug ??
             slugify(name)
 
         if (!slug) {
             return
         }
 
-        map[slug] = category
+        map[slug] = {
+            ...category,
+            slug,
+        }
     })
 
     return map
@@ -580,13 +471,19 @@ const backendCategoryMap = computed(() => {
 |--------------------------------------------------------------------------
 | Category Product Counts
 |--------------------------------------------------------------------------
+|
+| This is only a fallback for products already loaded on the page.
+| The database products_count remains authoritative when supplied.
+|
 */
 
 const categoryProductCounts = computed(() => {
     const counts = {}
 
     products.value.forEach(product => {
-        const slug = slugify(product.category)
+        const slug =
+            product.categorySlug ??
+            slugify(product.category)
 
         if (!slug) {
             return
@@ -632,23 +529,32 @@ const handleCategoryImageError = category => {
 */
 
 const categoryImage = category => {
-    const slug = category?.slug
+    const slug =
+        category?.slug ??
+        slugify(category?.name)
 
-    const backendCategory =
-        backendCategoryMap.value[slug]
+    if (!slug) {
+        return null
+    }
 
     const databaseImage =
-        backendCategory?.image_url ??
-        backendCategory?.image_path ??
-        backendCategory?.image ??
-        backendCategory?.thumbnail ??
-        backendCategory?.photo ??
+        category?.image_url ??
+        category?.image_path ??
+        category?.image ??
+        category?.thumbnail ??
+        category?.photo ??
         null
 
+    /*
+     * Database image takes priority.
+     */
     if (databaseImage) {
         return imageUrl(databaseImage)
     }
 
+    /*
+     * Presentation fallback image.
+     */
     return categoryPictures[slug] ?? null
 }
 
@@ -656,49 +562,79 @@ const categoryImage = category => {
 |--------------------------------------------------------------------------
 | Category List
 |--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| DO NOT use fixedCategories here.
+|
+| props.categories comes directly from the database.
+|
 */
 
 const categoriesList = computed(() => {
-    return fixedCategories.map((category, index) => {
-        const backendCategory =
-            backendCategoryMap.value[category.slug]
+    if (!Array.isArray(props.categories)) {
+        return []
+    }
 
-        const backendCount =
-            backendCategory?.products_count ??
-            backendCategory?.product_count ??
-            backendCategory?.productsCount
-
-        const productsCount =
-            backendCount !== undefined &&
-            backendCount !== null
-                ? Number(backendCount)
-                : Number(
-                    categoryProductCounts.value[
-                        category.slug
-                    ] ?? 0
-                )
-
-        return {
-            ...category,
-
-            productsCount,
-
-            image:
-                categoryImage(category),
-
-            color:
-                categoryColors[category.slug] ??
-                'bg-teal-50',
-
-            icon:
-                categoryIcons[category.slug] ??
-                '🛍️',
-
-            key:
+    return props.categories
+        .filter(category => category && category.id)
+        .map((category, index) => {
+            const slug =
                 category.slug ??
-                `category-${index}`,
-        }
-    })
+                slugify(category.name)
+
+            const backendCount =
+                category.products_count ??
+                category.product_count ??
+                category.productsCount
+
+            const fallbackCount =
+                categoryProductCounts.value[slug] ?? 0
+
+            const productsCount =
+                backendCount !== undefined &&
+                backendCount !== null
+                    ? Number(backendCount)
+                    : Number(fallbackCount)
+
+            return {
+                ...category,
+
+                /*
+                 * Database values
+                 */
+                id: category.id,
+
+                name:
+                    category.name ??
+                    category.title ??
+                    'Category',
+
+                slug,
+
+                productsCount,
+
+                /*
+                 * Presentation values only
+                 */
+                image:
+                    categoryImage({
+                        ...category,
+                        slug,
+                    }),
+
+                color:
+                    categoryColors[slug] ??
+                    'bg-teal-50',
+
+                icon:
+                    categoryIcons[slug] ??
+                    '🛍️',
+
+                key:
+                    `${category.id}-${slug}` ??
+                    `category-${index}`,
+            }
+        })
 })
 
 /*
@@ -767,6 +703,9 @@ const goToCategory = category => {
         return
     }
 
+    /*
+     * Use the database slug.
+     */
     router.get(destination, {
         category:
             category?.slug ??
@@ -823,15 +762,12 @@ let observer = null
 onMounted(() => {
     if (
         typeof window === 'undefined' ||
-        typeof IntersectionObserver ===
-            'undefined'
+        typeof IntersectionObserver === 'undefined'
     ) {
         document
             .querySelectorAll('.alona-reveal')
             .forEach(element => {
-                element.classList.add(
-                    'is-visible'
-                )
+                element.classList.add('is-visible')
             })
 
         return
@@ -840,23 +776,19 @@ onMounted(() => {
     observer =
         new IntersectionObserver(
             entries => {
-                entries.forEach(
-                    entry => {
-                        if (
-                            !entry.isIntersecting
-                        ) {
-                            return
-                        }
-
-                        entry.target.classList.add(
-                            'is-visible'
-                        )
-
-                        observer?.unobserve(
-                            entry.target
-                        )
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        return
                     }
-                )
+
+                    entry.target.classList.add(
+                        'is-visible'
+                    )
+
+                    observer?.unobserve(
+                        entry.target
+                    )
+                })
             },
             {
                 threshold: 0.08,
@@ -872,7 +804,6 @@ onMounted(() => {
 
 onUnmounted(() => {
     observer?.disconnect()
-
     observer = null
 })
 </script>
@@ -881,7 +812,6 @@ onUnmounted(() => {
     <Head title="Alona" />
 
     <BuyerLayout>
-
         <div
             class="alona-page min-h-screen overflow-hidden bg-[#F8FAF9] text-[#1F2937]"
         >
@@ -1136,6 +1066,7 @@ onUnmounted(() => {
                     </div>
 
                     <div
+                        v-if="categoriesList.length > 1"
                         class="hidden items-center gap-2 sm:flex"
                     >
 
@@ -1192,7 +1123,12 @@ onUnmounted(() => {
                 </div>
 
 
-                <div class="relative">
+                <!-- DATABASE CATEGORIES -->
+
+                <div
+                    v-if="categoriesList.length"
+                    class="relative"
+                >
 
                     <div
                         class="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-r from-[#F8FAF9] to-transparent sm:block"
@@ -1330,6 +1266,36 @@ onUnmounted(() => {
                     ></div>
 
                 </div>
+
+
+                <!-- EMPTY CATEGORY STATE -->
+
+                <div
+                    v-else
+                    class="rounded-[24px] border border-dashed border-gray-200 bg-white p-10 text-center"
+                >
+
+                    <div
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F7F6] text-2xl"
+                    >
+                        🛍️
+                    </div>
+
+                    <h3
+                        class="mt-4 text-sm font-extrabold text-gray-900"
+                    >
+                        Categories are coming soon
+                    </h3>
+
+                    <p
+                        class="mx-auto mt-1 max-w-sm text-xs leading-5 text-gray-500"
+                    >
+                        No active marketplace categories
+                        are currently available.
+                    </p>
+
+                </div>
+
 
                 <div
                     v-if="categoriesList.length > 6"
@@ -1637,7 +1603,10 @@ onUnmounted(() => {
                                     {{
                                         String(
                                             index + 1
-                                        ).padStart(2, '0')
+                                        ).padStart(
+                                            2,
+                                            '0'
+                                        )
                                     }}
                                 </span>
 
@@ -1805,7 +1774,6 @@ onUnmounted(() => {
 
                     </div>
 
-
                     <div
                         class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
                     >
@@ -1836,17 +1804,11 @@ onUnmounted(() => {
                                     🛍️
                                 </div>
 
-
-                                <!-- VIEWED BADGE -->
-
                                 <span
                                     class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm backdrop-blur"
                                 >
                                     Viewed
                                 </span>
-
-
-                                <!-- SALE -->
 
                                 <span
                                     v-if="product.isSale"
@@ -1856,7 +1818,6 @@ onUnmounted(() => {
                                 </span>
 
                             </div>
-
 
                             <div
                                 class="px-1 pt-3.5"
@@ -1926,9 +1887,6 @@ onUnmounted(() => {
                         </Link>
 
                     </div>
-
-
-                    <!-- MOBILE CONTINUE SHOPPING -->
 
                     <div class="mt-6 sm:hidden">
 
@@ -2202,7 +2160,6 @@ onUnmounted(() => {
             </section>
 
         </div>
-
     </BuyerLayout>
 </template>
 

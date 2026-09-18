@@ -3,16 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+class CategorySeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         $categories = [
@@ -120,7 +114,9 @@ class DatabaseSeeder extends Seeder
 
         foreach ($categories as $category) {
             Category::updateOrCreate(
-                ['slug' => $category['slug']],
+                [
+                    'slug' => $category['slug'],
+                ],
                 [
                     'name' => $category['name'],
                     'is_active' => true,

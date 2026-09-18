@@ -10,12 +10,16 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'is_active'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'image_path',
+        'is_active',
+    ];
 
-    protected function casts(): array
-    {
-        return ['is_active' => 'boolean'];
-    }
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function products(): HasMany
     {
