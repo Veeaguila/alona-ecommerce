@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 
@@ -7,10 +7,12 @@ const page = usePage()
 
 const mobileOpen = ref(false)
 const searchQuery = ref('')
-const categoriesOpen = ref(false)
-const mobileCategoriesOpen = ref(false)
+
+const authModalOpen = ref(false)
+const authModalMode = ref('login')
 
 const user = computed(() => page.props.auth?.user ?? null)
+
 const isLoggedIn = computed(() => !!user.value)
 
 const userType = computed(() =>
@@ -47,6 +49,7 @@ const goToDashboard = () => {
     const destination = safeRoute(dashboardRoute.value)
 
     if (destination !== '#') {
+        mobileOpen.value = false
         router.visit(destination)
     }
 }
@@ -58,6 +61,8 @@ const searchProducts = () => {
         router.visit(safeRoute('guest.products'))
         return
     }
+
+    mobileOpen.value = false
 
     router.get(
         safeRoute('guest.products'),
@@ -72,8 +77,6 @@ const searchProducts = () => {
 }
 
 const goToCategory = category => {
-    categoriesOpen.value = false
-    mobileCategoriesOpen.value = false
     mobileOpen.value = false
 
     router.get(
@@ -94,9 +97,6 @@ const openCart = () => {
     authModalOpen.value = true
 }
 
-const authModalOpen = ref(false)
-const authModalMode = ref('login')
-
 const openAuthModal = mode => {
     authModalMode.value = mode
     authModalOpen.value = true
@@ -109,336 +109,176 @@ const closeAuthModal = () => {
 
 const toggleMobileMenu = () => {
     mobileOpen.value = !mobileOpen.value
-
-    if (!mobileOpen.value) {
-        mobileCategoriesOpen.value = false
-    }
 }
-
-const handleOutsideClick = event => {
-    const target = event.target
-
-    if (!target.closest('[data-category-dropdown]')) {
-        categoriesOpen.value = false
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('click', handleOutsideClick)
-})
-
-onUnmounted(() => {
-    document.removeEventListener('click', handleOutsideClick)
-})
 </script>
 
 <template>
     <div class="min-h-screen bg-[#F8FAF9] text-[#1F2937]">
-
-        <!-- ========================================================= -->
         <!-- HEADER -->
-        <!-- ========================================================= -->
-
         <header
-            class="sticky top-0 z-50 border-b border-[#E5E7EB]/80 bg-white/95 backdrop-blur-xl"
+            class="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 shadow-sm backdrop-blur"
         >
-
+            <!-- MAIN HEADER ROW -->
             <div
-                class="mx-auto flex h-[72px] max-w-[1440px] items-center gap-3 px-4 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8"
+                class="mx-auto flex h-[68px] max-w-[1440px] items-center gap-2 px-3 sm:h-[74px] sm:gap-3 sm:px-6 lg:h-[78px] lg:gap-5 lg:px-8"
             >
-
                 <!-- LOGO -->
-
                 <Link
                     href="/"
-                    class="flex shrink-0 items-center"
+                    class="flex shrink-0 items-center transition duration-200 hover:opacity-90"
                     aria-label="Alona Home"
                 >
                     <img
                         src="/images/alona.png"
                         alt="Alona"
-                        class="h-9 w-auto object-contain sm:h-10 lg:h-11"
+                        class="h-8 w-auto object-contain sm:h-9 lg:h-11"
                     />
                 </Link>
 
-
-                <!-- DESKTOP SEARCH + CATEGORIES -->
-
-                <div
-                    class="hidden min-w-0 flex-1 items-center gap-2 md:flex"
-                >
-
-                    <!-- Search -->
-
+                <!-- DESKTOP SEARCH -->
+                <div class="hidden min-w-0 flex-1 md:block">
                     <form
-                        class="relative min-w-0 flex-1"
+                        class="relative mx-auto w-full max-w-[720px]"
                         @submit.prevent="searchProducts"
                     >
-
-                        <svg
-                            class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
+                        <!-- Search Icon -->
+                        <span
+                            class="pointer-events-none absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-[#64748B]"
                         >
-                            <circle
-                                cx="11"
-                                cy="11"
-                                r="7"
-                            />
-
-                            <path
-                                d="m20 20-4-4"
-                                stroke-linecap="round"
-                            />
-                        </svg>
+                            <svg
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                            >
+                                <circle
+                                    cx="11"
+                                    cy="11"
+                                    r="7"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                />
+                                <path
+                                    d="M20 20L16.2 16.2"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
+                        </span>
 
                         <input
                             v-model="searchQuery"
                             type="search"
-                            placeholder="Search products..."
-                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
+                            placeholder="Search products, brands and more..."
+                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] hover:border-[#CBD5E1] focus:border-[#16A6A0] focus:bg-white focus:ring-4 focus:ring-[#16A6A0]/10"
                         />
-
                     </form>
+                </div>
 
-
-                    <!-- CATEGORIES -->
-
-                    <div
-                        class="relative shrink-0"
-                        data-category-dropdown
+                <!-- MOBILE SEARCH -->
+                <div class="min-w-0 flex-1 md:hidden">
+                    <form
+                        class="relative w-full"
+                        @submit.prevent="searchProducts"
                     >
-
-                        <button
-                            type="button"
-                            class="flex h-11 items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-bold text-[#1F2937] transition hover:border-[#16A6A0] hover:bg-[#E8F7F6]"
-                            :class="{
-                                'border-[#16A6A0] bg-[#E8F7F6] text-[#087F8C]':
-                                    categoriesOpen
-                            }"
-                            @click.stop="categoriesOpen = !categoriesOpen"
+                        <!-- Search Icon -->
+                        <span
+                            class="pointer-events-none absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-[#64748B]"
                         >
-
                             <svg
-                                class="h-4 w-4 text-[#087F8C]"
+                                class="h-4 w-4"
                                 viewBox="0 0 24 24"
                                 fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.8"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
                             >
+                                <circle
+                                    cx="11"
+                                    cy="11"
+                                    r="7"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                />
                                 <path
-                                    d="M4 6h16M4 12h16M4 18h16"
+                                    d="M20 20L16.2 16.2"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
                                     stroke-linecap="round"
                                 />
                             </svg>
+                        </span>
 
-                            <span>
-                                Categories
-                            </span>
+                        <input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Search..."
+                            class="h-10 w-full min-w-0 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-9 pr-2 text-xs text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10 sm:h-11 sm:pl-10 sm:text-sm"
+                        />
+                    </form>
+                </div>
 
+                <!-- DESKTOP ACTIONS -->
+                <div class="hidden shrink-0 items-center gap-2 md:flex">
+                    <!-- Cart -->
+                    <button
+                        type="button"
+                        class="group flex h-10 items-center gap-2 rounded-xl px-3 text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        @click="openCart"
+                    >
+                        <span
+                            class="flex h-9 w-9 items-center justify-center rounded-lg transition duration-200 group-hover:bg-white"
+                        >
                             <svg
-                                class="h-3.5 w-3.5 transition-transform duration-200"
-                                :class="{
-                                    'rotate-180': categoriesOpen
-                                }"
+                                class="h-5 w-5"
                                 viewBox="0 0 24 24"
                                 fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
                             >
                                 <path
-                                    d="m6 9 6 6 6-6"
+                                    d="M3 4H5L7.4 15.2C7.57 16 8.28 16.6 9.1 16.6H17.6C18.37 16.6 19.05 16.1 19.28 15.36L21 9H6"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                 />
+                                <circle
+                                    cx="9.5"
+                                    cy="20"
+                                    r="1.2"
+                                    fill="currentColor"
+                                />
+                                <circle
+                                    cx="17.5"
+                                    cy="20"
+                                    r="1.2"
+                                    fill="currentColor"
+                                />
                             </svg>
+                        </span>
 
-                        </button>
-
-
-                        <!-- DESKTOP CATEGORY DROPDOWN -->
-
-                        <Transition
-                            enter-active-class="transition duration-150 ease-out"
-                            enter-from-class="translate-y-1 opacity-0"
-                            enter-to-class="translate-y-0 opacity-100"
-                            leave-active-class="transition duration-100 ease-in"
-                            leave-from-class="translate-y-0 opacity-100"
-                            leave-to-class="translate-y-1 opacity-0"
-                        >
-
-                            <div
-                                v-if="categoriesOpen"
-                                class="absolute right-0 top-[calc(100%+10px)] z-50 w-[300px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl shadow-black/10"
-                                @click.stop
-                            >
-
-                                <div
-                                    class="border-b border-[#E5E7EB] px-3 py-2.5"
-                                >
-                                    <p
-                                        class="text-[10px] font-black uppercase tracking-[0.18em] text-[#087F8C]"
-                                    >
-                                        Browse
-                                    </p>
-
-                                    <p
-                                        class="mt-0.5 text-xs text-[#64748B]"
-                                    >
-                                        Explore products by category
-                                    </p>
-                                </div>
-
-
-                                <div
-                                    v-if="categories.length"
-                                    class="max-h-[420px] overflow-y-auto py-1"
-                                >
-
-                                    <button
-                                        v-for="category in categories"
-                                        :key="category.id ?? category.slug ?? category.name"
-                                        type="button"
-                                        class="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-[#E8F7F6]"
-                                        @click="goToCategory(category)"
-                                    >
-
-                                        <span
-                                            class="flex min-w-0 items-center gap-3"
-                                        >
-
-                                            <span
-                                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        d="M4 6h16M4 12h16M4 18h16"
-                                                        stroke-linecap="round"
-                                                    />
-                                                </svg>
-                                            </span>
-
-                                            <span class="min-w-0">
-                                                <span
-                                                    class="block truncate text-sm font-bold text-[#1F2937]"
-                                                >
-                                                    {{ category.name }}
-                                                </span>
-
-                                                <span
-                                                    class="block text-[10px] text-[#64748B]"
-                                                >
-                                                    {{ category.products_count ?? 0 }}
-                                                    products
-                                                </span>
-                                            </span>
-
-                                        </span>
-
-
-                                        <svg
-                                            class="h-4 w-4 shrink-0 text-[#94A3B8]"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                d="m9 18 6-6-6-6"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-                                        </svg>
-
-                                    </button>
-
-                                </div>
-
-
-                                <div
-                                    v-else
-                                    class="px-3 py-6 text-center text-xs text-[#64748B]"
-                                >
-                                    No categories available.
-                                </div>
-
-                            </div>
-
-                        </Transition>
-
-                    </div>
-
-                </div>
-
-
-                <!-- DESKTOP ACTIONS -->
-
-                <div
-                    class="ml-auto hidden shrink-0 items-center gap-2 md:flex"
-                >
-
-                    <!-- CART -->
-
-                    <button
-                        type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        aria-label="Cart"
-                        @click="openCart"
-                    >
-                        <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        >
-                            <path
-                                d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-
-                            <circle
-                                cx="9"
-                                cy="20"
-                                r="1"
-                            />
-
-                            <circle
-                                cx="18"
-                                cy="20"
-                                r="1"
-                            />
-                        </svg>
+                        <span class="text-sm font-bold">
+                            Cart
+                        </span>
                     </button>
 
-
+                    <!-- Login / Dashboard -->
                     <template v-if="isLoggedIn">
-
                         <button
                             type="button"
-                            class="rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066974]"
+                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md active:translate-y-0"
                             @click="goToDashboard"
                         >
                             Dashboard
                         </button>
-
                     </template>
 
-
                     <template v-else>
-
                         <button
                             type="button"
-                            class="rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            class="inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
                             @click="openAuthModal('login')"
                         >
                             Log in
@@ -446,79 +286,72 @@ onUnmounted(() => {
 
                         <button
                             type="button"
-                            class="rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066974]"
+                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md active:translate-y-0"
                             @click="openAuthModal('register')"
                         >
                             Register
                         </button>
-
                     </template>
-
                 </div>
 
-
                 <!-- MOBILE ACTIONS -->
-
-                <div
-                    class="ml-auto flex items-center gap-1 md:hidden"
-                >
-
-                    <!-- Cart -->
-
+                <div class="flex shrink-0 items-center gap-0.5 md:hidden">
+                    <!-- Mobile Cart -->
                     <button
                         type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        aria-label="Cart"
+                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
+                        aria-label="Shopping cart"
                         @click="openCart"
                     >
                         <svg
                             class="h-5 w-5"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
                         >
                             <path
-                                d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"
+                                d="M3 4H5L7.4 15.2C7.57 16 8.28 16.6 9.1 16.6H17.6C18.37 16.6 19.05 16.1 19.28 15.36L21 9H6"
+                                stroke="currentColor"
+                                stroke-width="1.8"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                             />
-
                             <circle
-                                cx="9"
+                                cx="9.5"
                                 cy="20"
-                                r="1"
+                                r="1.2"
+                                fill="currentColor"
                             />
-
                             <circle
-                                cx="18"
+                                cx="17.5"
                                 cy="20"
-                                r="1"
+                                r="1.2"
+                                fill="currentColor"
                             />
                         </svg>
                     </button>
 
-
-                    <!-- Menu -->
-
+                    <!-- Mobile Menu -->
                     <button
                         type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        aria-label="Open menu"
+                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
                         :aria-expanded="mobileOpen"
+                        aria-label="Toggle menu"
                         @click="toggleMobileMenu"
                     >
-
                         <svg
                             v-if="!mobileOpen"
                             class="h-5 w-5"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
                         >
                             <path
-                                d="M4 6h16M4 12h16M4 18h16"
+                                d="M4 6H20M4 12H20M4 18H20"
+                                stroke="currentColor"
+                                stroke-width="2"
                                 stroke-linecap="round"
                             />
                         </svg>
@@ -528,255 +361,80 @@ onUnmounted(() => {
                             class="h-5 w-5"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
                         >
                             <path
-                                d="M6 6l12 12M18 6 6 18"
+                                d="M6 6L18 18M18 6L6 18"
+                                stroke="currentColor"
+                                stroke-width="2"
                                 stroke-linecap="round"
                             />
                         </svg>
-
                     </button>
-
                 </div>
-
             </div>
 
-
-            <!-- ========================================================= -->
             <!-- MOBILE MENU -->
-            <!-- ========================================================= -->
-
             <Transition
                 enter-active-class="transition duration-200 ease-out"
-                enter-from-class="-translate-y-2 opacity-0"
+                enter-from-class="translate-y-[-8px] opacity-0"
                 enter-to-class="translate-y-0 opacity-100"
                 leave-active-class="transition duration-150 ease-in"
                 leave-from-class="translate-y-0 opacity-100"
-                leave-to-class="-translate-y-2 opacity-0"
+                leave-to-class="translate-y-[-8px] opacity-0"
             >
-
                 <div
                     v-if="mobileOpen"
                     class="border-t border-[#E5E7EB] bg-white md:hidden"
                 >
-
                     <div
-                        class="mx-auto max-h-[calc(100vh-78px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6"
+                        class="mx-auto max-h-[calc(100vh-80px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6"
                     >
-
-                        <!-- MOBILE SEARCH -->
-
-                        <form
-                            class="relative"
-                            @submit.prevent="searchProducts"
-                        >
-
-                            <svg
-                                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
+                        <!-- Menu Header -->
+                        <div class="mb-3 flex items-center gap-2">
+                            <span
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
                             >
-                                <circle
-                                    cx="11"
-                                    cy="11"
-                                    r="7"
-                                />
-
-                                <path
-                                    d="m20 20-4-4"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
-
-                            <input
-                                v-model="searchQuery"
-                                type="search"
-                                placeholder="Search products..."
-                                class="h-12 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm outline-none transition focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
-                            />
-
-                        </form>
-
-
-                        <!-- MOBILE CATEGORIES -->
-
-                        <div
-                            class="mt-3 overflow-hidden rounded-2xl border border-[#E5E7EB]"
-                        >
-
-                            <button
-                                type="button"
-                                class="flex min-h-[52px] w-full items-center justify-between px-4 text-sm font-extrabold text-[#1F2937] transition hover:bg-[#E8F7F6]"
-                                :class="{
-                                    'bg-[#E8F7F6] text-[#087F8C]':
-                                        mobileCategoriesOpen
-                                }"
-                                @click="mobileCategoriesOpen = !mobileCategoriesOpen"
-                            >
-
-                                <span class="flex items-center gap-3">
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-                                            <path
-                                                d="M4 6h16M4 12h16M4 18h16"
-                                                stroke-linecap="round"
-                                            />
-                                        </svg>
-                                    </span>
-
-                                    Categories
-
-                                </span>
-
-
                                 <svg
-                                    class="h-4 w-4 transition-transform duration-200"
-                                    :class="{
-                                        'rotate-180':
-                                            mobileCategoriesOpen
-                                    }"
+                                    class="h-4 w-4"
                                     viewBox="0 0 24 24"
                                     fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    aria-hidden="true"
                                 >
                                     <path
-                                        d="m6 9 6 6 6-6"
+                                        d="M4 6H20M4 12H20M4 18H20"
+                                        stroke="currentColor"
+                                        stroke-width="2"
                                         stroke-linecap="round"
-                                        stroke-linejoin="round"
                                     />
                                 </svg>
+                            </span>
 
-                            </button>
-
-
-                            <!-- CATEGORY LIST -->
-
-                            <div
-                                v-if="mobileCategoriesOpen"
-                                class="border-t border-[#E5E7EB] bg-[#F8FAF9] p-2"
+                            <span
+                                class="text-sm font-extrabold text-[#1F2937]"
                             >
-
-                                <div
-                                    v-if="categories.length"
-                                    class="max-h-[60vh] overflow-y-auto"
-                                >
-
-                                    <button
-                                        v-for="category in categories"
-                                        :key="category.id ?? category.slug ?? category.name"
-                                        type="button"
-                                        class="flex min-h-[48px] w-full items-center justify-between rounded-xl px-3 py-2 text-left transition active:bg-[#E8F7F6] hover:bg-[#E8F7F6]"
-                                        @click="goToCategory(category)"
-                                    >
-
-                                        <span
-                                            class="flex min-w-0 items-center gap-3"
-                                        >
-
-                                            <span
-                                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#087F8C] shadow-sm"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        d="M4 6h16M4 12h16M4 18h16"
-                                                        stroke-linecap="round"
-                                                    />
-                                                </svg>
-                                            </span>
-
-                                            <span
-                                                class="min-w-0"
-                                            >
-                                                <span
-                                                    class="block truncate text-sm font-bold text-[#1F2937]"
-                                                >
-                                                    {{ category.name }}
-                                                </span>
-
-                                                <span
-                                                    class="block text-[10px] text-[#64748B]"
-                                                >
-                                                    {{ category.products_count ?? 0 }}
-                                                    products
-                                                </span>
-                                            </span>
-
-                                        </span>
-
-                                        <svg
-                                            class="h-4 w-4 shrink-0 text-[#94A3B8]"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <path
-                                                d="m9 18 6-6-6-6"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-                                        </svg>
-
-                                    </button>
-
-                                </div>
-
-                                <div
-                                    v-else
-                                    class="px-3 py-5 text-center text-xs text-[#64748B]"
-                                >
-                                    No categories available.
-                                </div>
-
-                            </div>
-
+                                Menu
+                            </span>
                         </div>
 
-
-                        <!-- MOBILE AUTH -->
-
-                        <div
-                            class="mt-3 grid grid-cols-2 gap-2"
-                        >
-
+                        <!-- Menu Actions -->
+                        <div class="grid grid-cols-2 gap-2">
                             <template v-if="isLoggedIn">
-
                                 <button
                                     type="button"
-                                    class="col-span-2 rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-extrabold text-white"
+                                    class="col-span-2 flex h-11 items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
                                     @click="goToDashboard"
                                 >
                                     Dashboard
                                 </button>
-
                             </template>
 
-
                             <template v-else>
-
                                 <button
                                     type="button"
-                                    class="rounded-xl border border-[#E5E7EB] px-4 py-3 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAF9]"
+                                    class="flex h-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:border-[#16A6A0] hover:bg-[#E8F7F6] active:scale-[0.98]"
                                     @click="openAuthModal('login')"
                                 >
                                     Log in
@@ -784,196 +442,176 @@ onUnmounted(() => {
 
                                 <button
                                     type="button"
-                                    class="rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-extrabold text-white transition hover:bg-[#066974]"
+                                    class="flex h-11 items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
                                     @click="openAuthModal('register')"
                                 >
                                     Register
                                 </button>
-
                             </template>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </Transition>
-
         </header>
 
-
-        <!-- ========================================================= -->
         <!-- PAGE CONTENT -->
-        <!-- ========================================================= -->
-
         <main>
             <slot />
         </main>
 
-
-        <!-- ========================================================= -->
         <!-- FOOTER -->
-        <!-- ========================================================= -->
-
-        <footer
-            class="border-t border-[#E5E7EB] bg-white"
-        >
-
+        <footer class="border-t border-[#E5E7EB] bg-white">
             <div
-                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8"
+                class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
             >
-
-                <!-- Brand -->
-
-                <div class="md:col-span-2 lg:col-span-1">
-
-                    <Link
-                        href="/"
-                        class="inline-flex"
-                    >
-                        <img
-                            src="/images/alona.png"
-                            alt="Alona"
-                            class="h-10 w-auto object-contain"
-                        />
-                    </Link>
-
-                    <p
-                        class="mt-4 max-w-xs text-sm leading-6 text-[#64748B]"
-                    >
-                        Discover products, connect with sellers, and enjoy
-                        simple shopping with Alona.
-                    </p>
-
-                </div>
-
-
-                <!-- Shop -->
-
-                <div>
-
-                    <h3
-                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
-                    >
-                        Shop
-                    </h3>
-
-                    <div class="mt-4 space-y-3">
-
-                        <Link
-                            :href="route('guest.products')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            All products
-                        </Link>
-
-                        <Link
-                            :href="route('guest.categories')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Categories
-                        </Link>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Help -->
-
-                <div>
-
-                    <h3
-                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
-                    >
-                        Help
-                    </h3>
-
-                    <div class="mt-4 space-y-3">
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Contact us
-                        </a>
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            FAQs
-                        </a>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Seller -->
-
-                <div>
-
-                    <h3
-                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
-                    >
-                        Sell with Alona
-                    </h3>
-
-                    <p
-                        class="mt-4 text-sm leading-6 text-[#64748B]"
-                    >
-                        Turn your products into opportunities and reach more
-                        customers.
-                    </p>
-
-                    <button
-                        type="button"
-                        class="mt-4 inline-flex rounded-xl bg-[#E8F7F6] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
-                        @click="openAuthModal('register-seller')"
-                    >
-                        Become a seller
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div
-                class="border-t border-[#E5E7EB]"
-            >
-
                 <div
-                    class="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-5 text-xs text-[#64748B] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
+                    class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10"
                 >
+                    <!-- Brand -->
+                    <div class="sm:col-span-2 lg:col-span-1">
+                        <Link
+                            href="/"
+                            class="inline-flex items-center"
+                            aria-label="Alona Home"
+                        >
+                            <img
+                                src="/images/alona.png"
+                                alt="Alona"
+                                class="h-10 w-auto object-contain"
+                            />
+                        </Link>
 
-                    <p>
-                        © {{ new Date().getFullYear() }} Alona. All rights reserved.
-                    </p>
+                        <p
+                            class="mt-4 max-w-sm text-sm leading-6 text-[#64748B]"
+                        >
+                            Discover products from trusted sellers and enjoy
+                            a smooth shopping experience with Alona
+                            Marketplace.
+                        </p>
+                    </div>
 
-                    <p>
-                        A marketplace made simple.
-                    </p>
+                    <!-- Shop -->
+                    <div>
+                        <h3
+                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
+                        >
+                            Shop
+                        </h3>
 
+                        <div class="mt-4 space-y-3">
+                            <Link
+                                :href="safeRoute('guest.products')"
+                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
+                            >
+                                All Products
+                            </Link>
+
+                            <Link
+                                :href="safeRoute('guest.deals', safeRoute('guest.products'))"
+                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
+                            >
+                                Deals
+                            </Link>
+                        </div>
+                    </div>
+
+                    <!-- Help -->
+                    <div>
+                        <h3
+                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
+                        >
+                            Help
+                        </h3>
+
+                        <div class="mt-4 space-y-3">
+                            <a
+                                href="#"
+                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
+                            >
+                                Contact Us
+                            </a>
+
+                            <a
+                                href="#"
+                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
+                            >
+                                Shipping & Delivery
+                            </a>
+
+                            <a
+                                href="#"
+                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
+                            >
+                                Returns & Refunds
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Sell -->
+                    <div>
+                        <h3
+                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
+                        >
+                            Sell with Alona
+                        </h3>
+
+                        <p
+                            class="mt-4 text-sm leading-6 text-[#64748B]"
+                        >
+                            Start selling your products and grow your
+                            business with Alona Marketplace.
+                        </p>
+
+                        <button
+                            type="button"
+                            class="mt-4 inline-flex h-10 items-center rounded-xl bg-[#F4B942] px-4 text-sm font-extrabold text-[#1F2937] shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                            @click="openAuthModal('register-seller')"
+                        >
+                            Become a Seller
+                        </button>
+                    </div>
                 </div>
 
-            </div>
+                <!-- Footer Bottom -->
+                <div
+                    class="mt-10 flex flex-col gap-3 border-t border-[#E5E7EB] pt-6 text-sm text-[#64748B] sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <p>
+                        © {{ new Date().getFullYear() }} Alona Marketplace.
+                        All rights reserved.
+                    </p>
 
+                    <div class="flex items-center gap-4">
+                        <a
+                            href="#"
+                            class="transition duration-200 hover:text-[#087F8C]"
+                        >
+                            Privacy
+                        </a>
+
+                        <a
+                            href="#"
+                            class="transition duration-200 hover:text-[#087F8C]"
+                        >
+                            Terms
+                        </a>
+                    </div>
+                </div>
+            </div>
         </footer>
 
-
-        <!-- ========================================================= -->
         <!-- AUTH MODAL -->
-        <!-- ========================================================= -->
-
         <AuthModal
             :show="authModalOpen"
             :mode="authModalMode"
             @close="closeAuthModal"
             @update:mode="authModalMode = $event"
         />
-
     </div>
 </template>
+
+<style scoped>
+input[type='search']::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+</style>
