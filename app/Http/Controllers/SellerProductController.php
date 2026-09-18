@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -116,9 +117,12 @@ class SellerProductController extends Controller
                     ->count(),
             ],
 
-            'categories' => Category::where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            /*
+             * IMPORTANT:
+             * Seller category filters also come from the same
+             * categories table used by Buyer Categories.
+             */
+            'categories' => $this->activeCategories(),
 
             'filters' => $request->only([
                 'search',
@@ -140,16 +144,11 @@ class SellerProductController extends Controller
         $seller = $request->user();
 
         $search = trim((string) $request->input('search', ''));
+
         $stockStatus = $request->input(
             'stock_status',
             'All Stock'
         );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Products
-        |--------------------------------------------------------------------------
-        */
 
         $products = Product::query()
             ->where('seller_id', $seller->id)
@@ -182,17 +181,12 @@ class SellerProductController extends Controller
             ->when(
                 $stockStatus !== 'All Stock',
                 function ($q) use ($stockStatus) {
-
                     match ($stockStatus) {
-
                         'Out of Stock' =>
                             $q->where('stock', 0),
 
                         'Low Stock' =>
-                            $q->whereBetween(
-                                'stock',
-                                [1, 5]
-                            ),
+                            $q->whereBetween('stock', [1, 5]),
 
                         'In Stock' =>
                             $q->where('stock', '>', 5),
@@ -204,12 +198,6 @@ class SellerProductController extends Controller
 
             ->latest()
             ->get();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Summary
-        |--------------------------------------------------------------------------
-        */
 
         $summary = [
             'total_products' => Product::where(
@@ -251,17 +239,10 @@ class SellerProductController extends Controller
                 ->count(),
         ];
 
-        /*
-        |--------------------------------------------------------------------------
-        | Return Page
-        |--------------------------------------------------------------------------
-        */
-
         return Inertia::render(
             'Seller/StockMonitoring',
             [
                 'products' => $products,
-
                 'summary' => $summary,
 
                 'filters' => [
@@ -282,9 +263,10 @@ class SellerProductController extends Controller
     public function create(): Response
     {
         return Inertia::render('Seller/AddProduct', [
-            'categories' => Category::where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            /*
+             * This is the SAME categories table used by Buyer.
+             */
+            'categories' => $this->activeCategories(),
         ]);
     }
 
@@ -351,11 +333,8 @@ class SellerProductController extends Controller
                 }
             });
         } catch (\Throwable $exception) {
-
             foreach ($imagePaths as $imagePath) {
-                Storage::disk('public')->delete(
-                    $imagePath
-                );
+                Storage::disk('public')->delete($imagePath);
             }
 
             throw $exception;
@@ -405,13 +384,16 @@ class SellerProductController extends Controller
 
         return Inertia::render('Seller/EditProduct', [
             'product' => $product->load([
+                'category:id,name,slug',
                 'variants',
                 'images',
             ]),
 
-            'categories' => Category::where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            /*
+             * Same source of truth as Add Product
+             * and Buyer Categories.
+             */
+            'categories' => $this->activeCategories(),
 
             'unansweredQuestions' => $product->questions()
                 ->whereNull('answer')
@@ -444,9 +426,20 @@ class SellerProductController extends Controller
                 'max:255',
             ],
 
+            /*
+             * Only ACTIVE categories can be assigned.
+             *
+             * This prevents a seller from assigning a product
+             * to a category that Buyer Categories cannot display.
+             */
             'category_id' => [
                 'required',
-                'exists:categories,id',
+                'integer',
+                Rule::exists('categories', 'id')
+                    ->where(
+                        fn ($query) =>
+                            $query->where('is_active', true)
+                    ),
             ],
 
             'price' => [
@@ -498,12 +491,9 @@ class SellerProductController extends Controller
             ],
         ]);
 
-        $newImagePaths = $this->storeProductImages(
-            $request
-        );
+        $newImagePaths = $this->storeProductImages($request);
 
         if (count($newImagePaths) > 0) {
-
             $oldImagePaths = $product->images()
                 ->orderBy('sort_order')
                 ->pluck('image_path')
@@ -522,8 +512,7 @@ class SellerProductController extends Controller
                 $oldImagePaths[] = $product->image_path;
             }
 
-            $validated['image_path'] =
-                $newImagePaths[0];
+            $validated['image_path'] = $newImagePaths[0];
 
             unset(
                 $validated['image'],
@@ -531,14 +520,12 @@ class SellerProductController extends Controller
             );
 
             try {
-
                 DB::transaction(function () use (
                     $product,
                     $validated,
                     $newImagePaths,
                     $oldImagePaths
                 ) {
-
                     $product->update($validated);
 
                     $product->images()->delete();
@@ -554,10 +541,8 @@ class SellerProductController extends Controller
                     }
 
                     foreach ($oldImagePaths as $oldImagePath) {
-
                         if (
-                            $oldImagePath !==
-                                $newImagePaths[0] &&
+                            $oldImagePath !== $newImagePaths[0] &&
                             !in_array(
                                 $oldImagePath,
                                 $newImagePaths,
@@ -565,26 +550,18 @@ class SellerProductController extends Controller
                             )
                         ) {
                             Storage::disk('public')
-                                ->delete(
-                                    $oldImagePath
-                                );
+                                ->delete($oldImagePath);
                         }
                     }
                 });
-
             } catch (\Throwable $exception) {
-
                 foreach ($newImagePaths as $imagePath) {
-                    Storage::disk('public')->delete(
-                        $imagePath
-                    );
+                    Storage::disk('public')->delete($imagePath);
                 }
 
                 throw $exception;
             }
-
         } else {
-
             unset(
                 $validated['image'],
                 $validated['images']
@@ -593,6 +570,9 @@ class SellerProductController extends Controller
             $product->update($validated);
         }
 
+        /*
+         * Any seller edit goes back to pending approval.
+         */
         $product->update([
             'status' => 'pending',
         ]);
@@ -675,12 +655,10 @@ class SellerProductController extends Controller
             $validated,
             $product
         ) {
-
             foreach (
                 $validated['variants'] ?? []
                 as $variantData
             ) {
-
                 $variant = $product->variants()
                     ->whereKey($variantData['id'])
                     ->first();
@@ -696,7 +674,6 @@ class SellerProductController extends Controller
             }
 
             if ($product->variants()->exists()) {
-
                 $totalStock = $product
                     ->variants()
                     ->sum('stock');
@@ -704,9 +681,7 @@ class SellerProductController extends Controller
                 $product->update([
                     'stock' => $totalStock,
                 ]);
-
             } else {
-
                 $product->update([
                     'stock' => $validated['stock'],
                 ]);
@@ -772,25 +747,17 @@ class SellerProductController extends Controller
 
         $exists = $product->variants()
             ->where(function ($query) use ($color) {
-
                 if ($color === null) {
                     $query->whereNull('color');
                 } else {
-                    $query->where(
-                        'color',
-                        $color
-                    );
+                    $query->where('color', $color);
                 }
             })
             ->where(function ($query) use ($size) {
-
                 if ($size === null) {
                     $query->whereNull('size');
                 } else {
-                    $query->where(
-                        'size',
-                        $size
-                    );
+                    $query->where('size', $size);
                 }
             })
             ->exists();
@@ -872,31 +839,19 @@ class SellerProductController extends Controller
         }
 
         $duplicate = $product->variants()
-            ->where(
-                'id',
-                '!=',
-                $variant->id
-            )
+            ->where('id', '!=', $variant->id)
             ->where(function ($query) use ($color) {
-
                 if ($color === null) {
                     $query->whereNull('color');
                 } else {
-                    $query->where(
-                        'color',
-                        $color
-                    );
+                    $query->where('color', $color);
                 }
             })
             ->where(function ($query) use ($size) {
-
                 if ($size === null) {
                     $query->whereNull('size');
                 } else {
-                    $query->where(
-                        'size',
-                        $size
-                    );
+                    $query->where('size', $size);
                 }
             })
             ->exists();
@@ -1041,9 +996,20 @@ class SellerProductController extends Controller
                 'max:255',
             ],
 
+            /*
+             * CRITICAL CATEGORY RULE
+             *
+             * The seller can only choose an active category.
+             * Buyer Categories also only displays active categories.
+             */
             'category_id' => [
                 'required',
-                'exists:categories,id',
+                'integer',
+                Rule::exists('categories', 'id')
+                    ->where(
+                        fn ($query) =>
+                            $query->where('is_active', true)
+                    ),
             ],
 
             'price' => [
@@ -1099,6 +1065,36 @@ class SellerProductController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | ACTIVE CATEGORIES
+    |--------------------------------------------------------------------------
+    |
+    | ONE SOURCE OF TRUTH:
+    |
+    | categories table
+    |       ↓
+    | Seller
+    |       ↓
+    | products.category_id
+    |       ↓
+    | Buyer
+    |
+    */
+
+    private function activeCategories()
+    {
+        return Category::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'slug',
+            ]);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | STORE PRODUCT IMAGES
     |--------------------------------------------------------------------------
     */
@@ -1109,12 +1105,7 @@ class SellerProductController extends Controller
         $imagePaths = [];
 
         if ($request->hasFile('images')) {
-
-            foreach (
-                $request->file('images')
-                as $image
-            ) {
-
+            foreach ($request->file('images') as $image) {
                 if (!$image->isValid()) {
                     continue;
                 }
@@ -1130,7 +1121,6 @@ class SellerProductController extends Controller
             count($imagePaths) === 0 &&
             $request->hasFile('image')
         ) {
-
             $image = $request->file('image');
 
             if ($image->isValid()) {
@@ -1181,20 +1171,12 @@ class SellerProductController extends Controller
 
         $normalized = [];
 
-        foreach (
-            $variants
-            as $index => $variant
-        ) {
-
-            $color = filled(
-                $variant['color'] ?? null
-            )
+        foreach ($variants as $index => $variant) {
+            $color = filled($variant['color'] ?? null)
                 ? trim($variant['color'])
                 : null;
 
-            $size = filled(
-                $variant['size'] ?? null
-            )
+            $size = filled($variant['size'] ?? null)
                 ? trim($variant['size'])
                 : null;
 
@@ -1208,19 +1190,14 @@ class SellerProductController extends Controller
             }
 
             $combinationKey =
-                strtolower(
-                    $color ?? '__none__'
-                ) .
+                strtolower($color ?? '__none__') .
                 '|' .
-                strtolower(
-                    $size ?? '__none__'
-                );
+                strtolower($size ?? '__none__');
 
             if (
                 collect($normalized)->contains(
                     fn ($existing) =>
-                        $existing['_key'] ===
-                        $combinationKey
+                        $existing['_key'] === $combinationKey
                 )
             ) {
                 abort(
@@ -1243,7 +1220,6 @@ class SellerProductController extends Controller
 
         return collect($normalized)
             ->map(function ($variant) {
-
                 unset($variant['_key']);
 
                 return $variant;
