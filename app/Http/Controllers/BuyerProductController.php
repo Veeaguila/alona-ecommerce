@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\RecentlyViewedProduct;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,7 +33,10 @@ class BuyerProductController extends Controller
                 $category !== 'all',
                 fn ($query) => $query->whereHas(
                     'category',
-                    fn ($categoryQuery) => $categoryQuery->where('slug', $category)
+                    fn ($categoryQuery) => $categoryQuery->where(
+                        'slug',
+                        $category
+                    )
                 )
             )
             ->when(
@@ -74,7 +78,10 @@ class BuyerProductController extends Controller
             'categories' => Category::query()
                 ->where('is_active', true)
                 ->orderBy('name')
-                ->get(['name', 'slug']),
+                ->get([
+                    'name',
+                    'slug',
+                ]),
 
             'filters' => [
                 'search' => $search,
@@ -87,7 +94,45 @@ class BuyerProductController extends Controller
 
     public function show(Product $product): Response
     {
-        abort_unless($product->status === 'approved', 404);
+        abort_unless(
+            $product->status === 'approved',
+            404
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Recently Viewed
+        |--------------------------------------------------------------------------
+        |
+        | Only authenticated buyers are recorded.
+        | Guests can still browse product pages normally.
+        |
+        */
+
+        if (
+            auth()->check() &&
+            auth()->user()->role === 'buyer'
+        ) {
+            $recentlyViewed = RecentlyViewedProduct::query()
+                ->where('user_id', auth()->id())
+                ->where('product_id', $product->id)
+                ->first();
+
+            if ($recentlyViewed) {
+                /*
+                 * Move the existing record to the newest position.
+                 */
+                $recentlyViewed->update([
+                    'viewed_at' => now(),
+                ]);
+            } else {
+                RecentlyViewedProduct::create([
+                    'user_id' => auth()->id(),
+                    'product_id' => $product->id,
+                    'viewed_at' => now(),
+                ]);
+            }
+        }
 
         $product->load([
             'category:id,name,slug',
@@ -103,10 +148,10 @@ class BuyerProductController extends Controller
             'questions' => fn ($q) => $q
                 ->where('is_public', true)
                 ->whereNotNull('answer')
-                ->with(
+                ->with([
                     'buyer:id,name',
-                    'answeredBy:id,name'
-                )
+                    'answeredBy:id,name',
+                ])
                 ->latest()
                 ->limit(5),
         ]);
@@ -115,14 +160,14 @@ class BuyerProductController extends Controller
             'product' => $product,
 
             'sellerStats' => [
-                'total_products' => \App\Models\Product::where(
+                'total_products' => Product::where(
                     'seller_id',
                     $product->seller_id
                 )
                     ->where('status', 'approved')
                     ->count(),
 
-                'avg_rating' => \App\Models\Product::where(
+                'avg_rating' => Product::where(
                     'seller_id',
                     $product->seller_id
                 )

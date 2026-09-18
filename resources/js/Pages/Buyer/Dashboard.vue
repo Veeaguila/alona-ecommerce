@@ -13,6 +13,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+
+    recentlyViewedProducts: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 /*
@@ -77,6 +82,10 @@ const slugify = value => {
 */
 
 const products = computed(() => {
+    if (!Array.isArray(props.products)) {
+        return []
+    }
+
     return props.products.map(product => {
         const numericPrice = Number(product.price ?? 0)
         const numericOldPrice = Number(product.old_price ?? 0)
@@ -149,6 +158,79 @@ const products = computed(() => {
 
 /*
 |--------------------------------------------------------------------------
+| Recently Viewed Products
+|--------------------------------------------------------------------------
+*/
+
+const recentlyViewed = computed(() => {
+    if (!Array.isArray(props.recentlyViewedProducts)) {
+        return []
+    }
+
+    return props.recentlyViewedProducts
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(
+                product.old_price ?? 0
+            )
+
+            return {
+                ...product,
+
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
+
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+/*
+|--------------------------------------------------------------------------
 | Top Selling
 |--------------------------------------------------------------------------
 */
@@ -181,9 +263,6 @@ const trendingProducts = computed(() => {
 |--------------------------------------------------------------------------
 | CATEGORY PHOTOS
 |--------------------------------------------------------------------------
-|
-| These are mapped to the exact category names shown in your screenshots.
-|
 */
 
 const categoryPictures = {
@@ -267,12 +346,6 @@ const categoryPictures = {
 |--------------------------------------------------------------------------
 | EXACT CATEGORIES FROM YOUR SCREENSHOTS
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| These are the ONLY categories displayed on the homepage.
-| Backend categories are used only for product counts/images when
-| a matching category exists.
-|
 */
 
 const fixedCategories = [
@@ -410,53 +483,29 @@ const fixedCategories = [
 
 const categoryColors = {
     'mens-apparel': 'bg-blue-50',
-
     'mobiles-gadgets': 'bg-slate-50',
-
     'mobiles-accessories': 'bg-gray-50',
-
     'home-entertainment': 'bg-cyan-50',
-
     'babies-kids': 'bg-rose-50',
-
     'home-living': 'bg-amber-50',
-
     groceries: 'bg-lime-50',
-
     'toys-games-collectibles': 'bg-purple-50',
-
     'womens-bags': 'bg-emerald-50',
-
     'women-accessories': 'bg-red-50',
-
     'womens-apparel': 'bg-pink-50',
-
     'health-personal-care': 'bg-cyan-50',
-
     'makeup-fragrances': 'bg-pink-50',
-
     'home-appliances': 'bg-teal-50',
-
     'laptops-computers': 'bg-sky-50',
-
     cameras: 'bg-red-50',
-
     'sports-travel': 'bg-orange-50',
-
     'mens-bags-accessories': 'bg-blue-50',
-
     'mens-shoes': 'bg-sky-50',
-
     motors: 'bg-slate-100',
-
     'womens-shoes': 'bg-rose-50',
-
     'pet-care': 'bg-yellow-50',
-
     audio: 'bg-violet-50',
-
     'hobbies-stationery': 'bg-indigo-50',
-
     gaming: 'bg-violet-50',
 }
 
@@ -464,60 +513,33 @@ const categoryColors = {
 |--------------------------------------------------------------------------
 | Category Icons
 |--------------------------------------------------------------------------
-|
-| Only used when the category photo cannot be loaded.
-|
 */
 
 const categoryIcons = {
     'mens-apparel': '👕',
-
     'mobiles-gadgets': '📱',
-
     'mobiles-accessories': '🔌',
-
     'home-entertainment': '📺',
-
     'babies-kids': '🍼',
-
     'home-living': '🛋️',
-
     groceries: '🥬',
-
     'toys-games-collectibles': '🧸',
-
     'womens-bags': '👜',
-
     'women-accessories': '🕶️',
-
     'womens-apparel': '👗',
-
     'health-personal-care': '🧴',
-
     'makeup-fragrances': '💄',
-
     'home-appliances': '🧊',
-
     'laptops-computers': '💻',
-
     cameras: '📷',
-
     'sports-travel': '🏃',
-
     'mens-bags-accessories': '🎒',
-
     'mens-shoes': '👟',
-
     motors: '🏍️',
-
     'womens-shoes': '👠',
-
     'pet-care': '🐶',
-
     audio: '🎧',
-
     'hobbies-stationery': '✏️',
-
     gaming: '🎮',
 }
 
@@ -525,10 +547,6 @@ const categoryIcons = {
 |--------------------------------------------------------------------------
 | Backend Category Lookup
 |--------------------------------------------------------------------------
-|
-| The backend is NOT allowed to add extra categories.
-| It is only used to find matching database information.
-|
 */
 
 const backendCategoryMap = computed(() => {
@@ -616,10 +634,6 @@ const handleCategoryImageError = category => {
 const categoryImage = category => {
     const slug = category?.slug
 
-    /*
-     * First use the matching database category image.
-     */
-
     const backendCategory =
         backendCategoryMap.value[slug]
 
@@ -635,10 +649,6 @@ const categoryImage = category => {
         return imageUrl(databaseImage)
     }
 
-    /*
-     * Otherwise use our category-specific photo.
-     */
-
     return categoryPictures[slug] ?? null
 }
 
@@ -646,12 +656,6 @@ const categoryImage = category => {
 |--------------------------------------------------------------------------
 | Category List
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| Only fixedCategories are returned.
-|
-| This prevents unrelated backend categories from appearing.
-|
 */
 
 const categoriesList = computed(() => {
@@ -1094,8 +1098,6 @@ onUnmounted(() => {
                 class="alona-reveal mx-auto max-w-[1440px] scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 lg:pb-12"
             >
 
-                <!-- SECTION HEADER -->
-
                 <div
                     class="mb-5 flex items-end justify-between gap-4"
                 >
@@ -1132,8 +1134,6 @@ onUnmounted(() => {
                         </p>
 
                     </div>
-
-                    <!-- DESKTOP CONTROLS -->
 
                     <div
                         class="hidden items-center gap-2 sm:flex"
@@ -1176,11 +1176,13 @@ onUnmounted(() => {
                                 stroke="currentColor"
                                 stroke-width="2"
                             >
+
                                 <path
                                     d="m9 18 6-6-6-6"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                 />
+
                             </svg>
 
                         </button>
@@ -1190,19 +1192,11 @@ onUnmounted(() => {
                 </div>
 
 
-                <!-- =================================================
-                     HORIZONTAL CATEGORY SLIDER
-                ================================================== -->
-
                 <div class="relative">
-
-                    <!-- LEFT FADE -->
 
                     <div
                         class="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-r from-[#F8FAF9] to-transparent sm:block"
                     ></div>
-
-                    <!-- CATEGORY TRACK -->
 
                     <div
                         ref="categorySlider"
@@ -1220,8 +1214,6 @@ onUnmounted(() => {
                             @click="goToCategory(category)"
                         >
 
-                            <!-- PHOTO -->
-
                             <div
                                 class="relative aspect-[1.05] overflow-hidden bg-[#E8F7F6]"
                             >
@@ -1235,8 +1227,6 @@ onUnmounted(() => {
                                     referrerpolicy="no-referrer"
                                     @error="handleCategoryImageError(category)"
                                 />
-
-                                <!-- FALLBACK -->
 
                                 <div
                                     v-else
@@ -1252,19 +1242,13 @@ onUnmounted(() => {
 
                                 </div>
 
-                                <!-- DARK GRADIENT -->
-
                                 <div
                                     class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"
                                 ></div>
 
-                                <!-- TEAL HOVER -->
-
                                 <div
                                     class="absolute inset-0 bg-[#087F8C]/0 transition duration-500 group-hover:bg-[#087F8C]/20"
                                 ></div>
-
-                                <!-- HOVER ARROW -->
 
                                 <div
                                     class="absolute right-3 top-3 flex h-8 w-8 translate-y-1 items-center justify-center rounded-full border border-white/30 bg-white/95 text-[#087F8C] opacity-0 shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
@@ -1292,8 +1276,6 @@ onUnmounted(() => {
                                     </svg>
 
                                 </div>
-
-                                <!-- CATEGORY INFO -->
 
                                 <div
                                     class="absolute inset-x-0 bottom-0 z-10 p-4"
@@ -1343,16 +1325,11 @@ onUnmounted(() => {
 
                     </div>
 
-                    <!-- RIGHT FADE -->
-
                     <div
                         class="pointer-events-none absolute right-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-l from-[#F8FAF9] to-transparent sm:block"
                     ></div>
 
                 </div>
-
-
-                <!-- SLIDER HINT -->
 
                 <div
                     v-if="categoriesList.length > 6"
@@ -1372,9 +1349,6 @@ onUnmounted(() => {
                     ></span>
 
                 </div>
-
-
-                <!-- MOBILE VIEW ALL -->
 
                 <div class="mt-4 sm:hidden">
 
@@ -1435,7 +1409,6 @@ onUnmounted(() => {
 
                 </div>
 
-
                 <div
                     class="grid overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm lg:grid-cols-[.85fr_1.15fr]"
                 >
@@ -1474,7 +1447,6 @@ onUnmounted(() => {
                         </div>
 
                     </Link>
-
 
                     <div
                         class="flex flex-col justify-center p-5 sm:p-7 lg:p-8"
@@ -1628,7 +1600,6 @@ onUnmounted(() => {
 
                     </div>
 
-
                     <div
                         v-if="trendingProducts.length"
                         class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
@@ -1744,7 +1715,6 @@ onUnmounted(() => {
 
                     </div>
 
-
                     <div
                         v-else
                         class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-[#F8FAF9] p-12 text-center"
@@ -1768,6 +1738,213 @@ onUnmounted(() => {
                             Check back soon for new products
                             from Alona sellers.
                         </p>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 RECENTLY VIEWED
+            ====================================================== -->
+
+            <section
+                v-if="recentlyViewed.length"
+                class="alona-reveal border-b border-gray-100 bg-[#F8FAF9]"
+            >
+
+                <div
+                    class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                >
+
+                    <div
+                        class="flex items-end justify-between gap-4"
+                    >
+
+                        <div>
+
+                            <div
+                                class="flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="h-2 w-2 rounded-full bg-[#F4B942]"
+                                ></span>
+
+                                <p
+                                    class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                                >
+                                    Pick up where you left off
+                                </p>
+
+                            </div>
+
+                            <h2
+                                class="mt-2 text-2xl font-black tracking-[-0.03em] text-gray-900 sm:text-3xl"
+                            >
+                                Recently Viewed
+                            </h2>
+
+                            <p
+                                class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm"
+                            >
+                                Products you've looked at recently.
+                            </p>
+
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:gap-3 sm:flex"
+                        >
+                            Continue shopping
+                            →
+                        </Link>
+
+                    </div>
+
+
+                    <div
+                        class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    >
+
+                        <Link
+                            v-for="(product, index) in recentlyViewed"
+                            :key="product.id ?? `recent-${index}`"
+                            :href="safeRoute('buyer.product', '#', product.id)"
+                            class="recent-product-card group"
+                        >
+
+                            <div
+                                class="relative aspect-[.92] overflow-hidden rounded-[22px] bg-white ring-1 ring-black/[0.04]"
+                            >
+
+                                <img
+                                    v-if="product.image"
+                                    :src="product.image"
+                                    :alt="product.name"
+                                    class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-105"
+                                    loading="lazy"
+                                />
+
+                                <div
+                                    v-else
+                                    class="flex h-full items-center justify-center text-4xl"
+                                >
+                                    🛍️
+                                </div>
+
+
+                                <!-- VIEWED BADGE -->
+
+                                <span
+                                    class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm backdrop-blur"
+                                >
+                                    Viewed
+                                </span>
+
+
+                                <!-- SALE -->
+
+                                <span
+                                    v-if="product.isSale"
+                                    class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                                >
+                                    SALE
+                                </span>
+
+                            </div>
+
+
+                            <div
+                                class="px-1 pt-3.5"
+                            >
+
+                                <p
+                                    class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                                >
+                                    {{ product.category }}
+                                </p>
+
+                                <h3
+                                    class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition duration-300 group-hover:text-[#087F8C]"
+                                >
+                                    {{ product.name }}
+                                </h3>
+
+                                <div
+                                    class="mt-2 flex items-center gap-2"
+                                >
+
+                                    <span
+                                        class="text-sm font-black text-[#087F8C]"
+                                    >
+                                        {{ product.price }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.oldPrice"
+                                        class="text-[10px] text-gray-400 line-through"
+                                    >
+                                        {{ product.oldPrice }}
+                                    </span>
+
+                                </div>
+
+                                <div
+                                    class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                                >
+
+                                    <span
+                                        class="text-[#F4B942]"
+                                    >
+                                        ★
+                                    </span>
+
+                                    <span
+                                        class="font-semibold text-gray-600"
+                                    >
+                                        {{
+                                            product.rating > 0
+                                                ? product.rating.toFixed(1)
+                                                : 'New'
+                                        }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.reviews > 0"
+                                    >
+                                        ({{ product.reviews }})
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </Link>
+
+                    </div>
+
+
+                    <!-- MOBILE CONTINUE SHOPPING -->
+
+                    <div class="mt-6 sm:hidden">
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                        >
+                            Continue shopping
+
+                            <span
+                                class="transition-transform duration-300 group-hover:translate-x-1"
+                            >
+                                →
+                            </span>
+
+                        </Link>
 
                     </div>
 
@@ -2230,6 +2407,38 @@ onUnmounted(() => {
 .product-card:hover {
     transform:
         translateY(-5px);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Recently Viewed Cards
+|--------------------------------------------------------------------------
+*/
+
+.recent-product-card {
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+.recent-product-card:hover {
+    transform:
+        translateY(-5px);
+}
+
+.recent-product-card:active {
+    transform:
+        translateY(-1px)
+        scale(.99);
+}
+
+.recent-product-card img {
+    will-change: transform;
+
+    backface-visibility: hidden;
+
+    transform: translateZ(0);
 }
 
 

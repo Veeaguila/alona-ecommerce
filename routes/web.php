@@ -281,8 +281,72 @@ Route::get('/buyer/categories', [
 */
 
 Route::get('/buyer', function () {
+    $user = auth()->user();
+
+    $recentlyViewedProducts = \App\Models\RecentlyViewedProduct::query()
+        ->where('user_id', $user->id)
+        ->whereHas('product', function ($query) {
+            $query->where('status', 'approved');
+        })
+        ->with([
+            'product' => function ($query) {
+                $query
+                    ->with([
+                        'category:id,name,slug',
+                        'images:id,product_id,image_path,sort_order',
+                    ])
+                    ->where('status', 'approved');
+            },
+        ])
+        ->orderByDesc('viewed_at')
+        ->take(6)
+        ->get()
+        ->map(function ($recentlyViewed) {
+            $product = $recentlyViewed->product;
+
+            if (!$product) {
+                return null;
+            }
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'price' => $product->price,
+                'old_price' => $product->old_price,
+                'rating' => $product->rating,
+                'reviews_count' => $product->reviews_count,
+                'image_path' => $product->image_path,
+
+                'category' => $product->category
+                    ? [
+                        'id' => $product->category->id,
+                        'name' => $product->category->name,
+                        'slug' => $product->category->slug,
+                    ]
+                    : null,
+
+                'images' => $product->images
+                    ->map(fn ($image) => [
+                        'id' => $image->id,
+                        'image_path' => $image->image_path,
+                        'sort_order' => $image->sort_order,
+                    ])
+                    ->values()
+                    ->all(),
+
+                'viewed_at' => $recentlyViewed->viewed_at?->toISOString(),
+            ];
+        })
+        ->filter()
+        ->values()
+        ->all();
+
     return Inertia::render('Buyer/Dashboard', [
-        'categories' => Category::where('is_active', true)
+        'categories' => \App\Models\Category::where(
+            'is_active',
+            true
+        )
             ->withCount([
                 'products' => fn ($query) =>
                     $query->where('status', 'approved'),
@@ -294,11 +358,15 @@ Route::get('/buyer', function () {
                 'slug',
             ]),
 
-        'products' => Product::with('category:id,name')
+        'products' => \App\Models\Product::with(
+            'category:id,name'
+        )
             ->where('status', 'approved')
             ->latest()
             ->take(4)
             ->get(),
+
+        'recentlyViewedProducts' => $recentlyViewedProducts,
     ]);
 })->middleware([
     'auth',
