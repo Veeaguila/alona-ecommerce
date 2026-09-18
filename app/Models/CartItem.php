@@ -7,25 +7,48 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CartItem extends Model
 {
-    protected $fillable = ['user_id', 'product_id', 'product_variant_id', 'quantity'];
+    protected $fillable = [
+        'user_id',
+        'product_id',
+        'product_variant_id',
+        'quantity',
+    ];
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer'];
+        return [
+            'quantity' => 'integer',
+        ];
     }
 
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
-    }
-
-    public function variant(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
-    }
-
+    /**
+     * Buyer who owns this cart item.
+     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(
+            User::class
+        );
+    }
+
+    /**
+     * Product belonging to this cart item.
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(
+            Product::class
+        );
+    }
+
+    /**
+     * Optional product variant.
+     */
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(
+            ProductVariant::class,
+            'product_variant_id'
+        );
     }
 }
