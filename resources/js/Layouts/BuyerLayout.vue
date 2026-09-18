@@ -23,14 +23,12 @@ const page = usePage()
 const mobileOpen = ref(false)
 const searchQuery = ref('')
 
-const categoriesOpen = ref(false)
-const mobileCategoriesOpen = ref(false)
-
 const accountOpen = ref(false)
 const mobileAccountOpen = ref(false)
 
 const notificationsOpen = ref(false)
 const mobileNotificationsOpen = ref(false)
+
 const notificationsMarkedRead = ref(false)
 
 
@@ -44,7 +42,6 @@ const user = computed(() =>
     page.props.auth?.user ?? null
 )
 
-
 const userName = computed(() => {
     if (!user.value) {
         return 'Account'
@@ -57,7 +54,6 @@ const userName = computed(() => {
         'Account'
     )
 })
-
 
 const userEmail = computed(() => {
     return user.value?.email ?? ''
@@ -78,33 +74,21 @@ const userProfilePhoto = computed(() => {
         user.value?.avatar ??
         null
 
-    if (!path) {
+    if (!path || typeof path !== 'string') {
         return null
     }
 
     if (
         path.startsWith('http://') ||
         path.startsWith('https://') ||
-        path.startsWith('/storage/')
+        path.startsWith('/storage/') ||
+        path.startsWith('/images/')
     ) {
         return path
     }
 
     return `/storage/${path.replace(/^\/+/, '')}`
 })
-
-
-/*
-|--------------------------------------------------------------------------
-| CATEGORIES
-|--------------------------------------------------------------------------
-*/
-
-const categories = computed(() =>
-    Array.isArray(page.props.categories)
-        ? page.props.categories
-        : []
-)
 
 
 /*
@@ -117,7 +101,6 @@ const buyerCounts = computed(() =>
     page.props.buyerCounts ?? {}
 )
 
-
 const cartCount = computed(() =>
     Number(
         buyerCounts.value.cart ??
@@ -125,16 +108,6 @@ const cartCount = computed(() =>
         0
     )
 )
-
-
-const wishlistCount = computed(() =>
-    Number(
-        buyerCounts.value.wishlist ??
-        buyerCounts.value.wishlist_count ??
-        0
-    )
-)
-
 
 const notificationCount = computed(() => {
     if (notificationsMarkedRead.value) {
@@ -148,6 +121,12 @@ const notificationCount = computed(() => {
     )
 })
 
+
+/*
+|--------------------------------------------------------------------------
+| NOTIFICATIONS
+|--------------------------------------------------------------------------
+*/
 
 const notificationItems = computed(() => {
     const source =
@@ -167,7 +146,10 @@ const notificationItems = computed(() => {
         const data = item?.data ?? {}
 
         return {
-            id: item?.id ?? item?.uuid ?? `notification-${index}`,
+            id:
+                item?.id ??
+                item?.uuid ??
+                `notification-${index}`,
 
             title:
                 item?.title ??
@@ -192,7 +174,10 @@ const notificationItems = computed(() => {
 
             read:
                 notificationsMarkedRead.value ||
-                Boolean(item?.read_at ?? item?.read),
+                Boolean(
+                    item?.read_at ??
+                    item?.read
+                ),
 
             url:
                 item?.url ??
@@ -214,7 +199,7 @@ const notificationItems = computed(() => {
 const safeRoute = (name, fallback = '#') => {
     try {
         return route(name)
-    } catch (e) {
+    } catch (error) {
         return fallback
     }
 }
@@ -229,7 +214,9 @@ const safeRoute = (name, fallback = '#') => {
 const goToDashboard = () => {
     closeMenus()
 
-    const destination = safeRoute('buyer.dashboard')
+    const destination = safeRoute(
+        'buyer.dashboard'
+    )
 
     if (destination !== '#') {
         router.visit(destination)
@@ -246,7 +233,9 @@ const goToDashboard = () => {
 const searchProducts = () => {
     const query = searchQuery.value.trim()
 
-    const destination = safeRoute('buyer.products')
+    const destination = safeRoute(
+        'buyer.products'
+    )
 
     if (destination === '#') {
         return
@@ -269,29 +258,6 @@ const searchProducts = () => {
             preserveScroll: false,
         }
     )
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| CATEGORY
-|--------------------------------------------------------------------------
-*/
-
-const goToCategory = category => {
-    categoriesOpen.value = false
-    mobileCategoriesOpen.value = false
-    mobileOpen.value = false
-
-    const destination = safeRoute('buyer.products')
-
-    if (destination === '#') {
-        return
-    }
-
-    router.get(destination, {
-        category: category.slug ?? category.id,
-    })
 }
 
 
@@ -324,7 +290,9 @@ const openMessages = () => {
 const openCart = () => {
     closeMenus()
 
-    const destination = safeRoute('buyer.cart')
+    const destination = safeRoute(
+        'buyer.cart'
+    )
 
     if (destination !== '#') {
         router.visit(destination)
@@ -341,18 +309,15 @@ const openCart = () => {
 const toggleAccount = () => {
     accountOpen.value = !accountOpen.value
 
-    categoriesOpen.value = false
     notificationsOpen.value = false
 }
 
-
 const toggleMobileAccount = () => {
-    mobileAccountOpen.value = !mobileAccountOpen.value
+    mobileAccountOpen.value =
+        !mobileAccountOpen.value
 
-    mobileCategoriesOpen.value = false
     mobileNotificationsOpen.value = false
 }
-
 
 const openProfile = () => {
     closeMenus()
@@ -367,22 +332,12 @@ const openProfile = () => {
     }
 }
 
-
 const openOrders = () => {
     closeMenus()
 
-    const destination = safeRoute('buyer.orders')
-
-    if (destination !== '#') {
-        router.visit(destination)
-    }
-}
-
-
-const openWishlist = () => {
-    closeMenus()
-
-    const destination = safeRoute('buyer.wishlist')
+    const destination = safeRoute(
+        'buyer.orders'
+    )
 
     if (destination !== '#') {
         router.visit(destination)
@@ -397,37 +352,49 @@ const openWishlist = () => {
 */
 
 const toggleNotifications = () => {
-    notificationsOpen.value = !notificationsOpen.value
+    notificationsOpen.value =
+        !notificationsOpen.value
 
-    categoriesOpen.value = false
     accountOpen.value = false
     mobileOpen.value = false
     mobileNotificationsOpen.value = false
     mobileAccountOpen.value = false
 }
 
-
 const toggleMobileNotifications = () => {
     mobileNotificationsOpen.value =
         !mobileNotificationsOpen.value
 
-    categoriesOpen.value = false
     accountOpen.value = false
     mobileOpen.value = false
     notificationsOpen.value = false
     mobileAccountOpen.value = false
 }
 
-
 const markAllNotificationsRead = () => {
     notificationsMarkedRead.value = true
 
+    const markAllReadRoute =
+        safeRoute(
+            'buyer.notifications.markAllRead'
+        )
+
+    const readAllRoute =
+        safeRoute(
+            'buyer.notifications.readAll'
+        )
+
+    const markAllReadAlternative =
+        safeRoute(
+            'buyer.notifications.mark-all-read'
+        )
+
     const destination =
-        safeRoute('buyer.notifications.markAllRead') !== '#'
-            ? safeRoute('buyer.notifications.markAllRead')
-            : safeRoute('buyer.notifications.readAll') !== '#'
-                ? safeRoute('buyer.notifications.readAll')
-                : safeRoute('buyer.notifications.mark-all-read')
+        markAllReadRoute !== '#'
+            ? markAllReadRoute
+            : readAllRoute !== '#'
+                ? readAllRoute
+                : markAllReadAlternative
 
     if (destination !== '#') {
         router.post(
@@ -441,13 +408,15 @@ const markAllNotificationsRead = () => {
     }
 }
 
-
 const seeAllNotifications = () => {
     notificationsOpen.value = false
     mobileNotificationsOpen.value = false
+
     closeMenus()
 
-    const destination = safeRoute('buyer.notifications')
+    const destination = safeRoute(
+        'buyer.notifications'
+    )
 
     if (destination !== '#') {
         router.visit(destination)
@@ -464,8 +433,16 @@ const seeAllNotifications = () => {
 const logout = () => {
     closeMenus()
 
+    const destination = safeRoute(
+        'logout'
+    )
+
+    if (destination === '#') {
+        return
+    }
+
     router.post(
-        safeRoute('logout'),
+        destination,
         {},
         {
             preserveScroll: false,
@@ -481,10 +458,10 @@ const logout = () => {
 */
 
 const toggleMobileMenu = () => {
-    mobileOpen.value = !mobileOpen.value
+    mobileOpen.value =
+        !mobileOpen.value
 
     if (!mobileOpen.value) {
-        mobileCategoriesOpen.value = false
         mobileAccountOpen.value = false
         mobileNotificationsOpen.value = false
     }
@@ -498,12 +475,9 @@ const toggleMobileMenu = () => {
 */
 
 const closeMenus = () => {
-    categoriesOpen.value = false
     accountOpen.value = false
 
-    mobileCategoriesOpen.value = false
     mobileAccountOpen.value = false
-
     mobileOpen.value = false
 
     notificationsOpen.value = false
@@ -520,19 +494,27 @@ const closeMenus = () => {
 const handleOutsideClick = event => {
     const target = event.target
 
-    if (!target.closest('[data-category-dropdown]')) {
-        categoriesOpen.value = false
-    }
-
-    if (!target.closest('[data-account-dropdown]')) {
+    if (
+        !target.closest(
+            '[data-account-dropdown]'
+        )
+    ) {
         accountOpen.value = false
     }
 
-    if (!target.closest('[data-notification-dropdown]')) {
+    if (
+        !target.closest(
+            '[data-notification-dropdown]'
+        )
+    ) {
         notificationsOpen.value = false
     }
 
-    if (!target.closest('[data-mobile-notification-dropdown]')) {
+    if (
+        !target.closest(
+            '[data-mobile-notification-dropdown]'
+        )
+    ) {
         mobileNotificationsOpen.value = false
     }
 }
@@ -570,7 +552,6 @@ onMounted(() => {
         handleEscape
     )
 })
-
 
 onUnmounted(() => {
     document.removeEventListener(
@@ -613,7 +594,12 @@ onUnmounted(() => {
                 <!-- ================================================= -->
 
                 <Link
-                    :href="safeRoute('buyer.dashboard', '/')"
+                    :href="
+                        safeRoute(
+                            'buyer.dashboard',
+                            '/'
+                        )
+                    "
                     class="flex shrink-0 items-center"
                     aria-label="Alona Home"
                 >
@@ -628,17 +614,15 @@ onUnmounted(() => {
 
 
                 <!-- ================================================= -->
-                <!-- DESKTOP SEARCH + CATEGORIES -->
+                <!-- DESKTOP SEARCH -->
                 <!-- ================================================= -->
 
                 <div
-                    class="hidden min-w-0 flex-1 items-center gap-2 md:flex"
+                    class="hidden min-w-0 flex-1 items-center md:flex"
                 >
 
-                    <!-- SEARCH -->
-
                     <form
-                        class="relative min-w-0 flex-1"
+                        class="relative min-w-0 w-full"
                         @submit.prevent="searchProducts"
                     >
 
@@ -672,213 +656,6 @@ onUnmounted(() => {
                         />
 
                     </form>
-
-
-                    <!-- ================================================= -->
-                    <!-- CATEGORIES -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="relative shrink-0"
-                        data-category-dropdown
-                    >
-
-                        <button
-                            type="button"
-                            class="flex h-11 items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-bold text-[#1F2937] transition hover:border-[#16A6A0] hover:bg-[#E8F7F6]"
-                            :class="{
-                                'border-[#16A6A0] bg-[#E8F7F6] text-[#087F8C]':
-                                    categoriesOpen
-                            }"
-                            @click.stop="
-                                categoriesOpen = !categoriesOpen;
-                                accountOpen = false;
-                                notificationsOpen = false
-                            "
-                        >
-
-                            <svg
-                                class="h-4 w-4 text-[#087F8C]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                            >
-
-                                <path
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                    stroke-linecap="round"
-                                />
-
-                            </svg>
-
-
-                            <span>
-                                Categories
-                            </span>
-
-
-                            <svg
-                                class="h-3.5 w-3.5 transition-transform duration-200"
-                                :class="{
-                                    'rotate-180': categoriesOpen
-                                }"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-
-                                <path
-                                    d="m6 9 6 6 6-6"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                />
-
-                            </svg>
-
-                        </button>
-
-
-                        <!-- CATEGORY DROPDOWN -->
-
-                        <Transition
-                            enter-active-class="transition duration-150 ease-out"
-                            enter-from-class="translate-y-1 opacity-0"
-                            enter-to-class="translate-y-0 opacity-100"
-                            leave-active-class="transition duration-100 ease-in"
-                            leave-from-class="translate-y-0 opacity-100"
-                            leave-to-class="translate-y-1 opacity-0"
-                        >
-
-                            <div
-                                v-if="categoriesOpen"
-                                class="absolute right-0 top-[calc(100%+10px)] z-50 w-[300px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-2 shadow-2xl shadow-black/10"
-                                @click.stop
-                            >
-
-                                <div
-                                    class="border-b border-[#E5E7EB] px-3 py-2.5"
-                                >
-
-                                    <p
-                                        class="text-[10px] font-black uppercase tracking-[0.18em] text-[#087F8C]"
-                                    >
-                                        Browse
-                                    </p>
-
-
-                                    <p
-                                        class="mt-0.5 text-xs text-[#64748B]"
-                                    >
-                                        Explore products by category
-                                    </p>
-
-                                </div>
-
-
-                                <div
-                                    v-if="categories.length"
-                                    class="max-h-[420px] overflow-y-auto py-1"
-                                >
-
-                                    <button
-                                        v-for="category in categories"
-                                        :key="
-                                            category.id ??
-                                            category.slug ??
-                                            category.name
-                                        "
-                                        type="button"
-                                        class="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-[#E8F7F6]"
-                                        @click="goToCategory(category)"
-                                    >
-
-                                        <span
-                                            class="flex min-w-0 items-center gap-3"
-                                        >
-
-                                            <span
-                                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                                            >
-
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-
-                                                    <path
-                                                        d="M4 6h16M4 12h16M4 18h16"
-                                                        stroke-linecap="round"
-                                                    />
-
-                                                </svg>
-
-                                            </span>
-
-
-                                            <span
-                                                class="min-w-0"
-                                            >
-
-                                                <span
-                                                    class="block truncate text-sm font-bold text-[#1F2937]"
-                                                >
-                                                    {{ category.name }}
-                                                </span>
-
-
-                                                <span
-                                                    class="block text-[10px] text-[#64748B]"
-                                                >
-                                                    {{
-                                                        category.products_count ??
-                                                        0
-                                                    }}
-                                                    products
-                                                </span>
-
-                                            </span>
-
-                                        </span>
-
-
-                                        <svg
-                                            class="h-4 w-4 shrink-0 text-[#94A3B8]"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-
-                                            <path
-                                                d="m9 18 6-6-6-6"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-
-                                        </svg>
-
-                                    </button>
-
-                                </div>
-
-
-                                <div
-                                    v-else
-                                    class="px-3 py-6 text-center text-xs text-[#64748B]"
-                                >
-                                    No categories available.
-                                </div>
-
-                            </div>
-
-                        </Transition>
-
-                    </div>
 
                 </div>
 
@@ -972,7 +749,11 @@ onUnmounted(() => {
                             v-if="cartCount > 0"
                             class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
                         >
-                            {{ cartCount > 99 ? '99+' : cartCount }}
+                            {{
+                                cartCount > 99
+                                    ? '99+'
+                                    : cartCount
+                            }}
                         </span>
 
                     </button>
@@ -992,8 +773,12 @@ onUnmounted(() => {
                             class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                             aria-label="Notifications"
                             title="Notifications"
-                            :aria-expanded="notificationsOpen"
-                            @click.stop="toggleNotifications"
+                            :aria-expanded="
+                                notificationsOpen
+                            "
+                            @click.stop="
+                                toggleNotifications
+                            "
                         >
 
                             <svg
@@ -1019,7 +804,9 @@ onUnmounted(() => {
 
 
                             <span
-                                v-if="notificationCount > 0"
+                                v-if="
+                                    notificationCount > 0
+                                "
                                 class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
                             >
                                 {{
@@ -1047,6 +834,8 @@ onUnmounted(() => {
                                 @click.stop
                             >
 
+                                <!-- NOTIFICATION HEADER -->
+
                                 <div
                                     class="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3"
                                 >
@@ -1069,10 +858,14 @@ onUnmounted(() => {
 
 
                                     <button
-                                        v-if="notificationCount > 0"
+                                        v-if="
+                                            notificationCount > 0
+                                        "
                                         type="button"
                                         class="text-[11px] font-bold text-[#087F8C] transition hover:text-[#065F6B]"
-                                        @click="markAllNotificationsRead"
+                                        @click="
+                                            markAllNotificationsRead
+                                        "
                                     >
                                         Mark all as read
                                     </button>
@@ -1080,18 +873,26 @@ onUnmounted(() => {
                                 </div>
 
 
+                                <!-- NOTIFICATION LIST -->
+
                                 <div
                                     class="max-h-[360px] overflow-y-auto"
                                 >
 
                                     <button
-                                        v-for="notification in notificationItems"
-                                        :key="notification.id"
+                                        v-for="
+                                            notification in notificationItems
+                                        "
+                                        :key="
+                                            notification.id
+                                        "
                                         type="button"
                                         class="flex w-full gap-3 border-b border-[#F1F5F9] px-4 py-3 text-left transition hover:bg-[#F8FAF9]"
                                         @click="
                                             notification.url
-                                                ? router.visit(notification.url)
+                                                ? router.visit(
+                                                    notification.url
+                                                )
                                                 : seeAllNotifications()
                                         "
                                     >
@@ -1113,23 +914,33 @@ onUnmounted(() => {
                                             <span
                                                 class="block text-xs font-extrabold text-[#1F2937]"
                                             >
-                                                {{ notification.title }}
+                                                {{
+                                                    notification.title
+                                                }}
                                             </span>
 
 
                                             <span
-                                                v-if="notification.message"
+                                                v-if="
+                                                    notification.message
+                                                "
                                                 class="mt-0.5 block line-clamp-2 text-[11px] leading-4 text-[#64748B]"
                                             >
-                                                {{ notification.message }}
+                                                {{
+                                                    notification.message
+                                                }}
                                             </span>
 
 
                                             <span
-                                                v-if="notification.createdAt"
+                                                v-if="
+                                                    notification.createdAt
+                                                "
                                                 class="mt-1 block text-[9px] text-[#94A3B8]"
                                             >
-                                                {{ notification.createdAt }}
+                                                {{
+                                                    notification.createdAt
+                                                }}
                                             </span>
 
                                         </span>
@@ -1137,8 +948,12 @@ onUnmounted(() => {
                                     </button>
 
 
+                                    <!-- EMPTY STATE -->
+
                                     <div
-                                        v-if="notificationItems.length === 0"
+                                        v-if="
+                                            notificationItems.length === 0
+                                        "
                                         class="px-4 py-8 text-center"
                                     >
 
@@ -1188,10 +1003,14 @@ onUnmounted(() => {
                                 </div>
 
 
+                                <!-- SEE ALL -->
+
                                 <button
                                     type="button"
                                     class="flex w-full items-center justify-center border-t border-[#E5E7EB] px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#F8FAF9]"
-                                    @click="seeAllNotifications"
+                                    @click="
+                                        seeAllNotifications
+                                    "
                                 >
                                     See all notifications
                                 </button>
@@ -1221,18 +1040,24 @@ onUnmounted(() => {
                             }"
                             aria-label="Account"
                             :aria-expanded="accountOpen"
-                            @click.stop="toggleAccount"
+                            @click.stop="
+                                toggleAccount
+                            "
                         >
 
-                            <!-- DESKTOP PROFILE PHOTO -->
+                            <!-- PROFILE PHOTO -->
 
                             <span
                                 class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-xs font-black text-[#087F8C]"
                             >
 
                                 <img
-                                    v-if="userProfilePhoto"
-                                    :src="userProfilePhoto"
+                                    v-if="
+                                        userProfilePhoto
+                                    "
+                                    :src="
+                                        userProfilePhoto
+                                    "
                                     :alt="`${userName} profile photo`"
                                     class="h-full w-full object-cover"
                                 />
@@ -1271,7 +1096,8 @@ onUnmounted(() => {
                             <svg
                                 class="hidden h-3.5 w-3.5 text-[#64748B] transition-transform duration-200 lg:block"
                                 :class="{
-                                    'rotate-180': accountOpen
+                                    'rotate-180':
+                                        accountOpen
                                 }"
                                 viewBox="0 0 24 24"
                                 fill="none"
@@ -1290,9 +1116,7 @@ onUnmounted(() => {
                         </button>
 
 
-                        <!-- ================================================= -->
                         <!-- ACCOUNT DROPDOWN -->
-                        <!-- ================================================= -->
 
                         <Transition
                             enter-active-class="transition duration-150 ease-out"
@@ -1319,15 +1143,17 @@ onUnmounted(() => {
                                         class="flex items-center gap-3"
                                     >
 
-                                        <!-- DROPDOWN PROFILE PHOTO -->
-
                                         <span
                                             class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-sm font-black text-[#087F8C]"
                                         >
 
                                             <img
-                                                v-if="userProfilePhoto"
-                                                :src="userProfilePhoto"
+                                                v-if="
+                                                    userProfilePhoto
+                                                "
+                                                :src="
+                                                    userProfilePhoto
+                                                "
                                                 :alt="`${userName} profile photo`"
                                                 class="h-full w-full object-cover"
                                             />
@@ -1378,7 +1204,9 @@ onUnmounted(() => {
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="goToDashboard"
+                                        @click="
+                                            goToDashboard
+                                        "
                                     >
 
                                         <span
@@ -1440,7 +1268,9 @@ onUnmounted(() => {
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="openProfile"
+                                        @click="
+                                            openProfile
+                                        "
                                     >
 
                                         <span
@@ -1481,7 +1311,9 @@ onUnmounted(() => {
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="openOrders"
+                                        @click="
+                                            openOrders
+                                        "
                                     >
 
                                         <span
@@ -1587,6 +1419,7 @@ onUnmounted(() => {
                         type="button"
                         class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Messages"
+                        title="Messages"
                         @click="openMessages"
                     >
 
@@ -1620,6 +1453,7 @@ onUnmounted(() => {
                         type="button"
                         class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Cart"
+                        title="Cart"
                         @click="openCart"
                     >
 
@@ -1656,7 +1490,11 @@ onUnmounted(() => {
                             v-if="cartCount > 0"
                             class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
                         >
-                            {{ cartCount > 99 ? '99+' : cartCount }}
+                            {{
+                                cartCount > 99
+                                    ? '99+'
+                                    : cartCount
+                            }}
                         </span>
 
                     </button>
@@ -1674,8 +1512,12 @@ onUnmounted(() => {
                             class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                             aria-label="Notifications"
                             title="Notifications"
-                            :aria-expanded="mobileNotificationsOpen"
-                            @click.stop="toggleMobileNotifications"
+                            :aria-expanded="
+                                mobileNotificationsOpen
+                            "
+                            @click.stop="
+                                toggleMobileNotifications
+                            "
                         >
 
                             <svg
@@ -1701,7 +1543,9 @@ onUnmounted(() => {
 
 
                             <span
-                                v-if="notificationCount > 0"
+                                v-if="
+                                    notificationCount > 0
+                                "
                                 class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
                             >
                                 {{
@@ -1724,10 +1568,14 @@ onUnmounted(() => {
                         >
 
                             <div
-                                v-if="mobileNotificationsOpen"
+                                v-if="
+                                    mobileNotificationsOpen
+                                "
                                 class="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(360px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
                                 @click.stop
                             >
+
+                                <!-- HEADER -->
 
                                 <div
                                     class="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3"
@@ -1751,10 +1599,14 @@ onUnmounted(() => {
 
 
                                     <button
-                                        v-if="notificationCount > 0"
+                                        v-if="
+                                            notificationCount > 0
+                                        "
                                         type="button"
                                         class="text-[11px] font-bold text-[#087F8C] transition hover:text-[#065F6B]"
-                                        @click="markAllNotificationsRead"
+                                        @click="
+                                            markAllNotificationsRead
+                                        "
                                     >
                                         Mark all as read
                                     </button>
@@ -1762,18 +1614,26 @@ onUnmounted(() => {
                                 </div>
 
 
+                                <!-- LIST -->
+
                                 <div
                                     class="max-h-[360px] overflow-y-auto"
                                 >
 
                                     <button
-                                        v-for="notification in notificationItems"
-                                        :key="notification.id"
+                                        v-for="
+                                            notification in notificationItems
+                                        "
+                                        :key="
+                                            notification.id
+                                        "
                                         type="button"
                                         class="flex w-full gap-3 border-b border-[#F1F5F9] px-4 py-3 text-left transition hover:bg-[#F8FAF9]"
                                         @click="
                                             notification.url
-                                                ? router.visit(notification.url)
+                                                ? router.visit(
+                                                    notification.url
+                                                )
                                                 : seeAllNotifications()
                                         "
                                     >
@@ -1795,23 +1655,33 @@ onUnmounted(() => {
                                             <span
                                                 class="block text-xs font-extrabold text-[#1F2937]"
                                             >
-                                                {{ notification.title }}
+                                                {{
+                                                    notification.title
+                                                }}
                                             </span>
 
 
                                             <span
-                                                v-if="notification.message"
+                                                v-if="
+                                                    notification.message
+                                                "
                                                 class="mt-0.5 block line-clamp-2 text-[11px] leading-4 text-[#64748B]"
                                             >
-                                                {{ notification.message }}
+                                                {{
+                                                    notification.message
+                                                }}
                                             </span>
 
 
                                             <span
-                                                v-if="notification.createdAt"
+                                                v-if="
+                                                    notification.createdAt
+                                                "
                                                 class="mt-1 block text-[9px] text-[#94A3B8]"
                                             >
-                                                {{ notification.createdAt }}
+                                                {{
+                                                    notification.createdAt
+                                                }}
                                             </span>
 
                                         </span>
@@ -1819,8 +1689,12 @@ onUnmounted(() => {
                                     </button>
 
 
+                                    <!-- EMPTY -->
+
                                     <div
-                                        v-if="notificationItems.length === 0"
+                                        v-if="
+                                            notificationItems.length === 0
+                                        "
                                         class="px-4 py-8 text-center"
                                     >
 
@@ -1841,10 +1715,14 @@ onUnmounted(() => {
                                 </div>
 
 
+                                <!-- SEE ALL -->
+
                                 <button
                                     type="button"
                                     class="flex w-full items-center justify-center border-t border-[#E5E7EB] px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#F8FAF9]"
-                                    @click="seeAllNotifications"
+                                    @click="
+                                        seeAllNotifications
+                                    "
                                 >
                                     See all notifications
                                 </button>
@@ -1857,7 +1735,7 @@ onUnmounted(() => {
 
 
                     <!-- ================================================= -->
-                    <!-- MOBILE MENU -->
+                    <!-- MOBILE MENU BUTTON -->
                     <!-- ================================================= -->
 
                     <button
@@ -1930,11 +1808,15 @@ onUnmounted(() => {
                         class="mx-auto max-h-[calc(100vh-78px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6"
                     >
 
+                        <!-- ================================================= -->
                         <!-- MOBILE SEARCH -->
+                        <!-- ================================================= -->
 
                         <form
                             class="relative"
-                            @submit.prevent="searchProducts"
+                            @submit.prevent="
+                                searchProducts
+                            "
                         >
 
                             <svg
@@ -1970,190 +1852,6 @@ onUnmounted(() => {
 
 
                         <!-- ================================================= -->
-                        <!-- MOBILE CATEGORIES -->
-                        <!-- ================================================= -->
-
-                        <div
-                            class="mt-3 overflow-hidden rounded-2xl border border-[#E5E7EB]"
-                        >
-
-                            <button
-                                type="button"
-                                class="flex min-h-[52px] w-full items-center justify-between px-4 text-sm font-extrabold text-[#1F2937] transition hover:bg-[#E8F7F6]"
-                                :class="{
-                                    'bg-[#E8F7F6] text-[#087F8C]':
-                                        mobileCategoriesOpen
-                                }"
-                                @click="
-                                    mobileCategoriesOpen =
-                                        !mobileCategoriesOpen
-                                "
-                            >
-
-                                <span
-                                    class="flex items-center gap-3"
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M4 6h16M4 12h16M4 18h16"
-                                                stroke-linecap="round"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
-                                    Categories
-
-                                </span>
-
-
-                                <svg
-                                    class="h-4 w-4 transition-transform duration-200"
-                                    :class="{
-                                        'rotate-180':
-                                            mobileCategoriesOpen
-                                    }"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-
-                                    <path
-                                        d="m6 9 6 6 6-6"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    />
-
-                                </svg>
-
-                            </button>
-
-
-                            <!-- CATEGORY LIST -->
-
-                            <div
-                                v-if="mobileCategoriesOpen"
-                                class="border-t border-[#E5E7EB] bg-[#F8FAF9] p-2"
-                            >
-
-                                <div
-                                    v-if="categories.length"
-                                    class="max-h-[60vh] overflow-y-auto"
-                                >
-
-                                    <button
-                                        v-for="category in categories"
-                                        :key="
-                                            category.id ??
-                                            category.slug ??
-                                            category.name
-                                        "
-                                        type="button"
-                                        class="flex min-h-[48px] w-full items-center justify-between rounded-xl px-3 py-2 text-left transition active:bg-[#E8F7F6] hover:bg-[#E8F7F6]"
-                                        @click="goToCategory(category)"
-                                    >
-
-                                        <span
-                                            class="flex min-w-0 items-center gap-3"
-                                        >
-
-                                            <span
-                                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#087F8C] shadow-sm"
-                                            >
-
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-
-                                                    <path
-                                                        d="M4 6h16M4 12h16M4 18h16"
-                                                        stroke-linecap="round"
-                                                    />
-
-                                                </svg>
-
-                                            </span>
-
-
-                                            <span
-                                                class="min-w-0"
-                                            >
-
-                                                <span
-                                                    class="block truncate text-sm font-bold text-[#1F2937]"
-                                                >
-                                                    {{ category.name }}
-                                                </span>
-
-
-                                                <span
-                                                    class="block text-[10px] text-[#64748B]"
-                                                >
-                                                    {{
-                                                        category.products_count ??
-                                                        0
-                                                    }}
-                                                    products
-                                                </span>
-
-                                            </span>
-
-                                        </span>
-
-
-                                        <svg
-                                            class="h-4 w-4 shrink-0 text-[#94A3B8]"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-
-                                            <path
-                                                d="m9 18 6-6-6-6"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-
-                                        </svg>
-
-                                    </button>
-
-                                </div>
-
-
-                                <div
-                                    v-else
-                                    class="px-3 py-5 text-center text-xs text-[#64748B]"
-                                >
-                                    No categories available.
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- ================================================= -->
                         <!-- MOBILE ACCOUNT -->
                         <!-- ================================================= -->
 
@@ -2168,22 +1866,28 @@ onUnmounted(() => {
                                     'bg-[#E8F7F6]':
                                         mobileAccountOpen
                                 }"
-                                @click="toggleMobileAccount"
+                                @click="
+                                    toggleMobileAccount
+                                "
                             >
 
                                 <span
                                     class="flex min-w-0 items-center gap-3"
                                 >
 
-                                    <!-- MOBILE PROFILE PHOTO -->
+                                    <!-- PROFILE PHOTO -->
 
                                     <span
                                         class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-sm font-black text-[#087F8C]"
                                     >
 
                                         <img
-                                            v-if="userProfilePhoto"
-                                            :src="userProfilePhoto"
+                                            v-if="
+                                                userProfilePhoto
+                                            "
+                                            :src="
+                                                userProfilePhoto
+                                            "
                                             :alt="`${userName} profile photo`"
                                             class="h-full w-full object-cover"
                                         />
@@ -2247,7 +1951,9 @@ onUnmounted(() => {
                             <!-- MOBILE ACCOUNT LINKS -->
 
                             <div
-                                v-if="mobileAccountOpen"
+                                v-if="
+                                    mobileAccountOpen
+                                "
                                 class="border-t border-[#E5E7EB] bg-[#F8FAF9] p-2"
                             >
 
@@ -2256,7 +1962,9 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="goToDashboard"
+                                    @click="
+                                        goToDashboard
+                                    "
                                 >
 
                                     <span
@@ -2318,7 +2026,9 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="openProfile"
+                                    @click="
+                                        openProfile
+                                    "
                                 >
 
                                     <span
@@ -2359,7 +2069,9 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="openOrders"
+                                    @click="
+                                        openOrders
+                                    "
                                 >
 
                                     <span
@@ -2475,7 +2187,12 @@ onUnmounted(() => {
                 >
 
                     <Link
-                        :href="safeRoute('buyer.dashboard', '/')"
+                        :href="
+                            safeRoute(
+                                'buyer.dashboard',
+                                '/'
+                            )
+                        "
                         class="inline-flex"
                     >
 
@@ -2514,7 +2231,11 @@ onUnmounted(() => {
                     >
 
                         <Link
-                            :href="safeRoute('buyer.products')"
+                            :href="
+                                safeRoute(
+                                    'buyer.products'
+                                )
+                            "
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
                             All products
@@ -2522,7 +2243,11 @@ onUnmounted(() => {
 
 
                         <Link
-                            :href="safeRoute('buyer.categories')"
+                            :href="
+                                safeRoute(
+                                    'buyer.categories'
+                                )
+                            "
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
                             Categories
@@ -2530,7 +2255,11 @@ onUnmounted(() => {
 
 
                         <Link
-                            :href="safeRoute('buyer.cart')"
+                            :href="
+                                safeRoute(
+                                    'buyer.cart'
+                                )
+                            "
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
                             Cart
@@ -2557,7 +2286,12 @@ onUnmounted(() => {
                     >
 
                         <Link
-                            :href="safeRoute('buyer.conversations', '#')"
+                            :href="
+                                safeRoute(
+                                    'buyer.conversations',
+                                    '#'
+                                )
+                            "
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
                             Messages
@@ -2606,7 +2340,9 @@ onUnmounted(() => {
                     <button
                         type="button"
                         class="mt-4 inline-flex rounded-xl bg-[#E8F7F6] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
-                        @click="goToDashboard"
+                        @click="
+                            goToDashboard
+                        "
                     >
                         My dashboard
                     </button>
