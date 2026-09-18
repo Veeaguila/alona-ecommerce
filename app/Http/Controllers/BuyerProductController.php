@@ -11,6 +11,9 @@ use Inertia\Response;
 
 class BuyerProductController extends Controller
 {
+    /**
+     * Display the buyer product listing.
+     */
     public function index(Request $request): Response
     {
         $search = trim((string) $request->input('search', ''));
@@ -21,6 +24,12 @@ class BuyerProductController extends Controller
         $products = Product::query()
             ->with('category:id,name,slug')
             ->where('status', 'approved')
+
+            /*
+             |--------------------------------------------------------------------------
+             | Search
+             |--------------------------------------------------------------------------
+             */
             ->when(
                 $search !== '',
                 fn ($query) => $query->where(function ($query) use ($search) {
@@ -29,6 +38,12 @@ class BuyerProductController extends Controller
                         ->orWhere('description', 'like', "%{$search}%");
                 })
             )
+
+            /*
+             |--------------------------------------------------------------------------
+             | Category
+             |--------------------------------------------------------------------------
+             */
             ->when(
                 $category !== 'all',
                 fn ($query) => $query->whereHas(
@@ -39,6 +54,12 @@ class BuyerProductController extends Controller
                     )
                 )
             )
+
+            /*
+             |--------------------------------------------------------------------------
+             | Maximum Price
+             |--------------------------------------------------------------------------
+             */
             ->when(
                 is_numeric($maxPrice),
                 fn ($query) => $query->where(
@@ -48,6 +69,11 @@ class BuyerProductController extends Controller
                 )
             );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Sorting
+        |--------------------------------------------------------------------------
+        */
         switch ($sort) {
             case 'price-low':
                 $products->orderBy('price', 'asc');
@@ -92,8 +118,16 @@ class BuyerProductController extends Controller
         ]);
     }
 
+    /**
+     * Display a single approved product.
+     */
     public function show(Product $product): Response
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Only approved products can be viewed.
+        |--------------------------------------------------------------------------
+        */
         abort_unless(
             $product->status === 'approved',
             404
@@ -101,39 +135,43 @@ class BuyerProductController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Recently Viewed
+        | Recently Viewed Products
         |--------------------------------------------------------------------------
         |
         | Only authenticated buyers are recorded.
-        | Guests can still browse product pages normally.
         |
+        | IMPORTANT:
+        | The application uses "usertype" in the users table,
+        | not "role".
+        |
+        | updateOrCreate() ensures:
+        |
+        | - First view  = create record
+        | - Repeat view = update viewed_at
+        | - No duplicate user/product records
+        |
+        |--------------------------------------------------------------------------
         */
-
         if (
             auth()->check() &&
-            auth()->user()->role === 'buyer'
+            auth()->user()->usertype === 'buyer'
         ) {
-            $recentlyViewed = RecentlyViewedProduct::query()
-                ->where('user_id', auth()->id())
-                ->where('product_id', $product->id)
-                ->first();
-
-            if ($recentlyViewed) {
-                /*
-                 * Move the existing record to the newest position.
-                 */
-                $recentlyViewed->update([
-                    'viewed_at' => now(),
-                ]);
-            } else {
-                RecentlyViewedProduct::create([
+            RecentlyViewedProduct::updateOrCreate(
+                [
                     'user_id' => auth()->id(),
                     'product_id' => $product->id,
+                ],
+                [
                     'viewed_at' => now(),
-                ]);
-            }
+                ]
+            );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Load Product Relationships
+        |--------------------------------------------------------------------------
+        */
         $product->load([
             'category:id,name,slug',
 
@@ -141,11 +179,11 @@ class BuyerProductController extends Controller
 
             'variants:id,product_id,color,size,stock',
 
-            'reviews' => fn ($q) => $q
+            'reviews' => fn ($query) => $query
                 ->with('user:id,name')
                 ->latest(),
 
-            'questions' => fn ($q) => $q
+            'questions' => fn ($query) => $query
                 ->where('is_public', true)
                 ->whereNotNull('answer')
                 ->with([
@@ -156,25 +194,31 @@ class BuyerProductController extends Controller
                 ->limit(5),
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Seller Statistics
+        |--------------------------------------------------------------------------
+        */
+        $sellerStats = [
+            'total_products' => Product::where(
+                'seller_id',
+                $product->seller_id
+            )
+                ->where('status', 'approved')
+                ->count(),
+
+            'avg_rating' => Product::where(
+                'seller_id',
+                $product->seller_id
+            )
+                ->where('status', 'approved')
+                ->whereNotNull('rating')
+                ->avg('rating'),
+        ];
+
         return Inertia::render('Buyer/Show', [
             'product' => $product,
-
-            'sellerStats' => [
-                'total_products' => Product::where(
-                    'seller_id',
-                    $product->seller_id
-                )
-                    ->where('status', 'approved')
-                    ->count(),
-
-                'avg_rating' => Product::where(
-                    'seller_id',
-                    $product->seller_id
-                )
-                    ->where('status', 'approved')
-                    ->whereNotNull('rating')
-                    ->avg('rating'),
-            ],
+            'sellerStats' => $sellerStats,
         ]);
     }
 }

@@ -283,41 +283,76 @@ Route::get('/buyer/categories', [
 Route::get('/buyer', function () {
     $user = auth()->user();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Recently Viewed Products
+    |--------------------------------------------------------------------------
+    |
+    | Get the latest 6 approved products viewed by this buyer.
+    |
+    |--------------------------------------------------------------------------
+    */
+
     $recentlyViewedProducts = \App\Models\RecentlyViewedProduct::query()
         ->where('user_id', $user->id)
+
         ->whereHas('product', function ($query) {
             $query->where('status', 'approved');
         })
+
         ->with([
             'product' => function ($query) {
                 $query
+                    ->where('status', 'approved')
+
                     ->with([
                         'category:id,name,slug',
+
                         'images:id,product_id,image_path,sort_order',
-                    ])
-                    ->where('status', 'approved');
+                    ]);
             },
         ])
+
         ->orderByDesc('viewed_at')
+
         ->take(6)
+
         ->get()
+
         ->map(function ($recentlyViewed) {
             $product = $recentlyViewed->product;
 
+            /*
+            |--------------------------------------------------------------------------
+            | Skip deleted / unavailable products
+            |--------------------------------------------------------------------------
+            */
             if (!$product) {
                 return null;
             }
 
             return [
                 'id' => $product->id,
+
                 'name' => $product->name,
+
                 'slug' => $product->slug,
+
                 'price' => $product->price,
+
                 'old_price' => $product->old_price,
+
                 'rating' => $product->rating,
+
                 'reviews_count' => $product->reviews_count,
+
                 'image_path' => $product->image_path,
 
+                /*
+                |--------------------------------------------------------------------------
+                | Category
+                |--------------------------------------------------------------------------
+                */
                 'category' => $product->category
                     ? [
                         'id' => $product->category->id,
@@ -326,52 +361,95 @@ Route::get('/buyer', function () {
                     ]
                     : null,
 
+                /*
+                |--------------------------------------------------------------------------
+                | Additional Product Images
+                |--------------------------------------------------------------------------
+                */
                 'images' => $product->images
                     ->map(fn ($image) => [
                         'id' => $image->id,
+
                         'image_path' => $image->image_path,
+
                         'sort_order' => $image->sort_order,
                     ])
                     ->values()
                     ->all(),
 
-                'viewed_at' => $recentlyViewed->viewed_at?->toISOString(),
+                /*
+                |--------------------------------------------------------------------------
+                | When the product was viewed
+                |--------------------------------------------------------------------------
+                */
+                'viewed_at' => $recentlyViewed->viewed_at
+                    ?->toISOString(),
             ];
         })
+
         ->filter()
+
         ->values()
+
         ->all();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard
+    |--------------------------------------------------------------------------
+    */
+
     return Inertia::render('Buyer/Dashboard', [
-        'categories' => \App\Models\Category::where(
-            'is_active',
-            true
-        )
+        /*
+        |--------------------------------------------------------------------------
+        | Categories
+        |--------------------------------------------------------------------------
+        */
+        'categories' => \App\Models\Category::query()
+            ->where('is_active', true)
+
             ->withCount([
                 'products' => fn ($query) =>
                     $query->where('status', 'approved'),
             ])
+
             ->orderBy('name')
+
             ->get([
                 'id',
                 'name',
                 'slug',
             ]),
 
-        'products' => \App\Models\Product::with(
-            'category:id,name'
-        )
+        /*
+        |--------------------------------------------------------------------------
+        | Latest Products
+        |--------------------------------------------------------------------------
+        */
+        'products' => \App\Models\Product::query()
+            ->with('category:id,name')
+
             ->where('status', 'approved')
+
             ->latest()
+
             ->take(4)
+
             ->get(),
 
+        /*
+        |--------------------------------------------------------------------------
+        | Recently Viewed
+        |--------------------------------------------------------------------------
+        */
         'recentlyViewedProducts' => $recentlyViewedProducts,
     ]);
-})->middleware([
-    'auth',
-    'buyer',
-])->name('buyer.dashboard');
+})
+    ->middleware([
+        'auth',
+        'buyer',
+    ])
+    ->name('buyer.dashboard');
 
 
 /*
