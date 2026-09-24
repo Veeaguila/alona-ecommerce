@@ -35,11 +35,19 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google OAuth
+    |--------------------------------------------------------------------------
+    */
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
-        'verify' => env('GOOGLE_CA_BUNDLE') ?: env('GOOGLE_VERIFY_SSL', true),
+
+        // Keep SSL certificate verification enabled.
+        'verify' => env('GOOGLE_VERIFY_SSL', true),
     ],
 
 ];

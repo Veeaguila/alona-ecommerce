@@ -10,28 +10,48 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
+    /**
+     * Redirect the user to Google for authentication.
+     */
     public function redirect()
     {
         return $this->googleDriver()->redirect();
     }
 
+    /**
+     * Handle Google's callback.
+     */
     public function callback()
     {
         $googleUser = $this->googleDriver()->user();
 
-        $user = User::firstOrCreate(
-            ['email' => $googleUser->getEmail()],
-            [
-                'name' => $googleUser->getName(),
+        $email = $googleUser->getEmail();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Find existing user or create a new buyer
+        |--------------------------------------------------------------------------
+        */
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            $user = User::create([
+                'name' => $googleUser->getName() ?: 'Google User',
+                'email' => $email,
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
                 'usertype' => 'buyer',
                 'status' => 'approved',
-                'password' => bcrypt(str()->random(24)),
-            ]
-        );
+                'password' => bcrypt(str()->random(32)),
+            ]);
+        } else {
+            /*
+            |--------------------------------------------------------------------------
+            | Update existing Google information
+            |--------------------------------------------------------------------------
+            */
 
-        if (! $user->wasRecentlyCreated) {
             $user->update([
                 'name' => $googleUser->getName() ?: $user->name,
                 'google_id' => $googleUser->getId(),
@@ -39,21 +59,38 @@ class GoogleController extends Controller
             ]);
         }
 
-        Auth::login($user);
+        /*
+        |--------------------------------------------------------------------------
+        | Login the user
+        |--------------------------------------------------------------------------
+        */
+
+        Auth::login($user, true);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect based on user type
+        |--------------------------------------------------------------------------
+        */
 
         $destination = match ($user->usertype) {
-            'seller' => 'seller.dashboard',
             'admin' => 'admin.dashboard',
+            'seller' => 'seller.dashboard',
+            'buyer' => 'buyer.dashboard',
             default => 'buyer.dashboard',
         };
 
         return redirect()->route($destination);
     }
 
+    /**
+     * Create the Google Socialite driver.
+     */
     private function googleDriver()
     {
-        return Socialite::driver('google')->setHttpClient(new Client([
-            'verify' => config('services.google.verify', true),
-        ]));
+        return Socialite::driver('google')
+            ->setHttpClient(new Client([
+                'verify' => config('services.google.verify', true),
+            ]));
     }
 }
