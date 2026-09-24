@@ -958,14 +958,14 @@ const submitRegister = () => {
             },
 
             onError: (errors) => {
-                console.error(
-                    'Registration validation errors:',
-                    errors
-                )
+            console.error(
+                'Registration validation errors:',
+                JSON.stringify(errors, null, 2)
+            )
 
-                stepError.value =
-                    'Please correct the highlighted fields and try again.'
-            },
+            stepError.value =
+                'Please correct the highlighted fields and try again.'
+        },
 
             onSuccess: () => {
                 registrationSuccess.value =
