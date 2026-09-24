@@ -437,7 +437,9 @@ const isSeller = computed(() => {
     return registrationType.value === 'seller'
 })
 
-const totalSteps = computed(() => 4)
+const totalSteps = computed(() => {
+    return isSeller.value ? 4 : 3
+})
 
 const stepTitle = computed(() => {
     if (registrationStep.value === 1) {
@@ -452,9 +454,7 @@ const stepTitle = computed(() => {
         return 'Address'
     }
 
-    return isSeller.value
-        ? 'Store information'
-        : 'Verification'
+    return 'Store information'
 })
 
 const stepDescription = computed(() => {
@@ -470,9 +470,7 @@ const stepDescription = computed(() => {
         return 'Enter your complete delivery address.'
     }
 
-    return isSeller.value
-        ? 'Provide your store and verification information.'
-        : 'Upload an identification document to complete registration.'
+    return 'Provide your store and required verification information.'
 })
 
 /*
@@ -832,19 +830,6 @@ const validateCurrentStep = () => {
 
             return false
         }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | STEP 4 BUYER
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        registrationStep.value === 4 &&
-        !isSeller.value
-    ) {
-        return true
     }
 
     return true
@@ -2041,96 +2026,6 @@ watch(
                                         {{ registerForm.barangay }},
                                         {{ registerForm.municipality }},
                                         {{ registerForm.province }}
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                            <!-- ================================================= -->
-                            <!-- STEP 4 BUYER -->
-                            <!-- ================================================= -->
-
-                            <div
-                                v-else-if="
-                                    registrationStep === 4 &&
-                                    !isSeller
-                                "
-                                class="space-y-5"
-                            >
-
-                                <div
-                                    class="rounded-xl bg-[#E8F7F6] p-4"
-                                >
-
-                                    <h3
-                                        class="font-semibold text-[#087F8C]"
-                                    >
-                                        Identity verification
-                                    </h3>
-
-                                    <p
-                                        class="mt-1 text-sm leading-5 text-[#64748B]"
-                                    >
-                                        Upload a valid identification document.
-                                        Your registration will be reviewed by an administrator.
-                                    </p>
-
-                                </div>
-
-                                <!-- ID -->
-
-                                <div>
-
-                                    <label
-                                        for="register-id"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Valid ID
-                                        <span class="text-[#94A3B8]">
-                                            (optional)
-                                        </span>
-                                    </label>
-
-                                    <input
-                                        id="register-id"
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        @change="handleIdUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
-                                    />
-
-                                    <p
-                                        class="mt-1 text-xs text-[#94A3B8]"
-                                    >
-                                        JPG, JPEG, PNG, or PDF. Maximum 5 MB.
-                                    </p>
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.id"
-                                    />
-
-                                </div>
-
-                                <div
-                                    class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 text-sm text-[#64748B]"
-                                >
-
-                                    <p
-                                        class="font-medium text-[#1F2937]"
-                                    >
-                                        Registration review
-                                    </p>
-
-                                    <p
-                                        class="mt-1 leading-5"
-                                    >
-                                        Your account will be created with
-                                        <strong class="text-[#087F8C]">
-                                            pending
-                                        </strong>
-                                        status and will require administrator approval.
                                     </p>
 
                                 </div>
