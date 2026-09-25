@@ -74,12 +74,6 @@ class BuyerOrderController extends Controller
             ->whereIn('id', $selectedIds)
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Validate checkout products
-        |--------------------------------------------------------------------------
-        */
-
         foreach ($items as $item) {
             if (!$item->product) {
                 continue;
@@ -128,25 +122,6 @@ class BuyerOrderController extends Controller
             404
         );
 
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT
-        |--------------------------------------------------------------------------
-        |
-        | statusHistories() belongs to OrderItem.
-        |
-        | Therefore we load it through:
-        |
-        | items.statusHistories
-        |
-        | We do NOT use:
-        |
-        | statusHistories
-        |
-        | directly on Order.
-        |
-        */
-
         $order->load([
             'items.product.category',
             'items.variant',
@@ -166,9 +141,6 @@ class BuyerOrderController extends Controller
 
     /**
      * Validate a voucher from the checkout page.
-     *
-     * This endpoint is used by the buyer frontend before placing
-     * the actual order.
      */
     public function validateVoucher(
         Request $request
@@ -202,12 +174,6 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Load buyer-owned selected cart items
-        |--------------------------------------------------------------------------
-        */
-
         $items = $request->user()
             ->cartItems()
             ->with([
@@ -223,12 +189,6 @@ class BuyerOrderController extends Controller
                 'message' => 'Some selected cart items are invalid.',
             ], 422);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validate products
-        |--------------------------------------------------------------------------
-        */
 
         foreach ($items as $item) {
             if (!$item->product) {
@@ -258,12 +218,6 @@ class BuyerOrderController extends Controller
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Find voucher
-        |--------------------------------------------------------------------------
-        */
-
         $voucherCode = strtoupper(
             trim($data['voucher_code'])
         );
@@ -282,12 +236,6 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Active status
-        |--------------------------------------------------------------------------
-        */
-
         if (
             Schema::hasColumn('vouchers', 'is_active') &&
             !$voucher->is_active
@@ -297,12 +245,6 @@ class BuyerOrderController extends Controller
                 'message' => 'This voucher is no longer active.',
             ], 422);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | START DATE
-        |--------------------------------------------------------------------------
-        */
 
         if (
             Schema::hasColumn('vouchers', 'starts_at') &&
@@ -323,12 +265,6 @@ class BuyerOrderController extends Controller
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | EXPIRATION DATE
-        |--------------------------------------------------------------------------
-        */
-
         if (
             Schema::hasColumn('vouchers', 'expires_at') &&
             $voucher->expires_at
@@ -347,12 +283,6 @@ class BuyerOrderController extends Controller
                 ], 422);
             }
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | USAGE LIMIT
-        |--------------------------------------------------------------------------
-        */
 
         if (
             Schema::hasColumn('vouchers', 'usage_limit') &&
@@ -375,12 +305,6 @@ class BuyerOrderController extends Controller
                 ], 422);
             }
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | SELLER-SPECIFIC VOUCHER
-        |--------------------------------------------------------------------------
-        */
 
         $eligibleItems = $items->filter(
             function ($item) use ($voucher) {
@@ -410,12 +334,6 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | ELIGIBLE SUBTOTAL
-        |--------------------------------------------------------------------------
-        */
-
         $eligibleSubtotal = $eligibleItems->sum(
             function ($item) {
                 return $this->itemPrice($item) *
@@ -430,12 +348,6 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | MINIMUM SPEND
-        |--------------------------------------------------------------------------
-        */
-
         if (
             Schema::hasColumn(
                 'vouchers',
@@ -443,7 +355,7 @@ class BuyerOrderController extends Controller
             ) &&
             $voucher->min_spend !== null &&
             $eligibleSubtotal <
-                (float) $voucher->min_spend
+            (float) $voucher->min_spend
         ) {
             return response()->json([
                 'valid' => false,
@@ -456,12 +368,6 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | CALCULATE DISCOUNT
-        |--------------------------------------------------------------------------
-        */
-
         $discount = $this->calculateVoucherDiscount(
             $voucher,
             $eligibleSubtotal
@@ -473,12 +379,6 @@ class BuyerOrderController extends Controller
                 'message' => 'This voucher does not provide a valid discount.',
             ], 422);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | SUCCESS
-        |--------------------------------------------------------------------------
-        */
 
         return response()->json([
             'valid' => true,
@@ -562,7 +462,6 @@ class BuyerOrderController extends Controller
 
         $order = DB::transaction(
             function () use (
-                $request,
                 $user,
                 $data,
                 $selectedIds
@@ -917,23 +816,28 @@ class BuyerOrderController extends Controller
                 |--------------------------------------------------------------------------
                 | Create order
                 |--------------------------------------------------------------------------
+                |
+                | IMPORTANT:
+                | order_number is explicitly generated here.
+                | This fixes the MySQL error:
+                |
+                | Field 'order_number' doesn't have a default value
+                |
                 */
 
-                $orderData = [
-                    'user_id' => $user->id,
+                $orderNumber = $this->generateOrderNumber();
 
-                    'shipping_address' =>
-                        $data['shipping_address'],
+                $order = new Order();
 
-                    'payment_method' =>
-                        $data['payment_method'],
-
-                    'subtotal' => $subtotal,
-
-                    'total' => $total,
-
-                    'status' => 'pending',
-                ];
+                $order->order_number = $orderNumber;
+                $order->user_id = $user->id;
+                $order->shipping_address =
+                    $data['shipping_address'];
+                $order->payment_method =
+                    $data['payment_method'];
+                $order->subtotal = $subtotal;
+                $order->total = $total;
+                $order->status = 'pending';
 
                 /*
                 |--------------------------------------------------------------------------
@@ -948,7 +852,7 @@ class BuyerOrderController extends Controller
                         'voucher_id'
                     )
                 ) {
-                    $orderData['voucher_id'] =
+                    $order->voucher_id =
                         $voucher->id;
                 }
 
@@ -959,7 +863,7 @@ class BuyerOrderController extends Controller
                         'voucher_code'
                     )
                 ) {
-                    $orderData['voucher_code'] =
+                    $order->voucher_code =
                         $voucher->code;
                 }
 
@@ -969,13 +873,11 @@ class BuyerOrderController extends Controller
                         'discount'
                     )
                 ) {
-                    $orderData['discount'] =
+                    $order->discount =
                         $discount;
                 }
 
-                $order = Order::create(
-                    $orderData
-                );
+                $order->save();
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1252,6 +1154,33 @@ class BuyerOrderController extends Controller
     | HELPERS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Generate a unique order number.
+     *
+     * Example:
+     * ALN-20260925-583214
+     */
+    private function generateOrderNumber(): string
+    {
+        do {
+            $orderNumber =
+                'ALN-' .
+                now()->format('Ymd') .
+                '-' .
+                random_int(100000, 999999);
+
+        } while (
+            Order::query()
+                ->where(
+                    'order_number',
+                    $orderNumber
+                )
+                ->exists()
+        );
+
+        return $orderNumber;
+    }
 
     /**
      * Normalize selected cart IDs.
@@ -1778,12 +1707,6 @@ class BuyerOrderController extends Controller
                 now();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Do not insert if required user_id/seller_id cannot be supplied
-        |--------------------------------------------------------------------------
-        */
-
         if (
             in_array(
                 'user_id',
@@ -1822,22 +1745,10 @@ class BuyerOrderController extends Controller
             return;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Determine current stock
-        |--------------------------------------------------------------------------
-        */
-
         $stock =
             $this->stockForProduct(
                 $product
             );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Only notify at low stock
-        |--------------------------------------------------------------------------
-        */
 
         if (
             $stock > 5

@@ -133,7 +133,7 @@ const getStyle = slug => categoryStyles[slug] ?? defaultStyle
                         </svg>
                     </span>
 
-                    <!-- NAME -->
+                    <!-- NAME ONLY -->
                     <h2
                         class="mt-4 text-sm font-semibold text-gray-900 transition group-hover:text-[#087F8C]"
                     >
