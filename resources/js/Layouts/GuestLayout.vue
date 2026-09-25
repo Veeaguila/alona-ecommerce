@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 
@@ -7,65 +7,120 @@ const page = usePage()
 
 const mobileOpen = ref(false)
 const searchQuery = ref('')
-
 const authModalOpen = ref(false)
 const authModalMode = ref('login')
 
 const user = computed(() => page.props.auth?.user ?? null)
-
 const isLoggedIn = computed(() => !!user.value)
 
-const userType = computed(() =>
-    user.value?.usertype ?? user.value?.role ?? null
-)
+const buyerCounts = computed(() => page.props.buyerCounts ?? {})
 
-const dashboardRoute = computed(() => {
-    if (userType.value === 'admin') {
-        return 'admin.dashboard'
-    }
-
-    if (userType.value === 'seller') {
-        return 'seller.dashboard'
-    }
-
-    return 'buyer.dashboard'
-})
-
-const categories = computed(() =>
-    Array.isArray(page.props.categories)
-        ? page.props.categories
-        : []
+const cartCount = computed(() =>
+    Number(
+        buyerCounts.value.cart ??
+        buyerCounts.value.cart_count ??
+        0
+    )
 )
 
 const safeRoute = (name, fallback = '#') => {
     try {
         return route(name)
-    } catch (e) {
+    } catch (error) {
         return fallback
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| MOBILE MENU
+|--------------------------------------------------------------------------
+*/
+
+const openMobileMenu = () => {
+    mobileOpen.value = true
+}
+
+const closeMobileMenu = () => {
+    mobileOpen.value = false
+}
+
+const toggleMobileMenu = event => {
+    event?.stopPropagation()
+
+    mobileOpen.value = !mobileOpen.value
+}
+
+/*
+|--------------------------------------------------------------------------
+| AUTH MODAL
+|--------------------------------------------------------------------------
+*/
+
+const openAuthModal = mode => {
+    authModalMode.value = mode
+    authModalOpen.value = true
+    closeMobileMenu()
+}
+
+const closeAuthModal = () => {
+    authModalOpen.value = false
+}
+
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
 const goToDashboard = () => {
-    const destination = safeRoute(dashboardRoute.value)
+    closeMobileMenu()
+
+    if (!isLoggedIn.value) {
+        openAuthModal('login')
+        return
+    }
+
+    const userType =
+        user.value?.usertype ??
+        user.value?.role ??
+        'buyer'
+
+    const destination =
+        userType === 'admin'
+            ? safeRoute('admin.dashboard')
+            : userType === 'seller'
+                ? safeRoute('seller.dashboard')
+                : safeRoute('buyer.dashboard')
 
     if (destination !== '#') {
-        mobileOpen.value = false
         router.visit(destination)
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| SEARCH
+|--------------------------------------------------------------------------
+*/
+
 const searchProducts = () => {
     const query = searchQuery.value.trim()
+    const destination = safeRoute('guest.products')
 
-    if (!query) {
-        router.visit(safeRoute('guest.products'))
+    if (destination === '#') {
         return
     }
 
-    mobileOpen.value = false
+    closeMobileMenu()
+
+    if (!query) {
+        router.visit(destination)
+        return
+    }
 
     router.get(
-        safeRoute('guest.products'),
+        destination,
         {
             search: query,
         },
@@ -76,209 +131,194 @@ const searchProducts = () => {
     )
 }
 
-const goToCategory = category => {
-    mobileOpen.value = false
-
-    router.get(
-        safeRoute('guest.products'),
-        {
-            category: category.slug ?? category.id,
-        }
-    )
-}
+/*
+|--------------------------------------------------------------------------
+| CART
+|--------------------------------------------------------------------------
+*/
 
 const openCart = () => {
-    if (isLoggedIn.value) {
-        router.visit(safeRoute('buyer.cart'))
+    closeMobileMenu()
+
+    if (!isLoggedIn.value) {
+        openAuthModal('login')
         return
     }
 
-    authModalMode.value = 'login'
-    authModalOpen.value = true
+    const destination = safeRoute('buyer.cart')
+
+    if (destination !== '#') {
+        router.visit(destination)
+    }
 }
 
-const openAuthModal = mode => {
-    authModalMode.value = mode
-    authModalOpen.value = true
-    mobileOpen.value = false
+/*
+|--------------------------------------------------------------------------
+| OUTSIDE CLICK / ESCAPE
+|--------------------------------------------------------------------------
+*/
+
+const handleOutsideClick = event => {
+    const menu = document.querySelector('[data-mobile-menu]')
+    const button = document.querySelector('[data-mobile-menu-button]')
+
+    if (!mobileOpen.value) {
+        return
+    }
+
+    if (
+        menu &&
+        !menu.contains(event.target) &&
+        button &&
+        !button.contains(event.target)
+    ) {
+        closeMobileMenu()
+    }
 }
 
-const closeAuthModal = () => {
-    authModalOpen.value = false
+const handleEscape = event => {
+    if (event.key === 'Escape') {
+        closeMobileMenu()
+        closeAuthModal()
+    }
 }
 
-const toggleMobileMenu = () => {
-    mobileOpen.value = !mobileOpen.value
-}
+onMounted(() => {
+    document.addEventListener('click', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleOutsideClick)
+    document.removeEventListener('keydown', handleEscape)
+})
 </script>
 
 <template>
     <div class="min-h-screen bg-[#F8FAF9] text-[#1F2937]">
+
         <!-- HEADER -->
         <header
-            class="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 shadow-sm backdrop-blur"
+            class="sticky top-0 z-50 border-b border-[#E5E7EB]/80 bg-white/95 backdrop-blur-xl"
         >
-            <!-- MAIN HEADER ROW -->
+
+            <!-- MAIN HEADER -->
             <div
-                class="mx-auto flex h-[68px] max-w-[1440px] items-center gap-2 px-3 sm:h-[74px] sm:gap-3 sm:px-6 lg:h-[78px] lg:gap-5 lg:px-8"
+                class="mx-auto flex h-[72px] max-w-[1440px] items-center gap-2 px-3 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8"
             >
+
                 <!-- LOGO -->
                 <Link
-                    href="/"
-                    class="flex shrink-0 items-center transition duration-200 hover:opacity-90"
+                    :href="safeRoute('guest.home', '/')"
+                    class="flex shrink-0 items-center"
                     aria-label="Alona Home"
                 >
                     <img
                         src="/images/alona.png"
                         alt="Alona"
-                        class="h-8 w-auto object-contain sm:h-9 lg:h-11"
+                        class="h-9 w-auto object-contain sm:h-10 lg:h-11"
                     />
                 </Link>
 
                 <!-- DESKTOP SEARCH -->
-                <div class="hidden min-w-0 flex-1 md:block">
+                <div
+                    class="hidden min-w-0 flex-1 items-center md:flex"
+                >
                     <form
-                        class="relative mx-auto w-full max-w-[720px]"
+                        class="relative min-w-0 w-full"
                         @submit.prevent="searchProducts"
                     >
-                        <!-- Search Icon -->
-                        <span
-                            class="pointer-events-none absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-[#64748B]"
+                        <svg
+                            class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
                         >
-                            <svg
-                                class="h-5 w-5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                aria-hidden="true"
-                            >
-                                <circle
-                                    cx="11"
-                                    cy="11"
-                                    r="7"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                />
-                                <path
-                                    d="M20 20L16.2 16.2"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
-                        </span>
+                            <circle
+                                cx="11"
+                                cy="11"
+                                r="7"
+                            />
+
+                            <path
+                                d="m20 20-4-4"
+                                stroke-linecap="round"
+                            />
+                        </svg>
 
                         <input
                             v-model="searchQuery"
                             type="search"
-                            placeholder="Search products, brands and more..."
-                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] hover:border-[#CBD5E1] focus:border-[#16A6A0] focus:bg-white focus:ring-4 focus:ring-[#16A6A0]/10"
-                        />
-                    </form>
-                </div>
-
-                <!-- MOBILE SEARCH -->
-                <div class="min-w-0 flex-1 md:hidden">
-                    <form
-                        class="relative w-full"
-                        @submit.prevent="searchProducts"
-                    >
-                        <!-- Search Icon -->
-                        <span
-                            class="pointer-events-none absolute left-3 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-[#64748B]"
-                        >
-                            <svg
-                                class="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                aria-hidden="true"
-                            >
-                                <circle
-                                    cx="11"
-                                    cy="11"
-                                    r="7"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                />
-                                <path
-                                    d="M20 20L16.2 16.2"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
-                        </span>
-
-                        <input
-                            v-model="searchQuery"
-                            type="search"
-                            placeholder="Search..."
-                            class="h-10 w-full min-w-0 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-9 pr-2 text-xs text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10 sm:h-11 sm:pl-10 sm:text-sm"
+                            placeholder="Search products..."
+                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
                         />
                     </form>
                 </div>
 
                 <!-- DESKTOP ACTIONS -->
-                <div class="hidden shrink-0 items-center gap-2 md:flex">
-                    <!-- Cart -->
+                <div
+                    class="ml-auto hidden shrink-0 items-center gap-1 md:flex"
+                >
+
+                    <!-- CART -->
                     <button
                         type="button"
-                        class="group flex h-10 items-center gap-2 rounded-xl px-3 text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        aria-label="Cart"
+                        title="Cart"
                         @click="openCart"
                     >
-                        <span
-                            class="flex h-9 w-9 items-center justify-center rounded-lg transition duration-200 group-hover:bg-white"
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
                         >
-                            <svg
-                                class="h-5 w-5"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    d="M3 4H5L7.4 15.2C7.57 16 8.28 16.6 9.1 16.6H17.6C18.37 16.6 19.05 16.1 19.28 15.36L21 9H6"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                />
-                                <circle
-                                    cx="9.5"
-                                    cy="20"
-                                    r="1.2"
-                                    fill="currentColor"
-                                />
-                                <circle
-                                    cx="17.5"
-                                    cy="20"
-                                    r="1.2"
-                                    fill="currentColor"
-                                />
-                            </svg>
-                        </span>
+                            <path
+                                d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
 
-                        <span class="text-sm font-bold">
-                            Cart
+                            <circle
+                                cx="9"
+                                cy="20"
+                                r="1"
+                            />
+
+                            <circle
+                                cx="18"
+                                cy="20"
+                                r="1"
+                            />
+                        </svg>
+
+                        <span
+                            v-if="cartCount > 0"
+                            class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
+                        >
+                            {{ cartCount > 99 ? '99+' : cartCount }}
                         </span>
                     </button>
 
-                    <!-- Login / Dashboard -->
+                    <!-- LOGGED-IN -->
                     <template v-if="isLoggedIn">
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md active:translate-y-0"
+                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="goToDashboard"
                         >
                             Dashboard
                         </button>
                     </template>
 
+                    <!-- GUEST -->
                     <template v-else>
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
+                            class="inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
                             @click="openAuthModal('login')"
                         >
                             Log in
@@ -286,7 +326,7 @@ const toggleMobileMenu = () => {
 
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md active:translate-y-0"
+                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="openAuthModal('register')"
                         >
                             Register
@@ -295,103 +335,160 @@ const toggleMobileMenu = () => {
                 </div>
 
                 <!-- MOBILE ACTIONS -->
-                <div class="flex shrink-0 items-center gap-0.5 md:hidden">
-                    <!-- Mobile Cart -->
+                <div
+                    class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1 md:hidden"
+                >
+
+                    <!-- MOBILE SEARCH -->
+                    <form
+                        class="min-w-0 flex-1"
+                        @submit.prevent="searchProducts"
+                    >
+                        <div class="relative">
+                            <svg
+                                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle
+                                    cx="11"
+                                    cy="11"
+                                    r="7"
+                                />
+
+                                <path
+                                    d="m20 20-4-4"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
+
+                            <input
+                                v-model="searchQuery"
+                                type="search"
+                                placeholder="Search..."
+                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-9 pr-2 text-xs text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
+                            />
+                        </div>
+                    </form>
+
+                    <!-- MOBILE CART -->
                     <button
                         type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
-                        aria-label="Shopping cart"
+                        class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        aria-label="Cart"
+                        title="Cart"
                         @click="openCart"
                     >
                         <svg
                             class="h-5 w-5"
                             viewBox="0 0 24 24"
                             fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            aria-hidden="true"
+                            stroke="currentColor"
+                            stroke-width="1.8"
                         >
                             <path
-                                d="M3 4H5L7.4 15.2C7.57 16 8.28 16.6 9.1 16.6H17.6C18.37 16.6 19.05 16.1 19.28 15.36L21 9H6"
-                                stroke="currentColor"
-                                stroke-width="1.8"
+                                d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                             />
+
                             <circle
-                                cx="9.5"
+                                cx="9"
                                 cy="20"
-                                r="1.2"
-                                fill="currentColor"
+                                r="1"
                             />
+
                             <circle
-                                cx="17.5"
+                                cx="18"
                                 cy="20"
-                                r="1.2"
-                                fill="currentColor"
+                                r="1"
                             />
                         </svg>
+
+                        <span
+                            v-if="cartCount > 0"
+                            class="absolute -right-0.5 -top-0.5 flex min-h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#E85D5D] px-1 text-[9px] font-black leading-none text-white"
+                        >
+                            {{ cartCount > 99 ? '99+' : cartCount }}
+                        </span>
                     </button>
 
-                    <!-- Mobile Menu -->
+                    <!-- MOBILE MENU BUTTON -->
                     <button
                         type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#64748B] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
+                        data-mobile-menu-button
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
                         :aria-expanded="mobileOpen"
+                        aria-controls="mobile-menu"
                         aria-label="Toggle menu"
-                        @click="toggleMobileMenu"
+                        @click.stop="toggleMobileMenu"
                     >
-                        <svg
-                            v-if="!mobileOpen"
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            aria-hidden="true"
+                        <Transition
+                            mode="out-in"
+                            enter-active-class="transition duration-150 ease-out"
+                            enter-from-class="scale-75 rotate-45 opacity-0"
+                            enter-to-class="scale-100 rotate-0 opacity-100"
+                            leave-active-class="transition duration-100 ease-in"
+                            leave-from-class="scale-100 rotate-0 opacity-100"
+                            leave-to-class="scale-75 -rotate-45 opacity-0"
                         >
-                            <path
-                                d="M4 6H20M4 12H20M4 18H20"
+                            <svg
+                                v-if="!mobileOpen"
+                                key="menu"
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
                                 stroke="currentColor"
                                 stroke-width="2"
-                                stroke-linecap="round"
-                            />
-                        </svg>
+                            >
+                                <path
+                                    d="M4 6H20M4 12H20M4 18H20"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
 
-                        <svg
-                            v-else
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            aria-hidden="true"
-                        >
-                            <path
-                                d="M6 6L18 18M18 6L6 18"
+                            <svg
+                                v-else
+                                key="close"
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
                                 stroke="currentColor"
                                 stroke-width="2"
-                                stroke-linecap="round"
-                            />
-                        </svg>
+                            >
+                                <path
+                                    d="M6 6L18 18M18 6L6 18"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
+                        </Transition>
                     </button>
                 </div>
             </div>
 
             <!-- MOBILE MENU -->
             <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="translate-y-[-8px] opacity-0"
-                enter-to-class="translate-y-0 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="translate-y-0 opacity-100"
-                leave-to-class="translate-y-[-8px] opacity-0"
+                enter-active-class="transition-all duration-200 ease-out"
+                enter-from-class="max-h-0 opacity-0"
+                enter-to-class="max-h-[220px] opacity-100"
+                leave-active-class="transition-all duration-150 ease-in"
+                leave-from-class="max-h-[220px] opacity-100"
+                leave-to-class="max-h-0 opacity-0"
             >
                 <div
                     v-if="mobileOpen"
-                    class="border-t border-[#E5E7EB] bg-white md:hidden"
+                    id="mobile-menu"
+                    data-mobile-menu
+                    class="overflow-hidden border-t border-[#E5E7EB] bg-white md:hidden"
+                    @click.stop
                 >
                     <div
-                        class="mx-auto max-h-[calc(100vh-80px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6"
+                        class="mx-auto max-w-[1440px] px-4 py-4 sm:px-6"
                     >
-                        <!-- Menu Header -->
+
+                        <!-- MENU TITLE -->
                         <div class="mb-3 flex items-center gap-2">
                             <span
                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
@@ -400,13 +497,11 @@ const toggleMobileMenu = () => {
                                     class="h-4 w-4"
                                     viewBox="0 0 24 24"
                                     fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    aria-hidden="true"
+                                    stroke="currentColor"
+                                    stroke-width="2"
                                 >
                                     <path
                                         d="M4 6H20M4 12H20M4 18H20"
-                                        stroke="currentColor"
-                                        stroke-width="2"
                                         stroke-linecap="round"
                                     />
                                 </svg>
@@ -419,34 +514,41 @@ const toggleMobileMenu = () => {
                             </span>
                         </div>
 
-                        <!-- Menu Actions -->
-                        <div class="grid grid-cols-2 gap-2">
+                        <!-- MENU OPTIONS -->
+                        <div class="grid gap-2">
+
+                            <!-- LOGGED-IN -->
                             <template v-if="isLoggedIn">
                                 <button
                                     type="button"
-                                    class="col-span-2 flex h-11 items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
+                                    class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
                                     @click="goToDashboard"
                                 >
                                     Dashboard
                                 </button>
                             </template>
 
+                            <!-- GUEST -->
                             <template v-else>
-                                <button
-                                    type="button"
-                                    class="flex h-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:border-[#16A6A0] hover:bg-[#E8F7F6] active:scale-[0.98]"
-                                    @click="openAuthModal('login')"
-                                >
-                                    Log in
-                                </button>
+                                <div class="grid grid-cols-2 gap-2">
 
-                                <button
-                                    type="button"
-                                    class="flex h-11 items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
-                                    @click="openAuthModal('register')"
-                                >
-                                    Register
-                                </button>
+                                    <button
+                                        type="button"
+                                        class="flex h-11 w-full items-center justify-center rounded-xl border border-[#E5E7EB] px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6] active:scale-[0.98]"
+                                        @click="openAuthModal('login')"
+                                    >
+                                        Log in
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
+                                        @click="openAuthModal('register')"
+                                    >
+                                        Register
+                                    </button>
+
+                                </div>
                             </template>
                         </div>
                     </div>
@@ -455,147 +557,114 @@ const toggleMobileMenu = () => {
         </header>
 
         <!-- PAGE CONTENT -->
-        <main>
+        <main class="min-h-[60vh]">
             <slot />
         </main>
 
         <!-- FOOTER -->
         <footer class="border-t border-[#E5E7EB] bg-white">
             <div
-                class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8"
             >
-                <div
-                    class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10"
-                >
-                    <!-- Brand -->
-                    <div class="sm:col-span-2 lg:col-span-1">
+
+                <!-- BRAND -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <Link
+                        :href="safeRoute('guest.home', '/')"
+                        class="inline-flex"
+                    >
+                        <img
+                            src="/images/alona.png"
+                            alt="Alona"
+                            class="h-10 w-auto object-contain"
+                        />
+                    </Link>
+
+                    <p
+                        class="mt-4 max-w-xs text-sm leading-6 text-[#64748B]"
+                    >
+                        Discover products, connect with sellers, and enjoy
+                        simple shopping with Alona.
+                    </p>
+                </div>
+
+                <!-- SHOP -->
+                <div>
+                    <h3
+                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
+                    >
+                        Shop
+                    </h3>
+
+                    <div class="mt-4 space-y-3">
                         <Link
-                            href="/"
-                            class="inline-flex items-center"
-                            aria-label="Alona Home"
+                            :href="safeRoute('guest.products')"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            <img
-                                src="/images/alona.png"
-                                alt="Alona"
-                                class="h-10 w-auto object-contain"
-                            />
+                            All products
                         </Link>
 
-                        <p
-                            class="mt-4 max-w-sm text-sm leading-6 text-[#64748B]"
+                        <Link
+                            :href="safeRoute('guest.products')"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            Discover products from trusted sellers and enjoy
-                            a smooth shopping experience with Alona
-                            Marketplace.
-                        </p>
-                    </div>
+                            Categories
+                        </Link>
 
-                    <!-- Shop -->
-                    <div>
-                        <h3
-                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
+                        <a
+                            href="#"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            Shop
-                        </h3>
+                            Contact us
+                        </a>
 
-                        <div class="mt-4 space-y-3">
-                            <Link
-                                :href="safeRoute('guest.products')"
-                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
-                            >
-                                All Products
-                            </Link>
-
-                            <Link
-                                :href="safeRoute('guest.deals', safeRoute('guest.products'))"
-                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
-                            >
-                                Deals
-                            </Link>
-                        </div>
-                    </div>
-
-                    <!-- Help -->
-                    <div>
-                        <h3
-                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
+                        <a
+                            href="#"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            Help
-                        </h3>
-
-                        <div class="mt-4 space-y-3">
-                            <a
-                                href="#"
-                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
-                            >
-                                Contact Us
-                            </a>
-
-                            <a
-                                href="#"
-                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
-                            >
-                                Shipping & Delivery
-                            </a>
-
-                            <a
-                                href="#"
-                                class="block text-sm text-[#64748B] transition duration-200 hover:text-[#087F8C]"
-                            >
-                                Returns & Refunds
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Sell -->
-                    <div>
-                        <h3
-                            class="text-sm font-extrabold uppercase tracking-wide text-[#1F2937]"
-                        >
-                            Sell with Alona
-                        </h3>
-
-                        <p
-                            class="mt-4 text-sm leading-6 text-[#64748B]"
-                        >
-                            Start selling your products and grow your
-                            business with Alona Marketplace.
-                        </p>
-
-                        <button
-                            type="button"
-                            class="mt-4 inline-flex h-10 items-center rounded-xl bg-[#F4B942] px-4 text-sm font-extrabold text-[#1F2937] shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                            @click="openAuthModal('register-seller')"
-                        >
-                            Become a Seller
-                        </button>
+                            FAQs
+                        </a>
                     </div>
                 </div>
 
-                <!-- Footer Bottom -->
+                <!-- SELL WITH ALONA -->
+                <div>
+                    <h3
+                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
+                    >
+                        Sell with Alona
+                    </h3>
+
+                    <p
+                        class="mt-4 text-sm leading-6 text-[#64748B]"
+                    >
+                        Start selling your products and grow your business
+                        with Alona Marketplace.
+                    </p>
+
+                    <button
+                        type="button"
+                        class="mt-4 inline-flex rounded-xl bg-[#F4B942] px-4 py-2.5 text-xs font-extrabold text-[#1F2937] transition hover:-translate-y-0.5 hover:shadow-md"
+                        @click="openAuthModal('register-seller')"
+                    >
+                        Become a Seller
+                    </button>
+                </div>
+            </div>
+
+            <!-- FOOTER BOTTOM -->
+            <div class="border-t border-[#E5E7EB]">
                 <div
-                    class="mt-10 flex flex-col gap-3 border-t border-[#E5E7EB] pt-6 text-sm text-[#64748B] sm:flex-row sm:items-center sm:justify-between"
+                    class="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-5 text-xs text-[#64748B] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
                 >
                     <p>
-                        © {{ new Date().getFullYear() }} Alona Marketplace.
+                        © {{ new Date().getFullYear() }} Alona.
                         All rights reserved.
                     </p>
 
-                    <div class="flex items-center gap-4">
-                        <a
-                            href="#"
-                            class="transition duration-200 hover:text-[#087F8C]"
-                        >
-                            Privacy
-                        </a>
-
-                        <a
-                            href="#"
-                            class="transition duration-200 hover:text-[#087F8C]"
-                        >
-                            Terms
-                        </a>
-                    </div>
+                    <p>
+                        A marketplace made simple.
+                    </p>
                 </div>
             </div>
         </footer>
