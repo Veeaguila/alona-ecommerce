@@ -904,6 +904,9 @@ class BuyerOrderController extends Controller
                         'product_id' =>
                             $product->id,
 
+                        'product_name' =>
+                            $product->name,
+
                         'quantity' =>
                             $quantity,
 
