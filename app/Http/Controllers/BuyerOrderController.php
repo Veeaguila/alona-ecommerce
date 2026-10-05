@@ -1451,7 +1451,7 @@ class BuyerOrderController extends Controller
                     $variantStock =
                         $variant->newQuery()
                             ->where(
-                                $variant->getForeignKey(),
+                                'product_id',
                                 $product->id
                             )
                             ->sum('stock');
@@ -1464,7 +1464,7 @@ class BuyerOrderController extends Controller
                     $variantStock =
                         $variant->newQuery()
                             ->where(
-                                $variant->getForeignKey(),
+                                'product_id',
                                 $product->id
                             )
                             ->sum('quantity');
