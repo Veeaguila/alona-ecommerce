@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 
 const props = defineProps({
@@ -9,6 +9,21 @@ const props = defineProps({
             data: [],
             links: [],
             total: 0,
+        }),
+    },
+
+    categories: {
+        type: Array,
+        default: () => [],
+    },
+
+    filters: {
+        type: Object,
+        default: () => ({
+            search: '',
+            category: 'all',
+            max_price: 5000,
+            sort: 'featured',
         }),
     },
 })
@@ -47,6 +62,28 @@ const formatPrice = price => {
         maximumFractionDigits: 2,
     })
 }
+
+/*
+|--------------------------------------------------------------------------
+| CATEGORY FILTER
+|--------------------------------------------------------------------------
+*/
+
+const changeCategory = category => {
+    router.get(
+        route('buyer.products'),
+        {
+            search: props.filters.search || undefined,
+            category: category || 'all',
+            max_price: props.filters.max_price ?? 5000,
+            sort: props.filters.sort || 'featured',
+        },
+        {
+            preserveState: true,
+            preserveScroll: false,
+        }
+    )
+}
 </script>
 
 <template>
@@ -67,8 +104,45 @@ const formatPrice = price => {
             >
 
                 <!-- ===================================================== -->
-                <!-- PAGE HEADER -->
+                <!-- CATEGORY FILTER -->
                 <!-- ===================================================== -->
+
+                <div
+                    class="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1"
+                >
+
+                    <!-- ALL -->
+                    <button
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-2 text-[10px] font-semibold transition sm:text-[11px]"
+                        :class="
+                            (props.filters.category || 'all') === 'all'
+                                ? 'border-[#087F8C] bg-[#087F8C] text-white'
+                                : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
+                        "
+                        @click="changeCategory('all')"
+                    >
+                        All
+                    </button>
+
+                    <!-- DATABASE CATEGORIES -->
+                    <button
+                        v-for="category in props.categories"
+                        :key="category.slug"
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-2 text-[10px] font-semibold transition sm:text-[11px]"
+                        :class="
+                            props.filters.category === category.slug
+                                ? 'border-[#087F8C] bg-[#087F8C] text-white'
+                                : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
+                        "
+                        @click="changeCategory(category.slug)"
+                    >
+                        {{ category.name }}
+                    </button>
+
+                </div>
+
 
                 <!-- ===================================================== -->
                 <!-- PRODUCTS -->
@@ -146,35 +220,48 @@ const formatPrice = price => {
                             <div
                                 class="mt-1.5 flex min-w-0 items-center gap-1"
                             >
+
                                 <!-- STARS -->
-                                <div class="flex shrink-0 items-center">
+
+                                <div
+                                    class="flex shrink-0 items-center"
+                                >
+
                                     <span
                                         v-for="star in 5"
                                         :key="star"
                                         class="text-[11px] leading-none sm:text-xs"
                                         :class="
-                                            star <= Math.round(Number(product.rating ?? 0))
+                                            star <= Math.round(
+                                                Number(product.rating ?? 0)
+                                            )
                                                 ? 'text-[#F4B942]'
                                                 : 'text-[#CBD5E1]'
                                         "
                                     >
                                         ★
                                     </span>
+
                                 </div>
 
+
                                 <!-- RATING NUMBER -->
+
                                 <span
                                     class="text-[10px] font-medium text-[#64748B] sm:text-[11px]"
                                 >
                                     {{ Number(product.rating ?? 0).toFixed(2) }}
                                 </span>
 
+
                                 <!-- REVIEW COUNT -->
+
                                 <span
                                     class="truncate text-[10px] text-[#94A3B8] sm:text-[11px]"
                                 >
                                     ({{ Number(product.reviews_count ?? 0) }})
                                 </span>
+
                             </div>
 
 
@@ -186,11 +273,16 @@ const formatPrice = price => {
 
                                 <div class="min-w-0">
 
+                                    <!-- CURRENT PRICE -->
+
                                     <span
                                         class="block truncate text-[12px] font-bold text-[#1F2937] sm:text-sm"
                                     >
                                         ₱{{ formatPrice(product.price) }}
                                     </span>
+
+
+                                    <!-- OLD PRICE -->
 
                                     <span
                                         v-if="product.old_price"
@@ -303,3 +395,4 @@ const formatPrice = price => {
 
     </BuyerLayout>
 </template>
+
