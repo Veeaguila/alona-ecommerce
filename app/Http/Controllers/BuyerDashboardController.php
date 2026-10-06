@@ -76,48 +76,47 @@ class BuyerDashboardController extends Controller
             ->map(fn ($product) => $this->formatProduct($product))
             ->values();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Top Selling Products
-        |--------------------------------------------------------------------------
-        |
-        | Sales are calculated from actual OrderItem quantities.
-        |
-        | Cancelled items are excluded.
-        |
-        */
-        $topSellingIds = DB::table('order_items')
-            ->select(
-                'product_id',
-                DB::raw('SUM(quantity) as sold_count')
-            )
-            ->whereNotNull('product_id')
-            ->where('status', '!=', 'cancelled')
-            ->groupBy('product_id')
-            ->orderByDesc('sold_count')
-            ->limit(12)
-            ->pluck('sold_count', 'product_id');
+/*
+|--------------------------------------------------------------------------
+| Top Selling Products
+|--------------------------------------------------------------------------
+|
+| Sales are calculated from actual OrderItem quantities.
+| Cancelled items are excluded.
+|
+*/
+$topSellingIds = DB::table('order_items')
+    ->select(
+        'product_id',
+        DB::raw('SUM(quantity) as sold_count')
+    )
+    ->whereNotNull('product_id')
+    ->where('status', '!=', 'cancelled')
+    ->groupBy('product_id')
+    ->orderByDesc('sold_count')
+    ->limit(12)
+    ->pluck('sold_count', 'product_id');
 
-        $topSellingProducts = collect();
+$topSellingProducts = collect();
 
-        if ($topSellingIds->isNotEmpty()) {
-            $topSellingProducts = (clone $approvedProductQuery)
-                ->whereIn('id', $topSellingIds->keys())
-                ->get()
-                ->sortByDesc(function ($product) use ($topSellingIds) {
-                    return (int) ($topSellingIds[$product->id] ?? 0);
-                })
-                ->map(function ($product) use ($topSellingIds) {
-                    $formatted = $this->formatProduct($product);
+if ($topSellingIds->isNotEmpty()) {
+    $topSellingProducts = (clone $approvedProductQuery)
+        ->whereIn('id', $topSellingIds->keys())
+        ->get()
+        ->sortByDesc(function ($product) use ($topSellingIds) {
+            return (int) ($topSellingIds[$product->id] ?? 0);
+        })
+        ->map(function ($product) use ($topSellingIds) {
+            $formatted = $this->formatProduct($product);
 
-                    $formatted['sold_count'] = (int) (
-                        $topSellingIds[$product->id] ?? 0
-                    );
+            $formatted['sold_count'] = (int) (
+                $topSellingIds[$product->id] ?? 0
+            );
 
-                    return $formatted;
-                })
-                ->values();
-        }
+            return $formatted;
+        })
+        ->values();
+}
 
         /*
         |--------------------------------------------------------------------------

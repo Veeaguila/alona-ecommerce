@@ -14,11 +14,31 @@ const props = defineProps({
         default: () => [],
     },
 
+    featuredProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    recommendedProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    topSellingProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    promotions: {
+        type: Array,
+        default: () => [],
+    },
+
     recentlyViewedProducts: {
         type: Array,
         default: () => [],
     },
-})
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -255,7 +275,151 @@ const sortedBySales = computed(() => {
 })
 
 const featuredProduct = computed(() => {
-    return sortedBySales.value[0] ?? null
+    return props.featuredProducts?.[0] || null;
+});
+
+const featuredProductsList = computed(() => {
+    if (!Array.isArray(props.featuredProducts)) {
+        return []
+    }
+
+    return props.featuredProducts
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+
+            return {
+                ...product,
+                name: product.name ?? product.title ?? 'Product',
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+                price: `₱${numericPrice.toLocaleString()}`,
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+const topSellingProductsList = computed(() => {
+    return props.topSellingProducts || [];
+});
+
+/*
+|--------------------------------------------------------------------------
+| Recommended Products
+|--------------------------------------------------------------------------
+*/
+
+const recommendedProductsList = computed(() => {
+    if (!Array.isArray(props.recommendedProducts)) {
+        return []
+    }
+
+    // Recommended products must be different from Featured products.
+    const featuredIds = new Set(
+        (props.featuredProducts || [])
+            .filter(product => product && product.id)
+            .map(product => Number(product.id))
+    )
+
+    return props.recommendedProducts
+        .filter(product => {
+            if (!product || !product.id) {
+                return false
+            }
+
+            return !featuredIds.has(Number(product.id))
+        })
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+
+            return {
+                ...product,
+
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
+
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                soldCount: Number(
+                    product.sold_count ??
+                    product.sales_count ??
+                    product.total_sold ??
+                    0
+                ),
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
 })
 
 /*
@@ -265,12 +429,10 @@ const featuredProduct = computed(() => {
 */
 
 const trendingProducts = computed(() => {
-    const featuredId = featuredProduct.value?.id
-
-    return products.value
-        .filter(product => product.id !== featuredId)
-        .slice(0, 6)
-})
+    return props.featuredProducts
+        .filter((product) => product.id !== featuredProduct.value?.id)
+        .slice(0, 6);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -1338,20 +1500,303 @@ onUnmounted(() => {
 
 
             <!-- =====================================================
-                 TOP SELLING
+                 FEATURED PRODUCTS
             ====================================================== -->
 
             <section
-                v-if="featuredProduct"
+                v-if="featuredProductsList.length"
                 class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
             >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                        >
+                            Featured for you
+                        </p>
+
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            Featured Products
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Handpicked products worth discovering.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        See all products →
+                    </Link>
+                </div>
 
                 <div
-                    class="mb-4 flex items-end justify-between gap-4"
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 >
+                    <Link
+                        v-for="product in featuredProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
 
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                🛍️
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-[#F4B942] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C]"
+                            >
+                                Featured
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">★</span>
+                                <span class="font-semibold text-gray-600">
+                                    {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
+                                </span>
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        See all products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                 RECOMMENDED PRODUCTS
+            ====================================================== -->
+
+            <section
+                v-if="recommendedProductsList.length"
+                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
+                        <p
+                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                        >
+                            Recommended for you
+                        </p>
 
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            You may also like
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Products selected based on your shopping activity.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        Browse more →
+                    </Link>
+                </div>
+
+                <div
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                    <Link
+                        v-for="product in recommendedProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                🛍️
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm"
+                            >
+                                Recommended
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">
+                                    ★
+                                </span>
+
+                                <span class="font-semibold text-gray-600">
+                                    {{
+                                        product.rating > 0
+                                            ? product.rating.toFixed(1)
+                                            : 'New'
+                                    }}
+                                </span>
+
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        Browse more products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                TOP SELLING
+            ====================================================== -->
+
+            <section
+                v-if="topSellingProductsList.length"
+                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
                         <p
                             class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
                         >
@@ -1363,7 +1808,6 @@ onUnmounted(() => {
                         >
                             Customer favorites
                         </h2>
-
                     </div>
 
                     <Link
@@ -1372,22 +1816,24 @@ onUnmounted(() => {
                     >
                         See all products →
                     </Link>
-
                 </div>
 
                 <div
                     class="grid overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm lg:grid-cols-[.85fr_1.15fr]"
                 >
-
+                    <!-- #1 TOP SELLING -->
                     <Link
-                        :href="safeRoute('buyer.product', '#', featuredProduct.id)"
+                        :href="safeRoute(
+                            'buyer.product',
+                            '#',
+                            topSellingProductsList[0].id
+                        )"
                         class="group relative h-[230px] overflow-hidden bg-[#F3F7F6] sm:h-[280px] lg:h-[320px]"
                     >
-
                         <img
-                            v-if="featuredProduct.image"
-                            :src="featuredProduct.image"
-                            :alt="featuredProduct.name"
+                            v-if="topSellingProductsList[0].image"
+                            :src="topSellingProductsList[0].image"
+                            :alt="topSellingProductsList[0].name"
                             class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                             loading="lazy"
                         />
@@ -1406,35 +1852,34 @@ onUnmounted(() => {
                         </div>
 
                         <div
-                            v-if="featuredProduct.isSale"
+                            v-if="topSellingProductsList[0].isSale"
                             class="absolute bottom-4 left-4 rounded-full bg-[#E85D5D] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white"
                         >
                             Sale
                         </div>
-
                     </Link>
 
+                    <!-- PRODUCT DETAILS -->
                     <div
                         class="flex flex-col justify-center p-5 sm:p-7 lg:p-8"
                     >
-
                         <span
                             class="w-fit rounded-full bg-[#E8F7F6] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C]"
                         >
-                            {{ featuredProduct.category }}
+                            {{ topSellingProductsList[0].category }}
                         </span>
 
                         <h3
                             class="mt-3 text-xl font-black leading-tight tracking-[-0.03em] text-gray-900 sm:text-2xl"
                         >
-                            {{ featuredProduct.name }}
+                            {{ topSellingProductsList[0].name }}
                         </h3>
 
                         <p
-                            v-if="featuredProduct.description"
+                            v-if="topSellingProductsList[0].description"
                             class="mt-3 line-clamp-3 max-w-xl text-xs leading-5 text-gray-500 sm:text-sm"
                         >
-                            {{ featuredProduct.description }}
+                            {{ topSellingProductsList[0].description }}
                         </p>
 
                         <p
@@ -1445,73 +1890,64 @@ onUnmounted(() => {
                             from one of our Alona sellers.
                         </p>
 
-                        <div
-                            class="mt-4 flex items-end gap-3"
-                        >
-
+                        <div class="mt-4 flex items-end gap-3">
                             <span
                                 class="text-xl font-black text-[#087F8C]"
                             >
-                                {{ featuredProduct.price }}
+                                {{ topSellingProductsList[0].price }}
                             </span>
 
                             <span
-                                v-if="featuredProduct.oldPrice"
+                                v-if="topSellingProductsList[0].oldPrice"
                                 class="pb-0.5 text-xs text-gray-400 line-through"
                             >
-                                {{ featuredProduct.oldPrice }}
+                                {{ topSellingProductsList[0].oldPrice }}
                             </span>
-
                         </div>
 
                         <div
                             class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-400"
                         >
-
                             <span class="text-[#F4B942]">
                                 ★
                             </span>
 
-                            <strong
-                                class="text-gray-600"
-                            >
+                            <strong class="text-gray-600">
                                 {{
-                                    featuredProduct.rating.toFixed(
-                                        1
-                                    )
+                                    Number(
+                                        topSellingProductsList[0].rating || 0
+                                    ).toFixed(1)
                                 }}
                             </strong>
 
                             <span>
-                                ({{ featuredProduct.reviews }}
+                                ({{ topSellingProductsList[0].reviews }}
                                 reviews)
                             </span>
 
-                            <span
-                                class="text-gray-300"
-                            >
+                            <span class="text-gray-300">
                                 •
                             </span>
 
-                            <span>
-                                {{ featuredProduct.soldCount }}
+                            <strong class="text-[#087F8C]">
+                                {{ topSellingProductsList[0].soldCount }}
                                 sold
-                            </span>
-
+                            </strong>
                         </div>
 
                         <Link
-                            :href="safeRoute('buyer.product', '#', featuredProduct.id)"
+                            :href="safeRoute(
+                                'buyer.product',
+                                '#',
+                                topSellingProductsList[0].id
+                            )"
                             class="mt-5 inline-flex w-fit items-center gap-3 rounded-xl bg-[#087F8C] px-4 py-3 text-xs font-extrabold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#066974]"
                         >
                             View product
                             →
                         </Link>
-
                     </div>
-
                 </div>
-
             </section>
 
 
