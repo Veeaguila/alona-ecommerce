@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import GuestLayout from '@/Layouts/GuestLayout.vue'
 
 const props = defineProps({
     categories: {
@@ -38,7 +39,16 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+
+    isGuest: {
+        type: Boolean,
+        default: false,
+    },
 });
+
+const pageLayout = computed(() =>
+    props.isGuest ? GuestLayout : BuyerLayout
+)
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +58,14 @@ const props = defineProps({
 
 const safeRoute = (name, fallback = '#', params = undefined) => {
     try {
+        if (props.isGuest) {
+            const guestRoutes = {
+                'buyer.products': 'guest.products',
+                'buyer.product': 'guest.product',
+            }
+            name = guestRoutes[name] || name
+        }
+
         return params === undefined
             ? route(name)
             : route(name, params)
@@ -330,6 +348,87 @@ const featuredProductsList = computed(() => {
 const topSellingProductsList = computed(() => {
     return props.topSellingProducts || [];
 });
+
+/* Hero carousel: slide 0 is the original Discover hero; later slides are only sold products. */
+const topSellingCarouselProducts = computed(() => {
+    const source =
+        Array.isArray(props.topSellingProducts) && props.topSellingProducts.length
+            ? props.topSellingProducts
+            : products.value
+
+    return source
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+            const soldCount = Number(
+                product.sold_count ??
+                product.sales_count ??
+                product.order_items_count ??
+                product.total_sold ??
+                product.soldCount ??
+                0
+            )
+
+            return {
+                ...product,
+                name: product.name ?? product.title ?? 'Product',
+                category: product.category?.name ?? product.category_name ?? 'Product',
+                price: `₱${numericPrice.toLocaleString()}`,
+                oldPrice: numericOldPrice > 0 ? `₱${numericOldPrice.toLocaleString()}` : null,
+                rating: Number(product.rating ?? product.average_rating ?? product.reviews_avg_rating ?? 0),
+                reviews: Number(product.reviews_count ?? product.review_count ?? product.reviews ?? 0),
+                image: imageUrl(product.image_path ?? product.image ?? product.image_url ?? product.thumbnail ?? product.photo),
+                description: product.description ?? '',
+                soldCount,
+                isSale: numericOldPrice > 0 && numericOldPrice > numericPrice,
+            }
+        })
+        .filter(product => product.soldCount > 0)
+        .sort((a, b) => b.soldCount - a.soldCount)
+})
+
+const heroSlide = ref(0)
+const heroTimer = ref(null)
+const heroPaused = ref(false)
+
+const heroSlideCount = computed(() => 1 + topSellingCarouselProducts.value.length)
+
+const currentHeroProduct = computed(() => {
+    if (heroSlide.value <= 0) return null
+    return topSellingCarouselProducts.value[heroSlide.value - 1] ?? null
+})
+
+const goToHeroSlide = slide => {
+    const total = heroSlideCount.value
+    if (total <= 1) {
+        heroSlide.value = 0
+        return
+    }
+    heroSlide.value = ((Number(slide) % total) + total) % total
+}
+
+const nextHeroSlide = () => goToHeroSlide(heroSlide.value + 1)
+const previousHeroSlide = () => goToHeroSlide(heroSlide.value - 1)
+
+const clearHeroTimer = () => {
+    if (heroTimer.value) {
+        clearInterval(heroTimer.value)
+        heroTimer.value = null
+    }
+}
+
+const startHeroTimer = () => {
+    clearHeroTimer()
+    if (heroSlideCount.value <= 1) return
+
+    heroTimer.value = setInterval(() => {
+        if (!heroPaused.value) nextHeroSlide()
+    }, 6000)
+}
+
+const pauseHero = () => { heroPaused.value = true }
+const resumeHero = () => { heroPaused.value = false }
 
 /*
 |--------------------------------------------------------------------------
@@ -962,224 +1061,208 @@ onMounted(() => {
         .forEach(element => {
             observer.observe(element)
         })
+
+    startHeroTimer()
 })
 
 onUnmounted(() => {
     observer?.disconnect()
     observer = null
+    clearHeroTimer()
 })
 </script>
 
 <template>
     <Head title="Alona" />
 
-    <BuyerLayout>
+    <component :is="pageLayout">
         <div
             class="alona-page min-h-screen overflow-hidden bg-[#F8FAF9] text-[#1F2937]"
         >
 
-            <!-- =====================================================
-                 HERO
-            ====================================================== -->
-
+            <!-- HERO CAROUSEL: original Discover hero first, then actual sold products -->
             <section class="relative">
+                <div class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#16A6A0]/10 blur-3xl"></div>
+                <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#F4B942]/10 blur-3xl"></div>
 
-                <div
-                    class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#16A6A0]/10 blur-3xl"
-                ></div>
-
-                <div
-                    class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#F4B942]/10 blur-3xl"
-                ></div>
-
-                <div
-                    class="mx-auto max-w-[1440px] px-4 pb-7 pt-5 sm:px-6 lg:px-8 lg:pb-10"
-                >
-
+                <div class="mx-auto max-w-[1440px] px-4 pb-7 pt-5 sm:px-6 lg:px-8 lg:pb-10">
                     <div
                         class="alona-reveal hero-card relative overflow-hidden rounded-[30px] bg-[#087F8C]"
+                        @mouseenter="pauseHero"
+                        @mouseleave="resumeHero"
                     >
+                        <div class="absolute -right-24 -top-32 h-96 w-96 rounded-full border-[70px] border-white/[0.05]"></div>
+                        <div class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"></div>
 
-                        <div
-                            class="absolute -right-24 -top-32 h-96 w-96 rounded-full border-[70px] border-white/[0.05]"
-                        ></div>
-
-                        <div
-                            class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"
-                        ></div>
-
-                        <div
-                            class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.05fr_.95fr]"
-                        >
-
+                        <Transition name="hero-slide" mode="out-in">
+                            <!-- SLIDE 1: YOUR ORIGINAL HERO -->
                             <div
-                                class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20"
+                                v-if="heroSlide === 0"
+                                key="discover"
+                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.05fr_.95fr]"
                             >
+                                <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+                                    <div class="hero-item mb-5 flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]">✦</span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">Discover • Shop • Enjoy</span>
+                                    </div>
 
-                                <div
-                                    class="hero-item mb-5 flex items-center gap-3"
-                                >
+                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                                        Welcome to
+                                        <span class="text-[#F4B942]">Alona.</span>
+                                    </h1>
 
-                                    <span
-                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"
-                                    >
-                                        ✦
-                                    </span>
+                                    <p class="hero-item mt-5 max-w-xl text-sm leading-6 text-teal-50 sm:text-base sm:leading-7">
+                                        Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.
+                                    </p>
 
-                                    <span
-                                        class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50"
-                                    >
-                                        Discover • Shop • Enjoy
-                                    </span>
+                                    <div class="hero-item mt-7 flex flex-wrap gap-3">
+                                        <Link
+                                            :href="safeRoute('buyer.products')"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
+                                        >
+                                            Shop Now
+                                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                        </Link>
 
+                                        <a
+                                            href="#categories"
+                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/50 px-5 py-3.5 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
+                                        >
+                                            Explore Categories
+                                        </a>
+                                    </div>
                                 </div>
 
-                                <h1
-                                    class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl"
-                                >
-                                    Welcome to
-                                    <span
-                                        class="text-[#F4B942]"
-                                    >
-                                        Alona.
-                                    </span>
-                                </h1>
+                                <div class="hero-visual relative flex min-h-[260px] items-center justify-center lg:min-h-0">
+                                    <div class="absolute h-[250px] w-[250px] rounded-full bg-white/[0.08] sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"></div>
+                                    <div class="absolute h-[210px] w-[210px] rounded-full border border-white/10 sm:h-[300px] sm:w-[300px]"></div>
+                                    <img src="/images/Alogo.png" alt="Alona" class="alona-floating relative z-10 w-[230px] max-w-[75%] object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)] sm:w-[310px] lg:w-[390px]" />
 
-                                <p
-                                    class="hero-item mt-5 max-w-xl text-sm leading-6 text-teal-50 sm:text-base sm:leading-7"
-                                >
-                                    Everything you love,
-                                    all in one place.
-                                    Discover quality
-                                    products, trusted
-                                    sellers, and great
-                                    deals made for you.
-                                </p>
+                                    <div class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]">🛍️</div>
+                                            <div>
+                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Shopping</p>
+                                                <p class="text-xs font-extrabold text-gray-900">Made simple</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                <div
-                                    class="hero-item mt-7 flex flex-wrap gap-3"
-                                >
+                                    <div class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white">★</div>
+                                            <div>
+                                                <p class="text-[9px] font-bold text-gray-400">DISCOVER</p>
+                                                <p class="text-xs font-extrabold text-gray-900">Something new</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SLIDES 2+: ONLY PRODUCTS WITH ACTUAL SALES -->
+                            <div
+                                v-else-if="currentHeroProduct"
+                                :key="`top-selling-${currentHeroProduct.id}`"
+                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.05fr_.95fr]"
+                            >
+                                <div class="relative z-10 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]">🔥</span>
+                                        <span class="text-xs font-black uppercase tracking-[0.2em] text-teal-50">Top Selling</span>
+                                    </div>
+
+                                    <p class="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
+                                        Customer favorite #{{ heroSlide }}
+                                    </p>
+
+                                    <h2 class="mt-2 max-w-xl text-3xl font-black leading-tight tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
+                                        {{ currentHeroProduct.name }}
+                                    </h2>
+
+                                    <p class="mt-3 max-w-xl text-sm leading-6 text-teal-50 sm:text-base">
+                                        {{ currentHeroProduct.description || 'A customer favorite from one of our Alona sellers.' }}
+                                    </p>
+
+                                    <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                        <span class="rounded-full bg-white/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white">{{ currentHeroProduct.category }}</span>
+                                        <span class="flex items-center gap-1 text-xs text-white/80">
+                                            <span class="text-[#F4B942]">★</span>
+                                            <strong class="text-white">{{ currentHeroProduct.rating > 0 ? currentHeroProduct.rating.toFixed(1) : 'New' }}</strong>
+                                            <span v-if="currentHeroProduct.reviews > 0">({{ currentHeroProduct.reviews }})</span>
+                                        </span>
+                                        <span class="text-xs font-bold text-[#F4B942]">{{ currentHeroProduct.soldCount.toLocaleString() }} sold</span>
+                                    </div>
+
+                                    <div class="mt-5 flex items-end gap-3">
+                                        <span class="text-2xl font-black text-white">{{ currentHeroProduct.price }}</span>
+                                        <span v-if="currentHeroProduct.oldPrice" class="pb-0.5 text-xs text-white/50 line-through">{{ currentHeroProduct.oldPrice }}</span>
+                                    </div>
+
+                                    <div class="mt-6 flex flex-wrap gap-3">
+                                        <Link
+                                            :href="safeRoute('buyer.product', '#', currentHeroProduct.id)"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-xs font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1"
+                                        >
+                                            View Product
+                                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                        </Link>
+                                        <Link
+                                            :href="safeRoute('buyer.products')"
+                                            class="inline-flex items-center gap-2 rounded-2xl border border-white/50 px-5 py-3.5 text-xs font-extrabold text-white transition hover:bg-white hover:text-[#087F8C]"
+                                        >
+                                            Shop more
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                <div class="relative flex min-h-[260px] items-center justify-center p-6 lg:min-h-0 lg:p-10">
+                                    <div class="absolute h-[245px] w-[245px] rounded-full bg-white/[0.08] sm:h-[330px] sm:w-[330px] lg:h-[390px] lg:w-[390px]"></div>
+                                    <div class="absolute h-[205px] w-[205px] rounded-full border border-white/10 sm:h-[275px] sm:w-[275px] lg:h-[330px] lg:w-[330px]"></div>
 
                                     <Link
-                                        :href="safeRoute('buyer.products')"
-                                        class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
+                                        :href="safeRoute('buyer.product', '#', currentHeroProduct.id)"
+                                        class="relative z-10 block h-[220px] w-[220px] overflow-hidden rounded-[28px] bg-white p-2 shadow-2xl shadow-black/20 transition duration-500 hover:scale-[1.02] sm:h-[270px] sm:w-[270px] lg:h-[320px] lg:w-[320px]"
                                     >
-                                        Shop Now
-
-                                        <span
-                                            class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white"
-                                        >
-                                            →
-                                        </span>
+                                        <img
+                                            v-if="currentHeroProduct.image"
+                                            :src="currentHeroProduct.image"
+                                            :alt="currentHeroProduct.name"
+                                            class="h-full w-full rounded-[22px] object-cover"
+                                            loading="eager"
+                                        />
+                                        <div v-else class="flex h-full w-full items-center justify-center rounded-[22px] bg-[#F4F7F6] text-6xl">🛍️</div>
                                     </Link>
 
-                                    <a
-                                        href="#categories"
-                                        class="inline-flex items-center gap-3 rounded-2xl border border-white/50 px-5 py-3.5 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
-                                    >
-                                        Explore Categories
-                                    </a>
+                                    <span class="absolute left-[7%] top-[14%] z-20 rounded-full bg-[#F4B942] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C] shadow-lg">
+                                        #{{ heroSlide }} Top Seller
+                                    </span>
 
+                                    <span v-if="currentHeroProduct.isSale" class="absolute bottom-[12%] right-[8%] z-20 rounded-full bg-[#E85D5D] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">SALE</span>
                                 </div>
-
                             </div>
+                        </Transition>
 
-                            <div
-                                class="hero-visual relative flex min-h-[260px] items-center justify-center lg:min-h-0"
-                            >
+                        <template v-if="heroSlideCount > 1">
+                            <button type="button" aria-label="Previous hero slide" class="absolute left-4 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/10 text-white backdrop-blur transition hover:bg-white hover:text-[#087F8C] sm:left-6" @click="previousHeroSlide">←</button>
+                            <button type="button" aria-label="Next hero slide" class="absolute right-4 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/10 text-white backdrop-blur transition hover:bg-white hover:text-[#087F8C] sm:right-6" @click="nextHeroSlide">→</button>
 
-                                <div
-                                    class="absolute h-[250px] w-[250px] rounded-full bg-white/[0.08] sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"
-                                ></div>
-
-                                <div
-                                    class="absolute h-[210px] w-[210px] rounded-full border border-white/10 sm:h-[300px] sm:w-[300px]"
-                                ></div>
-
-                                <img
-                                    src="/images/Alogo.png"
-                                    alt="Alona"
-                                    class="alona-floating relative z-10 w-[230px] max-w-[75%] object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)] sm:w-[310px] lg:w-[390px]"
-                                />
-
-                                <div
-                                    class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block"
-                                >
-
-                                    <div
-                                        class="flex items-center gap-3"
-                                    >
-
-                                        <div
-                                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                                        >
-                                            🛍️
-                                        </div>
-
-                                        <div>
-
-                                            <p
-                                                class="text-[9px] font-bold uppercase tracking-wider text-gray-400"
-                                            >
-                                                Shopping
-                                            </p>
-
-                                            <p
-                                                class="text-xs font-extrabold text-gray-900"
-                                            >
-                                                Made simple
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div
-                                    class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block"
-                                >
-
-                                    <div
-                                        class="flex items-center gap-3"
-                                    >
-
-                                        <div
-                                            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"
-                                        >
-                                            ★
-                                        </div>
-
-                                        <div>
-
-                                            <p
-                                                class="text-[9px] font-bold text-gray-400"
-                                            >
-                                                DISCOVER
-                                            </p>
-
-                                            <p
-                                                class="text-xs font-extrabold text-gray-900"
-                                            >
-                                                Something new
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
+                            <div class="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 backdrop-blur">
+                                <button
+                                    v-for="index in heroSlideCount"
+                                    :key="`hero-dot-${index}`"
+                                    type="button"
+                                    :aria-label="`Go to hero slide ${index}`"
+                                    class="h-1.5 rounded-full transition-all duration-300"
+                                    :class="heroSlide === index - 1 ? 'w-5 bg-white' : 'w-1.5 bg-white/45 hover:bg-white/70'"
+                                    @click="goToHeroSlide(index - 1)"
+                                ></button>
                             </div>
-
-                        </div>
-
+                        </template>
                     </div>
-
                 </div>
-
             </section>
-
 
             <!-- =====================================================
                  SHOP BY CATEGORY
@@ -1215,7 +1298,7 @@ onUnmounted(() => {
                         <h2
                             class="mt-1.5 text-2xl font-black tracking-[-0.03em] text-[#1F2937] sm:text-3xl"
                         >
-                            Shop by Category
+                            Categories
                         </h2>
 
                         <p
@@ -1498,459 +1581,6 @@ onUnmounted(() => {
 
             </section>
 
-
-            <!-- =====================================================
-                 FEATURED PRODUCTS
-            ====================================================== -->
-
-            <section
-                v-if="featuredProductsList.length"
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
-            >
-                <div class="mb-4 flex items-end justify-between gap-4">
-                    <div>
-                        <p
-                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
-                        >
-                            Featured for you
-                        </p>
-
-                        <h2
-                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
-                        >
-                            Featured Products
-                        </h2>
-
-                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
-                            Handpicked products worth discovering.
-                        </p>
-                    </div>
-
-                    <Link
-                        :href="safeRoute('buyer.products')"
-                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
-                    >
-                        See all products →
-                    </Link>
-                </div>
-
-                <div
-                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                >
-                    <Link
-                        v-for="product in featuredProductsList"
-                        :key="product.id"
-                        :href="safeRoute('buyer.product', '#', product.id)"
-                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
-                    >
-                        <div
-                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
-                        >
-                            <img
-                                v-if="product.image"
-                                :src="product.image"
-                                :alt="product.name"
-                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                loading="lazy"
-                            />
-
-                            <div
-                                v-else
-                                class="flex h-full items-center justify-center text-4xl"
-                            >
-                                🛍️
-                            </div>
-
-                            <span
-                                class="absolute left-3 top-3 rounded-full bg-[#F4B942] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C]"
-                            >
-                                Featured
-                            </span>
-
-                            <span
-                                v-if="product.isSale"
-                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                            >
-                                SALE
-                            </span>
-                        </div>
-
-                        <div class="p-3.5">
-                            <p
-                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
-                            >
-                                {{ product.category }}
-                            </p>
-
-                            <h3
-                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
-                            >
-                                {{ product.name }}
-                            </h3>
-
-                            <div class="mt-2 flex items-center gap-2">
-                                <span
-                                    class="text-sm font-black text-[#087F8C]"
-                                >
-                                    {{ product.price }}
-                                </span>
-
-                                <span
-                                    v-if="product.oldPrice"
-                                    class="text-[10px] text-gray-400 line-through"
-                                >
-                                    {{ product.oldPrice }}
-                                </span>
-                            </div>
-
-                            <div
-                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                            >
-                                <span class="text-[#F4B942]">★</span>
-                                <span class="font-semibold text-gray-600">
-                                    {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
-                                </span>
-                                <span v-if="product.reviews > 0">
-                                    ({{ product.reviews }})
-                                </span>
-                            </div>
-
-                            <p
-                                v-if="product.seller?.name"
-                                class="mt-2 truncate text-[10px] text-gray-400"
-                            >
-                                {{ product.seller.name }}
-                            </p>
-                        </div>
-                    </Link>
-                </div>
-
-                <div class="mt-5 sm:hidden">
-                    <Link
-                        :href="safeRoute('buyer.products')"
-                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
-                    >
-                        See all products
-                        <span class="transition-transform duration-300 group-hover:translate-x-1">
-                            →
-                        </span>
-                    </Link>
-                </div>
-            </section>
-
-
-            <!-- =====================================================
-                 RECOMMENDED PRODUCTS
-            ====================================================== -->
-
-            <section
-                v-if="recommendedProductsList.length"
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
-            >
-                <div class="mb-4 flex items-end justify-between gap-4">
-                    <div>
-                        <p
-                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
-                        >
-                            Recommended for you
-                        </p>
-
-                        <h2
-                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
-                        >
-                            You may also like
-                        </h2>
-
-                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
-                            Products selected based on your shopping activity.
-                        </p>
-                    </div>
-
-                    <Link
-                        :href="safeRoute('buyer.products')"
-                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
-                    >
-                        Browse more →
-                    </Link>
-                </div>
-
-                <div
-                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                >
-                    <Link
-                        v-for="product in recommendedProductsList"
-                        :key="product.id"
-                        :href="safeRoute('buyer.product', '#', product.id)"
-                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
-                    >
-                        <div
-                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
-                        >
-                            <img
-                                v-if="product.image"
-                                :src="product.image"
-                                :alt="product.name"
-                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                loading="lazy"
-                            />
-
-                            <div
-                                v-else
-                                class="flex h-full items-center justify-center text-4xl"
-                            >
-                                🛍️
-                            </div>
-
-                            <span
-                                class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm"
-                            >
-                                Recommended
-                            </span>
-
-                            <span
-                                v-if="product.isSale"
-                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                            >
-                                SALE
-                            </span>
-                        </div>
-
-                        <div class="p-3.5">
-                            <p
-                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
-                            >
-                                {{ product.category }}
-                            </p>
-
-                            <h3
-                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
-                            >
-                                {{ product.name }}
-                            </h3>
-
-                            <div class="mt-2 flex items-center gap-2">
-                                <span
-                                    class="text-sm font-black text-[#087F8C]"
-                                >
-                                    {{ product.price }}
-                                </span>
-
-                                <span
-                                    v-if="product.oldPrice"
-                                    class="text-[10px] text-gray-400 line-through"
-                                >
-                                    {{ product.oldPrice }}
-                                </span>
-                            </div>
-
-                            <div
-                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                            >
-                                <span class="text-[#F4B942]">
-                                    ★
-                                </span>
-
-                                <span class="font-semibold text-gray-600">
-                                    {{
-                                        product.rating > 0
-                                            ? product.rating.toFixed(1)
-                                            : 'New'
-                                    }}
-                                </span>
-
-                                <span v-if="product.reviews > 0">
-                                    ({{ product.reviews }})
-                                </span>
-                            </div>
-
-                            <p
-                                v-if="product.seller?.name"
-                                class="mt-2 truncate text-[10px] text-gray-400"
-                            >
-                                {{ product.seller.name }}
-                            </p>
-                        </div>
-                    </Link>
-                </div>
-
-                <div class="mt-5 sm:hidden">
-                    <Link
-                        :href="safeRoute('buyer.products')"
-                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
-                    >
-                        Browse more products
-                        <span class="transition-transform duration-300 group-hover:translate-x-1">
-                            →
-                        </span>
-                    </Link>
-                </div>
-            </section>
-
-
-            <!-- =====================================================
-                TOP SELLING
-            ====================================================== -->
-
-            <section
-                v-if="topSellingProductsList.length"
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
-            >
-                <div class="mb-4 flex items-end justify-between gap-4">
-                    <div>
-                        <p
-                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
-                        >
-                            Top Selling
-                        </p>
-
-                        <h2
-                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
-                        >
-                            Customer favorites
-                        </h2>
-                    </div>
-
-                    <Link
-                        :href="safeRoute('buyer.products')"
-                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
-                    >
-                        See all products →
-                    </Link>
-                </div>
-
-                <div
-                    class="grid overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm lg:grid-cols-[.85fr_1.15fr]"
-                >
-                    <!-- #1 TOP SELLING -->
-                    <Link
-                        :href="safeRoute(
-                            'buyer.product',
-                            '#',
-                            topSellingProductsList[0].id
-                        )"
-                        class="group relative h-[230px] overflow-hidden bg-[#F3F7F6] sm:h-[280px] lg:h-[320px]"
-                    >
-                        <img
-                            v-if="topSellingProductsList[0].image"
-                            :src="topSellingProductsList[0].image"
-                            :alt="topSellingProductsList[0].name"
-                            class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                            loading="lazy"
-                        />
-
-                        <div
-                            v-else
-                            class="flex h-full items-center justify-center text-5xl"
-                        >
-                            🛍️
-                        </div>
-
-                        <div
-                            class="absolute left-4 top-4 rounded-full bg-[#F4B942] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C]"
-                        >
-                            #1 Top Selling
-                        </div>
-
-                        <div
-                            v-if="topSellingProductsList[0].isSale"
-                            class="absolute bottom-4 left-4 rounded-full bg-[#E85D5D] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white"
-                        >
-                            Sale
-                        </div>
-                    </Link>
-
-                    <!-- PRODUCT DETAILS -->
-                    <div
-                        class="flex flex-col justify-center p-5 sm:p-7 lg:p-8"
-                    >
-                        <span
-                            class="w-fit rounded-full bg-[#E8F7F6] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C]"
-                        >
-                            {{ topSellingProductsList[0].category }}
-                        </span>
-
-                        <h3
-                            class="mt-3 text-xl font-black leading-tight tracking-[-0.03em] text-gray-900 sm:text-2xl"
-                        >
-                            {{ topSellingProductsList[0].name }}
-                        </h3>
-
-                        <p
-                            v-if="topSellingProductsList[0].description"
-                            class="mt-3 line-clamp-3 max-w-xl text-xs leading-5 text-gray-500 sm:text-sm"
-                        >
-                            {{ topSellingProductsList[0].description }}
-                        </p>
-
-                        <p
-                            v-else
-                            class="mt-3 text-xs leading-5 text-gray-400"
-                        >
-                            Discover this popular product
-                            from one of our Alona sellers.
-                        </p>
-
-                        <div class="mt-4 flex items-end gap-3">
-                            <span
-                                class="text-xl font-black text-[#087F8C]"
-                            >
-                                {{ topSellingProductsList[0].price }}
-                            </span>
-
-                            <span
-                                v-if="topSellingProductsList[0].oldPrice"
-                                class="pb-0.5 text-xs text-gray-400 line-through"
-                            >
-                                {{ topSellingProductsList[0].oldPrice }}
-                            </span>
-                        </div>
-
-                        <div
-                            class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-400"
-                        >
-                            <span class="text-[#F4B942]">
-                                ★
-                            </span>
-
-                            <strong class="text-gray-600">
-                                {{
-                                    Number(
-                                        topSellingProductsList[0].rating || 0
-                                    ).toFixed(1)
-                                }}
-                            </strong>
-
-                            <span>
-                                ({{ topSellingProductsList[0].reviews }}
-                                reviews)
-                            </span>
-
-                            <span class="text-gray-300">
-                                •
-                            </span>
-
-                            <strong class="text-[#087F8C]">
-                                {{ topSellingProductsList[0].soldCount }}
-                                sold
-                            </strong>
-                        </div>
-
-                        <Link
-                            :href="safeRoute(
-                                'buyer.product',
-                                '#',
-                                topSellingProductsList[0].id
-                            )"
-                            class="mt-5 inline-flex w-fit items-center gap-3 rounded-xl bg-[#087F8C] px-4 py-3 text-xs font-extrabold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#066974]"
-                        >
-                            View product
-                            →
-                        </Link>
-                    </div>
-                </div>
-            </section>
-
-
             <!-- =====================================================
                  TRENDING PRODUCTS
             ====================================================== -->
@@ -2148,6 +1778,302 @@ onUnmounted(() => {
 
                 </div>
 
+            </section>
+
+            <!-- =====================================================
+                 FEATURED PRODUCTS
+            ====================================================== -->
+
+            <section
+                v-if="featuredProductsList.length"
+                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                        >
+                            Featured for you
+                        </p>
+
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            Featured Products
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Handpicked products worth discovering.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        See all products →
+                    </Link>
+                </div>
+
+                <div
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                    <Link
+                        v-for="product in featuredProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                🛍️
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-[#F4B942] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C]"
+                            >
+                                Featured
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">★</span>
+                                <span class="font-semibold text-gray-600">
+                                    {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
+                                </span>
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        See all products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                 RECOMMENDED PRODUCTS
+            ====================================================== -->
+
+            <section
+                v-if="recommendedProductsList.length"
+                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                            <div
+                                class="flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="h-2 w-2 rounded-full bg-[#F4B942]"
+                                ></span>
+
+                                <p
+                                    class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                                >
+                                    Recommended For You
+                                </p>
+
+                            </div>
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            You may also like
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Products selected based on your shopping activity.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        Browse more →
+                    </Link>
+                </div>
+
+                <div
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                    <Link
+                        v-for="product in recommendedProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                🛍️
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm"
+                            >
+                                Recommended
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">
+                                    ★
+                                </span>
+
+                                <span class="font-semibold text-gray-600">
+                                    {{
+                                        product.rating > 0
+                                            ? product.rating.toFixed(1)
+                                            : 'New'
+                                    }}
+                                </span>
+
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        Browse more products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
             </section>
 
 
@@ -2596,7 +2522,7 @@ onUnmounted(() => {
             </section>
 
         </div>
-    </BuyerLayout>
+    </component>
 </template>
 
 
@@ -2832,6 +2758,30 @@ onUnmounted(() => {
     backface-visibility: hidden;
 
     transform: translateZ(0);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hero Carousel Transition
+|--------------------------------------------------------------------------
+*/
+
+.hero-slide-enter-active,
+.hero-slide-leave-active {
+    transition:
+        opacity .35s ease,
+        transform .35s ease;
+}
+
+.hero-slide-enter-from {
+    opacity: 0;
+    transform: translateX(18px);
+}
+
+.hero-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-18px);
 }
 
 

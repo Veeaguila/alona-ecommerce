@@ -3,6 +3,7 @@
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 
 const props = defineProps({
@@ -23,9 +24,17 @@ const props = defineProps({
             avg_rating: 0,
         }),
     },
+
+    isGuest: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const product = computed(() => props.product || {})
+const pageLayout = computed(() =>
+    props.isGuest ? GuestLayout : BuyerLayout
+)
 
 /*
 |--------------------------------------------------------------------------
@@ -173,6 +182,14 @@ const reviewDate = date => {
 
 const safeRoute = (name, params = undefined, fallback = '#') => {
     try {
+        if (props.isGuest) {
+            const guestRoutes = {
+                'buyer.products': 'guest.products',
+                'buyer.product': 'guest.product',
+            }
+            name = guestRoutes[name] || name
+        }
+
         if (params !== undefined) {
             return route(name, params)
         }
@@ -524,6 +541,11 @@ function prepareCartForm() {
 */
 
 function addToCart() {
+    if (props.isGuest) {
+        requireLogin()
+        return
+    }
+
     if (requireLogin()) {
         return
     }
@@ -552,6 +574,11 @@ function addToCart() {
 */
 
 function buyNow() {
+    if (props.isGuest) {
+        requireLogin()
+        return
+    }
+
     if (requireLogin()) {
         return
     }
@@ -588,6 +615,11 @@ function buyNow() {
 */
 
 function messageSeller() {
+    if (props.isGuest) {
+        requireLogin()
+        return
+    }
+
     if (requireLogin()) {
         return
     }
@@ -618,11 +650,13 @@ const breadcrumbs = computed(() => {
     const crumbs = [
         {
             label: 'Home',
-            href: safeRoute(
-                'buyer.dashboard',
-                undefined,
-                '/'
-            ),
+            href: props.isGuest
+                ? '/'
+                : safeRoute(
+                    'buyer.dashboard',
+                    undefined,
+                    '/'
+                ),
         },
     ]
 
@@ -670,7 +704,7 @@ const breadcrumbs = computed(() => {
         "
     />
 
-    <BuyerLayout>
+    <component :is="pageLayout">
         <main
             class="min-h-screen bg-[#F8FAF9]"
         >
@@ -897,6 +931,7 @@ const breadcrumbs = computed(() => {
                                             </p>
 
                                             <Link
+                                                v-if="!props.isGuest"
                                                 :href="
                                                     safeRoute(
                                                         'buyer.store.show',
@@ -907,6 +942,12 @@ const breadcrumbs = computed(() => {
                                             >
                                                 {{ storeName }}
                                             </Link>
+                                            <span
+                                                v-else
+                                                class="mt-0.5 block truncate text-sm font-bold text-[#1F2937]"
+                                            >
+                                                {{ storeName }}
+                                            </span>
 
                                             <div
                                                 class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1"
@@ -945,6 +986,7 @@ const breadcrumbs = computed(() => {
                                         <!-- VISIT STORE -->
 
                                         <Link
+                                            v-if="!props.isGuest"
                                             :href="
                                                 safeRoute(
                                                     'buyer.store.show',
@@ -989,6 +1031,7 @@ const breadcrumbs = computed(() => {
                                     <!-- MOBILE VISIT STORE -->
 
                                     <Link
+                                        v-if="!props.isGuest"
                                         :href="
                                             safeRoute(
                                                 'buyer.store.show',
@@ -1602,6 +1645,7 @@ const breadcrumbs = computed(() => {
                         </div>
 
                         <Link
+                            v-if="!props.isGuest"
                             :href="
                                 safeRoute(
                                     'buyer.product.reviews',
@@ -1899,5 +1943,5 @@ const breadcrumbs = computed(() => {
                 authModalOpen = false
             "
         />
-    </BuyerLayout>
+    </component>
 </template>

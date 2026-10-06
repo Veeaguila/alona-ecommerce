@@ -18,7 +18,20 @@ class BuyerDashboardController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        $user = $request->user();
+        return $this->renderDashboard($request);
+    }
+
+    /**
+     * Public marketplace homepage.
+     */
+    public function guest(Request $request): Response
+    {
+        return $this->renderDashboard($request, true);
+    }
+
+    private function renderDashboard(Request $request, bool $guest = false): Response
+    {
+        $user = $guest ? null : $request->user();
 
         /*
         |--------------------------------------------------------------------------
@@ -128,15 +141,17 @@ if ($topSellingIds->isNotEmpty()) {
         | products.
         |
         */
-        $recentCategoryIds = RecentlyViewedProduct::query()
-            ->where('user_id', $user->id)
-            ->with('product:id,category_id')
-            ->latest()
-            ->get()
-            ->pluck('product.category_id')
-            ->filter()
-            ->unique()
-            ->values();
+        $recentCategoryIds = $user
+            ? RecentlyViewedProduct::query()
+                ->where('user_id', $user->id)
+                ->with('product:id,category_id')
+                ->latest()
+                ->get()
+                ->pluck('product.category_id')
+                ->filter()
+                ->unique()
+                ->values()
+            : collect();
 
         $recommendedProducts = collect();
 
@@ -256,28 +271,30 @@ if ($topSellingIds->isNotEmpty()) {
         | Recently Viewed Products
         |--------------------------------------------------------------------------
         */
-        $recentlyViewedProducts = RecentlyViewedProduct::query()
-            ->where('user_id', $user->id)
-            ->with([
-                'product' => function ($query) {
-                    $query
-                        ->where('status', 'approved')
-                        ->with([
-                            'category:id,name,slug',
-                            'seller:id,name',
-                            'images',
-                        ]);
-                },
-            ])
-            ->latest()
-            ->take(8)
-            ->get()
-            ->pluck('product')
-            ->filter()
-            ->unique('id')
-            ->values()
-            ->map(fn ($product) => $this->formatProduct($product))
-            ->values();
+        $recentlyViewedProducts = $user
+            ? RecentlyViewedProduct::query()
+                ->where('user_id', $user->id)
+                ->with([
+                    'product' => function ($query) {
+                        $query
+                            ->where('status', 'approved')
+                            ->with([
+                                'category:id,name,slug',
+                                'seller:id,name',
+                                'images',
+                            ]);
+                    },
+                ])
+                ->latest()
+                ->take(8)
+                ->get()
+                ->pluck('product')
+                ->filter()
+                ->unique('id')
+                ->values()
+                ->map(fn ($product) => $this->formatProduct($product))
+                ->values()
+            : collect();
 
         /*
         |--------------------------------------------------------------------------
@@ -296,7 +313,7 @@ if ($topSellingIds->isNotEmpty()) {
             ->map(fn ($product) => $this->formatProduct($product))
             ->values();
 
-        return Inertia::render('Buyer/Dashboard', [
+        return Inertia::render($guest ? 'Guest/Home' : 'Buyer/Dashboard', [
             'categories' => $categories,
 
             'products' => $products,

@@ -35,7 +35,16 @@ class BuyerProductController extends Controller
                 fn ($query) => $query->where(function ($query) use ($search) {
                     $query
                         ->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('seller', function ($sellerQuery) use ($search) {
+                            $sellerQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('store_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('category', function ($categoryQuery) use ($search) {
+                            $categoryQuery
+                                ->where('name', 'like', "%{$search}%");
+                        });
                 })
             )
 
@@ -179,6 +188,8 @@ class BuyerProductController extends Controller
 
             'variants:id,product_id,color,size,stock',
 
+            'images:id,product_id,image_path',
+
             'reviews' => fn ($query) => $query
                 ->with('user:id,name')
                 ->latest(),
@@ -193,6 +204,24 @@ class BuyerProductController extends Controller
                 ->latest()
                 ->limit(5),
         ]);
+
+        $relatedProducts = Product::query()
+            ->with('category:id,name')
+            ->where('status', 'approved')
+            ->where('id', '!=', $product->id)
+            ->when(
+                $product->category_id,
+                fn ($query) => $query->where('category_id', $product->category_id)
+            )
+            ->latest()
+            ->take(5)
+            ->get([
+                'id',
+                'category_id',
+                'name',
+                'price',
+                'image_path',
+            ]);
 
         /*
         |--------------------------------------------------------------------------
@@ -218,6 +247,7 @@ class BuyerProductController extends Controller
 
         return Inertia::render('Buyer/Show', [
             'product' => $product,
+            'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
         ]);
     }

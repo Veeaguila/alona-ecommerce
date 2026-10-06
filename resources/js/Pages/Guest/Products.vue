@@ -64,44 +64,18 @@ const formatPrice = price => {
                 class="w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
             >
                 <!-- ===================================================== -->
-                <!-- PAGE HEADER -->
-                <!-- ===================================================== -->
-
-                <div class="mb-5">
-                    <div class="flex items-center gap-2">
-                        <span class="h-1.5 w-1.5 rounded-full bg-[#F4B942]"></span>
-
-                        <p
-                            class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C]"
-                        >
-                            Alona marketplace
-                        </p>
-                    </div>
-
-                    <h1
-                        class="mt-1.5 text-xl font-bold tracking-tight text-[#1F2937] sm:text-2xl"
-                    >
-                        Products
-                    </h1>
-
-                    <p class="mt-1 text-[11px] text-[#64748B] sm:text-[12px]">
-                        Discover products from trusted sellers.
-                    </p>
-                </div>
-
-                <!-- ===================================================== -->
                 <!-- PRODUCTS -->
                 <!-- ===================================================== -->
 
                 <div
                     v-if="products.data?.length"
-                    class="grid w-full min-w-0 grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+                    class="mt-6 grid w-full min-w-0 grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
                 >
                     <Link
                         v-for="product in products.data"
                         :key="product.id"
                         :href="route('guest.product', product.id)"
-                        class="group block min-w-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                        class="group block min-w-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#E5E7EB] hover:shadow-md"
                     >
                         <!-- ================================================= -->
                         <!-- IMAGE -->
@@ -150,25 +124,36 @@ const formatPrice = price => {
 
                             <!-- RATING -->
 
-                            <p
-                                class="mt-1.5 flex min-w-0 items-center gap-1 text-[10px] text-[#64748B] sm:text-[11px]"
+                            <div
+                                class="mt-1.5 flex min-w-0 items-center gap-1"
                             >
+                                <div class="flex shrink-0 items-center">
+                                    <span
+                                        v-for="star in 5"
+                                        :key="star"
+                                        class="text-[11px] leading-none sm:text-xs"
+                                        :class="
+                                            star <= Math.round(Number(product.rating ?? 0))
+                                                ? 'text-[#F4B942]'
+                                                : 'text-[#CBD5E1]'
+                                        "
+                                    >
+                                        ★
+                                    </span>
+                                </div>
+
                                 <span
-                                    class="shrink-0 text-[#F4B942]"
+                                    class="text-[10px] font-medium text-[#64748B] sm:text-[11px]"
                                 >
-                                    ★
+                                    {{ Number(product.rating ?? 0).toFixed(2) }}
                                 </span>
 
-                                <span>
-                                    {{ product.rating ?? 0 }}
-                                </span>
-
                                 <span
-                                    class="truncate text-[#64748B]"
+                                    class="truncate text-[10px] text-[#94A3B8] sm:text-[11px]"
                                 >
-                                    ({{ product.reviews_count ?? 0 }})
+                                    ({{ Number(product.reviews_count ?? 0) }})
                                 </span>
-                            </p>
+                            </div>
 
                             <!-- PRICE -->
 

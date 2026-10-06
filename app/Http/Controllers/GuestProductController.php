@@ -90,19 +90,64 @@ class GuestProductController extends Controller
         ]);
     }
 
-        public function show(Product $product): Response
+    public function show(Product $product): Response
     {
         abort_unless(
             $product->status === 'approved',
             404
         );
 
+        $product->load([
+            'category:id,name,slug',
+            'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
+            'variants:id,product_id,color,size,stock',
+            'images:id,product_id,image_path',
+            'reviews' => fn ($query) => $query
+                ->with('user:id,name')
+                ->latest(),
+            'questions' => fn ($query) => $query
+                ->where('is_public', true)
+                ->whereNotNull('answer')
+                ->with([
+                    'buyer:id,name',
+                    'answeredBy:id,name',
+                ])
+                ->latest()
+                ->limit(5),
+        ]);
+
+        $sellerStats = [
+            'total_products' => Product::where('seller_id', $product->seller_id)
+                ->where('status', 'approved')
+                ->count(),
+            'avg_rating' => Product::where('seller_id', $product->seller_id)
+                ->where('status', 'approved')
+                ->whereNotNull('rating')
+                ->avg('rating'),
+        ];
+
+        $relatedProducts = Product::query()
+            ->with('category:id,name')
+            ->where('status', 'approved')
+            ->where('id', '!=', $product->id)
+            ->when(
+                $product->category_id,
+                fn ($query) => $query->where('category_id', $product->category_id)
+            )
+            ->latest()
+            ->take(5)
+            ->get([
+                'id',
+                'category_id',
+                'name',
+                'price',
+                'image_path',
+            ]);
+
         return Inertia::render('Guest/Show', [
-            'product' => $product->load([
-                'category:id,name,slug',
-                'seller:id,name',
-                'variants:id,product_id,color,size,stock',
-            ]),
+            'product' => $product,
+            'relatedProducts' => $relatedProducts,
+            'sellerStats' => $sellerStats,
         ]);
     }
 }

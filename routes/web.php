@@ -48,28 +48,7 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return Inertia::render('Guest/Home', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-
-        'categories' => Category::where('is_active', true)
-            ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'slug',
-            ]),
-
-        'products' => Product::with('category:id,name')
-            ->where('status', 'approved')
-            ->latest()
-            ->take(6)
-            ->get(),
-    ]);
-});
+Route::get('/', [BuyerDashboardController::class, 'guest']);
 
 
 /*

@@ -329,7 +329,7 @@ onUnmounted(() => {
                             class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="openAuthModal('register')"
                         >
-                            Register
+                            Sign Up
                         </button>
                     </template>
                 </div>
@@ -545,7 +545,7 @@ onUnmounted(() => {
                                         class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
                                         @click="openAuthModal('register')"
                                     >
-                                        Register
+                                        Sign Up
                                     </button>
 
                                 </div>
