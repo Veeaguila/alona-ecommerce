@@ -12,6 +12,7 @@ use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\BuyerMessageController;
 use App\Http\Controllers\BuyerConversationController;
 use App\Http\Controllers\BuyerCategoryController;
+use App\Http\Controllers\BuyerDashboardController;
 use App\Http\Controllers\SellerProductController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\SellerOrderController;
@@ -278,173 +279,19 @@ Route::get('/buyer/categories', [
 |--------------------------------------------------------------------------
 | BUYER DASHBOARD
 |--------------------------------------------------------------------------
+|
+| Uses BuyerDashboardController for:
+| - Categories
+| - Featured Products
+| - Recommended Products
+| - Top Selling Products
+| - Promotions
+| - Recently Viewed Products
+|
+|--------------------------------------------------------------------------
 */
 
-Route::get('/buyer', function () {
-    $user = auth()->user();
-
-    /*
-    |--------------------------------------------------------------------------
-    | Recently Viewed Products
-    |--------------------------------------------------------------------------
-    |
-    | Get the latest 6 approved products viewed by this buyer.
-    |
-    |--------------------------------------------------------------------------
-    */
-
-    $recentlyViewedProducts = \App\Models\RecentlyViewedProduct::query()
-        ->where('user_id', $user->id)
-
-        ->whereHas('product', function ($query) {
-            $query->where('status', 'approved');
-        })
-
-        ->with([
-            'product' => function ($query) {
-                $query
-                    ->where('status', 'approved')
-
-                    ->with([
-                        'category:id,name,slug',
-
-                        'images:id,product_id,image_path,sort_order',
-                    ]);
-            },
-        ])
-
-        ->orderByDesc('viewed_at')
-
-        ->take(6)
-
-        ->get()
-
-        ->map(function ($recentlyViewed) {
-            $product = $recentlyViewed->product;
-
-            /*
-            |--------------------------------------------------------------------------
-            | Skip deleted / unavailable products
-            |--------------------------------------------------------------------------
-            */
-            if (!$product) {
-                return null;
-            }
-
-            return [
-                'id' => $product->id,
-
-                'name' => $product->name,
-
-                'slug' => $product->slug,
-
-                'price' => $product->price,
-
-                'old_price' => $product->old_price,
-
-                'rating' => $product->rating,
-
-                'reviews_count' => $product->reviews_count,
-
-                'image_path' => $product->image_path,
-
-                /*
-                |--------------------------------------------------------------------------
-                | Category
-                |--------------------------------------------------------------------------
-                */
-                'category' => $product->category
-                    ? [
-                        'id' => $product->category->id,
-                        'name' => $product->category->name,
-                        'slug' => $product->category->slug,
-                    ]
-                    : null,
-
-                /*
-                |--------------------------------------------------------------------------
-                | Additional Product Images
-                |--------------------------------------------------------------------------
-                */
-                'images' => $product->images
-                    ->map(fn ($image) => [
-                        'id' => $image->id,
-
-                        'image_path' => $image->image_path,
-
-                        'sort_order' => $image->sort_order,
-                    ])
-                    ->values()
-                    ->all(),
-
-                /*
-                |--------------------------------------------------------------------------
-                | When the product was viewed
-                |--------------------------------------------------------------------------
-                */
-                'viewed_at' => $recentlyViewed->viewed_at
-                    ?->toISOString(),
-            ];
-        })
-
-        ->filter()
-
-        ->values()
-
-        ->all();
-
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    return Inertia::render('Buyer/Dashboard', [
-        /*
-        |--------------------------------------------------------------------------
-        | Categories
-        |--------------------------------------------------------------------------
-        */
-        'categories' => \App\Models\Category::query()
-            ->where('is_active', true)
-
-            ->withCount([
-                'products' => fn ($query) =>
-                    $query->where('status', 'approved'),
-            ])
-
-            ->orderBy('name')
-
-            ->get([
-                'id',
-                'name',
-                'slug',
-            ]),
-
-        /*
-        |--------------------------------------------------------------------------
-        | Latest Products
-        |--------------------------------------------------------------------------
-        */
-        'products' => \App\Models\Product::query()
-            ->with('category:id,name')
-
-            ->where('status', 'approved')
-
-            ->latest()
-
-            ->take(4)
-
-            ->get(),
-
-        /*
-        |--------------------------------------------------------------------------
-        | Recently Viewed
-        |--------------------------------------------------------------------------
-        */
-        'recentlyViewedProducts' => $recentlyViewedProducts,
-    ]);
-})
+Route::get('/buyer', BuyerDashboardController::class)
     ->middleware([
         'auth',
         'buyer',
@@ -557,8 +404,8 @@ Route::middleware([
     ])->name('buyer.reviews.store');
 
     Route::get('/buyer/products/{product}/reviews', [
-    BuyerReviewController::class,
-    'productReviews',
+        BuyerReviewController::class,
+        'productReviews',
     ])->name('buyer.product.reviews');
 
     Route::get('/buyer/notifications', [
@@ -622,6 +469,7 @@ Route::middleware([
 
 });
 
+
 /*
 |--------------------------------------------------------------------------
 | BUYER ACCOUNT
@@ -644,6 +492,7 @@ Route::middleware([
     ])->name('buyer.account.update');
 
 });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -677,9 +526,6 @@ Route::middleware([
     ])->name('buyer.addresses.destroy');
 
 });
-
-
-
 /*
 |--------------------------------------------------------------------------
 | SELLER ROUTES

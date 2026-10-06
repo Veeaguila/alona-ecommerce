@@ -23,6 +23,7 @@ class Product extends Model
         'stock',
         'image_path',
         'status',
+        'is_featured',
         'rating',
         'reviews_count',
     ];
@@ -33,6 +34,7 @@ class Product extends Model
             'price' => 'decimal:2',
             'old_price' => 'decimal:2',
             'rating' => 'decimal:2',
+            'is_featured' => 'boolean',
         ];
     }
 
