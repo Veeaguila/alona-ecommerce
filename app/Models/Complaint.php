@@ -12,8 +12,11 @@ class Complaint extends Model
         'seller_id',
         'courier_id',
         'order_id',
+        'product_id',
         'subject',
+        'type',
         'description',
+        'contact_email',
         'evidence',
         'status',
         'resolution',
@@ -45,6 +48,11 @@ class Complaint extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function reviewer(): BelongsTo

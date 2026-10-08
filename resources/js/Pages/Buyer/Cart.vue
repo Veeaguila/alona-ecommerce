@@ -480,6 +480,96 @@ const selectedHasStockIssue = computed(() =>
 
 /*
 |--------------------------------------------------------------------------
+| VARIANT CHANGE (BUYER-12)
+|--------------------------------------------------------------------------
+*/
+
+const isChangeVariantModalOpen = ref(false)
+const variantModalItem = ref(null)
+const selectedColor = ref(null)
+const selectedSize = ref(null)
+const changingVariant = ref(false)
+
+const itemVariants = computed(() => {
+    return variantModalItem.value?.product?.variants || []
+})
+
+const availableColors = computed(() => {
+    const colors = itemVariants.value.map(v => v.color).filter(Boolean)
+    return [...new Set(colors)]
+})
+
+const sizesForColor = color => {
+    return itemVariants.value
+        .filter(v => (!color || v.color === color) && v.size)
+        .map(v => ({
+            id: v.id,
+            size: v.size,
+            stock: Number(v.stock || 0),
+        }))
+}
+
+const selectedTargetVariant = computed(() => {
+    if (!itemVariants.value.length) return null
+    return itemVariants.value.find(v => {
+        const matchesColor = !selectedColor.value || v.color === selectedColor.value
+        const matchesSize = !selectedSize.value || v.size === selectedSize.value
+        return matchesColor && matchesSize
+    }) || null
+})
+
+const openVariantModal = item => {
+    variantModalItem.value = item
+    if (item.variant) {
+        selectedColor.value = item.variant.color || null
+        selectedSize.value = item.variant.size || null
+    } else if (item.product?.variants?.length) {
+        selectedColor.value = item.product.variants[0].color || null
+        selectedSize.value = item.product.variants[0].size || null
+    }
+    isChangeVariantModalOpen.value = true
+}
+
+const closeVariantModal = () => {
+    isChangeVariantModalOpen.value = false
+    variantModalItem.value = null
+    selectedColor.value = null
+    selectedSize.value = null
+}
+
+const selectColorOption = color => {
+    selectedColor.value = color
+    const availableSizes = sizesForColor(color)
+    if (availableSizes.length > 0 && !availableSizes.some(s => s.size === selectedSize.value)) {
+        selectedSize.value = availableSizes[0].size
+    }
+}
+
+const submitVariantChange = () => {
+    if (!variantModalItem.value || !selectedTargetVariant.value) return
+
+    changingVariant.value = true
+    router.patch(
+        safeRoute('buyer.cart.update', variantModalItem.value.id),
+        {
+            product_variant_id: selectedTargetVariant.value.id,
+            quantity: Math.min(
+                Number(variantModalItem.value.quantity || 1),
+                Number(selectedTargetVariant.value.stock || 1)
+            ),
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                changingVariant.value = false
+                closeVariantModal()
+            },
+        }
+    )
+}
+
+/*
+|--------------------------------------------------------------------------
 | SUMMARY LABEL
 |--------------------------------------------------------------------------
 */
@@ -848,22 +938,31 @@ const checkoutButtonLabel = computed(() => {
                                                     }}
                                                 </h2>
 
-                                                <!-- VARIANT -->
+                                                <!-- VARIANT WITH CHANGE BUTTON (BUYER-12) -->
 
-                                                <p
-                                                    v-if="
-                                                        variantLabel(
-                                                            item
-                                                        )
-                                                    "
-                                                    class="mt-1 inline-flex max-w-full items-center rounded-md bg-[#F8FAF9] px-2 py-1 text-[10px] font-semibold text-[#64748B]"
+                                                <div
+                                                    v-if="item.product?.variants?.length || variantLabel(item)"
+                                                    class="mt-1.5 flex flex-wrap items-center gap-1.5"
                                                 >
-                                                    {{
-                                                        variantLabel(
-                                                            item
-                                                        )
-                                                    }}
-                                                </p>
+                                                    <span
+                                                        v-if="variantLabel(item)"
+                                                        class="inline-flex max-w-full items-center rounded-md border border-gray-200 bg-[#F8FAF9] px-2 py-0.5 text-[10px] font-semibold text-[#475569]"
+                                                    >
+                                                        {{ variantLabel(item) }}
+                                                    </span>
+
+                                                    <button
+                                                        v-if="item.product?.variants?.length > 1 || (item.product?.variants?.length === 1 && !item.variant)"
+                                                        type="button"
+                                                        class="inline-flex items-center gap-1 rounded-md border border-[#087F8C]/20 bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-bold text-[#087F8C] transition hover:bg-[#d4f2f0]"
+                                                        @click="openVariantModal(item)"
+                                                    >
+                                                        <span>Change</span>
+                                                        <svg class="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
 
                                                 <p
                                                     class="mt-2 text-sm font-extrabold text-[#087F8C]"
@@ -1338,5 +1437,132 @@ const checkoutButtonLabel = computed(() => {
                 </div>
             </div>
         </main>
+
+        <!-- ========================================================= -->
+        <!-- CHANGE VARIATION MODAL (BUYER-12) -->
+        <!-- ========================================================= -->
+
+        <div
+            v-if="isChangeVariantModalOpen && variantModalItem"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-gray-900">Change Product Variation</h3>
+                        <p class="text-xs text-gray-500">Select a different color or size</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="text-gray-400 hover:text-gray-600"
+                        @click="closeVariantModal"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <!-- PRODUCT PREVIEW -->
+                <div class="mt-4 flex items-center gap-3 rounded-xl bg-[#F8FAF9] p-3">
+                    <img
+                        v-if="itemImage(variantModalItem)"
+                        :src="itemImage(variantModalItem)"
+                        :alt="variantModalItem.product?.name"
+                        class="h-12 w-12 rounded-lg object-cover ring-1 ring-gray-200"
+                    />
+                    <div class="min-w-0 flex-1">
+                        <h4 class="truncate text-xs font-bold text-gray-900">
+                            {{ variantModalItem.product?.name }}
+                        </h4>
+                        <p class="mt-0.5 text-xs font-extrabold text-[#087F8C]">
+                            {{ money(itemPrice(variantModalItem)) }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- COLOR SELECTION -->
+                <div v-if="availableColors.length > 0" class="mt-4">
+                    <label class="block text-xs font-bold text-gray-700">Color</label>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            v-for="color in availableColors"
+                            :key="color"
+                            type="button"
+                            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                            :class="
+                                selectedColor === color
+                                    ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C]'
+                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            "
+                            @click="selectColorOption(color)"
+                        >
+                            {{ color }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SIZE SELECTION -->
+                <div v-if="selectedColor && sizesForColor(selectedColor).length > 0" class="mt-4">
+                    <label class="block text-xs font-bold text-gray-700">Size</label>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            v-for="item in sizesForColor(selectedColor)"
+                            :key="item.id"
+                            type="button"
+                            :disabled="item.stock <= 0"
+                            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                            :class="[
+                                selectedSize === item.size
+                                    ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C]'
+                                    : item.stock <= 0
+                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed line-through'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            ]"
+                            @click="selectedSize = item.size"
+                        >
+                            {{ item.size }}
+                            <span v-if="item.stock <= 0" class="text-[9px]">(Out)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STOCK & SELECTION SUMMARY -->
+                <div class="mt-4 rounded-xl bg-gray-50 p-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Selected Option:</span>
+                        <span class="font-bold text-gray-800">
+                            {{ selectedTargetVariant ? `${selectedTargetVariant.color || ''} / ${selectedTargetVariant.size || ''}` : 'Please select' }}
+                        </span>
+                    </div>
+                    <div class="mt-1 flex items-center justify-between">
+                        <span class="text-gray-500">Stock Available:</span>
+                        <span
+                            class="font-bold"
+                            :class="selectedTargetVariant && selectedTargetVariant.stock > 0 ? 'text-emerald-600' : 'text-red-500'"
+                        >
+                            {{ selectedTargetVariant ? `${selectedTargetVariant.stock} items in stock` : '—' }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button
+                        type="button"
+                        class="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                        @click="closeVariantModal"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="!selectedTargetVariant || selectedTargetVariant.stock <= 0 || changingVariant"
+                        class="rounded-xl bg-[#087F8C] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#066C76] disabled:cursor-not-allowed disabled:opacity-50"
+                        @click="submitVariantChange"
+                    >
+                        {{ changingVariant ? 'Updating...' : 'Save Variation' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </BuyerLayout>
 </template>

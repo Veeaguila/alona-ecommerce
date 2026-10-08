@@ -26,6 +26,7 @@ class BuyerCartController extends Controller
                         ->with([
                             'category:id,name,slug',
                             'images:id,product_id,image_path,sort_order',
+                            'variants:id,product_id,color,size,stock',
                         ]);
                 },
                 'variant:id,product_id,color,size,stock',
@@ -194,7 +195,7 @@ class BuyerCartController extends Controller
     }
 
     /**
-     * Update cart item quantity.
+     * Update cart item quantity or variation (BUYER-12).
      */
     public function update(
         Request $request,
@@ -206,7 +207,7 @@ class BuyerCartController extends Controller
         );
 
         $cartItem->loadMissing([
-            'product',
+            'product.variants',
             'variant',
         ]);
 
@@ -217,31 +218,86 @@ class BuyerCartController extends Controller
             'This product is no longer available.'
         );
 
-        $availableStock = $cartItem->variant
-            ? (int) $cartItem->variant->stock
+        $data = $request->validate([
+            'quantity' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'product_variant_id' => [
+                'nullable',
+                'integer',
+                'exists:product_variants,id',
+            ],
+        ]);
+
+        $targetVariantId = array_key_exists('product_variant_id', $data)
+            ? $data['product_variant_id']
+            : $cartItem->product_variant_id;
+
+        $targetVariant = null;
+        if ($targetVariantId) {
+            $targetVariant = $cartItem->product->variants->firstWhere('id', $targetVariantId);
+            abort_unless(
+                $targetVariant,
+                422,
+                'The selected variation does not belong to this product.'
+            );
+        }
+
+        $availableStock = $targetVariant
+            ? (int) $targetVariant->stock
             : (int) $cartItem->product->stock;
 
         if ($availableStock <= 0) {
             return back()->withErrors([
-                'cart_item' =>
-                    'This item is currently out of stock.',
+                'cart_item' => 'The selected variation is currently out of stock.',
             ]);
         }
 
-        $data = $request->validate([
-            'quantity' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:' . $availableStock,
-            ],
-        ]);
+        $requestedQuantity = isset($data['quantity'])
+            ? (int) $data['quantity']
+            : (int) $cartItem->quantity;
+
+        $newQuantity = min($requestedQuantity, $availableStock);
+
+        // If the buyer switched variations, check if they already have an existing cart item with that variation
+        if ($targetVariantId != $cartItem->product_variant_id) {
+            $existingItemQuery = $request->user()->cartItems()
+                ->where('product_id', $cartItem->product_id)
+                ->where('id', '!=', $cartItem->id);
+
+            if ($targetVariantId) {
+                $existingItemQuery->where('product_variant_id', $targetVariantId);
+            } else {
+                $existingItemQuery->whereNull('product_variant_id');
+            }
+
+            $existingItem = $existingItemQuery->first();
+
+            if ($existingItem) {
+                $mergedQuantity = min($availableStock, (int) $existingItem->quantity + $newQuantity);
+                $existingItem->update([
+                    'quantity' => $mergedQuantity,
+                ]);
+                $cartItem->delete();
+
+                return back()->with(
+                    'status',
+                    'Variation changed and combined with existing item in your cart.'
+                );
+            }
+        }
 
         $cartItem->update([
-            'quantity' => (int) $data['quantity'],
+            'product_variant_id' => $targetVariantId,
+            'quantity' => $newQuantity,
         ]);
 
-        return back();
+        return back()->with(
+            'status',
+            'Cart item updated successfully.'
+        );
     }
 
     /**

@@ -588,42 +588,42 @@ onUnmounted(() => {
                     </p>
                 </div>
 
-                <!-- SHOP -->
+                <!-- SHOP & SUPPORT -->
                 <div>
                     <h3
                         class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
                     >
-                        Shop
+                        Customer Support
                     </h3>
 
                     <div class="mt-4 space-y-3">
                         <Link
-                            :href="safeRoute('guest.products')"
+                            :href="safeRoute('guest.help', '/help')"
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            All products
+                            Help Center & Contact
+                        </Link>
+
+                        <Link
+                            :href="safeRoute('guest.faq', '/faq')"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Frequently Asked Questions
+                        </Link>
+
+                        <Link
+                            :href="safeRoute('guest.policies', '/policies')"
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Terms & Buyer Policies
                         </Link>
 
                         <Link
                             :href="safeRoute('guest.products')"
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            Categories
+                            Browse All Products
                         </Link>
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Contact us
-                        </a>
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            FAQs
-                        </a>
                     </div>
                 </div>
 

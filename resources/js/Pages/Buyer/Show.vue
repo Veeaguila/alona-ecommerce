@@ -642,6 +642,68 @@ function messageSeller() {
 
 /*
 |--------------------------------------------------------------------------
+| REPORT PRODUCT (BUYER-34)
+|--------------------------------------------------------------------------
+*/
+
+const isReportModalOpen = ref(false)
+
+const reportForm = useForm({
+    report_type: 'product',
+    product_id: null,
+    seller_id: null,
+    reason: 'Counterfeit / Fake Item',
+    description: '',
+    evidence_images: [],
+})
+
+const reportReasons = [
+    'Counterfeit / Fake Item',
+    'Misleading Description or Photos',
+    'Prohibited or Illegal Item',
+    'Damaged / Defective / Expired Product',
+    'Price Gouging / Scam',
+    'Other Product Issue',
+]
+
+function openReportModal() {
+    if (props.isGuest) {
+        requireLogin()
+        return
+    }
+
+    if (requireLogin()) {
+        return
+    }
+
+    reportForm.reset()
+    reportForm.report_type = 'product'
+    reportForm.product_id = product.value.id
+    reportForm.seller_id = product.value.seller?.id || null
+    isReportModalOpen.value = true
+}
+
+function closeReportModal() {
+    isReportModalOpen.value = false
+    reportForm.reset()
+}
+
+function handleReportFileChange(event) {
+    const files = Array.from(event.target.files || [])
+    reportForm.evidence_images = files.slice(0, 4)
+}
+
+function submitReport() {
+    reportForm.post(safeRoute('buyer.reports.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeReportModal()
+        },
+    })
+}
+
+/*
+|--------------------------------------------------------------------------
 | BREADCRUMBS
 |--------------------------------------------------------------------------
 */
@@ -1433,12 +1495,12 @@ const breadcrumbs = computed(() => {
                             </div>
 
                             <!-- ================================================= -->
-                            <!-- MESSAGE SELLER -->
+                            <!-- MESSAGE SELLER & REPORT PRODUCT (BUYER-34) -->
                             <!-- ================================================= -->
 
                             <div
                                 v-if="product.id"
-                                class="mt-3"
+                                class="mt-3 flex items-center gap-2"
                             >
                                 <button
                                     type="button"
@@ -1448,9 +1510,19 @@ const breadcrumbs = computed(() => {
                                     :disabled="
                                         cartForm.processing
                                     "
-                                    class="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-semibold text-[#1F2937] transition hover:border-[#16A6A0] hover:bg-[#E8F7F6] hover:text-[#087F8C] disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="flex-1 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-semibold text-[#1F2937] transition hover:border-[#16A6A0] hover:bg-[#E8F7F6] hover:text-[#087F8C] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Message Seller
+                                </button>
+
+                                <button
+                                    type="button"
+                                    @click="openReportModal"
+                                    title="Report this product for policy violations"
+                                    class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-[#FEF2F2] px-3.5 py-2.5 text-xs font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
+                                >
+                                    <span>🚩</span>
+                                    <span>Report</span>
                                 </button>
                             </div>
 
@@ -1943,5 +2015,94 @@ const breadcrumbs = computed(() => {
                 authModalOpen = false
             "
         />
+
+        <!-- ========================================================= -->
+        <!-- REPORT PRODUCT MODAL (BUYER-34) -->
+        <!-- ========================================================= -->
+
+        <div
+            v-if="isReportModalOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+        >
+            <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">🚩</span>
+                        <div>
+                            <h3 class="font-bold text-gray-900">Report This Product</h3>
+                            <p class="text-xs text-gray-500">Flag policy violations, fake listings, or safety issues</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="text-gray-400 hover:text-gray-600"
+                        @click="closeReportModal"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <form class="mt-4 space-y-4" @submit.prevent="submitReport">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700">Product</label>
+                        <p class="mt-1 text-xs font-medium text-gray-800 line-clamp-1">
+                            {{ product.name }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700">Violation Reason</label>
+                        <select
+                            v-model="reportForm.reason"
+                            class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-[#087F8C] focus:outline-hidden"
+                            required
+                        >
+                            <option v-for="reason in reportReasons" :key="reason" :value="reason">
+                                {{ reason }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700">Description of Violation</label>
+                        <textarea
+                            v-model="reportForm.description"
+                            rows="4"
+                            class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-[#087F8C] focus:outline-hidden"
+                            placeholder="Provide specific details about why this product violates community standards..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700">Evidence / Screenshots (Optional, max 4)</label>
+                        <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            class="mt-1 block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#087F8C] hover:file:bg-[#d6f0ef]"
+                            @change="handleReportFileChange"
+                        />
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                        <button
+                            type="button"
+                            class="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                            @click="closeReportModal"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="reportForm.processing"
+                            class="rounded-xl bg-[#DC2626] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#B91C1C] disabled:opacity-50"
+                        >
+                            {{ reportForm.processing ? 'Submitting Report...' : 'Submit Report' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </component>
 </template>

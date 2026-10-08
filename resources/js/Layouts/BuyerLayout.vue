@@ -368,6 +368,24 @@ const openReviews = () => {
     }
 }
 
+const openHelpCenter = () => {
+    closeMenus()
+
+    const destination = safeRoute('buyer.help')
+    if (destination !== '#') {
+        router.visit(destination)
+    }
+}
+
+const openComplaints = () => {
+    closeMenus()
+
+    const destination = safeRoute('buyer.complaints')
+    if (destination !== '#') {
+        router.visit(destination)
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1444,6 +1462,87 @@ onUnmounted(() => {
 
                                     </button>
 
+                                    <!-- HELP CENTER (BUYER-37) -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="
+                                            openHelpCenter
+                                        "
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="9"
+                                                />
+
+                                                <path
+                                                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                                                />
+
+                                                <line
+                                                    x1="12"
+                                                    y1="17"
+                                                    x2="12.01"
+                                                    y2="17"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+                                        Help Center
+
+                                    </button>
+
+                                    <!-- COMPLAINTS (BUYER-33) -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="
+                                            openComplaints
+                                        "
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <path
+                                                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+                                        Complaints & Tickets
+
+                                    </button>
+
                                 </div>
 
 
@@ -2280,6 +2379,89 @@ onUnmounted(() => {
 
                                 </button>
 
+                                <!-- HELP CENTER (BUYER-37) -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="
+                                        openHelpCenter
+                                    "
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="9"
+                                            />
+
+                                            <path
+                                                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                                            />
+
+                                            <line
+                                                x1="12"
+                                                y1="17"
+                                                x2="12.01"
+                                                y2="17"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+
+                                    Help Center
+
+                                </button>
+
+                                <!-- COMPLAINTS (BUYER-33) -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="
+                                        openComplaints
+                                    "
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <path
+                                                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+
+                                    Complaints & Tickets
+
+                                </button>
+
 
                                 <!-- LOGOUT -->
 
@@ -2457,7 +2639,7 @@ onUnmounted(() => {
                     <h3
                         class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
                     >
-                        Help
+                        Customer Support
                     </h3>
 
 
@@ -2468,30 +2650,62 @@ onUnmounted(() => {
                         <Link
                             :href="
                                 safeRoute(
+                                    'buyer.help',
+                                    '#'
+                                )
+                            "
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Help Center
+                        </Link>
+
+                        <Link
+                            :href="
+                                safeRoute(
+                                    'buyer.faq',
+                                    '#'
+                                )
+                            "
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Frequently Asked Questions
+                        </Link>
+
+                        <Link
+                            :href="
+                                safeRoute(
+                                    'buyer.policies',
+                                    '#'
+                                )
+                            "
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Buyer Policies & Protection
+                        </Link>
+
+                        <Link
+                            :href="
+                                safeRoute(
+                                    'buyer.complaints',
+                                    '#'
+                                )
+                            "
+                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        >
+                            Complaints & Ticket Status
+                        </Link>
+
+                        <Link
+                            :href="
+                                safeRoute(
                                     'buyer.conversations',
                                     '#'
                                 )
                             "
                             class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
-                            Messages
+                            Seller Messages
                         </Link>
-
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Contact us
-                        </a>
-
-
-                        <a
-                            href="#"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            FAQs
-                        </a>
 
                     </div>
 

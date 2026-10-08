@@ -229,6 +229,20 @@ class AdminComplaintController extends Controller
                 $request->user()->id,
         ]);
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('buyer_notifications') && $complaint->buyer_id) {
+            try {
+                \App\Models\BuyerNotification::create([
+                    'user_id' => $complaint->buyer_id,
+                    'title' => "Complaint status: " . ucfirst($validated['status']),
+                    'type' => 'complaint',
+                    'message' => "Your complaint '{$complaint->subject}' has been marked as {$validated['status']}. Response: " . \Illuminate\Support\Str::limit($validated['resolution'], 120),
+                    'action_url' => route('buyer.complaints'),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore notification error
+            }
+        }
+
         return back()->with(
             'status',
             'Complaint resolution saved successfully.'

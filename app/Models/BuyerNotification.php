@@ -12,7 +12,9 @@ class BuyerNotification extends Model
     protected $fillable = [
         'user_id',
         'title',
+        'type',
         'message',
+        'action_url',
         'read_at',
     ];
 

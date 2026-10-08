@@ -46,6 +46,21 @@ class SellerConversationController extends Controller
         $conversation->messages()->create(['sender_id' => $request->user()->id, 'body' => $data['body']]);
         $conversation->update(['last_message_at' => now()]);
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('buyer_notifications') && $conversation->buyer_id) {
+            try {
+                $sellerName = $request->user()->store_name ?: $request->user()->name;
+                \App\Models\BuyerNotification::create([
+                    'user_id' => $conversation->buyer_id,
+                    'title' => "New message from {$sellerName}",
+                    'type' => 'message',
+                    'message' => \Illuminate\Support\Str::limit($data['body'], 120),
+                    'action_url' => route('buyer.conversations.show', $conversation->id),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore notification errors
+            }
+        }
+
         return back();
     }
 

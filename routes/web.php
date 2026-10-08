@@ -67,6 +67,21 @@ Route::get('/product/{product}', [
     'show',
 ])->name('guest.product');
 
+Route::get('/help', [
+    \App\Http\Controllers\BuyerSupportController::class,
+    'help',
+])->name('guest.help');
+
+Route::get('/faq', [
+    \App\Http\Controllers\BuyerSupportController::class,
+    'faq',
+])->name('guest.faq');
+
+Route::get('/policies', [
+    \App\Http\Controllers\BuyerSupportController::class,
+    'policies',
+])->name('guest.policies');
+
 Route::get('/categories', function () {
     return Inertia::render('Guest/Categories', [
         'categories' => Category::query()
@@ -392,10 +407,41 @@ Route::middleware([
     'buyer',
 ])->group(function () {
 
+    // Buyer Support, Help Center, FAQs, Policies & Complaints (BUYER-32 to BUYER-38)
+    Route::get('/buyer/help', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'help',
+    ])->name('buyer.help');
+
+    Route::get('/buyer/faq', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'faq',
+    ])->name('buyer.faq');
+
+    Route::get('/buyer/policies', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'policies',
+    ])->name('buyer.policies');
+
+    Route::get('/buyer/complaints', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'complaints',
+    ])->name('buyer.complaints');
+
     Route::post('/buyer/complaints', [
-        BuyerComplaintController::class,
-        'store',
+        \App\Http\Controllers\BuyerSupportController::class,
+        'storeComplaint',
     ])->name('buyer.complaints.store');
+
+    Route::post('/buyer/reports', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'storeReport',
+    ])->name('buyer.reports.store');
+
+    Route::post('/buyer/support/contact', [
+        \App\Http\Controllers\BuyerSupportController::class,
+        'contactSupport',
+    ])->name('buyer.support.contact');
 
     Route::get('/buyer/reviews', [
         BuyerReviewController::class,
@@ -520,6 +566,17 @@ Route::middleware([
         ProfileController::class,
         'update',
     ])->name('buyer.account.update');
+
+    // Login Session Management (BUYER-39)
+    Route::delete('/buyer/sessions/{session}', [
+        ProfileController::class,
+        'revokeSession',
+    ])->name('buyer.sessions.revoke');
+
+    Route::post('/buyer/sessions/revoke-other', [
+        ProfileController::class,
+        'revokeOtherSessions',
+    ])->name('buyer.sessions.revoke-other');
 
 });
 

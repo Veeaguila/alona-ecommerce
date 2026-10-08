@@ -1300,6 +1300,20 @@ class BuyerOrderController extends Controller
             }
         );
 
+        if (Schema::hasTable('buyer_notifications')) {
+            try {
+                BuyerNotification::create([
+                    'user_id' => $user->id,
+                    'title' => "Order #{$order->order_number} placed",
+                    'type' => 'order',
+                    'message' => "Your order with total ₱" . number_format((float) $order->total, 2) . " has been placed and is waiting for fulfillment.",
+                    'action_url' => route('buyer.orders.show', $order->id),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore notification logging errors
+            }
+        }
+
         return redirect()
             ->route(
                 'buyer.orders.show',
