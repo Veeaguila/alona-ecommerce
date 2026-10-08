@@ -90,6 +90,20 @@ class OrderItem extends Model
         )->latest();
     }
 
+    public function returnRequests(): HasMany
+    {
+        return $this->hasMany(
+            OrderReturnRequest::class
+        )->latest();
+    }
+
+    public function latestReturnRequest()
+    {
+        return $this->hasOne(
+            OrderReturnRequest::class
+        )->latestOfMany();
+    }
+
     /**
      * Determine whether this item can move from its current
      * status to the requested status.

@@ -22,20 +22,20 @@ Each checkbox is a separate task with a short description. Existing functions su
 
 ## Checkout and Payments
 
-- [ ] **BUYER-13: Shipping options.** Let buyers choose from available shipping methods at checkout.
-- [ ] **BUYER-14: Shipping calculation.** Calculate and show shipping fees in the checkout total.
-- [ ] **BUYER-15: Payment choices.** Support buyer-selectable payment methods beyond COD.
-- [ ] **BUYER-16: Saved payment methods.** Let buyers securely add and remove saved payment methods.
+- [x] **BUYER-13: Shipping options.** Let buyers choose from available shipping methods at checkout.
+- [x] **BUYER-14: Shipping calculation.** Calculate and show shipping fees in the checkout total.
+- [x] **BUYER-15: Payment choices.** Support buyer-selectable payment methods beyond COD.
+- [x] **BUYER-16: Saved payment methods.** Let buyers securely add and remove saved payment methods.
 
 ## Orders, Returns, and Refunds
 
-- [ ] **BUYER-17: Order status filters.** Separate orders into To Pay, To Ship, To Receive, In Transit, Delivered, and Cancelled views.
-- [ ] **BUYER-18: Cancel an order.** Let buyers cancel orders that have not passed the allowed fulfillment stage.
-- [ ] **BUYER-19: Order tracking.** Show fulfillment milestones and carrier tracking details to the buyer.
-- [ ] **BUYER-20: Reorder.** Let buyers add eligible items from a previous order to their cart again.
-- [ ] **BUYER-21: Request a return.** Let buyers request a return for eligible order items and select a reason.
-- [ ] **BUYER-22: Request a refund.** Let buyers request and follow a refund for an eligible order.
-- [ ] **BUYER-23: Return/refund evidence and responses.** Let buyers upload evidence and view seller/admin decisions and status updates.
+- [x] **BUYER-17: Order status filters.** Separate orders into To Pay, To Ship, To Receive, In Transit, Delivered, and Cancelled views.
+- [x] **BUYER-18: Cancel an order.** Let buyers cancel orders that have not passed the allowed fulfillment stage.
+- [x] **BUYER-19: Order tracking.** Show fulfillment milestones and carrier tracking details to the buyer.
+- [x] **BUYER-20: Reorder.** Let buyers add eligible items from a previous order to their cart again.
+- [x] **BUYER-21: Request a return.** Let buyers request a return for eligible order items and select a reason.
+- [x] **BUYER-22: Request a refund.** Let buyers request and follow a refund for an eligible order.
+- [x] **BUYER-23: Return/refund evidence and responses.** Let buyers upload evidence and view seller/admin decisions and status updates.
 
 ## Vouchers and Reviews
 

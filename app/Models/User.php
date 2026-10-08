@@ -88,6 +88,11 @@ class User extends Authenticatable
         return $this->hasMany(Address::class);
     }
 
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(PaymentMethod::class);
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
@@ -132,6 +137,16 @@ class User extends Authenticatable
     public function conversationsAsSeller(): HasMany
     {
         return $this->hasMany(Conversation::class, 'seller_id');
+    }
+
+    public function returnRequestsAsBuyer(): HasMany
+    {
+        return $this->hasMany(OrderReturnRequest::class, 'buyer_id');
+    }
+
+    public function returnRequestsAsSeller(): HasMany
+    {
+        return $this->hasMany(OrderReturnRequest::class, 'seller_id');
     }
 
     /*

@@ -17,7 +17,13 @@ class Order extends Model
         'discount',
         'total',
         'shipping_address',
+        'shipping_method',
+        'shipping_fee',
         'payment_method',
+        'payment_status',
+        'payment_method_id',
+        'cancellation_reason',
+        'cancelled_at',
         'status',
     ];
 
@@ -25,8 +31,10 @@ class Order extends Model
     {
         return [
             'subtotal' => 'decimal:2',
+            'shipping_fee' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -43,6 +51,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function returnRequests(): HasMany
+    {
+        return $this->hasMany(OrderReturnRequest::class);
     }
 
     /**

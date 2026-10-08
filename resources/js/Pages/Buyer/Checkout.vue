@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 
@@ -18,7 +18,39 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+
+    shipping_options: {
+        type: Array,
+        default: () => [],
+    },
+
+    seller_count: {
+        type: Number,
+        default: 1,
+    },
+
+    free_shipping_threshold: {
+        type: [Number, String],
+        default: null,
+    },
+
+    default_shipping_method: {
+        type: String,
+        default: 'standard',
+    },
+
+    payment_options: {
+        type: Array,
+        default: () => [],
+    },
+
+    saved_payment_methods: {
+        type: Array,
+        default: () => [],
+    },
 })
+
+const sellerCount = computed(() => Math.max(1, props.seller_count))
 
 const selectedItems = ref(
     props.selected_items
@@ -28,10 +60,25 @@ const selectedItems = ref(
 
 const form = useForm({
     shipping_address: '',
+    shipping_method: props.default_shipping_method,
     payment_method: 'cod',
+    payment_method_id: null,
     voucher_code: '',
     selected_items: [...selectedItems.value],
 })
+
+// Preselect the buyer's default saved method for the chosen payment type.
+watch(
+    () => form.payment_method,
+    type => {
+        const saved = props.saved_payment_methods.filter(
+            method => method.type === type
+        )
+
+        form.payment_method_id =
+            (saved.find(method => method.is_default) || saved[0])?.id ?? null
+    }
+)
 
 const voucherInput = ref('')
 const appliedVoucher = ref(null)
@@ -91,8 +138,39 @@ const discount = computed(() =>
     Number(appliedVoucher.value?.discount || 0)
 )
 
-const total = computed(() =>
+const merchandiseTotal = computed(() =>
     Math.max(0, subtotal.value - discount.value)
+)
+
+// Mirrors the server-side calculation (the server is authoritative).
+const feeFor = option => {
+    if (
+        option.key !== 'express' &&
+        props.free_shipping_threshold !== null &&
+        props.free_shipping_threshold !== undefined &&
+        merchandiseTotal.value >= Number(props.free_shipping_threshold)
+    ) {
+        return 0
+    }
+
+    return Number(option.fee_per_seller) * sellerCount.value
+}
+
+const selectedShipping = computed(() =>
+    props.shipping_options.find(
+        option => option.key === form.shipping_method
+    )
+)
+
+const shippingFee = computed(() =>
+    selectedShipping.value ? feeFor(selectedShipping.value) : 0
+)
+
+const savedFor = type =>
+    props.saved_payment_methods.filter(method => method.type === type)
+
+const total = computed(() =>
+    merchandiseTotal.value + shippingFee.value
 )
 
 const totalQuantity = computed(() =>
@@ -475,14 +553,87 @@ const submit = () => {
                             </div>
                         </section>
 
-                        <!-- PAYMENT -->
+                        <!-- SHIPPING METHOD -->
                         <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
                             <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm">💳</span>
+                                    <span class="text-sm">🚚</span>
                                     <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
-                                        Payment
+                                        Delivery
                                     </p>
+                                </div>
+
+                                <h2 class="mt-1 text-sm font-extrabold text-[#1F2937]">
+                                    Shipping method
+                                </h2>
+
+                                <p class="mt-1 text-xs leading-5 text-[#64748B]">
+                                    Fees are charged per seller
+                                    ({{ sellerCount }} {{ sellerCount === 1 ? 'seller' : 'sellers' }} in this order).
+                                    <span v-if="free_shipping_threshold">
+                                        Free standard shipping on orders of {{ money(free_shipping_threshold) }} or more.
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="space-y-3 p-4 sm:p-5">
+                                <label
+                                    v-for="option in shipping_options"
+                                    :key="option.key"
+                                    class="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition sm:p-4"
+                                    :class="
+                                        form.shipping_method === option.key
+                                            ? 'border-[#16A6A0] bg-[#E8F7F6] ring-2 ring-[#D5F0EE]'
+                                            : 'border-[#E5E7EB] bg-[#F8FAF9]'
+                                    "
+                                >
+                                    <input
+                                        v-model="form.shipping_method"
+                                        type="radio"
+                                        :value="option.key"
+                                        class="h-4 w-4 shrink-0 border-gray-300 text-[#087F8C] focus:ring-[#16A6A0]"
+                                    />
+
+                                    <span class="min-w-0 flex-1">
+                                        <strong class="block text-xs font-extrabold text-[#1F2937]">
+                                            {{ option.label }}
+                                        </strong>
+                                        <small class="mt-1 block text-xs leading-4 text-[#64748B]">
+                                            {{ option.description }}
+                                        </small>
+                                    </span>
+
+                                    <span class="shrink-0 text-xs font-extrabold text-[#1F2937]">
+                                        {{ feeFor(option) === 0 ? 'Free' : money(feeFor(option)) }}
+                                    </span>
+                                </label>
+
+                                <p
+                                    v-if="form.errors.shipping_method"
+                                    class="rounded-lg bg-[#FFF1F1] px-3 py-2 text-xs font-medium text-[#C24141]"
+                                >
+                                    {{ form.errors.shipping_method }}
+                                </p>
+                            </div>
+                        </section>
+
+                        <!-- PAYMENT -->
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+                            <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm">💳</span>
+                                        <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
+                                            Payment
+                                        </p>
+                                    </div>
+
+                                    <Link
+                                        :href="route('buyer.payment-methods')"
+                                        class="text-[10px] font-bold text-[#087F8C] hover:underline"
+                                    >
+                                        Manage saved methods
+                                    </Link>
                                 </div>
 
                                 <h2 class="mt-1 text-sm font-extrabold text-[#1F2937]">
@@ -494,43 +645,77 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <div class="p-4 sm:p-5">
-                                <label
-                                    class="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition sm:p-4"
-                                    :class="
-                                        form.payment_method === 'cod'
-                                            ? 'border-[#16A6A0] bg-[#E8F7F6] ring-2 ring-[#D5F0EE]'
-                                            : 'border-[#E5E7EB] bg-[#F8FAF9]'
-                                    "
+                            <div class="space-y-3 p-4 sm:p-5">
+                                <div
+                                    v-for="option in payment_options"
+                                    :key="option.key"
                                 >
-                                    <input
-                                        v-model="form.payment_method"
-                                        type="radio"
-                                        value="cod"
-                                        required
-                                        class="h-4 w-4 shrink-0 border-gray-300 text-[#087F8C] focus:ring-[#16A6A0]"
-                                    />
+                                    <label
+                                        class="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition sm:p-4"
+                                        :class="
+                                            form.payment_method === option.key
+                                                ? 'border-[#16A6A0] bg-[#E8F7F6] ring-2 ring-[#D5F0EE]'
+                                                : 'border-[#E5E7EB] bg-[#F8FAF9]'
+                                        "
+                                    >
+                                        <input
+                                            v-model="form.payment_method"
+                                            type="radio"
+                                            :value="option.key"
+                                            required
+                                            class="h-4 w-4 shrink-0 border-gray-300 text-[#087F8C] focus:ring-[#16A6A0]"
+                                        />
 
-                                    <span class="min-w-0 flex-1">
-                                        <strong class="block text-xs font-extrabold text-[#1F2937]">
-                                            Cash on Delivery
-                                        </strong>
+                                        <span class="min-w-0 flex-1">
+                                            <strong class="block text-xs font-extrabold text-[#1F2937]">
+                                                {{ option.label }}
+                                            </strong>
+                                            <small class="mt-1 block text-xs leading-4 text-[#64748B]">
+                                                {{ option.description }}
+                                            </small>
+                                        </span>
+                                    </label>
 
-                                        <small class="mt-1 block text-xs leading-4 text-[#64748B]">
-                                            Pay with cash when your order arrives.
-                                        </small>
-                                    </span>
+                                    <!-- Saved methods of this type -->
+                                    <div
+                                        v-if="form.payment_method === option.key && option.online"
+                                        class="mt-2 space-y-2 pl-7"
+                                    >
+                                        <label
+                                            v-for="saved in savedFor(option.key)"
+                                            :key="saved.id"
+                                            class="flex cursor-pointer items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-xs"
+                                        >
+                                            <input
+                                                v-model="form.payment_method_id"
+                                                type="radio"
+                                                :value="saved.id"
+                                                class="h-3.5 w-3.5 border-gray-300 text-[#087F8C] focus:ring-[#16A6A0]"
+                                            />
+                                            <span class="font-bold text-[#1F2937]">
+                                                {{ saved.brand || option.label }} •••• {{ saved.last_four }}
+                                            </span>
+                                            <span class="text-[#64748B]">{{ saved.holder_name }}</span>
+                                        </label>
 
-                                    <span class="hidden shrink-0 rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-[#087F8C] sm:inline-flex">
-                                        Available
-                                    </span>
-                                </label>
+                                        <p
+                                            v-if="!savedFor(option.key).length"
+                                            class="text-[10px] leading-4 text-[#64748B]"
+                                        >
+                                            No saved {{ option.label }} yet.
+                                            <Link :href="route('buyer.payment-methods')" class="font-bold text-[#087F8C] hover:underline">
+                                                Add one
+                                            </Link>
+                                            to pay faster next time.
+                                        </p>
+                                    </div>
+                                </div>
 
                                 <p
-                                    v-if="form.errors.payment_method"
-                                    class="mt-2 rounded-lg bg-[#FFF1F1] px-3 py-2 text-xs font-medium text-[#C24141]"
+                                    v-if="form.errors.payment_method || form.errors.payment_method_id"
+                                    class="rounded-lg bg-[#FFF1F1] px-3 py-2 text-xs font-medium text-[#C24141]"
                                 >
-                                    {{ form.errors.payment_method }}
+                                    {{ form.errors.payment_method || form.errors.payment_method_id }}
                                 </p>
                             </div>
                         </section>
@@ -612,10 +797,18 @@ const submit = () => {
                                 </div>
 
                                 <div class="flex items-start justify-between gap-3">
-                                    <span class="text-[#64748B]">Shipping</span>
+                                    <span class="text-[#64748B]">
+                                        Shipping
+                                        <span v-if="selectedShipping" class="block text-[10px] text-[#94A3B8]">
+                                            {{ selectedShipping.label }}
+                                        </span>
+                                    </span>
 
-                                    <span class="text-right text-[10px] font-medium leading-4 text-[#94A3B8]">
-                                        Calculated at checkout
+                                    <span
+                                        class="text-right font-bold"
+                                        :class="shippingFee === 0 ? 'text-[#22A06B]' : 'text-[#1F2937]'"
+                                    >
+                                        {{ shippingFee === 0 ? 'Free' : money(shippingFee) }}
                                     </span>
                                 </div>
                             </div>
@@ -757,7 +950,10 @@ const submit = () => {
                         </section>
 
                         <!-- COD -->
-                        <section class="min-w-0 rounded-2xl border border-[#F2D98F] bg-[#FFF7E5] p-4">
+                        <section
+                            v-if="form.payment_method === 'cod'"
+                            class="min-w-0 rounded-2xl border border-[#F2D98F] bg-[#FFF7E5] p-4"
+                        >
                             <div class="flex min-w-0 gap-3">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-base shadow-sm">
                                     💵
@@ -769,7 +965,7 @@ const submit = () => {
                                     </h3>
 
                                     <p class="mt-1 text-[10px] leading-4 text-[#9A6B08]">
-                                        Prepare sufficient cash when your order arrives.
+                                        Prepare {{ money(total) }} in cash when your order arrives.
                                     </p>
                                 </div>
                             </div>

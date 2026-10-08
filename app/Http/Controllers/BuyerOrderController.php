@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuyerNotification;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturnRequest;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\SellerNotification;
 use App\Models\Voucher;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,22 +30,90 @@ class BuyerOrderController extends Controller
     */
 
     /**
-     * Display buyer orders.
+     * Display buyer orders with status filter tabs and search.
      */
     public function index(Request $request): Response
     {
-        $orders = $request->user()
+        $user = $request->user();
+        $statusTab = strtolower((string) $request->input('status', 'all'));
+        $search = trim((string) $request->input('search', ''));
+
+        // Precompute counts for status tabs
+        $counts = [
+            'all' => $user->orders()->count(),
+            'to_pay' => $user->orders()
+                ->where('payment_status', 'unpaid')
+                ->where('payment_method', '!=', 'cod')
+                ->where('status', '!=', 'cancelled')
+                ->count(),
+            'to_ship' => $user->orders()
+                ->whereIn('status', ['pending', 'processing', 'packed', 'ready_for_pickup'])
+                ->count(),
+            'in_transit' => $user->orders()
+                ->whereIn('status', ['shipped', 'out_for_delivery'])
+                ->count(),
+            'delivered' => $user->orders()
+                ->whereIn('status', ['delivered', 'completed'])
+                ->count(),
+            'cancelled' => $user->orders()
+                ->where('status', 'cancelled')
+                ->count(),
+            'returns' => $user->orders()
+                ->whereHas('returnRequests')
+                ->count(),
+        ];
+
+        $ordersQuery = $user
             ->orders()
             ->with([
                 'items.product',
                 'items.variant',
-            ])
+                'items.returnRequests',
+                'returnRequests',
+            ]);
+
+        // Filter by tab
+        match ($statusTab) {
+            'to_pay' => $ordersQuery
+                ->where('payment_status', 'unpaid')
+                ->where('payment_method', '!=', 'cod')
+                ->where('status', '!=', 'cancelled'),
+            'to_ship' => $ordersQuery
+                ->whereIn('status', ['pending', 'processing', 'packed', 'ready_for_pickup']),
+            'in_transit', 'to_receive' => $ordersQuery
+                ->whereIn('status', ['shipped', 'out_for_delivery']),
+            'delivered' => $ordersQuery
+                ->whereIn('status', ['delivered', 'completed']),
+            'cancelled' => $ordersQuery
+                ->where('status', 'cancelled'),
+            'returns' => $ordersQuery
+                ->whereHas('returnRequests'),
+            default => null,
+        };
+
+        // Search by order number or product name
+        if ($search !== '') {
+            $ordersQuery->where(function ($query) use ($search) {
+                $query->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('items', function ($itemQuery) use ($search) {
+                        $itemQuery->where('product_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $ordersQuery
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('Buyer/Orders', [
             'orders' => $orders,
+            'current_status' => $statusTab,
+            'counts' => $counts,
+            'filters' => [
+                'status' => $statusTab,
+                'search' => $search,
+            ],
         ]);
     }
 
@@ -62,6 +134,7 @@ class BuyerOrderController extends Controller
                     ->addresses()
                     ->latest()
                     ->get(),
+                ...$this->checkoutOptions($request, collect()),
             ]);
         }
 
@@ -106,11 +179,101 @@ class BuyerOrderController extends Controller
                 ->addresses()
                 ->latest()
                 ->get(),
+
+            ...$this->checkoutOptions($request, $items),
         ]);
     }
 
     /**
-     * Show a specific buyer order.
+     * Shipping/payment options shown at checkout.
+     */
+    private function checkoutOptions(Request $request, $items): array
+    {
+        $sellerCount = $items
+            ->map(fn ($item) => $item->product?->seller_id)
+            ->filter()
+            ->unique()
+            ->count();
+
+        return [
+            'shipping_options' => collect(config('checkout.shipping_methods'))
+                ->map(fn ($method, $key) => [
+                    'key' => $key,
+                    'label' => $method['label'],
+                    'description' => $method['description'],
+                    'fee_per_seller' => (float) $method['fee_per_seller'],
+                ])
+                ->values()
+                ->all(),
+
+            'seller_count' => max(1, $sellerCount),
+
+            'free_shipping_threshold' => config('checkout.free_shipping_threshold'),
+
+            'default_shipping_method' => config('checkout.default_shipping_method'),
+
+            'payment_options' => collect(config('checkout.payment_methods'))
+                ->map(fn ($method, $key) => [
+                    'key' => $key,
+                    'label' => $method['label'],
+                    'description' => $method['description'],
+                    'online' => $method['online'],
+                ])
+                ->values()
+                ->all(),
+
+            'saved_payment_methods' => $request->user()
+                ->paymentMethods()
+                ->orderByDesc('is_default')
+                ->latest()
+                ->get(),
+        ];
+    }
+
+    /**
+     * Authoritative shipping fee calculation.
+     * Fee is per seller package; free above the configured threshold
+     * (except express delivery).
+     */
+    private function calculateShippingFee(
+        string $method,
+        $items,
+        float $merchandiseTotal
+    ): float {
+        $config = config("checkout.shipping_methods.{$method}");
+
+        if (!$config) {
+            return 0.0;
+        }
+
+        $threshold = config('checkout.free_shipping_threshold');
+
+        if (
+            $method !== 'express' &&
+            $threshold !== null &&
+            $merchandiseTotal >= (float) $threshold
+        ) {
+            return 0.0;
+        }
+
+        $sellerCount = max(
+            1,
+            $items
+                ->map(fn ($item) => $item->product?->seller_id)
+                ->filter()
+                ->unique()
+                ->count()
+        );
+
+        return round(
+            (float) $config['fee_per_seller'] * $sellerCount,
+            2
+        );
+    }
+
+    /**
+     * Show a specific buyer order with tracking milestones, return eligibility,
+     * and status history.
      */
     public function show(
         Request $request,
@@ -124,12 +287,73 @@ class BuyerOrderController extends Controller
 
         $order->load([
             'items.product.category',
+            'items.product.seller',
             'items.variant',
             'items.statusHistories',
+            'items.returnRequests',
+            'returnRequests',
         ]);
 
+        $orderStatusHistories = Schema::hasTable('order_status_histories')
+            ? DB::table('order_status_histories')
+                ->where('order_id', $order->id)
+                ->orderBy('created_at', 'asc')
+                ->get()
+            : collect();
+
+        // Calculate order cancellability:
+        // Allowed if order is in pending, processing, packed and not shipped/ready for pickup
+        $cancellableStatuses = ['pending', 'processing', 'packed'];
+        $canCancelOrder = in_array(strtolower((string) $order->status), $cancellableStatuses, true)
+            && $order->items->every(function ($item) use ($cancellableStatuses) {
+                return in_array(strtolower((string) ($item->status ?? 'pending')), $cancellableStatuses, true);
+            });
+
+        // Add item-level metadata
+        $itemsWithMeta = $order->items->map(function ($item) {
+            $itemStatus = strtolower((string) ($item->status ?? 'pending'));
+            $isDelivered = in_array($itemStatus, ['delivered', 'completed'], true);
+
+            // Return policy window
+            $returnDays = (int) ($item->product?->seller?->return_policy_days ?? 7);
+            if ($returnDays <= 0) {
+                $returnDays = 7;
+            }
+
+            $deliveredAt = $item->delivered_at ?? $item->updated_at ?? now();
+            $returnDeadline = Carbon::parse($deliveredAt)->addDays($returnDays);
+            $isWithinReturnWindow = now()->lessThanOrEqualTo($returnDeadline);
+
+            // Active return request
+            $activeReturn = $item->returnRequests
+                ->whereIn('status', ['pending', 'approved', 'completed'])
+                ->first();
+
+            $canReturn = $isDelivered && $isWithinReturnWindow && !$activeReturn;
+
+            // Product availability for reorder
+            $isProductAvailable = $item->product
+                && (!Schema::hasColumn('products', 'status') || $item->product->status === 'approved')
+                && $this->stockForOrderItem($item) > 0;
+
+            return array_merge($item->toArray(), [
+                'can_confirm_delivery' => in_array($itemStatus, ['shipped', 'out_for_delivery'], true),
+                'can_review' => $isDelivered,
+                'can_return' => $canReturn,
+                'can_reorder' => $isProductAvailable,
+                'return_deadline' => $isDelivered ? $returnDeadline->toIso8601String() : null,
+                'return_policy_days' => $returnDays,
+                'active_return_request' => $activeReturn,
+                'latest_return_request' => $item->returnRequests->first(),
+            ]);
+        });
+
         return Inertia::render('Buyer/OrderDetails', [
-            'order' => $order,
+            'order' => array_merge($order->toArray(), [
+                'items' => $itemsWithMeta,
+                'can_cancel' => $canCancelOrder,
+                'status_histories' => $orderStatusHistories,
+            ]),
         ]);
     }
 
@@ -421,7 +645,17 @@ class BuyerOrderController extends Controller
 
             'payment_method' => [
                 'required',
-                'in:cod',
+                'in:' . implode(',', array_keys(config('checkout.payment_methods'))),
+            ],
+
+            'payment_method_id' => [
+                'nullable',
+                'integer',
+            ],
+
+            'shipping_method' => [
+                'required',
+                'in:' . implode(',', array_keys(config('checkout.shipping_methods'))),
             ],
 
             'voucher_code' => [
@@ -807,10 +1041,37 @@ class BuyerOrderController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
+                $shippingMethod = $data['shipping_method'];
+
+                $shippingFee = $this->calculateShippingFee(
+                    $shippingMethod,
+                    $items,
+                    max(0, $subtotal - $discount)
+                );
+
+                $savedPaymentMethod = null;
+
+                if (!empty($data['payment_method_id'])) {
+                    $savedPaymentMethod = $user
+                        ->paymentMethods()
+                        ->whereKey($data['payment_method_id'])
+                        ->first();
+
+                    if (
+                        !$savedPaymentMethod ||
+                        $savedPaymentMethod->type !== $data['payment_method']
+                    ) {
+                        throw ValidationException::withMessages([
+                            'payment_method_id' =>
+                                'The selected saved payment method is invalid.',
+                        ]);
+                    }
+                }
+
                 $total = max(
                     0,
                     $subtotal - $discount
-                );
+                ) + $shippingFee;
 
                 /*
                 |--------------------------------------------------------------------------
@@ -835,6 +1096,10 @@ class BuyerOrderController extends Controller
                     $data['shipping_address'];
                 $order->payment_method =
                     $data['payment_method'];
+                $order->shipping_method = $shippingMethod;
+                $order->shipping_fee = $shippingFee;
+                $order->payment_status = 'unpaid';
+                $order->payment_method_id = $savedPaymentMethod?->id;
                 $order->subtotal = $subtotal;
                 $order->total = $total;
                 $order->status = 'pending';
@@ -1149,6 +1414,396 @@ class BuyerOrderController extends Controller
         return back()->with(
             'status',
             'Delivery confirmed successfully.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ORDER CANCELLATION (BUYER-18)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Buyer cancels an order before fulfillment.
+     */
+    public function cancel(
+        Request $request,
+        Order $order
+    ): RedirectResponse {
+        abort_unless(
+            (int) $order->user_id ===
+            (int) $request->user()->id,
+            404
+        );
+
+        $data = $request->validate([
+            'reason' => [
+                'required',
+                'string',
+                'max:500',
+            ],
+        ]);
+
+        $cancellableStatuses = ['pending', 'processing', 'packed'];
+
+        if (!in_array(strtolower((string) $order->status), $cancellableStatuses, true)) {
+            throw ValidationException::withMessages([
+                'reason' => 'This order cannot be cancelled anymore as it has already progressed in fulfillment.',
+            ]);
+        }
+
+        $order->load('items.product', 'items.variant');
+
+        DB::transaction(function () use ($order, $data, $cancellableStatuses) {
+            $order->update([
+                'status' => 'cancelled',
+                'cancellation_reason' => $data['reason'],
+                'cancelled_at' => now(),
+            ]);
+
+            foreach ($order->items as $item) {
+                $itemStatus = strtolower((string) ($item->status ?? 'pending'));
+
+                if (in_array($itemStatus, $cancellableStatuses, true)) {
+                    $item->update([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                    ]);
+
+                    if (Schema::hasTable('order_item_status_histories')) {
+                        $item->statusHistories()->create([
+                            'status' => 'cancelled',
+                            'note' => 'Order cancelled by buyer: ' . $data['reason'],
+                        ]);
+                    }
+
+                    // Restock inventory
+                    $this->restockOrderItem($item);
+
+                    // Notify seller
+                    $this->notifySellerCancelledOrder($order, $item, $data['reason']);
+                }
+            }
+
+            $this->createOrderStatusHistory(
+                $order,
+                'cancelled'
+            );
+
+            // Buyer notification
+            if (Schema::hasTable('buyer_notifications')) {
+                BuyerNotification::create([
+                    'user_id' => $order->user_id,
+                    'title' => "Order #{$order->order_number} cancelled",
+                    'message' => 'Your order has been cancelled successfully.',
+                ]);
+            }
+        });
+
+        return back()->with(
+            'status',
+            'Order cancelled successfully.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | REORDER (BUYER-20)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Buyer re-adds items from a previous order into the cart.
+     */
+    public function reorder(
+        Request $request,
+        Order $order
+    ): RedirectResponse {
+        abort_unless(
+            (int) $order->user_id ===
+            (int) $request->user()->id,
+            404
+        );
+
+        $order->load('items.product', 'items.variant');
+        $user = $request->user();
+        $addedCount = 0;
+
+        foreach ($order->items as $item) {
+            $product = $item->product;
+
+            if (!$product) {
+                continue;
+            }
+
+            if (Schema::hasColumn('products', 'status') && $product->status !== 'approved') {
+                continue;
+            }
+
+            $stock = $this->stockForOrderItem($item);
+
+            if ($stock <= 0) {
+                continue;
+            }
+
+            $qtyToAdd = min((int) $item->quantity, $stock);
+
+            if ($qtyToAdd <= 0) {
+                $qtyToAdd = 1;
+            }
+
+            // Check if user already has this product + variant in cart
+            $cartItemQuery = $user->cartItems()
+                ->where('product_id', $product->id);
+
+            if ($item->product_variant_id) {
+                $cartItemQuery->where('product_variant_id', $item->product_variant_id);
+            } else {
+                $cartItemQuery->whereNull('product_variant_id');
+            }
+
+            $existingCartItem = $cartItemQuery->first();
+
+            if ($existingCartItem) {
+                $newQty = min($stock, (int) $existingCartItem->quantity + $qtyToAdd);
+                $existingCartItem->update([
+                    'quantity' => $newQty,
+                ]);
+            } else {
+                $user->cartItems()->create([
+                    'product_id' => $product->id,
+                    'product_variant_id' => $item->product_variant_id,
+                    'quantity' => $qtyToAdd,
+                ]);
+            }
+
+            $addedCount++;
+        }
+
+        if ($addedCount === 0) {
+            return back()->withErrors([
+                'reorder' => 'None of the items from this order are currently available in stock.',
+            ]);
+        }
+
+        return redirect()
+            ->route('buyer.cart')
+            ->with('status', "Added {$addedCount} item(s) from this order to your cart.");
+    }
+
+    /**
+     * Reorder a single line item.
+     */
+    public function reorderItem(
+        Request $request,
+        OrderItem $orderItem
+    ): RedirectResponse {
+        $orderItem->load('order', 'product', 'variant');
+
+        abort_unless(
+            (int) $orderItem->order->user_id ===
+            (int) $request->user()->id,
+            404
+        );
+
+        $product = $orderItem->product;
+
+        if (!$product || (Schema::hasColumn('products', 'status') && $product->status !== 'approved')) {
+            return back()->withErrors([
+                'reorder' => 'This product is no longer available.',
+            ]);
+        }
+
+        $stock = $this->stockForOrderItem($orderItem);
+
+        if ($stock <= 0) {
+            return back()->withErrors([
+                'reorder' => 'This product is currently out of stock.',
+            ]);
+        }
+
+        $user = $request->user();
+        $qtyToAdd = min((int) $orderItem->quantity, $stock);
+        if ($qtyToAdd <= 0) {
+            $qtyToAdd = 1;
+        }
+
+        $cartItemQuery = $user->cartItems()
+            ->where('product_id', $product->id);
+
+        if ($orderItem->product_variant_id) {
+            $cartItemQuery->where('product_variant_id', $orderItem->product_variant_id);
+        } else {
+            $cartItemQuery->whereNull('product_variant_id');
+        }
+
+        $existingCartItem = $cartItemQuery->first();
+
+        if ($existingCartItem) {
+            $newQty = min($stock, (int) $existingCartItem->quantity + $qtyToAdd);
+            $existingCartItem->update(['quantity' => $newQty]);
+        } else {
+            $user->cartItems()->create([
+                'product_id' => $product->id,
+                'product_variant_id' => $orderItem->product_variant_id,
+                'quantity' => $qtyToAdd,
+            ]);
+        }
+
+        return redirect()
+            ->route('buyer.cart')
+            ->with('status', "{$product->name} added to your cart.");
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RETURNS & REFUNDS (BUYER-21, BUYER-22, BUYER-23)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Submit a return / refund request for an eligible order item.
+     */
+    public function storeReturnRequest(
+        Request $request,
+        OrderItem $orderItem
+    ): RedirectResponse {
+        $orderItem->load('order.user', 'product.seller', 'returnRequests');
+
+        abort_unless(
+            (int) $orderItem->order->user_id ===
+            (int) $request->user()->id,
+            404
+        );
+
+        $itemStatus = strtolower((string) ($orderItem->status ?? $orderItem->order->status));
+
+        if (!in_array($itemStatus, ['delivered', 'completed'], true)) {
+            throw ValidationException::withMessages([
+                'reason' => 'Returns and refunds can only be requested after the item has been delivered.',
+            ]);
+        }
+
+        // Return policy days check
+        $returnDays = (int) ($orderItem->product?->seller?->return_policy_days ?? 7);
+        if ($returnDays <= 0) {
+            $returnDays = 7;
+        }
+
+        $deliveredAt = $orderItem->delivered_at ?? $orderItem->updated_at ?? now();
+        $returnDeadline = Carbon::parse($deliveredAt)->addDays($returnDays);
+
+        if (now()->greaterThan($returnDeadline)) {
+            throw ValidationException::withMessages([
+                'reason' => "The {$returnDays}-day return window for this item has expired.",
+            ]);
+        }
+
+        // Check if an active return request already exists
+        $hasActive = $orderItem->returnRequests()
+            ->whereIn('status', ['pending', 'approved', 'completed'])
+            ->exists();
+
+        if ($hasActive) {
+            throw ValidationException::withMessages([
+                'reason' => 'A return or refund request for this item is already being processed.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'type' => [
+                'required',
+                'in:return_and_refund,refund_only',
+            ],
+            'reason' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+            'reason_details' => [
+                'nullable',
+                'string',
+                'max:1500',
+            ],
+            'evidence_images' => [
+                'nullable',
+                'array',
+                'max:5',
+            ],
+            'evidence_images.*' => [
+                'image',
+                'mimes:jpeg,png,jpg,webp',
+                'max:5120',
+            ],
+        ]);
+
+        $evidencePaths = [];
+
+        if ($request->hasFile('evidence_images')) {
+            foreach ($request->file('evidence_images') as $file) {
+                $evidencePaths[] = $file->store('returns', 'public');
+            }
+        }
+
+        $sellerId = $orderItem->product?->seller_id ?? null;
+
+        $returnRequest = OrderReturnRequest::create([
+            'order_id' => $orderItem->order_id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $request->user()->id,
+            'seller_id' => $sellerId,
+            'type' => $data['type'],
+            'reason' => $data['reason'],
+            'reason_details' => $data['reason_details'] ?? null,
+            'requested_amount' => (float) ($orderItem->price * $orderItem->quantity),
+            'evidence_images' => $evidencePaths,
+            'status' => 'pending',
+        ]);
+
+        // Notify seller
+        $this->notifySellerReturnRequest($returnRequest, $orderItem);
+
+        // Notify buyer
+        if (Schema::hasTable('buyer_notifications')) {
+            BuyerNotification::create([
+                'user_id' => $request->user()->id,
+                'title' => 'Return/Refund request submitted',
+                'message' => "Your request for {$orderItem->product_name} has been received and is pending seller review.",
+            ]);
+        }
+
+        return back()->with(
+            'status',
+            'Return / refund request submitted successfully.'
+        );
+    }
+
+    /**
+     * Buyer cancels a pending return / refund request.
+     */
+    public function cancelReturnRequest(
+        Request $request,
+        OrderReturnRequest $returnRequest
+    ): RedirectResponse {
+        abort_unless(
+            (int) $returnRequest->buyer_id ===
+            (int) $request->user()->id,
+            404
+        );
+
+        if ($returnRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'status' => 'Only pending return/refund requests can be cancelled.',
+            ]);
+        }
+
+        $returnRequest->update([
+            'status' => 'cancelled',
+        ]);
+
+        return back()->with(
+            'status',
+            'Return request has been cancelled.'
         );
     }
 
@@ -1901,5 +2556,129 @@ class BuyerOrderController extends Controller
         }
 
         return 0;
+    }
+
+    /**
+     * Restock inventory when an order item is cancelled.
+     */
+    private function restockOrderItem(
+        OrderItem $item
+    ): void {
+        $quantity = (int) $item->quantity;
+
+        if ($quantity <= 0) {
+            return;
+        }
+
+        if ($item->variant) {
+            $variant = $item->variant;
+
+            if (Schema::hasColumn($variant->getTable(), 'stock')) {
+                $variant->increment('stock', $quantity);
+            } elseif (Schema::hasColumn($variant->getTable(), 'quantity')) {
+                $variant->increment('quantity', $quantity);
+            }
+
+            if ($item->product && Schema::hasColumn($item->product->getTable(), 'stock')) {
+                $product = $item->product;
+                $variantStock = 0;
+
+                if (Schema::hasColumn($variant->getTable(), 'stock')) {
+                    $variantStock = $variant->newQuery()
+                        ->where('product_id', $product->id)
+                        ->sum('stock');
+                } elseif (Schema::hasColumn($variant->getTable(), 'quantity')) {
+                    $variantStock = $variant->newQuery()
+                        ->where('product_id', $product->id)
+                        ->sum('quantity');
+                }
+
+                $product->update([
+                    'stock' => max(0, (int) $variantStock),
+                ]);
+            }
+
+            return;
+        }
+
+        if ($item->product) {
+            $product = $item->product;
+
+            if (Schema::hasColumn($product->getTable(), 'stock')) {
+                $product->increment('stock', $quantity);
+            } elseif (Schema::hasColumn($product->getTable(), 'quantity')) {
+                $product->increment('quantity', $quantity);
+            }
+        }
+    }
+
+    /**
+     * Get stock for an order item (used for reorder eligibility checks).
+     */
+    private function stockForOrderItem(
+        OrderItem $item
+    ): int {
+        if ($item->variant) {
+            if (isset($item->variant->stock)) {
+                return max(0, (int) $item->variant->stock);
+            }
+            if (isset($item->variant->quantity)) {
+                return max(0, (int) $item->variant->quantity);
+            }
+        }
+
+        if ($item->product) {
+            if (isset($item->product->stock)) {
+                return max(0, (int) $item->product->stock);
+            }
+            if (isset($item->product->quantity)) {
+                return max(0, (int) $item->product->quantity);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Notify seller when buyer cancels an order item.
+     */
+    private function notifySellerCancelledOrder(
+        Order $order,
+        OrderItem $item,
+        string $reason
+    ): void {
+        $sellerId = $item->product?->seller_id;
+
+        if (!$sellerId || !Schema::hasTable('seller_notifications')) {
+            return;
+        }
+
+        SellerNotification::create([
+            'user_id' => $sellerId,
+            'title' => 'Order Item Cancelled by Buyer',
+            'message' => "Order #{$order->order_number} for {$item->product_name} was cancelled. Reason: {$reason}",
+        ]);
+    }
+
+    /**
+     * Notify seller when buyer submits a return/refund request.
+     */
+    private function notifySellerReturnRequest(
+        OrderReturnRequest $returnRequest,
+        OrderItem $item
+    ): void {
+        $sellerId = $returnRequest->seller_id;
+
+        if (!$sellerId || !Schema::hasTable('seller_notifications')) {
+            return;
+        }
+
+        $typeLabel = $returnRequest->type === 'refund_only' ? 'Refund Request' : 'Return & Refund Request';
+
+        SellerNotification::create([
+            'user_id' => $sellerId,
+            'title' => "New {$typeLabel} Received",
+            'message' => "Buyer requested a {$returnRequest->type} for {$item->product_name}. Reason: {$returnRequest->reason}",
+        ]);
     }
 }

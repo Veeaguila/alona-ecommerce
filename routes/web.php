@@ -348,10 +348,35 @@ Route::middleware([
         'show',
     ])->name('buyer.orders.show');
 
+    Route::post('/buyer/orders/{order}/cancel', [
+        BuyerOrderController::class,
+        'cancel',
+    ])->name('buyer.orders.cancel');
+
+    Route::post('/buyer/orders/{order}/reorder', [
+        BuyerOrderController::class,
+        'reorder',
+    ])->name('buyer.orders.reorder');
+
+    Route::post('/buyer/order-items/{orderItem}/reorder', [
+        BuyerOrderController::class,
+        'reorderItem',
+    ])->name('buyer.order-items.reorder');
+
     Route::patch('/buyer/order-items/{orderItem}/confirm-delivery', [
         BuyerOrderController::class,
         'confirmDelivery',
     ])->name('buyer.order-items.confirm-delivery');
+
+    Route::post('/buyer/order-items/{orderItem}/return', [
+        BuyerOrderController::class,
+        'storeReturnRequest',
+    ])->name('buyer.order-items.return');
+
+    Route::post('/buyer/return-requests/{returnRequest}/cancel', [
+        BuyerOrderController::class,
+        'cancelReturnRequest',
+    ])->name('buyer.return-requests.cancel');
 
 });
 
@@ -503,6 +528,21 @@ Route::middleware([
         BuyerAddressController::class,
         'destroy',
     ])->name('buyer.addresses.destroy');
+
+    Route::get('/buyer/payment-methods', [
+        \App\Http\Controllers\BuyerPaymentMethodController::class,
+        'index',
+    ])->name('buyer.payment-methods');
+
+    Route::post('/buyer/payment-methods', [
+        \App\Http\Controllers\BuyerPaymentMethodController::class,
+        'store',
+    ])->name('buyer.payment-methods.store');
+
+    Route::delete('/buyer/payment-methods/{paymentMethod}', [
+        \App\Http\Controllers\BuyerPaymentMethodController::class,
+        'destroy',
+    ])->name('buyer.payment-methods.destroy');
 
 });
 /*
