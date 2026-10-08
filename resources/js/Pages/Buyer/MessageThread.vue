@@ -1,4 +1,3 @@
-```vue
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
@@ -202,9 +201,9 @@ onMounted(() => {
     <Head :title="`Chat with ${sellerName}`" />
 
     <BuyerLayout>
-        <main class="w-full min-w-0 overflow-x-hidden">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
             <div
-                class="w-full min-w-0 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8"
+                class="mx-auto max-w-[1536px] w-full min-w-0 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8"
             >
                 <!-- ================================================== -->
                 <!-- PAGE HEADER -->
@@ -812,4 +811,3 @@ onMounted(() => {
         </main>
     </BuyerLayout>
 </template>
-```

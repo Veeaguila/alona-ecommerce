@@ -160,6 +160,37 @@ const promotionDaysLeft = expiresAt => {
     )
 }
 
+const claimingPromotionId = ref(null)
+const copiedPromotionCode = ref(null)
+
+const claimPromotion = voucherId => {
+    if (props.isGuest) {
+        router.visit(safeRoute('login'))
+        return
+    }
+
+    claimingPromotionId.value = voucherId
+    router.post(
+        safeRoute('buyer.vouchers.claim', '#', voucherId),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                claimingPromotionId.value = null
+            },
+        }
+    )
+}
+
+const copyPromotionCode = code => {
+    if (!code) return
+    navigator.clipboard?.writeText(code)
+    copiedPromotionCode.value = code
+    setTimeout(() => {
+        copiedPromotionCode.value = null
+    }, 2000)
+}
+
 /*
 |--------------------------------------------------------------------------
 | Products
@@ -1132,7 +1163,7 @@ onUnmounted(() => {
                 <div class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#16A6A0]/10 blur-3xl"></div>
                 <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#F4B942]/10 blur-3xl"></div>
 
-                <div class="mx-auto max-w-[1440px] px-4 pb-7 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+                <div class="mx-auto max-w-[1536px] w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
                     <div
                         class="alona-reveal hero-card relative overflow-hidden rounded-[30px] bg-[#087F8C]"
                         @mouseenter="pauseHero"
@@ -1317,7 +1348,7 @@ onUnmounted(() => {
 
             <section
                 id="categories"
-                class="alona-reveal mx-auto max-w-[1440px] scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 lg:pb-12"
+                class="alona-reveal mx-auto max-w-[1536px] w-full scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 2xl:px-10 lg:pb-12"
             >
 
                 <div
@@ -1637,7 +1668,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
                 >
 
                     <div
@@ -1828,12 +1859,188 @@ onUnmounted(() => {
             </section>
 
             <!-- =====================================================
+                 PROMOTIONS & VOUCHERS (CLAIMABLE)
+            ====================================================== -->
+
+            <section
+                class="alona-reveal border-y border-gray-100 bg-[#F8FAF9]"
+            >
+                <div
+                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                >
+                    <div class="flex items-end justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+
+                                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]">
+                                    Deals & Vouchers
+                                </p>
+                            </div>
+
+                            <h2 class="mt-2 text-2xl font-black tracking-[-0.03em] text-gray-900 sm:text-3xl">
+                                Active Promotions
+                            </h2>
+
+                            <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
+                                Claim vouchers to your account and apply extra discounts at checkout.
+                            </p>
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.vouchers')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:gap-3 sm:flex"
+                        >
+                            View all vouchers →
+                        </Link>
+                    </div>
+
+                    <div
+                        v-if="props.promotions.length"
+                        class="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    >
+                        <div
+                            v-for="promotion in props.promotions"
+                            :key="promotion.id"
+                            class="group relative flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#E5E7EB] bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
+                        >
+                            <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#E8F7F6]/60"></div>
+
+                            <div>
+                                <!-- BADGES -->
+                                <div class="relative flex flex-wrap items-center justify-between gap-2">
+                                    <span
+                                        v-if="promotion.is_platform || !promotion.seller"
+                                        class="rounded-full bg-[#E8F7F6] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-[#087F8C]"
+                                    >
+                                        Platform Voucher
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="max-w-[170px] truncate rounded-full bg-[#FFF7E6] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-[#B47A08]"
+                                        :title="promotion.seller?.name"
+                                    >
+                                        Store: {{ promotion.seller?.name }}
+                                    </span>
+
+                                    <span
+                                        v-if="promotion.is_claimed"
+                                        class="inline-flex items-center gap-1 rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[9px] font-extrabold text-[#16A34A]"
+                                    >
+                                        ✓ Claimed
+                                    </span>
+                                    <span
+                                        v-else-if="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3"
+                                        class="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[9px] font-bold text-[#DC2626]"
+                                    >
+                                        Expiring Soon ⏰
+                                    </span>
+                                </div>
+
+                                <!-- VALUE & MIN SPEND -->
+                                <div class="relative mt-4">
+                                    <p class="text-2xl font-black tracking-tight text-[#087F8C]">
+                                        {{ formatPromotionValue(promotion) }}
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-[#64748B]">
+                                        {{ Number(promotion.min_spend ?? 0) > 0 ? `Min. spend ₱${Number(promotion.min_spend).toLocaleString('en-PH')}` : 'No minimum spend' }}
+                                    </p>
+                                </div>
+
+                                <!-- VOUCHER CODE BOX -->
+                                <div class="relative mt-3 flex items-center justify-between gap-2 rounded-xl border border-dashed border-[#087F8C]/30 bg-[#F8FAF9] px-3 py-2">
+                                    <span class="truncate font-mono text-xs font-black tracking-wider text-gray-900">
+                                        🏷️ {{ promotion.code }}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        class="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-extrabold transition"
+                                        :class="copiedPromotionCode === promotion.code ? 'bg-[#16A34A] text-white' : 'bg-[#087F8C] text-white hover:bg-[#16A6A0]'"
+                                        @click="copyPromotionCode(promotion.code)"
+                                    >
+                                        {{ copiedPromotionCode === promotion.code ? 'Copied!' : 'Copy' }}
+                                    </button>
+                                </div>
+
+                                <!-- EXPIRY INFO -->
+                                <div class="relative mt-3 flex items-center justify-between text-[10px] text-[#64748B]">
+                                    <span>Validity:</span>
+                                    <span :class="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3 ? 'font-bold text-[#DC2626]' : 'font-medium text-gray-700'">
+                                        {{ formatPromotionDate(promotion.expires_at) ? `Until ${formatPromotionDate(promotion.expires_at)}` : 'No expiration' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- CLAIM ACTION BUTTON -->
+                            <div class="relative mt-4 pt-3 border-t border-[#F1F5F9]">
+                                <button
+                                    v-if="promotion.is_claimed"
+                                    type="button"
+                                    disabled
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#DCFCE7] py-2.5 text-xs font-extrabold text-[#16A34A] cursor-default shadow-sm"
+                                >
+                                    <span>✓</span>
+                                    <span>Claimed to Your Account</span>
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    :disabled="claimingPromotionId === promotion.id"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#087F8C] py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
+                                    @click="claimPromotion(promotion.id)"
+                                >
+                                    <span>🎟️</span>
+                                    <span>{{ claimingPromotionId === promotion.id ? 'Claiming...' : 'Claim Voucher' }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-white px-6 py-12 text-center"
+                    >
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF6DF] text-2xl">
+                            🎟️
+                        </div>
+
+                        <h3 class="mt-4 text-sm font-extrabold text-gray-900">
+                            No active promotions right now
+                        </h3>
+
+                        <p class="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
+                            Check back soon for vouchers and special deals from Alona sellers.
+                        </p>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#16A6A0]"
+                        >
+                            Browse products →
+                        </Link>
+                    </div>
+
+                    <div class="mt-5 sm:hidden">
+                        <Link
+                            :href="safeRoute('buyer.vouchers')"
+                            class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                        >
+                            View all vouchers
+                            <span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
                  FEATURED PRODUCTS
             ====================================================== -->
 
             <section
                 v-if="featuredProductsList.length"
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
             >
                 <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
@@ -1973,7 +2180,7 @@ onUnmounted(() => {
 
             <section
                 v-if="recommendedProductsList.length"
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9"
+                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
             >
                 <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
@@ -2134,7 +2341,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
                 >
 
                     <div
@@ -2321,176 +2528,11 @@ onUnmounted(() => {
 
 
             <!-- =====================================================
-                 PROMOTIONS
-            ====================================================== -->
-
-            <section
-                class="alona-reveal border-y border-gray-100 bg-white"
-            >
-                <div
-                    class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
-                >
-
-                    <div class="flex items-end justify-between gap-4">
-
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-
-                                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]">
-                                    Deals & Vouchers
-                                </p>
-                            </div>
-
-                            <h2 class="mt-2 text-2xl font-black tracking-[-0.03em] text-gray-900 sm:text-3xl">
-                                Promotions
-                            </h2>
-
-                            <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                                Save more with active vouchers from Alona sellers.
-                            </p>
-                        </div>
-
-                        <Link
-                            :href="safeRoute('buyer.products')"
-                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:gap-3 sm:flex"
-                        >
-                            Shop products →
-                        </Link>
-                    </div>
-
-                    <div
-                        v-if="props.promotions.length"
-                        class="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                    >
-                        <div
-                            v-for="promotion in props.promotions"
-                            :key="promotion.id"
-                            class="group relative overflow-hidden rounded-[22px] border border-[#E8EDEC] bg-[#F8FAF9] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/20 hover:shadow-lg hover:shadow-[#087F8C]/5"
-                        >
-
-                            <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#E8F7F6]"></div>
-
-                            <div class="relative flex items-start justify-between gap-3">
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#087F8C] text-lg text-white shadow-sm">
-                                    🎟️
-                                </div>
-
-                                <span class="rounded-full bg-[#E8F7F6] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-[#087F8C]">
-                                    Active
-                                </span>
-                            </div>
-
-                            <div class="relative mt-5">
-                                <p class="text-2xl font-black tracking-tight text-[#087F8C]">
-                                    {{ formatPromotionValue(promotion) }}
-                                </p>
-
-                                <p class="mt-1 text-xs font-semibold text-gray-900">
-                                    Use code
-                                </p>
-                            </div>
-
-                            <div class="relative mt-3 flex items-center justify-between gap-2 rounded-xl border border-dashed border-[#087F8C]/30 bg-white px-3 py-2.5">
-                                <span class="truncate text-xs font-black tracking-[0.12em] text-gray-900">
-                                    {{ promotion.code }}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    class="shrink-0 rounded-lg bg-[#087F8C] px-2.5 py-1.5 text-[9px] font-bold text-white transition hover:bg-[#16A6A0]"
-                                    @click="navigator.clipboard?.writeText(promotion.code)"
-                                >
-                                    Copy
-                                </button>
-                            </div>
-
-                            <div class="relative mt-4 space-y-2">
-
-                                <div
-                                    v-if="Number(promotion.min_spend ?? 0) > 0"
-                                    class="flex items-center justify-between gap-3 text-[10px]"
-                                >
-                                    <span class="text-gray-500">
-                                        Minimum spend
-                                    </span>
-
-                                    <span class="font-bold text-gray-800">
-                                        ₱{{ Number(promotion.min_spend).toLocaleString('en-PH') }}
-                                    </span>
-                                </div>
-
-                                <div
-                                    v-if="promotion.seller?.name || promotion.seller?.store_name"
-                                    class="flex items-center justify-between gap-3 text-[10px]"
-                                >
-                                    <span class="text-gray-500">
-                                        Seller
-                                    </span>
-
-                                    <span class="max-w-[150px] truncate font-bold text-gray-800">
-                                        {{ promotion.seller?.store_name ?? promotion.seller?.name }}
-                                    </span>
-                                </div>
-
-                                <div
-                                    v-if="promotion.expires_at"
-                                    class="flex items-center justify-between gap-3 text-[10px]"
-                                >
-                                    <span class="text-gray-500">
-                                        Expires
-                                    </span>
-
-                                    <span class="font-bold text-[#E85D5D]">
-                                        {{ formatPromotionDate(promotion.expires_at) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div
-                                v-if="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3"
-                                class="relative mt-4 rounded-lg bg-[#FFF6DF] px-3 py-2 text-[9px] font-bold text-[#A87308]"
-                            >
-                                ⏰ Expires in
-                                {{ promotionDaysLeft(promotion.expires_at) }}
-                                day<span v-if="promotionDaysLeft(promotion.expires_at) !== 1">s</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        v-else
-                        class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-[#F8FAF9] px-6 py-12 text-center"
-                    >
-                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF6DF] text-2xl">
-                            🎟️
-                        </div>
-
-                        <h3 class="mt-4 text-sm font-extrabold text-gray-900">
-                            No active promotions right now
-                        </h3>
-
-                        <p class="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
-                            Check back soon for vouchers and special deals from Alona sellers.
-                        </p>
-
-                        <Link
-                            :href="safeRoute('buyer.products')"
-                            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#16A6A0]"
-                        >
-                            Browse products →
-                        </Link>
-                    </div>
-                </div>
-            </section>
-
-
-            <!-- =====================================================
                  DEAL BANNER
             ====================================================== -->
 
             <section
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
             >
 
                 <div
@@ -2558,7 +2600,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:px-8 lg:py-16"
+                    class="mx-auto max-w-[1536px] w-full px-4 py-12 sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
                 >
 
                     <div
@@ -2635,7 +2677,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
+                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
             >
 
                 <div
@@ -2698,7 +2740,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1440px] px-4 py-12 text-center sm:px-6 lg:px-8 lg:py-16"
+                    class="mx-auto max-w-[1536px] w-full px-4 py-12 text-center sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
                 >
 
                     <p

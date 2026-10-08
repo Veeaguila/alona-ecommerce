@@ -344,6 +344,30 @@ const openOrders = () => {
     }
 }
 
+const openVouchers = () => {
+    closeMenus()
+
+    const destination = safeRoute(
+        'buyer.vouchers'
+    )
+
+    if (destination !== '#') {
+        router.visit(destination)
+    }
+}
+
+const openReviews = () => {
+    closeMenus()
+
+    const destination = safeRoute(
+        'buyer.reviews'
+    )
+
+    if (destination !== '#') {
+        router.visit(destination)
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -586,7 +610,7 @@ onUnmounted(() => {
             <!-- ===================================================== -->
 
             <div
-                class="mx-auto flex h-[72px] max-w-[1440px] items-center gap-3 px-4 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8"
+                class="mx-auto flex h-[72px] max-w-[1536px] w-full items-center gap-3 px-4 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8 2xl:px-10"
             >
 
                 <!-- ================================================= -->
@@ -1342,6 +1366,84 @@ onUnmounted(() => {
 
                                     </button>
 
+                                    <!-- VOUCHERS -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="
+                                            openVouchers
+                                        "
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <path
+                                                    d="M21 12a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3Z"
+                                                    stroke-linejoin="round"
+                                                />
+
+                                                <path
+                                                    d="M9 9v6M15 9v6"
+                                                    stroke-linecap="round"
+                                                    stroke-dasharray="2 2"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+
+                                        My Vouchers
+
+                                    </button>
+
+                                    <!-- REVIEWS -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="
+                                            openReviews
+                                        "
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <path
+                                                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                    stroke-linejoin="round"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+
+                                        My Reviews
+
+                                    </button>
+
                                 </div>
 
 
@@ -1805,7 +1907,7 @@ onUnmounted(() => {
                 >
 
                     <div
-                        class="mx-auto max-h-[calc(100vh-78px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6"
+                        class="mx-auto max-h-[calc(100vh-78px)] max-w-[1536px] w-full overflow-y-auto px-4 py-4 sm:px-6 2xl:px-10"
                     >
 
                         <!-- ================================================= -->
@@ -2100,6 +2202,84 @@ onUnmounted(() => {
 
                                 </button>
 
+                                <!-- VOUCHERS -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="
+                                        openVouchers
+                                    "
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <path
+                                                d="M21 12a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3Z"
+                                                stroke-linejoin="round"
+                                            />
+
+                                            <path
+                                                d="M9 9v6M15 9v6"
+                                                stroke-linecap="round"
+                                                stroke-dasharray="2 2"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+
+                                    My Vouchers
+
+                                </button>
+
+                                <!-- REVIEWS -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="
+                                        openReviews
+                                    "
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <path
+                                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                stroke-linejoin="round"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+
+                                    My Reviews
+
+                                </button>
+
 
                                 <!-- LOGOUT -->
 
@@ -2177,7 +2357,7 @@ onUnmounted(() => {
         >
 
             <div
-                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8"
+                class="mx-auto grid max-w-[1536px] w-full gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8 2xl:px-10"
             >
 
                 <!-- BRAND -->
@@ -2361,7 +2541,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-5 text-xs text-[#64748B] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
+                    class="mx-auto flex max-w-[1536px] w-full flex-col gap-2 px-4 py-5 text-xs text-[#64748B] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8 2xl:px-10"
                 >
 
                     <p>

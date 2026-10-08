@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Voucher extends Model
 {
     protected $fillable = [
-        'seller_id', 'code', 'type', 'value', 'min_spend',
+        'seller_id', 'is_platform', 'code', 'type', 'value', 'min_spend',
         'usage_limit', 'used_count', 'starts_at', 'expires_at', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_platform' => 'boolean',
             'value' => 'decimal:2',
             'min_spend' => 'decimal:2',
             'usage_limit' => 'integer',
@@ -28,6 +29,18 @@ class Voucher extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function userVouchers()
+    {
+        return $this->hasMany(UserVoucher::class);
+    }
+
+    public function claimedUsers()
+    {
+        return $this->belongsToMany(User::class, 'user_vouchers')
+            ->withPivot(['status', 'claimed_at', 'used_at', 'expiring_alert_sent_at'])
+            ->withTimestamps();
     }
 
     public function isValidNow(): bool

@@ -1,4 +1,3 @@
-```vue
 <!-- Buyer delivery address book with add, edit, default, and remove support. -->
 <script setup>
 import { computed, ref } from 'vue'
@@ -110,33 +109,36 @@ const remove = address => {
 
     <BuyerLayout>
         <main
-            class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8"
+            class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]"
         >
-            <!-- PAGE HEADER -->
-            <div class="mb-8">
-                <p
-                    class="text-sm font-semibold text-indigo-600"
-                >
-                    Delivery details
-                </p>
+            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
+                <!-- PAGE HEADER -->
+                <div class="mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p
+                            class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs"
+                        >
+                            Delivery details
+                        </p>
+                    </div>
 
-                <h1
-                    class="mt-1 text-3xl font-bold text-gray-900"
-                >
-                    My Addresses
-                </h1>
+                    <h1
+                        class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl"
+                    >
+                        My Addresses
+                    </h1>
 
-                <p
-                    class="mt-2 max-w-2xl text-sm leading-6 text-gray-500"
-                >
-                    Manage the delivery addresses you use for
-                    your Zellora orders.
-                </p>
-            </div>
+                    <p
+                        class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm"
+                    >
+                        Manage the delivery addresses you use for your Alona orders.
+                    </p>
+                </div>
 
-            <div
-                class="grid gap-6 lg:grid-cols-[1fr_360px]"
-            >
+                <div
+                    class="grid gap-6 lg:grid-cols-[1fr_380px]"
+                >
                 <!-- SAVED ADDRESSES -->
                 <section class="space-y-4">
                     <div
@@ -160,7 +162,7 @@ const remove = address => {
 
                                     <span
                                         v-if="address.is_default"
-                                        class="mt-2 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600"
+                                        class="mt-2 inline-flex rounded-full bg-[#E8F7F6] px-2.5 py-1 text-xs font-semibold text-[#087F8C]"
                                     >
                                         Default
                                     </span>
@@ -171,7 +173,7 @@ const remove = address => {
                                 >
                                     <button
                                         type="button"
-                                        class="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                                        class="text-sm font-semibold text-[#087F8C] hover:text-[#16A6A0]"
                                         @click="editAddress(address)"
                                     >
                                         Edit
@@ -222,7 +224,7 @@ const remove = address => {
                 >
                     <div>
                         <p
-                            class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
+                            class="text-xs font-semibold uppercase tracking-wide text-[#087F8C]"
                         >
                             {{ isEditing ? 'Edit address' : 'New address' }}
                         </p>
@@ -294,7 +296,7 @@ const remove = address => {
                         <input
                             v-model="form.is_default"
                             type="checkbox"
-                            class="rounded text-indigo-600"
+                            class="rounded text-[#087F8C] focus:ring-[#087F8C]"
                         />
 
                         <span>
@@ -307,7 +309,7 @@ const remove = address => {
                         <button
                             type="submit"
                             :disabled="form.processing"
-                            class="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="flex-1 rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{
                                 form.processing
@@ -334,10 +336,11 @@ const remove = address => {
             <!-- CHECKOUT LINK -->
             <Link
                 :href="route('buyer.checkout')"
-                class="mt-6 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                class="mt-6 inline-block text-sm font-semibold text-[#087F8C] hover:text-[#16A6A0]"
             >
                 Continue to checkout →
             </Link>
+        </div>
         </main>
     </BuyerLayout>
 </template>
@@ -357,7 +360,7 @@ const remove = address => {
 }
 
 .field:focus {
-    border-color: rgb(129 140 248);
+    border-color: rgb(8 127 140);
     background: white;
 }
 </style>

@@ -149,6 +149,28 @@ class User extends Authenticatable
         return $this->hasMany(OrderReturnRequest::class, 'seller_id');
     }
 
+    public function userVouchers(): HasMany
+    {
+        return $this->hasMany(UserVoucher::class);
+    }
+
+    public function claimedVouchers()
+    {
+        return $this->belongsToMany(Voucher::class, 'user_vouchers')
+            ->withPivot(['status', 'claimed_at', 'used_at', 'expiring_alert_sent_at'])
+            ->withTimestamps();
+    }
+
+    public function sellerReviewsGiven(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'user_id');
+    }
+
+    public function sellerReviewsReceived(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'seller_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Attribute casting

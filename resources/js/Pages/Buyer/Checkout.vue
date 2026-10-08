@@ -303,7 +303,7 @@ const submit = () => {
 
     <BuyerLayout>
         <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1500px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-14">
+            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
 
                 <!-- HEADER -->
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

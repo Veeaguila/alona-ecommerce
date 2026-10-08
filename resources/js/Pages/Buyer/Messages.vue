@@ -239,7 +239,7 @@ onMounted(scrollToBottom)
 
     <BuyerLayout>
         <main class="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-6 lg:px-8 lg:py-7">
+            <div class="mx-auto w-full max-w-[1536px] px-4 py-5 sm:px-6 lg:px-8 2xl:px-10 lg:py-7">
 
                 <!-- HEADER -->
                 <header class="mb-5">

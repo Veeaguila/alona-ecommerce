@@ -7,7 +7,7 @@ Each checkbox is a separate task with a short description. Existing functions su
 - [ ] **BUYER-01: Featured products.** Add a real, manageable featured-products section to the buyer dashboard.
 - [ ] **BUYER-02: Recommended products.** Show products recommended for the signed-in buyer.
 - [ ] **BUYER-03: Top-selling products.** Rank products using actual sales data instead of the latest products.
-- [ ] **BUYER-04: Promotions.** Show active seller and platform promotions to buyers.
+- [x] **BUYER-04: Promotions.** Show active seller and platform promotions to buyers.
 - [ ] **BUYER-05: Subcategories.** Add subcategory data and buyer navigation for nested categories.
 - [ ] **BUYER-06: Store and category search.** Let buyers search stores and categories as well as products.
 - [ ] **BUYER-07: Advanced filters.** Add usable filters for price range, rating, category, and availability.
@@ -39,14 +39,14 @@ Each checkbox is a separate task with a short description. Existing functions su
 
 ## Vouchers and Reviews
 
-- [ ] **BUYER-24: Browse vouchers.** Show available seller and platform vouchers to buyers.
-- [ ] **BUYER-25: Claim vouchers.** Let buyers claim eligible vouchers to their account.
-- [ ] **BUYER-26: My vouchers.** Show claimed, used, and available vouchers in the buyer account.
-- [ ] **BUYER-27: Expiring voucher alerts.** Notify buyers when a claimed voucher is about to expire.
-- [ ] **BUYER-28: Products awaiting review.** Show delivered products that the buyer has not reviewed yet.
-- [ ] **BUYER-29: Edit a review.** Let buyers edit their own submitted product reviews.
-- [ ] **BUYER-30: Seller ratings.** Let buyers rate and review sellers after a completed order.
-- [ ] **BUYER-31: Media reviews.** Let buyers attach photos or videos to product reviews.
+- [x] **BUYER-24: Browse vouchers.** Show available seller and platform vouchers to buyers.
+- [x] **BUYER-25: Claim vouchers.** Let buyers claim eligible vouchers to their account.
+- [x] **BUYER-26: My vouchers.** Show claimed, used, and available vouchers in the buyer account.
+- [x] **BUYER-27: Expiring voucher alerts.** Notify buyers when a claimed voucher is about to expire.
+- [x] **BUYER-28: Products awaiting review.** Show delivered products that the buyer has not reviewed yet.
+- [x] **BUYER-29: Edit a review.** Let buyers edit their own submitted product reviews.
+- [x] **BUYER-30: Seller ratings.** Let buyers rate and review sellers after a completed order.
+- [x] **BUYER-31: Media reviews.** Let buyers attach photos or videos to product reviews.
 
 ## Messages, Notifications, and Support
 

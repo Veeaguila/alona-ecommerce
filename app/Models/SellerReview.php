@@ -5,14 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Review extends Model
+class SellerReview extends Model
 {
     protected $fillable = [
         'user_id',
-        'product_id',
+        'seller_id',
+        'order_id',
         'rating',
         'comment',
-        'media',
         'seller_reply',
         'seller_replied_at',
     ];
@@ -21,7 +21,6 @@ class Review extends Model
     {
         return [
             'rating' => 'integer',
-            'media' => 'array',
             'seller_replied_at' => 'datetime',
         ];
     }
@@ -31,8 +30,14 @@ class Review extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function product(): BelongsTo
+    public function seller(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }
+

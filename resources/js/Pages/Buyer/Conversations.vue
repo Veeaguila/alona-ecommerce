@@ -184,7 +184,7 @@ onMounted(() => {
 
     <BuyerLayout>
         <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full min-w-0 max-w-[1600px] px-3 py-4 pb-10 sm:px-6 sm:py-6 sm:pb-12 lg:px-8 lg:py-7 lg:pb-14">
+            <div class="mx-auto w-full min-w-0 max-w-[1536px] px-4 py-6 pb-10 sm:px-6 sm:py-6 sm:pb-12 lg:px-8 2xl:px-10 lg:py-7 lg:pb-14">
 
                 <!-- PAGE HEADER -->
                 <div class="mb-5 flex min-w-0 items-end justify-between gap-4 sm:mb-6">

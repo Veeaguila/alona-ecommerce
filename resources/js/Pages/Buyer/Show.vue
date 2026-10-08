@@ -709,7 +709,7 @@ const breadcrumbs = computed(() => {
             class="min-h-screen bg-[#F8FAF9]"
         >
             <div
-                class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+                class="mx-auto max-w-[1536px] w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-10 lg:py-8"
             >
 
                 <!-- ===================================================== -->
@@ -1833,7 +1833,7 @@ const breadcrumbs = computed(() => {
                     </h2>
 
                     <div
-                        class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+                        class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
                     >
                         <Link
                             v-for="

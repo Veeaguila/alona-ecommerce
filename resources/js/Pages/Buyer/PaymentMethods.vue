@@ -44,12 +44,18 @@ const remove = method => {
     <Head title="Payment Methods" />
 
     <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] bg-[#F8FAF9]">
-            <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
                 <div class="flex items-end justify-between gap-3">
                     <div>
-                        <h1 class="text-2xl font-extrabold text-[#1F2937]">Payment Methods</h1>
-                        <p class="mt-1 text-sm text-[#64748B]">
+                        <div class="flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                                Payment details
+                            </p>
+                        </div>
+                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">Payment Methods</h1>
+                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
                             Save a payment method for faster checkout. We only keep the last 4 digits.
                         </p>
                     </div>
@@ -59,7 +65,7 @@ const remove = method => {
                     </Link>
                 </div>
 
-                <div class="mt-6 grid gap-5 md:grid-cols-2">
+                <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_420px]">
                     <!-- LIST -->
                     <section class="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
                         <h2 class="text-sm font-extrabold text-[#1F2937]">Saved methods</h2>

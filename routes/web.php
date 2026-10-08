@@ -407,10 +407,36 @@ Route::middleware([
         'store',
     ])->name('buyer.reviews.store');
 
+    Route::patch('/buyer/reviews/{review}', [
+        BuyerReviewController::class,
+        'update',
+    ])->name('buyer.reviews.update');
+
+    Route::delete('/buyer/reviews/{review}', [
+        BuyerReviewController::class,
+        'destroy',
+    ])->name('buyer.reviews.destroy');
+
+    Route::post('/buyer/orders/{order}/sellers/{seller}/review', [
+        BuyerReviewController::class,
+        'storeSellerReview',
+    ])->name('buyer.seller-reviews.store');
+
     Route::get('/buyer/products/{product}/reviews', [
         BuyerReviewController::class,
         'productReviews',
     ])->name('buyer.product.reviews');
+
+    // Buyer Vouchers (BUYER-24, BUYER-25, BUYER-26)
+    Route::get('/buyer/vouchers', [
+        \App\Http\Controllers\BuyerVoucherController::class,
+        'index',
+    ])->name('buyer.vouchers');
+
+    Route::post('/buyer/vouchers/{voucher}/claim', [
+        \App\Http\Controllers\BuyerVoucherController::class,
+        'claim',
+    ])->name('buyer.vouchers.claim');
 
     Route::get('/buyer/notifications', [
         BuyerNotificationController::class,

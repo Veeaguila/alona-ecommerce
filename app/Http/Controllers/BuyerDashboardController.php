@@ -221,6 +221,10 @@ if ($topSellingIds->isNotEmpty()) {
         */
         $today = now()->startOfDay();
 
+        $claimedVoucherIds = $user
+            ? $user->claimedVouchers()->pluck('vouchers.id')->toArray()
+            : [];
+
         $promotions = Voucher::query()
             ->with([
                 'seller:id,name',
@@ -247,7 +251,7 @@ if ($topSellingIds->isNotEmpty()) {
             ->orderBy('expires_at')
             ->take(8)
             ->get()
-            ->map(function ($voucher) {
+            ->map(function ($voucher) use ($claimedVoucherIds) {
                 return [
                     'id' => $voucher->id,
                     'code' => $voucher->code,
@@ -256,6 +260,8 @@ if ($topSellingIds->isNotEmpty()) {
                     'min_spend' => (float) ($voucher->min_spend ?? 0),
                     'starts_at' => $voucher->starts_at?->format('Y-m-d'),
                     'expires_at' => $voucher->expires_at?->format('Y-m-d'),
+                    'is_claimed' => in_array($voucher->id, $claimedVoucherIds),
+                    'is_platform' => (bool) ($voucher->is_platform || $voucher->seller_id === null),
                     'seller' => $voucher->seller
                         ? [
                             'id' => $voucher->seller->id,

@@ -1,4 +1,3 @@
-```vue
 <!-- Buyer account profile page. -->
 <script setup>
 import { Head } from '@inertiajs/vue3'
@@ -29,20 +28,23 @@ defineProps({
     <Head title="My Account" />
 
     <BuyerLayout :active="active">
-        <main class="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-5xl">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+            <div class="mx-auto w-full max-w-[1200px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
 
                 <!-- PAGE HEADER -->
                 <div class="mb-8">
-                    <p class="text-sm font-semibold text-indigo-600">
-                        Buyer Account
-                    </p>
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                            Buyer Account
+                        </p>
+                    </div>
 
-                    <h1 class="mt-1 text-3xl font-bold text-gray-900">
+                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">
                         My Account
                     </h1>
 
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+                    <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
                         Manage your personal information, contact details,
                         delivery information, password, and account security.
                     </p>
@@ -53,7 +55,7 @@ defineProps({
                     class="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                     <div
-                        class="border-b border-gray-100 bg-gray-50 px-5 py-4 sm:px-8"
+                        class="border-b border-gray-100 bg-[#F8FAF9] px-5 py-4 sm:px-8"
                     >
                         <h2 class="text-base font-semibold text-gray-900">
                             Personal Information
@@ -77,7 +79,7 @@ defineProps({
                     class="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                     <div
-                        class="border-b border-gray-100 bg-gray-50 px-5 py-4 sm:px-8"
+                        class="border-b border-gray-100 bg-[#F8FAF9] px-5 py-4 sm:px-8"
                     >
                         <h2 class="text-base font-semibold text-gray-900">
                             Password & Security
@@ -118,4 +120,3 @@ defineProps({
         </main>
     </BuyerLayout>
 </template>
-```

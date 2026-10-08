@@ -5,24 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Review extends Model
+class UserVoucher extends Model
 {
     protected $fillable = [
         'user_id',
-        'product_id',
-        'rating',
-        'comment',
-        'media',
-        'seller_reply',
-        'seller_replied_at',
+        'voucher_id',
+        'status',
+        'claimed_at',
+        'used_at',
+        'expiring_alert_sent_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'rating' => 'integer',
-            'media' => 'array',
-            'seller_replied_at' => 'datetime',
+            'claimed_at' => 'datetime',
+            'used_at' => 'datetime',
+            'expiring_alert_sent_at' => 'datetime',
         ];
     }
 
@@ -31,8 +30,9 @@ class Review extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function product(): BelongsTo
+    public function voucher(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Voucher::class);
     }
 }
+
