@@ -7,9 +7,11 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\SellerReview;
+use App\Models\SellerNotification;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -171,6 +173,20 @@ class BuyerReviewController extends Controller
 
         $this->recalculateProductRating($product);
 
+        if ($product->seller_id && Schema::hasTable('seller_notifications')) {
+            try {
+                SellerNotification::create([
+                    'user_id' => $product->seller_id,
+                    'type' => 'review',
+                    'title' => 'New Product Review',
+                    'message' => "{$user->name} left a {$validated['rating']}-star review for \"{$product->name}\".",
+                    'url' => route('seller.reviews'),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore notification errors
+            }
+        }
+
         return back()->with(
             'status',
             'Your review has been submitted successfully.'
@@ -314,6 +330,20 @@ class BuyerReviewController extends Controller
                 'comment' => $validated['comment'] ?? null,
             ]
         );
+
+        if (Schema::hasTable('seller_notifications')) {
+            try {
+                SellerNotification::create([
+                    'user_id' => $seller->id,
+                    'type' => 'review',
+                    'title' => 'New Store Rating',
+                    'message' => "{$user->name} rated your store {$validated['rating']} stars.",
+                    'url' => route('seller.reviews'),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore notification errors
+            }
+        }
 
         return back()->with(
             'status',

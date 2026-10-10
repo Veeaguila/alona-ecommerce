@@ -89,10 +89,20 @@ class SellerOrderController extends Controller
                         )
                     );
 
-                    $query->where(
-                        'status',
-                        $status
-                    );
+                    if ($status === 'to_ship') {
+                        $query->whereIn('status', ['processing', 'packed', 'ready_for_pickup']);
+                    } elseif ($status === 'in_transit') {
+                        $query->whereIn('status', ['shipped', 'out_for_delivery']);
+                    } elseif ($status === 'delivered') {
+                        $query->whereIn('status', ['delivered', 'completed']);
+                    } elseif ($status === 'returned') {
+                        $query->whereHas('returnRequests');
+                    } else {
+                        $query->where(
+                            'status',
+                            $status
+                        );
+                    }
                 }
             )
             ->when(
