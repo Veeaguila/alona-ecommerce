@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -197,7 +198,7 @@ const imageUrl = path => {
                             :href="route('buyer.help')"
                             class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-extrabold text-gray-700 shadow-sm transition hover:bg-gray-50"
                         >
-                            <span>❓</span>
+                            <span><Icon name="help" class="h-4 w-4" /></span>
                             <span>Help Center</span>
                         </Link>
 
@@ -262,7 +263,7 @@ const imageUrl = path => {
                             class="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-8 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
                             @keydown.enter="handleSearch"
                         />
-                        <span class="pointer-events-none absolute left-3 top-2.5 text-xs text-gray-400">🔍</span>
+                        <span class="pointer-events-none absolute left-3 top-2.5 text-xs text-gray-400"><Icon name="search" class="h-3.5 w-3.5" /></span>
                         <button
                             v-if="searchQuery"
                             type="button"
@@ -392,7 +393,7 @@ const imageUrl = path => {
                     v-else
                     class="mt-6 rounded-3xl border border-dashed border-gray-200 bg-white p-12 text-center"
                 >
-                    <span class="text-4xl">📋</span>
+                    <span class="text-4xl"><Icon name="receipt" class="h-4 w-4" /></span>
                     <h2 class="mt-3 text-base font-extrabold text-gray-900">
                         {{ current_status === 'all' ? 'No complaints or reports filed yet' : `No ${current_status} cases found` }}
                     </h2>

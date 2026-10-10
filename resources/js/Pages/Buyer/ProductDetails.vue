@@ -1,5 +1,6 @@
 <!-- Legacy buyer product detail view retained for compatibility. -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 
@@ -259,9 +260,7 @@ const selectedSize = 'Standard'
                             <div class="flex items-start gap-3">
                                 <div
                                     class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-indigo-50 text-indigo-600"
-                                >
-                                    🚚
-                                </div>
+                                ><Icon name="truck" class="h-4 w-4" /></div>
 
                                 <div>
                                     <p class="font-semibold text-gray-900">

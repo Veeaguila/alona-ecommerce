@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed, ref } from 'vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -12,6 +13,14 @@ const props = defineProps({
     recentOrders: {
         type: Array,
         default: () => [],
+    },
+    contactSettings: {
+        type: Object,
+        default: () => ({
+            email: 'support@alona.ph',
+            phone: '+63 (02) 8888-ALONA',
+            hours: 'Mon – Sat: 8:00 AM – 8:00 PM PHT',
+        }),
     },
 })
 
@@ -68,7 +77,7 @@ const helpTopics = [
     {
         id: 'orders',
         category: 'Orders & Shipping',
-        icon: '📦',
+        icon: 'package',
         title: 'How do I track my order?',
         summary: 'Find your package whereabouts, courier tracking number, and delivery milestones in real-time.',
         link: '/faq#tracking',
@@ -76,7 +85,7 @@ const helpTopics = [
     {
         id: 'returns',
         category: 'Returns & Refunds',
-        icon: '🔄',
+        icon: 'undo',
         title: 'How to request a return or refund?',
         summary: 'Submit a return request within the return window with photo or video evidence.',
         link: '/faq#returns',
@@ -84,7 +93,7 @@ const helpTopics = [
     {
         id: 'payments',
         category: 'Payments & Checkout',
-        icon: '💳',
+        icon: 'card',
         title: 'Payment methods accepted on Alona',
         summary: 'Learn about Cash on Delivery (COD), GCash, Maya, and Credit/Debit cards.',
         link: '/faq#payments',
@@ -92,7 +101,7 @@ const helpTopics = [
     {
         id: 'vouchers',
         category: 'Vouchers & Deals',
-        icon: '🎟️',
+        icon: 'ticket',
         title: 'How to claim and apply vouchers?',
         summary: 'Claim store and platform vouchers to get instant discounts during checkout.',
         link: '/faq#vouchers',
@@ -100,7 +109,7 @@ const helpTopics = [
     {
         id: 'safety',
         category: 'Safety & Protection',
-        icon: '🛡️',
+        icon: 'shield',
         title: 'Buyer Protection & Reporting',
         summary: 'How Alona protects your payments and allows reporting suspicious items or sellers.',
         link: '/faq#safety',
@@ -108,7 +117,7 @@ const helpTopics = [
     {
         id: 'account',
         category: 'Account & Security',
-        icon: '👤',
+        icon: 'user',
         title: 'Managing addresses & password security',
         summary: 'Update delivery addresses, verify your email, and protect your login credentials.',
         link: '/faq#account',
@@ -163,9 +172,7 @@ const filteredTopics = computed(() => {
                                 placeholder="Search by topic, e.g. return refund, tracking, voucher, payment..."
                                 class="w-full rounded-2xl border-0 bg-white py-3.5 pl-11 pr-4 text-xs font-medium text-gray-900 shadow-xl placeholder:text-gray-400 focus:ring-2 focus:ring-[#F4B942] sm:text-sm"
                             />
-                            <span class="pointer-events-none absolute left-4 top-3.5 text-base sm:top-4">
-                                🔍
-                            </span>
+                            <span class="pointer-events-none absolute left-4 top-3.5 text-base sm:top-4"><Icon name="search" class="h-5 w-5" /></span>
                             <button
                                 v-if="searchQuery"
                                 type="button"
@@ -193,7 +200,7 @@ const filteredTopics = computed(() => {
                         :href="safeRoute('buyer.orders')"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F7F6] text-xl transition group-hover:scale-110">📦</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F7F6] text-xl transition group-hover:scale-110"><Icon name="package" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Track Orders</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Live parcel tracking</p>
                     </Link>
@@ -202,7 +209,7 @@ const filteredTopics = computed(() => {
                         :href="safeRoute('buyer.complaints')"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFF7E6] text-xl transition group-hover:scale-110">📋</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFF7E6] text-xl transition group-hover:scale-110"><Icon name="receipt" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">My Complaints</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Track disputes & cases</p>
                     </Link>
@@ -211,7 +218,7 @@ const filteredTopics = computed(() => {
                         :href="safeRoute('buyer.faq')"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EBF5FF] text-xl transition group-hover:scale-110">❓</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EBF5FF] text-xl transition group-hover:scale-110"><Icon name="help" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Browse FAQs</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Frequently asked Q&As</p>
                     </Link>
@@ -220,7 +227,7 @@ const filteredTopics = computed(() => {
                         :href="safeRoute('buyer.vouchers')"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FDF2F8] text-xl transition group-hover:scale-110">🎟️</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FDF2F8] text-xl transition group-hover:scale-110"><Icon name="ticket" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Vouchers & Deals</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Claim discounts</p>
                     </Link>
@@ -229,7 +236,7 @@ const filteredTopics = computed(() => {
                         :href="safeRoute('buyer.policies')"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F0FDF4] text-xl transition group-hover:scale-110">📜</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F0FDF4] text-xl transition group-hover:scale-110"><Icon name="book" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Buyer Policies</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Terms & refund rules</p>
                     </Link>
@@ -238,7 +245,7 @@ const filteredTopics = computed(() => {
                         href="#contact-support"
                         class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FEF2F2] text-xl transition group-hover:scale-110">💬</span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FEF2F2] text-xl transition group-hover:scale-110"><Icon name="message" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Direct Support</h2>
                         <p class="mt-0.5 text-[10px] text-gray-500">Contact admin team</p>
                     </a>
@@ -291,7 +298,7 @@ const filteredTopics = computed(() => {
                             >
                                 <div>
                                     <div class="flex items-center justify-between">
-                                        <span class="text-2xl">{{ topic.icon }}</span>
+                                        <span class="text-2xl"><Icon :name="topic.icon" class="h-4 w-4" /></span>
                                         <span class="rounded-full bg-[#F1F5F9] px-2 py-0.5 text-[9px] font-bold text-[#64748B]">
                                             {{ topic.category }}
                                         </span>
@@ -316,7 +323,7 @@ const filteredTopics = computed(() => {
                         <!-- SAFETY & COMPLIANCE NOTICE (BUYER-34, BUYER-38) -->
                         <div class="mt-6 rounded-2xl border border-[#FED7AA] bg-[#FFFBEB] p-5">
                             <div class="flex items-start gap-3">
-                                <span class="text-2xl">🛡️</span>
+                                <span class="text-2xl"><Icon name="shield" class="h-4 w-4" /></span>
                                 <div>
                                     <h3 class="text-xs font-extrabold text-[#92400E] sm:text-sm">
                                         Alona Buyer Protection Guarantee
@@ -406,7 +413,7 @@ const filteredTopics = computed(() => {
                                     :disabled="supportForm.processing"
                                     class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#087F8C] py-3 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
                                 >
-                                    <span>✉️</span>
+                                    <span><Icon name="mail" class="h-4 w-4" /></span>
                                     <span>{{ supportForm.processing ? 'Sending Inquiry...' : 'Send Message to Support' }}</span>
                                 </button>
                             </form>
@@ -420,26 +427,26 @@ const filteredTopics = computed(() => {
 
                             <ul class="mt-3 space-y-3 text-xs">
                                 <li class="flex items-center gap-3">
-                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F6] text-sm text-[#087F8C]">📧</span>
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F6] text-sm text-[#087F8C]"><Icon name="mail" class="h-4 w-4" /></span>
                                     <div class="min-w-0">
                                         <p class="font-bold text-gray-800">Support Email</p>
-                                        <p class="text-gray-500 font-mono text-[11px]">support@alona.ph</p>
+                                        <p class="text-gray-500 font-mono text-[11px]">{{ contactSettings.email }}</p>
                                     </div>
                                 </li>
 
                                 <li class="flex items-center gap-3">
-                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FFF7E6] text-sm text-[#B47A08]">📞</span>
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FFF7E6] text-sm text-[#B47A08]"><Icon name="phone" class="h-4 w-4" /></span>
                                     <div class="min-w-0">
                                         <p class="font-bold text-gray-800">Customer Helpline</p>
-                                        <p class="text-gray-500 text-[11px]">+63 (02) 8888-ALONA</p>
+                                        <p class="text-gray-500 text-[11px]">{{ contactSettings.phone }}</p>
                                     </div>
                                 </li>
 
                                 <li class="flex items-center gap-3">
-                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EBF5FF] text-sm text-[#2563EB]">🕒</span>
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EBF5FF] text-sm text-[#2563EB]"><Icon name="clock" class="h-4 w-4" /></span>
                                     <div class="min-w-0">
                                         <p class="font-bold text-gray-800">Operating Hours</p>
-                                        <p class="text-gray-500 text-[11px]">Mon – Sat: 8:00 AM – 8:00 PM PHT</p>
+                                        <p class="text-gray-500 text-[11px]">{{ contactSettings.hours }}</p>
                                     </div>
                                 </li>
                             </ul>

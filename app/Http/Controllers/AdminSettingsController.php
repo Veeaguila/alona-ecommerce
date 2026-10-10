@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Models\Faq;
 use App\Models\PlatformSetting;
 use App\Models\Policy;
 use Illuminate\Http\RedirectResponse;
@@ -32,15 +33,21 @@ class AdminSettingsController extends Controller
             ->latest()
             ->get();
 
+        $faqs = Faq::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
         return Inertia::render('Admin/Settings', [
             'title' => 'Platform Settings',
             'eyebrow' => 'Settings',
-            'description' => 'Configure global marketplace settings, announcements, and policies.',
+            'description' => 'Configure global marketplace settings, announcements, policies, and FAQs.',
             'active' => 'settings',
 
             'settings' => $settings,
             'announcements' => $announcements,
             'policies' => $policies,
+            'faqs' => $faqs,
         ]);
     }
 
@@ -270,6 +277,184 @@ class AdminSettingsController extends Controller
         return back()->with(
             'status',
             'Platform setting created successfully.'
+        );
+    }
+
+    public function updatePlatformSetting(
+        Request $request,
+        PlatformSetting $platformSetting
+    ): RedirectResponse {
+        $data = $request->validate([
+            'value' => [
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+
+            'description' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'is_active' => [
+                'nullable',
+                'boolean',
+            ],
+        ]);
+
+        $platformSetting->update([
+            'value' => $data['value'] ?? '',
+            'description' => $data['description'] ?? $platformSetting->description,
+            'is_active' => $data['is_active'] ?? false,
+        ]);
+
+        return back()->with(
+            'status',
+            'Platform setting updated successfully.'
+        );
+    }
+
+    public function destroyPlatformSetting(
+        PlatformSetting $platformSetting
+    ): RedirectResponse {
+        $platformSetting->delete();
+
+        return back()->with(
+            'status',
+            'Platform setting deleted successfully.'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | FAQs
+    |--------------------------------------------------------------------------
+    */
+
+    public function faqs(): Response
+    {
+        $faqs = Faq::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return Inertia::render('Admin/Settings', [
+            'title' => 'FAQs',
+            'eyebrow' => 'Platform FAQs',
+            'description' => 'Create, edit, and organize frequently asked questions for buyers and sellers.',
+            'active' => 'faqs',
+
+            'faqs' => $faqs,
+
+            'settings' => [],
+            'announcements' => [],
+            'policies' => [],
+        ]);
+    }
+
+    public function storeFaq(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'question' => [
+                'required',
+                'string',
+                'max:500',
+            ],
+
+            'answer' => [
+                'required',
+                'string',
+                'max:10000',
+            ],
+
+            'category' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'sort_order' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'is_published' => [
+                'nullable',
+                'boolean',
+            ],
+        ]);
+
+        Faq::create([
+            'question' => $data['question'],
+            'answer' => $data['answer'],
+            'category' => $data['category'],
+            'sort_order' => $data['sort_order'] ?? 0,
+            'is_published' => $data['is_published'] ?? true,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return back()->with(
+            'status',
+            'FAQ created successfully.'
+        );
+    }
+
+    public function updateFaq(Request $request, Faq $faq): RedirectResponse
+    {
+        $data = $request->validate([
+            'question' => [
+                'required',
+                'string',
+                'max:500',
+            ],
+
+            'answer' => [
+                'required',
+                'string',
+                'max:10000',
+            ],
+
+            'category' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'sort_order' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'is_published' => [
+                'nullable',
+                'boolean',
+            ],
+        ]);
+
+        $faq->update([
+            'question' => $data['question'],
+            'answer' => $data['answer'],
+            'category' => $data['category'],
+            'sort_order' => $data['sort_order'] ?? $faq->sort_order,
+            'is_published' => $data['is_published'] ?? false,
+        ]);
+
+        return back()->with(
+            'status',
+            'FAQ updated successfully.'
+        );
+    }
+
+    public function destroyFaq(Faq $faq): RedirectResponse
+    {
+        $faq->delete();
+
+        return back()->with(
+            'status',
+            'FAQ deleted successfully.'
         );
     }
 }

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
+import Icon from '@/Components/Icon.vue'
 
 const props = defineProps({
     categories: {
@@ -38,6 +39,16 @@ const props = defineProps({
     recentlyViewedProducts: {
         type: Array,
         default: () => [],
+    },
+
+    marketplaceStats: {
+        type: Object,
+        default: () => ({
+            products: 0,
+            sellers: 0,
+            categories: 0,
+            orders_delivered: 0,
+        }),
     },
 
     isGuest: {
@@ -613,157 +624,6 @@ const trendingProducts = computed(() => {
 
 /*
 |--------------------------------------------------------------------------
-| CATEGORY PHOTOS
-|--------------------------------------------------------------------------
-*/
-
-const categoryPictures = {
-    'mens-apparel':
-        'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=85',
-
-    'mobiles-gadgets':
-        'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85',
-
-    'mobiles-accessories':
-        'https://images.unsplash.com/photo-1609592424831-1e1f6c9c0f25?auto=format&fit=crop&w=900&q=85',
-
-    'home-entertainment':
-        'https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=900&q=85',
-
-    'babies-kids':
-        'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=85',
-
-    'home-living':
-        'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85',
-
-    groceries:
-        'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=85',
-
-    'toys-games-collectibles':
-        'https://images.unsplash.com/photo-1594787318286-4d84bb1f0c2e?auto=format&fit=crop&w=900&q=85',
-
-    'womens-bags':
-        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=85',
-
-    'women-accessories':
-        'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=85',
-
-    'womens-apparel':
-        'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=85',
-
-    'health-personal-care':
-        'https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=85',
-
-    'makeup-fragrances':
-        'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=85',
-
-    'home-appliances':
-        'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=900&q=85',
-
-    'laptops-computers':
-        'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=85',
-
-    cameras:
-        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=85',
-
-    'sports-travel':
-        'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=900&q=85',
-
-    'mens-bags-accessories':
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85',
-
-    'mens-shoes':
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85',
-
-    motors:
-        'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=85',
-
-    'womens-shoes':
-        'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=900&q=85',
-
-    'pet-care':
-        'https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=900&q=85',
-
-    audio:
-        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=85',
-
-    'hobbies-stationery':
-        'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=900&q=85',
-
-    gaming:
-        'https://images.unsplash.com/photo-1605901309584-818e25960a8f?auto=format&fit=crop&w=900&q=85',
-}
-
-/*
-|--------------------------------------------------------------------------
-| Category Colors
-|--------------------------------------------------------------------------
-*/
-
-const categoryColors = {
-    'mens-apparel': 'bg-blue-50',
-    'mobiles-gadgets': 'bg-slate-50',
-    'mobiles-accessories': 'bg-gray-50',
-    'home-entertainment': 'bg-cyan-50',
-    'babies-kids': 'bg-rose-50',
-    'home-living': 'bg-amber-50',
-    groceries: 'bg-lime-50',
-    'toys-games-collectibles': 'bg-purple-50',
-    'womens-bags': 'bg-emerald-50',
-    'women-accessories': 'bg-red-50',
-    'womens-apparel': 'bg-pink-50',
-    'health-personal-care': 'bg-cyan-50',
-    'makeup-fragrances': 'bg-pink-50',
-    'home-appliances': 'bg-teal-50',
-    'laptops-computers': 'bg-sky-50',
-    cameras: 'bg-red-50',
-    'sports-travel': 'bg-orange-50',
-    'mens-bags-accessories': 'bg-blue-50',
-    'mens-shoes': 'bg-sky-50',
-    motors: 'bg-slate-100',
-    'womens-shoes': 'bg-rose-50',
-    'pet-care': 'bg-yellow-50',
-    audio: 'bg-violet-50',
-    'hobbies-stationery': 'bg-indigo-50',
-    gaming: 'bg-violet-50',
-}
-
-/*
-|--------------------------------------------------------------------------
-| Category Icons
-|--------------------------------------------------------------------------
-*/
-
-const categoryIcons = {
-    'mens-apparel': '👕',
-    'mobiles-gadgets': '📱',
-    'mobiles-accessories': '🔌',
-    'home-entertainment': '📺',
-    'babies-kids': '🍼',
-    'home-living': '🛋️',
-    groceries: '🥬',
-    'toys-games-collectibles': '🧸',
-    'womens-bags': '👜',
-    'women-accessories': '🕶️',
-    'womens-apparel': '👗',
-    'health-personal-care': '🧴',
-    'makeup-fragrances': '💄',
-    'home-appliances': '🧊',
-    'laptops-computers': '💻',
-    cameras: '📷',
-    'sports-travel': '🏃',
-    'mens-bags-accessories': '🎒',
-    'mens-shoes': '👟',
-    motors: '🏍️',
-    'womens-shoes': '👠',
-    'pet-care': '🐶',
-    audio: '🎧',
-    'hobbies-stationery': '✏️',
-    gaming: '🎮',
-}
-
-/*
-|--------------------------------------------------------------------------
 | Backend Category Lookup
 |--------------------------------------------------------------------------
 |
@@ -891,10 +751,7 @@ const categoryImage = category => {
         return imageUrl(databaseImage)
     }
 
-    /*
-     * Presentation fallback image.
-     */
-    return categoryPictures[slug] ?? null
+    return null
 }
 
 /*
@@ -960,14 +817,6 @@ const categoriesList = computed(() => {
                         ...category,
                         slug,
                     }),
-
-                color:
-                    categoryColors[slug] ??
-                    'bg-teal-50',
-
-                icon:
-                    categoryIcons[slug] ??
-                    '🛍️',
 
                 key:
                     `${category.id}-${slug}` ??
@@ -1054,41 +903,20 @@ const goToCategory = category => {
 
 /*
 |--------------------------------------------------------------------------
-| Benefits
+| Marketplace Stats (real data from the database)
 |--------------------------------------------------------------------------
 */
 
-const benefits = [
-    {
-        number: '01',
+const marketplaceHighlights = computed(() => {
+    const stats = props.marketplaceStats ?? {}
 
-        title:
-            'Curated for you',
-
-        text:
-            'Discover products selected from different categories in one simple marketplace.',
-    },
-
-    {
-        number: '02',
-
-        title:
-            'Trusted sellers',
-
-        text:
-            'Shop from sellers who are part of the Alona marketplace community.',
-    },
-
-    {
-        number: '03',
-
-        title:
-            'Simple shopping',
-
-        text:
-            'Find products, compare choices, and shop without unnecessary steps.',
-    },
-]
+    return [
+        { key: 'products', icon: 'package', label: 'Approved products', value: Number(stats.products ?? 0) },
+        { key: 'sellers', icon: 'store', label: 'Active sellers', value: Number(stats.sellers ?? 0) },
+        { key: 'categories', icon: 'grid', label: 'Categories', value: Number(stats.categories ?? 0) },
+        { key: 'orders', icon: 'truck', label: 'Orders delivered', value: Number(stats.orders_delivered ?? 0) },
+    ]
+})
 
 /*
 |--------------------------------------------------------------------------
@@ -1181,8 +1009,8 @@ onUnmounted(() => {
                             >
                                 <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
                                     <div class="hero-item mb-5 flex items-center gap-3">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]">✦</span>
-                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">Discover • Shop • Enjoy</span>
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"><Icon name="store" class="h-4 w-4" /></span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">{{ Number(marketplaceStats.sellers ?? 0).toLocaleString() }} sellers • {{ Number(marketplaceStats.products ?? 0).toLocaleString() }} products</span>
                                     </div>
 
                                     <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
@@ -1219,20 +1047,20 @@ onUnmounted(() => {
 
                                     <div class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block">
                                         <div class="flex items-center gap-3">
-                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]">🛍️</div>
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"><Icon name="package" class="h-5 w-5" /></div>
                                             <div>
-                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Shopping</p>
-                                                <p class="text-xs font-extrabold text-gray-900">Made simple</p>
+                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Products</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ Number(marketplaceStats.products ?? 0).toLocaleString() }} available</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
                                         <div class="flex items-center gap-3">
-                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white">★</div>
+                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"><Icon name="grid" class="h-4 w-4" /></div>
                                             <div>
-                                                <p class="text-[9px] font-bold text-gray-400">DISCOVER</p>
-                                                <p class="text-xs font-extrabold text-gray-900">Something new</p>
+                                                <p class="text-[9px] font-bold text-gray-400">CATEGORIES</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ Number(marketplaceStats.categories ?? 0).toLocaleString() }} to explore</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1247,7 +1075,7 @@ onUnmounted(() => {
                             >
                                 <div class="relative z-10 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
                                     <div class="flex items-center gap-3">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]">🔥</span>
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"><Icon name="flame" class="h-4 w-4" /></span>
                                         <span class="text-xs font-black uppercase tracking-[0.2em] text-teal-50">Top Selling</span>
                                     </div>
 
@@ -1310,7 +1138,7 @@ onUnmounted(() => {
                                             class="h-full w-full rounded-[22px] object-cover"
                                             loading="eager"
                                         />
-                                        <div v-else class="flex h-full w-full items-center justify-center rounded-[22px] bg-[#F4F7F6] text-6xl">🛍️</div>
+                                        <div v-else class="flex h-full w-full items-center justify-center rounded-[22px] bg-[#F4F7F6] text-6xl"><Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" /></div>
                                     </Link>
 
                                     <span class="absolute left-[7%] top-[14%] z-20 rounded-full bg-[#F4B942] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C] shadow-lg">
@@ -1489,14 +1317,13 @@ onUnmounted(() => {
 
                                 <div
                                     v-else
-                                    :class="category.color"
-                                    class="flex h-full w-full items-center justify-center transition duration-500 group-hover:scale-105"
+                                    class="flex h-full w-full items-center justify-center bg-[#E8F7F6] transition duration-500 group-hover:scale-105"
                                 >
 
                                     <div
-                                        class="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-3xl shadow-sm backdrop-blur"
+                                        class="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-[#087F8C] shadow-sm backdrop-blur"
                                     >
-                                        {{ category.icon }}
+                                        <Icon name="grid" class="h-7 w-7" />
                                     </div>
 
                                 </div>
@@ -1601,7 +1428,7 @@ onUnmounted(() => {
                     <div
                         class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F7F6] text-2xl"
                     >
-                        🛍️
+                        <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                     </div>
 
                     <h3
@@ -1738,7 +1565,7 @@ onUnmounted(() => {
                                     v-else
                                     class="flex h-full items-center justify-center text-4xl"
                                 >
-                                    🛍️
+                                    <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                                 </div>
 
                                 <span
@@ -1836,7 +1663,7 @@ onUnmounted(() => {
                         <div
                             class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F7F6] text-2xl"
                         >
-                            🛍️
+                            <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                         </div>
 
                         <h3
@@ -1927,13 +1754,13 @@ onUnmounted(() => {
                                         v-if="promotion.is_claimed"
                                         class="inline-flex items-center gap-1 rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[9px] font-extrabold text-[#16A34A]"
                                     >
-                                        ✓ Claimed
+                                        Claimed
                                     </span>
                                     <span
                                         v-else-if="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3"
                                         class="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[9px] font-bold text-[#DC2626]"
                                     >
-                                        Expiring Soon ⏰
+                                        Expiring Soon
                                     </span>
                                 </div>
 
@@ -1951,7 +1778,7 @@ onUnmounted(() => {
                                 <!-- VOUCHER CODE BOX -->
                                 <div class="relative mt-3 flex items-center justify-between gap-2 rounded-xl border border-dashed border-[#087F8C]/30 bg-[#F8FAF9] px-3 py-2">
                                     <span class="truncate font-mono text-xs font-black tracking-wider text-gray-900">
-                                        🏷️ {{ promotion.code }}
+                                        {{ promotion.code }}
                                     </span>
 
                                     <button
@@ -1991,7 +1818,7 @@ onUnmounted(() => {
                                     class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#087F8C] py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
                                     @click="claimPromotion(promotion.id)"
                                 >
-                                    <span>🎟️</span>
+                                    <span><Icon name="ticket" class="h-4 w-4" /></span>
                                     <span>{{ claimingPromotionId === promotion.id ? 'Claiming...' : 'Claim Voucher' }}</span>
                                 </button>
                             </div>
@@ -2003,7 +1830,7 @@ onUnmounted(() => {
                         class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-white px-6 py-12 text-center"
                     >
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF6DF] text-2xl">
-                            🎟️
+                            <Icon name="ticket" class="h-7 w-7" />
                         </div>
 
                         <h3 class="mt-4 text-sm font-extrabold text-gray-900">
@@ -2093,7 +1920,7 @@ onUnmounted(() => {
                                 v-else
                                 class="flex h-full items-center justify-center text-4xl"
                             >
-                                🛍️
+                                <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                             </div>
 
                             <span
@@ -2242,7 +2069,7 @@ onUnmounted(() => {
                                 v-else
                                 class="flex h-full items-center justify-center text-4xl"
                             >
-                                🛍️
+                                <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                             </div>
 
                             <span
@@ -2417,7 +2244,7 @@ onUnmounted(() => {
                                     v-else
                                     class="flex h-full items-center justify-center text-4xl"
                                 >
-                                    🛍️
+                                    <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
                                 </div>
 
                                 <span
@@ -2634,31 +2461,29 @@ onUnmounted(() => {
                         </div>
 
                         <div
-                            class="grid gap-4 sm:grid-cols-3"
+                            class="grid grid-cols-2 gap-4 sm:grid-cols-4"
                         >
 
                             <div
-                                v-for="benefit in benefits"
-                                :key="benefit.number"
+                                v-for="item in marketplaceHighlights"
+                                :key="item.key"
                                 class="rounded-[24px] border border-white/10 bg-white/[0.07] p-5 transition duration-300 hover:-translate-y-1 hover:bg-white/10"
                             >
 
-                                <span
-                                    class="text-xs font-black text-[#F4B942]"
-                                >
-                                    {{ benefit.number }}
+                                <span class="text-[#F4B942]">
+                                    <Icon :name="item.icon" class="h-5 w-5" />
                                 </span>
 
                                 <h3
-                                    class="mt-8 text-sm font-extrabold text-white"
+                                    class="mt-8 text-2xl font-black text-white"
                                 >
-                                    {{ benefit.title }}
+                                    {{ item.value.toLocaleString() }}
                                 </h3>
 
                                 <p
-                                    class="mt-2 text-xs leading-5 text-teal-100"
+                                    class="mt-1 text-xs leading-5 text-teal-100"
                                 >
-                                    {{ benefit.text }}
+                                    {{ item.label }}
                                 </p>
 
                             </div>

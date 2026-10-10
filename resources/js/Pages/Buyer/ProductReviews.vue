@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -144,9 +145,7 @@ const initials = name => {
                             <span
                                 v-else
                                 class="text-3xl"
-                            >
-                                🛍️
-                            </span>
+                            ><Icon name="bag" class="h-4 w-4" /></span>
                         </div>
 
 

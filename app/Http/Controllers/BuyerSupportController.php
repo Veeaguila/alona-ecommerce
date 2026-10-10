@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\BuyerNotification;
 use App\Models\Complaint;
+use App\Models\Faq;
 use App\Models\Message;
 use App\Models\Order;
+use App\Models\PlatformSetting;
 use App\Models\Policy;
 use App\Models\Product;
 use App\Models\User;
@@ -27,11 +29,23 @@ class BuyerSupportController extends Controller
     {
         $user = $request->user();
 
+        $settings = Schema::hasTable('platform_settings')
+            ? PlatformSetting::query()
+                ->whereIn('key', ['support.email', 'support.phone', 'support.hours'])
+                ->where('is_active', true)
+                ->pluck('value', 'key')
+            : collect();
+
         return Inertia::render('Buyer/HelpCenter', [
             'isGuest' => ! $user,
             'recentOrders' => $user
                 ? $user->orders()->latest()->limit(3)->get(['id', 'order_number', 'status', 'total', 'created_at'])
                 : [],
+            'contactSettings' => [
+                'email' => $settings->get('support.email') ?: 'support@alona.ph',
+                'phone' => $settings->get('support.phone') ?: '+63 (02) 8888-ALONA',
+                'hours' => $settings->get('support.hours') ?: 'Mon – Sat: 8:00 AM – 8:00 PM PHT',
+            ],
         ]);
     }
 
@@ -44,8 +58,17 @@ class BuyerSupportController extends Controller
     {
         $user = $request->user();
 
+        $faqs = Schema::hasTable('faqs')
+            ? Faq::query()
+                ->where('is_published', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+            : collect();
+
         return Inertia::render('Buyer/Faq', [
             'isGuest' => ! $user,
+            'faqs' => $faqs,
         ]);
     }
 

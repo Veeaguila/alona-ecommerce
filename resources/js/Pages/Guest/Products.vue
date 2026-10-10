@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 
@@ -95,9 +96,7 @@ const formatPrice = price => {
                             <span
                                 v-else
                                 class="text-3xl sm:text-4xl"
-                            >
-                                🛍️
-                            </span>
+                            ><Icon name="bag" class="h-4 w-4" /></span>
                         </div>
 
                         <!-- ================================================= -->

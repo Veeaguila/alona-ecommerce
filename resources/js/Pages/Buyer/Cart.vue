@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed, ref } from 'vue'
 import {
     Head,
@@ -691,9 +692,7 @@ const checkoutButtonLabel = computed(() => {
                 >
                     <div
                         class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F6] text-3xl"
-                    >
-                        🛒
-                    </div>
+                    ><Icon name="cart" class="h-7 w-7" /></div>
 
                     <h2
                         class="mt-4 text-base font-extrabold text-[#1F2937]"
@@ -899,9 +898,7 @@ const checkoutButtonLabel = computed(() => {
                                         <span
                                             v-else
                                             class="text-3xl"
-                                        >
-                                            🛍️
-                                        </span>
+                                        ><Icon name="bag" class="h-4 w-4" /></span>
                                     </div>
 
                                     <!-- CONTENT -->
@@ -1368,9 +1365,7 @@ const checkoutButtonLabel = computed(() => {
                             >
                                 <span
                                     class="shrink-0 text-sm"
-                                >
-                                    🔒
-                                </span>
+                                ><Icon name="lock" class="h-4 w-4" /></span>
 
                                 <p
                                     class="text-[10px] leading-5 text-[#64748B]"
@@ -1390,9 +1385,7 @@ const checkoutButtonLabel = computed(() => {
                             >
                                 <div
                                     class="text-base"
-                                >
-                                    🚚
-                                </div>
+                                ><Icon name="truck" class="h-4 w-4" /></div>
 
                                 <p
                                     class="mt-1 truncate text-[9px] font-bold text-[#64748B]"
@@ -1406,9 +1399,7 @@ const checkoutButtonLabel = computed(() => {
                             >
                                 <div
                                     class="text-base"
-                                >
-                                    🔒
-                                </div>
+                                ><Icon name="lock" class="h-4 w-4" /></div>
 
                                 <p
                                     class="mt-1 truncate text-[9px] font-bold text-[#64748B]"
@@ -1422,9 +1413,7 @@ const checkoutButtonLabel = computed(() => {
                             >
                                 <div
                                     class="text-base"
-                                >
-                                    ↩️
-                                </div>
+                                ><Icon name="undo" class="h-4 w-4" /></div>
 
                                 <p
                                     class="mt-1 truncate text-[9px] font-bold text-[#64748B]"

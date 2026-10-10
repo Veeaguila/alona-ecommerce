@@ -1181,6 +1181,36 @@ Route::prefix('admin')
             'storePlatformSetting',
         ])->name('admin.platform-settings.store');
 
+        Route::patch('/settings/platform/{platformSetting}', [
+            AdminSettingsController::class,
+            'updatePlatformSetting',
+        ])->name('admin.platform-settings.update');
+
+        Route::delete('/settings/platform/{platformSetting}', [
+            AdminSettingsController::class,
+            'destroyPlatformSetting',
+        ])->name('admin.platform-settings.destroy');
+
+        Route::get('/settings/faqs', [
+            AdminSettingsController::class,
+            'faqs',
+        ])->name('admin.faqs');
+
+        Route::post('/settings/faqs', [
+            AdminSettingsController::class,
+            'storeFaq',
+        ])->name('admin.faqs.store');
+
+        Route::patch('/settings/faqs/{faq}', [
+            AdminSettingsController::class,
+            'updateFaq',
+        ])->name('admin.faqs.update');
+
+        Route::delete('/settings/faqs/{faq}', [
+            AdminSettingsController::class,
+            'destroyFaq',
+        ])->name('admin.faqs.destroy');
+
 
         /*
         |--------------------------------------------------------------------------

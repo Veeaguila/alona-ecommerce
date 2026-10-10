@@ -1,5 +1,6 @@
 <!-- Buyer product detail page styled to match the Guest product detail page. -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -1521,7 +1522,7 @@ const breadcrumbs = computed(() => {
                                     title="Report this product for policy violations"
                                     class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-[#FEF2F2] px-3.5 py-2.5 text-xs font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
                                 >
-                                    <span>🚩</span>
+                                    <span><Icon name="flag" class="h-4 w-4" /></span>
                                     <span>Report</span>
                                 </button>
                             </div>
@@ -2027,7 +2028,7 @@ const breadcrumbs = computed(() => {
             <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
                 <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">🚩</span>
+                        <span class="text-xl"><Icon name="flag" class="h-4 w-4" /></span>
                         <div>
                             <h3 class="font-bold text-gray-900">Report This Product</h3>
                             <p class="text-xs text-gray-500">Flag policy violations, fake listings, or safety issues</p>

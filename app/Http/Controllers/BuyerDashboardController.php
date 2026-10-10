@@ -68,6 +68,7 @@ class BuyerDashboardController extends Controller
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
+                    'image_path' => $category->image_path,
                     'products_count' => (int) $category->products_count,
                 ];
             });
@@ -319,6 +320,22 @@ if ($topSellingIds->isNotEmpty()) {
             ->map(fn ($product) => $this->formatProduct($product))
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Marketplace statistics (real data)
+        |--------------------------------------------------------------------------
+        */
+        $marketplaceStats = [
+            'products' => Product::where('status', 'approved')->count(),
+            'sellers' => Product::where('status', 'approved')
+                ->distinct()
+                ->count('seller_id'),
+            'categories' => $categories->count(),
+            'orders_delivered' => (int) DB::table('order_items')
+                ->whereIn('status', ['delivered', 'completed'])
+                ->count(),
+        ];
+
         return Inertia::render($guest ? 'Guest/Home' : 'Buyer/Dashboard', [
             'categories' => $categories,
 
@@ -333,6 +350,8 @@ if ($topSellingIds->isNotEmpty()) {
             'promotions' => $promotions,
 
             'recentlyViewedProducts' => $recentlyViewedProducts,
+
+            'marketplaceStats' => $marketplaceStats,
         ]);
     }
 

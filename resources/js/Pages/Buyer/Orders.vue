@@ -1,5 +1,6 @@
 <!-- Buyer order history with status filter tabs, search, and quick actions. -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -261,9 +262,7 @@ const reorder = orderId => {
                             class="w-full rounded-xl border border-[#E5E7EB] bg-white py-2 pl-9 pr-8 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:ring-2 focus:ring-[#E8F7F6]"
                             @keydown.enter="handleSearch"
                         />
-                        <span class="pointer-events-none absolute left-3 top-2.5 text-[#94A3B8]">
-                            🔍
-                        </span>
+                        <span class="pointer-events-none absolute left-3 top-2.5 text-[#94A3B8]"><Icon name="search" class="h-4 w-4" /></span>
                         <button
                             v-if="searchQuery"
                             type="button"
@@ -386,7 +385,7 @@ const reorder = orderId => {
                                             {{ getStatusBadge(item.status || order.status).label }}
                                         </span>
                                         <span v-if="item.tracking_number" class="text-[#087F8C] font-semibold">
-                                            📦 {{ item.courier_name || 'Courier' }}: {{ item.tracking_number }}
+                                            {{ item.courier_name || 'Courier' }}: {{ item.tracking_number }}
                                         </span>
                                     </div>
                                 </div>
@@ -415,7 +414,7 @@ const reorder = orderId => {
                                     class="inline-flex items-center gap-1.5 rounded-xl border border-[#D5E4E3] bg-white px-3 py-1.5 text-xs font-bold text-[#087F8C] transition hover:bg-[#E8F7F6] disabled:opacity-50"
                                     @click="reorder(order.id)"
                                 >
-                                    <span>🔄</span>
+                                    <span><Icon name="undo" class="h-4 w-4" /></span>
                                     {{ reorderingId === order.id ? 'Adding...' : 'Buy Again' }}
                                 </button>
 

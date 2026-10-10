@@ -183,7 +183,8 @@ const isActive = (item) => {
             return (
                 path === '/admin/settings' ||
                 path.startsWith('/admin/settings/announcements') ||
-                path.startsWith('/admin/settings/policies')
+                path.startsWith('/admin/settings/policies') ||
+                path.startsWith('/admin/settings/faqs')
             )
 
         default:

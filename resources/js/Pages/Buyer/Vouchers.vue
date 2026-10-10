@@ -1,5 +1,6 @@
 <!-- Buyer Vouchers Page (Browse, Claim, View Claimed/Used/Expired, and Expiring Alerts). -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -143,7 +144,7 @@ const pagination = computed(() => {
                         :href="route('buyer.cart')"
                         class="inline-flex w-fit items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] sm:text-sm"
                     >
-                        <span>🛒</span>
+                        <span><Icon name="cart" class="h-4 w-4" /></span>
                         Go to Cart
                     </Link>
                 </div>
@@ -217,8 +218,7 @@ const pagination = computed(() => {
                                 </span>
 
                                 <span v-if="isExpiringSoon(voucher.expires_at)" class="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[9px] font-bold text-[#DC2626]">
-                                    Expiring Soon ⏰
-                                </span>
+                                    Expiring Soon </span>
                             </div>
 
                             <!-- DISCOUNT VALUE -->
@@ -235,7 +235,7 @@ const pagination = computed(() => {
                             <div class="mt-4 border-t border-dashed border-[#E5E7EB] pt-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1.5 font-mono text-xs font-extrabold text-[#087F8C]">
-                                        <span>🏷️</span>
+                                        <span><Icon name="tag" class="h-4 w-4" /></span>
                                         <span>{{ voucher.code }}</span>
                                     </div>
                                     <p class="text-[10px] text-[#94A3B8]">
@@ -285,8 +285,7 @@ const pagination = computed(() => {
                                     v-if="item.status === 'claimed' && isExpiringSoon(item.voucher?.expires_at)"
                                     class="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[9px] font-bold text-[#DC2626]"
                                 >
-                                    Expiring Soon ⏰
-                                </span>
+                                    Expiring Soon </span>
                                 <span
                                     v-else-if="item.status === 'used'"
                                     class="rounded-full bg-[#F1F5F9] px-2 py-0.5 text-[9px] font-bold text-[#64748B]"
@@ -315,7 +314,7 @@ const pagination = computed(() => {
                             <div class="mt-4 border-t border-dashed border-[#E5E7EB] pt-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1.5 font-mono text-xs font-extrabold text-[#087F8C]">
-                                        <span>🏷️</span>
+                                        <span><Icon name="tag" class="h-4 w-4" /></span>
                                         <span>{{ item.voucher?.code }}</span>
                                     </div>
                                     <p class="text-[10px] text-[#94A3B8]">
@@ -372,9 +371,7 @@ const pagination = computed(() => {
                     v-if="!voucherList.length"
                     class="mt-6 rounded-2xl border border-dashed border-[#D7E0E2] bg-white px-5 py-14 text-center shadow-sm"
                 >
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8F7F6] text-2xl">
-                        🏷️
-                    </div>
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8F7F6] text-2xl"><Icon name="tag" class="h-6 w-6" /></div>
 
                     <p class="mt-4 text-sm font-extrabold text-[#1F2937]">
                         {{ current_tab === 'browse' ? 'No new vouchers available to claim right now.' : 'No vouchers found in this tab.' }}

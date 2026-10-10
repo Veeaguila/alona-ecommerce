@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { ref, computed, watch } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -338,9 +339,7 @@ const submit = () => {
                     v-if="!hasItems"
                     class="mt-7 rounded-2xl border border-dashed border-[#D9E3E2] bg-white px-5 py-14 text-center shadow-sm sm:mt-8"
                 >
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F6] text-3xl">
-                        🛒
-                    </div>
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F6] text-3xl"><Icon name="cart" class="h-7 w-7" /></div>
 
                     <h2 class="mt-4 text-base font-extrabold text-[#1F2937]">
                         No items selected
@@ -408,9 +407,7 @@ const submit = () => {
                                             loading="lazy"
                                         />
 
-                                        <span v-else class="text-xl sm:text-2xl">
-                                            🛍️
-                                        </span>
+                                        <span v-else class="text-xl sm:text-2xl"><Icon name="bag" class="h-4 w-4" /></span>
                                     </div>
 
                                     <div class="min-w-0 flex-1">
@@ -454,7 +451,7 @@ const submit = () => {
                             <div class="flex min-w-0 items-start justify-between gap-4 border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-sm">📍</span>
+                                        <span class="text-sm"><Icon name="pin" class="h-4 w-4" /></span>
                                         <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
                                             Shipping
                                         </p>
@@ -479,9 +476,7 @@ const submit = () => {
                                     v-if="!addresses.length"
                                     class="rounded-xl border border-dashed border-[#D9E3E2] bg-[#F8FAF9] px-4 py-8 text-center"
                                 >
-                                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F7F6] text-xl">
-                                        📍
-                                    </div>
+                                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F7F6] text-xl"><Icon name="pin" class="h-5 w-5" /></div>
 
                                     <h3 class="mt-3 text-xs font-extrabold text-[#1F2937]">
                                         No saved addresses
@@ -557,7 +552,7 @@ const submit = () => {
                         <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
                             <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm">🚚</span>
+                                    <span class="text-sm"><Icon name="truck" class="h-4 w-4" /></span>
                                     <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
                                         Delivery
                                     </p>
@@ -622,7 +617,7 @@ const submit = () => {
                             <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-sm">💳</span>
+                                        <span class="text-sm"><Icon name="card" class="h-4 w-4" /></span>
                                         <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
                                             Payment
                                         </p>
@@ -848,7 +843,7 @@ const submit = () => {
                                 v-if="!form.shipping_address"
                                 class="mt-3 flex items-center justify-center gap-1 text-center text-[10px] leading-4 text-[#9A6B08]"
                             >
-                                <span>⚠️</span>
+                                <span><Icon name="warning" class="h-4 w-4" /></span>
                                 Select a delivery address to continue.
                             </p>
 
@@ -863,7 +858,7 @@ const submit = () => {
                         <!-- PROMO -->
                         <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-5">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm">🏷️</span>
+                                <span class="text-sm"><Icon name="tag" class="h-4 w-4" /></span>
                                 <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
                                     Savings
                                 </p>
@@ -955,9 +950,7 @@ const submit = () => {
                             class="min-w-0 rounded-2xl border border-[#F2D98F] bg-[#FFF7E5] p-4"
                         >
                             <div class="flex min-w-0 gap-3">
-                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-base shadow-sm">
-                                    💵
-                                </div>
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-base shadow-sm"><Icon name="card" class="h-5 w-5" /></div>
 
                                 <div class="min-w-0">
                                     <h3 class="text-xs font-extrabold text-[#7C5A0B]">
@@ -975,9 +968,7 @@ const submit = () => {
                         <section class="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-5">
                             <div class="grid grid-cols-3 gap-2 sm:gap-3">
                                 <div class="min-w-0 text-center">
-                                    <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-sm">
-                                        🔒
-                                    </div>
+                                    <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-sm"><Icon name="lock" class="h-4 w-4" /></div>
 
                                     <p class="mt-2 truncate text-[9px] font-bold text-[#64748B]">
                                         Secure
@@ -985,9 +976,7 @@ const submit = () => {
                                 </div>
 
                                 <div class="min-w-0 text-center">
-                                    <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-sm">
-                                        🚚
-                                    </div>
+                                    <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-sm"><Icon name="truck" class="h-4 w-4" /></div>
 
                                     <p class="mt-2 truncate text-[9px] font-bold text-[#64748B]">
                                         Delivery

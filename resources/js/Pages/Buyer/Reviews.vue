@@ -1,5 +1,6 @@
 <!-- Buyer Reviews Page with Reviewed Products, Awaiting Review, Seller Ratings, Media uploads, and Edit Review support. -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -261,7 +262,7 @@ const submitSellerReview = () => {
                         :href="route('buyer.orders')"
                         class="inline-flex w-fit items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] sm:text-sm"
                     >
-                        <span>📦</span>
+                        <span><Icon name="package" class="h-4 w-4" /></span>
                         View Orders
                     </Link>
                 </div>
@@ -327,7 +328,7 @@ const submitSellerReview = () => {
                                             :alt="review.product?.name"
                                             class="h-full w-full object-cover"
                                         />
-                                        <div v-else class="flex h-full w-full items-center justify-center text-xl">🛍️</div>
+                                        <div v-else class="flex h-full w-full items-center justify-center text-xl"><Icon name="bag" class="h-5 w-5" /></div>
                                     </div>
 
                                     <div>
@@ -437,7 +438,7 @@ const submitSellerReview = () => {
                                         :alt="item.product?.name"
                                         class="h-full w-full object-cover"
                                     />
-                                    <div v-else class="flex h-full w-full items-center justify-center text-xl">🛍️</div>
+                                    <div v-else class="flex h-full w-full items-center justify-center text-xl"><Icon name="bag" class="h-5 w-5" /></div>
                                 </div>
 
                                 <div>

@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 
@@ -179,9 +180,7 @@ const changeCategory = category => {
                             <span
                                 v-else
                                 class="text-3xl sm:text-4xl"
-                            >
-                                🛍️
-                            </span>
+                            ><Icon name="bag" class="h-4 w-4" /></span>
 
                         </div>
 

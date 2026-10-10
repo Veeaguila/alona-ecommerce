@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
@@ -35,6 +35,11 @@ const props = defineProps({
     },
 
     settings: {
+        type: Array,
+        default: () => [],
+    },
+
+    faqs: {
         type: Array,
         default: () => [],
     },
@@ -269,6 +274,155 @@ const policyStatusClass = (published) => {
     return published
         ? 'bg-[#E8F7F6] text-[#087F8C] ring-1 ring-inset ring-[#B9E7E4]'
         : 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200'
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| FAQ State & Actions
+|--------------------------------------------------------------------------
+*/
+
+const showFaqForm = ref(false)
+const editingFaqId = ref(null)
+const faqForms = ref({})
+
+const faqCategories = [
+    { value: 'orders', label: 'Orders & Tracking' },
+    { value: 'payments', label: 'Payments & Checkout' },
+    { value: 'shipping', label: 'Shipping & Delivery' },
+    { value: 'returns', label: 'Returns & Refunds' },
+    { value: 'vouchers', label: 'Vouchers & Deals' },
+    { value: 'safety', label: 'Safety & Protection' },
+    { value: 'account', label: 'Account & Profile' },
+    { value: 'general', label: 'General Inquiries' },
+]
+
+const faqForm = useForm({
+    category: 'general',
+    question: '',
+    answer: '',
+    sort_order: 0,
+    is_published: true,
+})
+
+const submitNewFaq = () => {
+    faqForm.post(route('admin.faqs.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            faqForm.reset()
+            faqForm.category = 'general'
+            faqForm.sort_order = 0
+            faqForm.is_published = true
+            showFaqForm.value = false
+        },
+    })
+}
+
+const cancelNewFaq = () => {
+    faqForm.reset()
+    faqForm.clearErrors()
+    faqForm.category = 'general'
+    faqForm.sort_order = 0
+    faqForm.is_published = true
+    showFaqForm.value = false
+}
+
+const getFaqForm = (faq) => {
+    if (!faqForms.value[faq.id]) {
+        faqForms.value[faq.id] = useForm({
+            category: faq.category ?? 'general',
+            question: faq.question ?? '',
+            answer: faq.answer ?? '',
+            sort_order: faq.sort_order ?? 0,
+            is_published: Boolean(faq.is_published),
+        })
+    }
+    return faqForms.value[faq.id]
+}
+
+const startEditingFaq = (faq) => {
+    const form = getFaqForm(faq)
+    form.category = faq.category ?? 'general'
+    form.question = faq.question ?? ''
+    form.answer = faq.answer ?? ''
+    form.sort_order = faq.sort_order ?? 0
+    form.is_published = Boolean(faq.is_published)
+    form.clearErrors()
+    editingFaqId.value = faq.id
+}
+
+const cancelEditingFaq = () => {
+    editingFaqId.value = null
+}
+
+const submitFaq = (faq) => {
+    const form = getFaqForm(faq)
+    form.patch(route('admin.faqs.update', faq.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingFaqId.value = null
+        },
+    })
+}
+
+const deleteFaq = (faq) => {
+    if (confirm(`Are you sure you want to delete this FAQ: "${faq.question}"?`)) {
+        router.delete(route('admin.faqs.destroy', faq.id), {
+            preserveScroll: true,
+        })
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Platform Setting Edit & Delete Actions
+|--------------------------------------------------------------------------
+*/
+
+const editingSettingId = ref(null)
+const settingForms = ref({})
+
+const getSettingForm = (setting) => {
+    if (!settingForms.value[setting.id]) {
+        settingForms.value[setting.id] = useForm({
+            value: setting.value ?? '',
+            description: setting.description ?? '',
+            is_active: Boolean(setting.is_active),
+        })
+    }
+    return settingForms.value[setting.id]
+}
+
+const startEditingSetting = (setting) => {
+    const form = getSettingForm(setting)
+    form.value = setting.value ?? ''
+    form.description = setting.description ?? ''
+    form.is_active = Boolean(setting.is_active)
+    form.clearErrors()
+    editingSettingId.value = setting.id
+}
+
+const cancelEditingSetting = () => {
+    editingSettingId.value = null
+}
+
+const submitSetting = (setting) => {
+    const form = getSettingForm(setting)
+    form.patch(route('admin.platform-settings.update', setting.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingSettingId.value = null
+        },
+    })
+}
+
+const deleteSetting = (setting) => {
+    if (confirm(`Are you sure you want to delete the platform setting "${setting.key}"?`)) {
+        router.delete(route('admin.platform-settings.destroy', setting.id), {
+            preserveScroll: true,
+        })
+    }
 }
 
 const activeSection = computed(() => {
@@ -1337,6 +1491,298 @@ const activeSection = computed(() => {
                 </div>
             </section>
 
+
+            <!-- =========================================================
+                 FAQS
+            ========================================================== -->
+
+            <section
+                class="mt-5 rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+            >
+                <!-- Section Header -->
+                <div class="border-b border-[#E5E7EB] px-5 py-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#16A6A0]"></span>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]">
+                                    Platform Knowledge Base
+                                </p>
+                            </div>
+                            <h2 class="mt-1 text-base font-bold text-[#1F2937]">
+                                Frequently Asked Questions (FAQs)
+                            </h2>
+                            <p class="mt-1 text-xs text-[#64748B]">
+                                Create, organize, and publish FAQs for marketplace buyers and sellers.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#087F8C] px-3.5 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#066E79] focus:outline-none focus:ring-2 focus:ring-[#087F8C]/20"
+                            @click="showFaqForm = !showFaqForm"
+                        >
+                            <svg v-if="!showFaqForm" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                            </svg>
+                            <svg v-else class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" d="M6 6l12 12M18 6 6 18" />
+                            </svg>
+                            {{ showFaqForm ? 'Close Form' : 'Add FAQ' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- New FAQ Form -->
+                <form
+                    v-if="showFaqForm"
+                    class="border-b border-[#E5E7EB] bg-[#F8FAF9] p-4 sm:p-5"
+                    @submit.prevent="submitNewFaq"
+                >
+                    <div class="rounded-xl border border-[#E5E7EB] bg-white p-4">
+                        <div class="mb-4">
+                            <p class="text-xs font-bold text-[#1F2937]">Create new FAQ</p>
+                            <p class="mt-1 text-[11px] text-[#94A3B8]">
+                                Enter the question, answer, category, and display order.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-3">
+                            <div class="md:col-span-2">
+                                <label for="faq-question" class="mb-1.5 block text-[11px] font-semibold text-[#475569]">
+                                    Question
+                                </label>
+                                <input
+                                    id="faq-question"
+                                    v-model="faqForm.question"
+                                    type="text"
+                                    maxlength="500"
+                                    placeholder="e.g. How do I request a refund?"
+                                    class="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
+                                />
+                                <p v-if="faqForm.errors.question" class="mt-1 text-[10px] font-semibold text-[#E85D5D]">
+                                    {{ faqForm.errors.question }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="faq-category" class="mb-1.5 block text-[11px] font-semibold text-[#475569]">
+                                    Category
+                                </label>
+                                <select
+                                    id="faq-category"
+                                    v-model="faqForm.category"
+                                    class="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
+                                >
+                                    <option v-for="cat in faqCategories" :key="cat.value" :value="cat.value">
+                                        {{ cat.label }}
+                                    </option>
+                                </select>
+                                <p v-if="faqForm.errors.category" class="mt-1 text-[10px] font-semibold text-[#E85D5D]">
+                                    {{ faqForm.errors.category }}
+                                </p>
+                            </div>
+
+                            <div class="md:col-span-3">
+                                <label for="faq-answer" class="mb-1.5 block text-[11px] font-semibold text-[#475569]">
+                                    Answer
+                                </label>
+                                <textarea
+                                    id="faq-answer"
+                                    v-model="faqForm.answer"
+                                    rows="5"
+                                    placeholder="Write a clear and comprehensive answer..."
+                                    class="w-full resize-y rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs leading-5 text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
+                                ></textarea>
+                                <p v-if="faqForm.errors.answer" class="mt-1 text-[10px] font-semibold text-[#E85D5D]">
+                                    {{ faqForm.errors.answer }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="faq-sort-order" class="mb-1.5 block text-[11px] font-semibold text-[#475569]">
+                                    Sort Order
+                                </label>
+                                <input
+                                    id="faq-sort-order"
+                                    v-model="faqForm.sort_order"
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    class="w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
+                                />
+                            </div>
+
+                            <div class="md:col-span-2 flex items-center pt-5">
+                                <label class="flex cursor-pointer items-center gap-3">
+                                    <input
+                                        v-model="faqForm.is_published"
+                                        type="checkbox"
+                                        class="h-3.5 w-3.5 rounded border-slate-300 text-[#087F8C] focus:ring-[#087F8C]"
+                                    />
+                                    <span class="text-[11px] font-semibold text-[#475569]">
+                                        Publish immediately (visible to buyers)
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] pt-4">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[11px] font-semibold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                                @click="cancelNewFaq"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="faqForm.processing"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-4 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
+                            >
+                                {{ faqForm.processing ? 'Saving...' : 'Save FAQ' }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Existing FAQs List -->
+                <div class="space-y-3 p-4 sm:p-5">
+                    <article
+                        v-for="item in faqs"
+                        :key="item.id"
+                        class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 transition hover:border-[#C9D7D5]"
+                    >
+                        <!-- View Mode -->
+                        <template v-if="editingFaqId !== item.id">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3 class="text-xs font-bold text-[#1F2937]">
+                                            {{ item.question }}
+                                        </h3>
+                                        <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-600">
+                                            {{ item.category }}
+                                        </span>
+                                        <span
+                                            class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                            :class="item.is_published ? 'bg-[#E8F7F6] text-[#087F8C]' : 'bg-slate-100 text-slate-500'"
+                                        >
+                                            {{ item.is_published ? 'Published' : 'Draft' }}
+                                        </span>
+                                    </div>
+                                    <p class="mt-2 text-[11px] leading-5 text-[#64748B] whitespace-pre-line">
+                                        {{ item.answer }}
+                                    </p>
+                                    <p class="mt-2 text-[10px] text-[#94A3B8]">
+                                        Sort order: {{ item.sort_order ?? 0 }}
+                                    </p>
+                                </div>
+
+                                <div class="flex shrink-0 items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#087F8C] transition hover:bg-[#E8F7F6]"
+                                        @click="startEditingFaq(item)"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-red-600 transition hover:bg-red-50"
+                                        @click="deleteFaq(item)"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Edit Mode -->
+                        <template v-else>
+                            <form @submit.prevent="submitFaq(item)">
+                                <div class="grid gap-3 sm:grid-cols-3">
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-[10px] font-bold text-gray-700">Question</label>
+                                        <input
+                                            v-model="getFaqForm(item).question"
+                                            type="text"
+                                            class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-700">Category</label>
+                                        <select
+                                            v-model="getFaqForm(item).category"
+                                            class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+                                        >
+                                            <option v-for="cat in faqCategories" :key="cat.value" :value="cat.value">
+                                                {{ cat.label }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="sm:col-span-3">
+                                        <label class="block text-[10px] font-bold text-gray-700">Answer</label>
+                                        <textarea
+                                            v-model="getFaqForm(item).answer"
+                                            rows="4"
+                                            class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-700">Sort Order</label>
+                                        <input
+                                            v-model="getFaqForm(item).sort_order"
+                                            type="number"
+                                            min="0"
+                                            class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+                                        />
+                                    </div>
+                                    <div class="sm:col-span-2 flex items-center pt-4">
+                                        <label class="flex cursor-pointer items-center gap-2">
+                                            <input
+                                                v-model="getFaqForm(item).is_published"
+                                                type="checkbox"
+                                                class="h-3.5 w-3.5 rounded border-slate-300 text-[#087F8C]"
+                                            />
+                                            <span class="text-xs font-semibold text-gray-700">Published</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 flex justify-end gap-2 border-t border-gray-200 pt-3">
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                        @click="cancelEditingFaq"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        :disabled="getFaqForm(item).processing"
+                                        class="rounded-lg bg-[#087F8C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#066E79] disabled:opacity-50"
+                                    >
+                                        {{ getFaqForm(item).processing ? 'Updating...' : 'Update FAQ' }}
+                                    </button>
+                                </div>
+                            </form>
+                        </template>
+                    </article>
+
+                    <!-- Empty state -->
+                    <div
+                        v-if="!faqs.length"
+                        class="rounded-xl border border-dashed border-[#DCE5E3] bg-[#F8FAF9] p-8 text-center"
+                    >
+                        <p class="text-xs font-semibold text-[#64748B]">No FAQs configured yet.</p>
+                        <p class="mt-1 text-[10px] text-[#94A3B8]">Click Add FAQ to create the first frequently asked question.</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- =========================================================
                  PLATFORM SETTINGS
             ========================================================== -->
@@ -1698,78 +2144,133 @@ const activeSection = computed(() => {
                                 >
                                     Status
                                 </th>
+
+                                <th
+                                    class="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
+                                >
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
 
                         <tbody
                             class="divide-y divide-[#E5E7EB]"
                         >
-                            <tr
+                            <template
                                 v-for="item in settings"
-                                :key="
-                                    item.id ?? item.key
-                                "
-                                class="transition hover:bg-[#F8FAF9]"
+                                :key="item.id ?? item.key"
                             >
-                                <td
-                                    class="px-5 py-3.5 text-xs font-semibold text-[#1F2937]"
+                                <tr
+                                    class="transition hover:bg-[#F8FAF9]"
                                 >
-                                    <div
-                                        class="inline-flex rounded-lg bg-[#E8F7F6] px-2.5 py-1.5 font-mono text-[10px] font-semibold text-[#087F8C]"
+                                    <td
+                                        class="px-5 py-3.5 text-xs font-semibold text-[#1F2937]"
                                     >
-                                        {{ item.key }}
-                                    </div>
-                                </td>
+                                        <div
+                                            class="inline-flex rounded-lg bg-[#E8F7F6] px-2.5 py-1.5 font-mono text-[10px] font-semibold text-[#087F8C]"
+                                        >
+                                            {{ item.key }}
+                                        </div>
+                                    </td>
 
-                                <td
-                                    class="max-w-[220px] px-5 py-3.5 text-[11px] font-semibold text-[#475569]"
-                                >
-                                    <span
-                                        class="break-words"
-                                    >
-                                        {{
-                                            item.value ?? '—'
-                                        }}
-                                    </span>
-                                </td>
-
-                                <td
-                                    class="max-w-[360px] px-5 py-3.5 text-[11px] leading-5 text-[#64748B]"
-                                >
-                                    {{
-                                        item.description ||
-                                        '—'
-                                    }}
-                                </td>
-
-                                <td
-                                    class="px-5 py-3.5"
-                                >
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold"
-                                        :class="
-                                            item.is_active
-                                                ? 'bg-[#E8F7F6] text-[#087F8C] ring-1 ring-inset ring-[#B9E7E4]'
-                                                : 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200'
-                                        "
+                                    <td
+                                        class="max-w-[220px] px-5 py-3.5 text-[11px] font-semibold text-[#475569]"
                                     >
                                         <span
-                                            class="h-1.5 w-1.5 rounded-full"
+                                            class="break-words"
+                                        >
+                                            {{
+                                                item.value ?? '—'
+                                            }}
+                                        </span>
+                                    </td>
+
+                                    <td
+                                        class="max-w-[360px] px-5 py-3.5 text-[11px] leading-5 text-[#64748B]"
+                                    >
+                                        {{
+                                            item.description ||
+                                            '—'
+                                        }}
+                                    </td>
+
+                                    <td
+                                        class="px-5 py-3.5"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold"
                                             :class="
                                                 item.is_active
-                                                    ? 'bg-[#22A06B]'
-                                                    : 'bg-[#94A3B8]'
+                                                    ? 'bg-[#E8F7F6] text-[#087F8C] ring-1 ring-inset ring-[#B9E7E4]'
+                                                    : 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200'
                                             "
-                                        ></span>
+                                        >
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full"
+                                                :class="
+                                                    item.is_active
+                                                        ? 'bg-[#22A06B]'
+                                                        : 'bg-[#94A3B8]'
+                                                "
+                                            ></span>
 
-                                        {{
-                                            item.is_active
-                                                ? 'Active'
-                                                : 'Inactive'
-                                        }}
-                                    </span>
-                                </td>
-                            </tr>
+                                            {{
+                                                item.is_active
+                                                    ? 'Active'
+                                                    : 'Inactive'
+                                            }}
+                                        </span>
+                                    </td>
+
+                                    <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#087F8C] transition hover:bg-[#E8F7F6]"
+                                            @click="startEditingSetting(item)"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="ml-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-red-600 transition hover:bg-red-50"
+                                            @click="deleteSetting(item)"
+                                        >
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- Inline edit modal/row if editingSettingId === item.id -->
+                                <tr v-if="editingSettingId === item.id" class="bg-[#F0FAF9]">
+                                    <td colspan="5" class="p-4 border-t border-b border-[#087F8C]/20">
+                                        <form @submit.prevent="submitSetting(item)">
+                                            <div class="grid gap-3 sm:grid-cols-3">
+                                                <div class="sm:col-span-1">
+                                                    <label class="block text-[10px] font-bold text-gray-700">Key (read-only)</label>
+                                                    <input :value="item.key" disabled class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs font-mono text-gray-500" />
+                                                </div>
+                                                <div class="sm:col-span-2">
+                                                    <label class="block text-[10px] font-bold text-gray-700">Value</label>
+                                                    <input v-model="getSettingForm(item).value" type="text" class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs" />
+                                                </div>
+                                                <div class="sm:col-span-2">
+                                                    <label class="block text-[10px] font-bold text-gray-700">Description</label>
+                                                    <input v-model="getSettingForm(item).description" type="text" class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs" />
+                                                </div>
+                                                <div class="flex items-center pt-4">
+                                                    <label class="flex cursor-pointer items-center gap-2">
+                                                        <input v-model="getSettingForm(item).is_active" type="checkbox" class="h-3.5 w-3.5 rounded border-slate-300 text-[#087F8C]" />
+                                                        <span class="text-xs font-semibold text-gray-700">Active</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 flex justify-end gap-2">
+                                                <button type="button" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50" @click="cancelEditingSetting">Cancel</button>
+                                                <button type="submit" :disabled="getSettingForm(item).processing" class="rounded-lg bg-[#087F8C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#066E79] disabled:opacity-50">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>

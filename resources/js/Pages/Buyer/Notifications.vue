@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -14,11 +15,11 @@ const activeTab = ref('all')
 
 const tabs = [
     { key: 'all', label: 'All Notifications' },
-    { key: 'order', label: '📦 Orders' },
-    { key: 'shipping', label: '🚚 Shipping' },
-    { key: 'message', label: '💬 Messages' },
-    { key: 'complaint', label: '🛡️ Support & Tickets' },
-    { key: 'promotion', label: '🎟️ Vouchers & Promos' },
+    { key: 'order', label: 'Orders' },
+    { key: 'shipping', label: 'Shipping' },
+    { key: 'message', label: 'Messages' },
+    { key: 'complaint', label: 'Support & Tickets' },
+    { key: 'promotion', label: 'Vouchers & Promos' },
 ]
 
 const filteredNotifications = computed(() => {
@@ -58,49 +59,49 @@ const getTypeMeta = type => {
         case 'order':
             return {
                 label: 'Order Update',
-                icon: '📦',
+                icon: 'package',
                 badgeBg: 'bg-blue-50 text-blue-700 border-blue-100',
                 iconBg: 'bg-blue-50 text-blue-600',
             }
         case 'payment':
             return {
                 label: 'Payment',
-                icon: '💳',
+                icon: 'card',
                 badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
                 iconBg: 'bg-emerald-50 text-emerald-600',
             }
         case 'shipping':
             return {
                 label: 'Shipping & Delivery',
-                icon: '🚚',
+                icon: 'truck',
                 badgeBg: 'bg-amber-50 text-amber-700 border-amber-100',
                 iconBg: 'bg-amber-50 text-amber-600',
             }
         case 'message':
             return {
                 label: 'Seller Message',
-                icon: '💬',
+                icon: 'message',
                 badgeBg: 'bg-teal-50 text-teal-700 border-teal-100',
                 iconBg: 'bg-teal-50 text-teal-600',
             }
         case 'promotion':
             return {
                 label: 'Promotion & Voucher',
-                icon: '🎟️',
+                icon: 'ticket',
                 badgeBg: 'bg-purple-50 text-purple-700 border-purple-100',
                 iconBg: 'bg-purple-50 text-purple-600',
             }
         case 'complaint':
             return {
                 label: 'Support & Resolution',
-                icon: '🛡️',
+                icon: 'shield',
                 badgeBg: 'bg-rose-50 text-rose-700 border-rose-100',
                 iconBg: 'bg-rose-50 text-rose-600',
             }
         default:
             return {
                 label: 'System Notice',
-                icon: '🔔',
+                icon: 'bell',
                 badgeBg: 'bg-gray-50 text-gray-700 border-gray-100',
                 iconBg: 'bg-[#E8F7F6] text-[#087F8C]',
             }
@@ -211,7 +212,7 @@ const formatDate = dateStr => {
                                     class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl shadow-xs"
                                     :class="getTypeMeta(item.type).iconBg"
                                 >
-                                    <span>{{ getTypeMeta(item.type).icon }}</span>
+                                    <span><Icon :name="getTypeMeta(item.type).icon" class="h-4 w-4" /></span>
                                 </div>
 
                                 <!-- CONTENT -->
@@ -261,9 +262,7 @@ const formatDate = dateStr => {
 
                     <!-- EMPTY STATE -->
                     <div v-else class="px-6 py-16 text-center sm:py-20">
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F6] text-2xl text-[#087F8C]">
-                            🔔
-                        </div>
+                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F6] text-2xl text-[#087F8C]"><Icon name="bell" class="h-6 w-6" /></div>
 
                         <h2 class="mt-4 text-base font-bold text-gray-900">
                             No notifications in this tab

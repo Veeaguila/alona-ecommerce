@@ -1,4 +1,5 @@
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { computed, ref } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -8,6 +9,10 @@ const props = defineProps({
     isGuest: {
         type: Boolean,
         default: false,
+    },
+    faqs: {
+        type: Array,
+        default: () => [],
     },
 })
 
@@ -38,147 +43,54 @@ const safeRoute = (name, fallback = '#') => {
     }
 }
 
-const categories = [
-    { key: 'all', label: 'All FAQs', icon: '🌟' },
-    { key: 'orders', label: 'Orders & Tracking', icon: '📦' },
-    { key: 'payments', label: 'Payments & Checkout', icon: '💳' },
-    { key: 'shipping', label: 'Shipping & Delivery', icon: '🚚' },
-    { key: 'returns', label: 'Returns & Refunds', icon: '🔄' },
-    { key: 'vouchers', label: 'Vouchers & Deals', icon: '🎟️' },
-    { key: 'safety', label: 'Safety & Protection', icon: '🛡️' },
-    { key: 'account', label: 'Account & Profile', icon: '👤' },
-]
+const categoryIconMap = {
+    all: 'sparkle',
+    orders: 'package',
+    payments: 'card',
+    shipping: 'truck',
+    returns: 'undo',
+    vouchers: 'ticket',
+    safety: 'shield',
+    account: 'user',
+    general: 'help',
+}
 
-const faqs = [
-    // Orders & Tracking
-    {
-        id: 1,
-        category: 'orders',
-        question: 'How do I place an order on Alona?',
-        answer: 'Browse products or search for what you need, choose your preferred variant (such as color or size) and quantity, then click "Add to Cart" or "Buy Now". Once in your cart, select the items you wish to purchase, proceed to Checkout, choose your delivery address and payment method, and confirm your order.',
-    },
-    {
-        id: 2,
-        category: 'orders',
-        question: 'How do I track the shipping status of my order?',
-        answer: 'Go to "My Orders" and click on your order to view its real-time tracking timeline. You will see fulfillment milestones (To Pack, Shipped, Out for Delivery, Delivered) as well as the assigned courier name and tracking number. You can click "Copy #" to track the parcel directly with the courier.',
-    },
-    {
-        id: 3,
-        category: 'orders',
-        question: 'Can I cancel an order after placing it?',
-        answer: 'Yes, you can cancel an order as long as it has not reached the shipped or out-for-delivery stage. Open the order in "My Orders", click "Cancel Order", select a cancellation reason, and submit. Any reserved inventory will be instantly restored.',
-    },
-    {
-        id: 4,
-        category: 'orders',
-        question: 'How do I reorder items I purchased before?',
-        answer: 'You can easily reorder past purchases by navigating to "My Orders" or "Order Details" and clicking the "Buy Again" button next to any eligible item or for the whole order.',
-    },
+const categoryLabels = {
+    orders: 'Orders & Tracking',
+    payments: 'Payments & Checkout',
+    shipping: 'Shipping & Delivery',
+    returns: 'Returns & Refunds',
+    vouchers: 'Vouchers & Deals',
+    safety: 'Safety & Protection',
+    account: 'Account & Profile',
+    general: 'General Inquiries',
+}
 
-    // Payments & Checkout
-    {
-        id: 5,
-        category: 'payments',
-        question: 'What payment methods can I use at checkout?',
-        answer: 'Alona supports multiple flexible payment options: Cash on Delivery (COD), e-wallets (GCash and Maya), and Credit/Debit Cards (Visa, Mastercard, JCB). You can also save payment methods securely in your account for rapid one-click checkout.',
-    },
-    {
-        id: 6,
-        category: 'payments',
-        question: 'Is my card and payment information secure?',
-        answer: 'Yes, absolutely. Alona complies with modern payment security standards. Only the last 4 digits and expiration date are stored for saved payment methods. Sensitive card numbers and CVVs are never saved on our servers.',
-    },
-    {
-        id: 7,
-        category: 'payments',
-        question: 'How are shipping fees calculated at checkout?',
-        answer: 'Shipping fees are calculated based on the delivery province and municipality you select, combined with the courier shipping option chosen (e.g. Standard Delivery vs. Express Shipping). Any applicable shipping discount vouchers will be automatically applied to the total.',
-    },
-
-    // Shipping & Delivery
-    {
-        id: 8,
-        category: 'shipping',
-        question: 'How long will it take for my order to arrive?',
-        answer: 'Metro Manila and nearby provinces typically take 1–3 business days. Provincial areas usually arrive within 3–7 business days. You can monitor courier tracking updates directly on your Order Details page.',
-    },
-    {
-        id: 9,
-        category: 'shipping',
-        question: 'What should I do if my package is delayed?',
-        answer: 'If your order tracking has not updated for several days past the expected delivery date, you can click "Contact Seller" on the order page or open a complaint ticket through the Help Center for platform assistance.',
-    },
-
-    // Returns & Refunds
-    {
-        id: 10,
-        category: 'returns',
-        question: 'How do I request a return or refund?',
-        answer: 'Go to "My Orders", open the delivered order, and click "Return / Refund" next to the specific item. Select whether you are requesting a full return & refund or refund only, choose the appropriate reason (e.g. damaged, wrong item, counterfeit), provide a description, and upload photo/video proof.',
-    },
-    {
-        id: 11,
-        category: 'returns',
-        question: 'How long does a seller have to respond to a return request?',
-        answer: 'Sellers are given 48 to 72 hours to review and respond to return requests. If the seller approves or fails to respond within the timeframe, the platform administrative team will step in to resolve the refund in your favor.',
-    },
-    {
-        id: 12,
-        category: 'returns',
-        question: 'When will I receive my refund?',
-        answer: 'Once approved, refunds are credited back to your original payment method or wallet within 2 to 5 business days depending on your financial institution.',
-    },
-
-    // Vouchers & Deals
-    {
-        id: 13,
-        category: 'vouchers',
-        question: 'How do I claim and use discount vouchers?',
-        answer: 'Visit the "Vouchers & Discounts" page from the main navigation or dashboard. Click "Claim Voucher" on any active promotion. Claimed vouchers will automatically appear in your voucher selection menu during checkout if your cart meets the minimum spend requirements.',
-    },
-    {
-        id: 14,
-        category: 'vouchers',
-        question: 'Will I be notified when my vouchers are about to expire?',
-        answer: 'Yes! Alona sends automated notification alerts to your inbox when a claimed voucher has 3 days or fewer remaining before expiration.',
-    },
-
-    // Safety & Protection
-    {
-        id: 15,
-        category: 'safety',
-        question: 'How do I report a suspicious product or misconduct by a seller?',
-        answer: 'On any product detail page or seller store page, click the "🚩 Report Product" or "🚩 Report Seller" button. Select the reason for your report (e.g. Counterfeit / Fake item, Prohibited content, Fraud, Misleading specifications) and attach evidence. Our compliance and safety team investigates all reports thoroughly.',
-    },
-    {
-        id: 16,
-        category: 'safety',
-        question: 'How can I track the status of my submitted complaints?',
-        answer: 'Navigate to "My Complaints" under your buyer account menu or Help Center. You can view the review stage (Pending, Reviewing, Resolved, Rejected), submitted evidence, and the official admin resolution notes.',
-    },
-
-    // Account & Profile
-    {
-        id: 17,
-        category: 'account',
-        question: 'How do I change my saved delivery addresses?',
-        answer: 'Go to your account profile dropdown and select "My Addresses". You can add new addresses, set a default address for instant checkout, edit existing entries, or delete addresses you no longer use.',
-    },
-    {
-        id: 18,
-        category: 'account',
-        question: 'How do I update my password and security settings?',
-        answer: 'Navigate to "My Account" → "Password & Security". Enter your current password and your new secure password to update your login credentials.',
-    },
-]
+const categories = computed(() => {
+    const list = [{ key: 'all', label: 'All FAQs', icon: 'sparkle' }]
+    const found = new Set()
+    for (const f of props.faqs) {
+        const cat = (f.category || 'general').toLowerCase()
+        if (!found.has(cat)) {
+            found.add(cat)
+            list.push({
+                key: cat,
+                label: categoryLabels[cat] || cat.charAt(0).toUpperCase() + cat.slice(1),
+                icon: categoryIconMap[cat] || 'help',
+            })
+        }
+    }
+    return list
+})
 
 const filteredFaqs = computed(() => {
-    return faqs.filter(item => {
-        const matchesCategory = activeCategory.value === 'all' || item.category === activeCategory.value
-        const matchesSearch = !searchQuery.value ||
-            item.question.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-            item.answer.toLowerCase().includes(searchQuery.value.toLowerCase())
+    return props.faqs.filter(item => {
+        const itemCat = (item.category || 'general').toLowerCase()
+        const matchesCategory = activeCategory.value === 'all' || itemCat === activeCategory.value
+        const q = (item.question || '').toLowerCase()
+        const a = (item.answer || '').toLowerCase()
+        const s = searchQuery.value.toLowerCase().trim()
+        const matchesSearch = !s || q.includes(s) || a.includes(s)
         return matchesCategory && matchesSearch
     })
 })
@@ -226,7 +138,7 @@ const filteredFaqs = computed(() => {
                                 placeholder="Search questions..."
                                 class="w-full rounded-xl border border-gray-200 bg-[#F8FAF9] py-2.5 pl-9 pr-8 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                             />
-                            <span class="pointer-events-none absolute left-3 top-2.5 text-sm text-gray-400">🔍</span>
+                            <span class="pointer-events-none absolute left-3 top-2.5 text-sm text-gray-400"><Icon name="search" class="h-4 w-4" /></span>
                             <button
                                 v-if="searchQuery"
                                 type="button"
@@ -248,7 +160,7 @@ const filteredFaqs = computed(() => {
                             :class="activeCategory === cat.key ? 'bg-[#087F8C] text-white shadow-sm' : 'bg-[#F8FAF9] text-gray-600 hover:bg-gray-100 hover:text-gray-900'"
                             @click="activeCategory = cat.key"
                         >
-                            <span>{{ cat.icon }}</span>
+                            <span><Icon :name="cat.icon" class="h-4 w-4" /></span>
                             <span>{{ cat.label }}</span>
                         </button>
                     </div>
@@ -294,7 +206,7 @@ const filteredFaqs = computed(() => {
                         v-if="!filteredFaqs.length"
                         class="rounded-2xl border border-dashed border-gray-200 bg-white p-12 text-center"
                     >
-                        <span class="text-3xl">🔍</span>
+                        <span class="text-3xl"><Icon name="search" class="h-4 w-4" /></span>
                         <h2 class="mt-3 text-sm font-extrabold text-gray-900">No matching questions found</h2>
                         <p class="mt-1 text-xs text-gray-500">
                             Try searching with different keywords or contact our support team.
@@ -325,14 +237,14 @@ const filteredFaqs = computed(() => {
                                 :href="safeRoute('buyer.help')"
                                 class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76]"
                             >
-                                <span>💬</span>
+                                <span><Icon name="message" class="h-4 w-4" /></span>
                                 <span>Help Center & Support</span>
                             </Link>
                             <Link
                                 :href="safeRoute('buyer.policies')"
                                 class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-extrabold text-gray-700 transition hover:bg-gray-50"
                             >
-                                <span>📜</span>
+                                <span><Icon name="book" class="h-4 w-4" /></span>
                                 <span>View Policies</span>
                             </Link>
                         </div>

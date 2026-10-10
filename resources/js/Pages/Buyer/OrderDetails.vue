@@ -1,5 +1,6 @@
 <!-- Buyer Order Details with tracking milestones, cancellation, reordering, and return/refund requests. -->
 <script setup>
+import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -442,7 +443,7 @@ const imageUrl = path => {
                             class="inline-flex items-center gap-1.5 rounded-xl border border-[#D5E4E3] bg-white px-3.5 py-1.5 text-xs font-bold text-[#087F8C] shadow-sm transition hover:bg-[#E8F7F6] disabled:opacity-50"
                             @click="reorderEntireOrder"
                         >
-                            <span>🔄</span>
+                            <span><Icon name="undo" class="h-4 w-4" /></span>
                             <span>{{ isReordering ? 'Adding to cart...' : 'Buy Again' }}</span>
                         </button>
                     </div>
@@ -465,7 +466,7 @@ const imageUrl = path => {
                     class="mt-4 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] p-4 text-[#991B1B] sm:p-5"
                 >
                     <div class="flex items-start gap-3">
-                        <span class="text-xl">⚠️</span>
+                        <span class="text-xl"><Icon name="warning" class="h-4 w-4" /></span>
                         <div>
                             <h2 class="text-sm font-extrabold sm:text-base">Order Cancelled</h2>
                             <p class="mt-1 text-xs text-[#B91C1C]">
@@ -594,7 +595,7 @@ const imageUrl = path => {
                                                 class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#D9F0EF] bg-[#E8F7F6] p-3 text-xs"
                                             >
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-base">📦</span>
+                                                    <span class="text-base"><Icon name="package" class="h-4 w-4" /></span>
                                                     <div>
                                                         <p class="font-extrabold text-[#087F8C]">
                                                             {{ item.courier_name || 'Courier' }}
@@ -621,7 +622,7 @@ const imageUrl = path => {
                                             >
                                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                                     <div class="flex items-center gap-2">
-                                                        <span class="text-base">🔄</span>
+                                                        <span class="text-base"><Icon name="undo" class="h-4 w-4" /></span>
                                                         <span class="text-xs font-extrabold text-[#9A3412]">
                                                             {{ item.latest_return_request.type === 'refund_only' ? 'Refund Request' : 'Return & Refund Request' }}
                                                         </span>
@@ -724,7 +725,7 @@ const imageUrl = path => {
                                                     class="inline-flex items-center gap-1 rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-1.5 text-xs font-bold text-[#475569] transition hover:bg-[#F8FAF9] disabled:opacity-50"
                                                     @click="reorderSingleItem(item.id)"
                                                 >
-                                                    <span>🔄</span>
+                                                    <span><Icon name="undo" class="h-4 w-4" /></span>
                                                     <span>{{ reorderingItemId === item.id ? 'Adding...' : 'Buy Again' }}</span>
                                                 </button>
                                             </div>
