@@ -326,8 +326,8 @@ class SellerProductController extends Controller
 
                 foreach ($variants as $variantData) {
                     $product->variants()->create([
-                        'color' => $variantData['color'],
-                        'size' => $variantData['size'],
+                        'color' => $variantData['color'] ?? null,
+                        'size' => $variantData['size'] ?? null,
                         'stock' => $variantData['stock'],
                     ]);
                 }
@@ -740,8 +740,7 @@ class SellerProductController extends Controller
 
         if (!$color && !$size) {
             return back()->withErrors([
-                'color' =>
-                    'Please provide a color or size for the variant.',
+                'color' => 'Please provide at least a color or a size.',
             ]);
         }
 
@@ -764,8 +763,7 @@ class SellerProductController extends Controller
 
         if ($exists) {
             return back()->withErrors([
-                'color' =>
-                    'This product variant already exists.',
+                'color' => 'This product variant combination already exists.',
             ]);
         }
 
@@ -833,8 +831,7 @@ class SellerProductController extends Controller
 
         if (!$color && !$size) {
             return back()->withErrors([
-                'color' =>
-                    'Please provide a color or size for the variant.',
+                'color' => 'Please provide at least a color or a size.',
             ]);
         }
 
@@ -858,8 +855,7 @@ class SellerProductController extends Controller
 
         if ($duplicate) {
             return back()->withErrors([
-                'color' =>
-                    'This product variant already exists.',
+                'color' => 'This product variant combination already exists.',
             ]);
         }
 
@@ -978,6 +974,54 @@ class SellerProductController extends Controller
                 'Product restored and submitted for admin approval.'
             );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE PRODUCT
+    |--------------------------------------------------------------------------
+    */
+
+    public function destroy(
+        Request $request,
+        Product $product
+    ): RedirectResponse {
+        abort_unless(
+            $product->seller_id === $request->user()->id,
+            403
+        );
+
+        if ($product->orderItems()->exists()) {
+            return back()->with('error', 'This product has existing customer order records and cannot be permanently deleted. Please archive it instead.');
+        }
+
+        try {
+            DB::transaction(function () use ($product) {
+                $imagePaths = $product->images()->pluck('image_path')->filter()->all();
+                if ($product->image_path) {
+                    $imagePaths[] = $product->image_path;
+                }
+                foreach (array_unique($imagePaths) as $path) {
+                    Storage::disk('public')->delete($path);
+                }
+
+                $product->images()->delete();
+                $product->variants()->delete();
+                $product->questions()->delete();
+                $product->reviews()->delete();
+                $product->delete();
+            });
+
+            return redirect()
+                ->route('seller.products')
+                ->with('status', 'Product deleted permanently.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to delete product: ' . $e->getMessage());
+        }
+    }
+
+
+
 
 
     /*
@@ -1189,10 +1233,7 @@ class SellerProductController extends Controller
                 );
             }
 
-            $combinationKey =
-                strtolower($color ?? '__none__') .
-                '|' .
-                strtolower($size ?? '__none__');
+            $combinationKey = ($color ?? '__none__') . '|' . ($size ?? '__none__');
 
             if (
                 collect($normalized)->contains(
@@ -1202,10 +1243,8 @@ class SellerProductController extends Controller
             ) {
                 abort(
                     422,
-                    'Duplicate product variant: ' .
-                    ($color ?? 'No Color') .
-                    ' / ' .
-                    ($size ?? 'No Size') .
+                    'Duplicate product variant combination at variant ' .
+                    ($index + 1) .
                     '.'
                 );
             }

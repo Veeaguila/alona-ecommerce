@@ -139,30 +139,60 @@ const stockClass = product => {
     return 'text-[#1F2937]'
 }
 
-const archive = product => {
-    if (!confirm(`Archive "${product.name}"? You can restore it later.`)) {
-        return
-    }
+// Modals
+const productToArchive = ref(null)
+const productToRestore = ref(null)
+const productToDelete = ref(null)
 
+const confirmArchive = product => {
+    productToArchive.value = product
+}
+
+const executeArchive = () => {
+    if (!productToArchive.value) return
     router.patch(
-        route('seller.products.archive', product.id),
+        route('seller.products.archive', productToArchive.value.id),
         {},
         {
             preserveScroll: true,
+            onSuccess: () => {
+                productToArchive.value = null
+            },
         }
     )
 }
 
-const restore = product => {
-    if (!confirm(`Restore "${product.name}"?`)) {
-        return
-    }
+const confirmRestore = product => {
+    productToRestore.value = product
+}
 
+const executeRestore = () => {
+    if (!productToRestore.value) return
     router.patch(
-        route('seller.products.restore', product.id),
+        route('seller.products.restore', productToRestore.value.id),
         {},
         {
             preserveScroll: true,
+            onSuccess: () => {
+                productToRestore.value = null
+            },
+        }
+    )
+}
+
+const confirmDelete = product => {
+    productToDelete.value = product
+}
+
+const executeDelete = () => {
+    if (!productToDelete.value) return
+    router.delete(
+        route('seller.products.destroy', productToDelete.value.id),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                productToDelete.value = null
+            },
         }
     )
 }
@@ -260,6 +290,32 @@ const outOfStockProducts = computed(() => {
 
                         Add Product
                     </Link>
+                </div>
+
+                <!-- Flash Status Alert -->
+                <div
+                    v-if="$page.props.flash?.status || $page.props.flash?.success"
+                    class="mt-4 flex items-center justify-between rounded-xl border border-[#BBE7D3] bg-[#ECFDF5] px-4 py-3 text-sm font-medium text-[#16845A]"
+                >
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{ $page.props.flash?.status || $page.props.flash?.success }}</span>
+                    </div>
+                </div>
+
+                <!-- Flash Error Alert -->
+                <div
+                    v-if="$page.props.flash?.error || $page.props.errors?.error"
+                    class="mt-4 flex items-center justify-between rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#DC2626]"
+                >
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{{ $page.props.flash?.error || $page.props.errors?.error }}</span>
+                    </div>
                 </div>
 
                 <!-- Summary -->
@@ -540,42 +596,28 @@ const outOfStockProducts = computed(() => {
                     <div class="hidden overflow-x-auto lg:block">
                         <table class="w-full">
                             <thead>
-                                <tr
-                                    class="border-b border-[#E5E7EB] bg-[#F8FAF9]"
-                                >
-                                    <th
-                                        class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                <tr class="border-b border-[#E5E7EB] bg-[#F8FAF9]">
+                                    <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Product
                                     </th>
 
-                                    <th
-                                        class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                    <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Category
                                     </th>
 
-                                    <th
-                                        class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                    <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Price
                                     </th>
 
-                                    <th
-                                        class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                    <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Stock
                                     </th>
 
-                                    <th
-                                        class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                    <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Status
                                     </th>
 
-                                    <th
-                                        class="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                                    >
+                                    <th class="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                         Actions
                                     </th>
                                 </tr>
@@ -588,154 +630,88 @@ const outOfStockProducts = computed(() => {
                                     class="transition hover:bg-[#F8FAF9]"
                                 >
                                     <!-- Product -->
-                                    <td class="px-5 py-3">
+                                    <td class="px-4 py-3">
                                         <div class="flex min-w-[240px] items-center gap-3">
-                                            <div
-                                                class="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F8FAF9]"
-                                            >
+                                            <div class="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F8FAF9]">
                                                 <img
                                                     v-if="productImage(product)"
                                                     :src="productImage(product)"
                                                     :alt="product.name"
                                                     class="h-full w-full object-cover"
                                                 />
-
-                                                <div
-                                                    v-else
-                                                    class="flex h-full w-full items-center justify-center text-[#087F8C]"
-                                                >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        class="h-5 w-5"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        stroke-width="1.7"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="m3 16 5-5 4 4 3-3 6 6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2Z"
-                                                        />
+                                                <div v-else class="flex h-full w-full items-center justify-center text-[#087F8C]">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m3 16 5-5 4 4 3-3 6 6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2Z" />
                                                     </svg>
                                                 </div>
                                             </div>
 
                                             <div class="min-w-0">
-                                                <p
-                                                    class="truncate text-sm font-semibold text-[#1F2937]"
-                                                >
+                                                <p class="truncate text-sm font-semibold text-[#1F2937]">
                                                     {{ product.name }}
                                                 </p>
-
-                                                <p
-                                                    class="mt-0.5 text-[11px] text-[#94A3B8]"
-                                                >
-                                                    Product #{{ product.id }}
-                                                </p>
+                                                <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#94A3B8]">
+                                                    <span>#{{ product.id }}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
 
                                     <!-- Category -->
                                     <td class="px-4 py-3">
-                                        <span
-                                            class="text-xs font-medium text-[#64748B]"
-                                        >
-                                            {{
-                                                product.category?.name ??
-                                                product.category_name ??
-                                                '—'
-                                            }}
-                                        </span>
+                                        <div class="text-xs font-medium text-[#64748B]">
+                                            {{ product.category?.name ?? product.category_name ?? '—' }}
+                                        </div>
                                     </td>
 
                                     <!-- Price -->
                                     <td class="px-4 py-3">
-                                        <p
-                                            class="text-sm font-bold text-[#087F8C]"
-                                        >
+                                        <p class="text-sm font-bold text-[#087F8C]">
                                             {{ peso(product.price) }}
                                         </p>
                                     </td>
 
                                     <!-- Stock -->
                                     <td class="px-4 py-3">
-                                        <p
-                                            class="text-sm font-bold"
-                                            :class="stockClass(product)"
-                                        >
+                                        <p class="text-sm font-bold" :class="stockClass(product)">
                                             {{ product.stock ?? 0 }}
                                         </p>
-
-                                        <p class="mt-0.5 text-[10px] text-[#94A3B8]">
-                                            units
-                                        </p>
+                                        <p class="mt-0.5 text-[10px] text-[#94A3B8]">units</p>
                                     </td>
 
                                     <!-- Status -->
                                     <td class="px-4 py-3">
-                                        <span
-                                            class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold"
-                                            :class="statusClass(product)"
-                                        >
+                                        <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold" :class="statusClass(product)">
                                             {{ statusOf(product) }}
                                         </span>
                                     </td>
 
                                     <!-- Actions -->
                                     <td class="px-5 py-3">
-                                        <div
-                                            class="flex items-center justify-end gap-1.5"
-                                        >
+                                        <div class="flex items-center justify-end gap-1.5">
+
+                                            <!-- Edit -->
                                             <Link
-                                                :href="
-                                                    route(
-                                                        'seller.products.edit',
-                                                        product.id
-                                                    )
-                                                "
+                                                :href="route('seller.products.edit', product.id)"
                                                 class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2.5 text-[11px] font-semibold text-[#64748B] transition hover:border-[#087F8C] hover:text-[#087F8C]"
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    class="h-3.5 w-3.5"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-8.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 8.5-8.5z"
-                                                    />
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-8.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 8.5-8.5z" />
                                                 </svg>
-
                                                 Edit
                                             </Link>
 
+                                            <!-- Archive / Restore -->
                                             <button
                                                 v-if="product.status !== 'archived'"
                                                 type="button"
-                                                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-2.5 text-[11px] font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
-                                                @click="archive(product)"
+                                                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-2.5 text-[11px] font-semibold text-[#B45309] transition hover:bg-[#FEF3C7]"
+                                                @click="confirmArchive(product)"
+                                                title="Archive Product"
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    class="h-3.5 w-3.5"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M3 7h18M5 7l1 12h12l1-12M9 7V4h6v3"
-                                                    />
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                                 </svg>
-
                                                 Archive
                                             </button>
 
@@ -743,24 +719,26 @@ const outOfStockProducts = computed(() => {
                                                 v-else
                                                 type="button"
                                                 class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#BBE7D3] bg-[#ECFDF5] px-2.5 text-[11px] font-semibold text-[#16845A] transition hover:bg-[#DFF8EB]"
-                                                @click="restore(product)"
+                                                @click="confirmRestore(product)"
+                                                title="Restore Product"
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    class="h-3.5 w-3.5"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M3 12a9 9 0 109-9 9.1 9.1 0 00-6.36 2.64L3 9m0 0V4m0 5h5"
-                                                    />
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 109-9 9.1 9.1 0 00-6.36 2.64L3 9m0 0V4m0 5h5" />
                                                 </svg>
-
                                                 Restore
+                                            </button>
+
+                                            <!-- Permanent Delete -->
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-2.5 text-[11px] font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
+                                                @click="confirmDelete(product)"
+                                                title="Delete Permanently"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Delete
                                             </button>
                                         </div>
                                     </td>
@@ -829,9 +807,9 @@ const outOfStockProducts = computed(() => {
                         <div
                             v-for="product in products.data"
                             :key="product.id"
-                            class="p-4"
+                            class="p-4 transition hover:bg-[#F8FAF9]"
                         >
-                            <div class="flex gap-3">
+                            <div class="flex items-start gap-3">
                                 <div
                                     class="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F8FAF9]"
                                 >
@@ -872,15 +850,9 @@ const outOfStockProducts = computed(() => {
                                                 {{ product.name }}
                                             </h3>
 
-                                            <p
-                                                class="mt-0.5 truncate text-[11px] text-[#94A3B8]"
-                                            >
-                                                {{
-                                                    product.category?.name ??
-                                                    product.category_name ??
-                                                    'Uncategorized'
-                                                }}
-                                            </p>
+                                            <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#94A3B8]">
+                                                <span>{{ product.category?.name ?? 'Uncategorized' }}</span>
+                                            </div>
                                         </div>
 
                                         <span
@@ -938,7 +910,8 @@ const outOfStockProducts = computed(() => {
                                         </div>
                                     </div>
 
-                                    <div class="mt-3 flex gap-2">
+                                    <div class="mt-3 flex flex-wrap gap-2">
+
                                         <Link
                                             :href="
                                                 route(
@@ -946,7 +919,7 @@ const outOfStockProducts = computed(() => {
                                                     product.id
                                                 )
                                             "
-                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 text-[11px] font-semibold text-[#64748B] transition hover:border-[#087F8C] hover:text-[#087F8C]"
+                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2.5 text-[11px] font-semibold text-[#64748B] transition hover:border-[#087F8C] hover:text-[#087F8C]"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -969,8 +942,8 @@ const outOfStockProducts = computed(() => {
                                         <button
                                             v-if="product.status !== 'archived'"
                                             type="button"
-                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 text-[11px] font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
-                                            @click="archive(product)"
+                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-2.5 text-[11px] font-semibold text-[#B45309] transition hover:bg-[#FEF3C7]"
+                                            @click="confirmArchive(product)"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -983,7 +956,7 @@ const outOfStockProducts = computed(() => {
                                                 <path
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
-                                                    d="M3 7h18M5 7l1 12h12l1-12M9 7V4h6v3"
+                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                                                 />
                                             </svg>
 
@@ -993,8 +966,8 @@ const outOfStockProducts = computed(() => {
                                         <button
                                             v-else
                                             type="button"
-                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#BBE7D3] bg-[#ECFDF5] px-3 text-[11px] font-semibold text-[#16845A] transition hover:bg-[#DFF8EB]"
-                                            @click="restore(product)"
+                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#BBE7D3] bg-[#ECFDF5] px-2.5 text-[11px] font-semibold text-[#16845A] transition hover:bg-[#DFF8EB]"
+                                            @click="confirmRestore(product)"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -1012,6 +985,29 @@ const outOfStockProducts = computed(() => {
                                             </svg>
 
                                             Restore
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-2.5 text-[11px] font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2]"
+                                            @click="confirmDelete(product)"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-3.5 w-3.5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
+                                            </svg>
+
+                                            Delete
                                         </button>
                                     </div>
                                 </div>
@@ -1101,6 +1097,135 @@ const outOfStockProducts = computed(() => {
                             </template>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Delete Confirmation Modal -->
+        <div
+            v-if="productToDelete"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FEF2F2] text-[#DC2626]">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#1F2937]">Delete Product</h3>
+                        <p class="text-xs text-[#64748B]">This action cannot be undone.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2]/60 p-3 text-xs text-[#991B1B]">
+                    <p class="font-semibold">Are you sure you want to permanently delete:</p>
+                    <p class="mt-1 font-bold text-[#7F1D1D]">"{{ productToDelete.name }}"</p>
+                    <p class="mt-2 text-[11px] text-[#B91C1C]">
+                        Note: Products with customer orders cannot be deleted to preserve order history. If this product has previous orders, please archive it instead.
+                    </p>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        @click="productToDelete = null"
+                        class="h-10 rounded-xl border border-[#E5E7EB] bg-white px-4 text-xs font-semibold text-[#64748B] hover:bg-[#F8FAF9]"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        @click="executeDelete"
+                        class="h-10 rounded-xl bg-[#DC2626] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#B91C1C]"
+                    >
+                        Permanently Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Archive Confirmation Modal -->
+        <div
+            v-if="productToArchive"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#B45309]">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#1F2937]">Archive Product</h3>
+                        <p class="text-xs text-[#64748B]">Hide from store without losing history</p>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-sm text-[#475569]">
+                    Are you sure you want to archive <strong class="text-[#1F2937]">"{{ productToArchive.name }}"</strong>?
+                    It will be hidden from shoppers but all order history and reviews will remain intact. You can restore it at any time.
+                </p>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        @click="productToArchive = null"
+                        class="h-10 rounded-xl border border-[#E5E7EB] bg-white px-4 text-xs font-semibold text-[#64748B] hover:bg-[#F8FAF9]"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        @click="executeArchive"
+                        class="h-10 rounded-xl bg-[#B45309] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#92400E]"
+                    >
+                        Archive Product
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Restore Confirmation Modal -->
+        <div
+            v-if="productToRestore"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ECFDF5] text-[#16845A]">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 109-9 9.1 9.1 0 00-6.36 2.64L3 9m0 0V4m0 5h5" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#1F2937]">Restore Product</h3>
+                        <p class="text-xs text-[#64748B]">Set product back to active</p>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-sm text-[#475569]">
+                    Restore <strong class="text-[#1F2937]">"{{ productToRestore.name }}"</strong>?
+                    The product status will be set back to active and visible to buyers.
+                </p>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        @click="productToRestore = null"
+                        class="h-10 rounded-xl border border-[#E5E7EB] bg-white px-4 text-xs font-semibold text-[#64748B] hover:bg-[#F8FAF9]"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        @click="executeRestore"
+                        class="h-10 rounded-xl bg-[#087F8C] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#066D78]"
+                    >
+                        Restore to Active
+                    </button>
                 </div>
             </div>
         </div>

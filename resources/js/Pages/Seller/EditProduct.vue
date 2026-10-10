@@ -385,24 +385,26 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <Link
-                        :href="route('seller.products')"
-                        class="inline-flex w-fit items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-semibold text-[#475569] shadow-sm transition hover:border-[#087F8C] hover:text-[#087F8C]"
-                    >
-                        <svg
-                            class="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
+                    <div class="flex items-center gap-2">
+                        <Link
+                            :href="route('seller.products')"
+                            class="inline-flex w-fit items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-semibold text-[#475569] shadow-sm transition hover:border-[#087F8C] hover:text-[#087F8C]"
                         >
-                            <path
-                                d="M4 7h16M4 12h16M4 17h10"
-                                stroke-linecap="round"
-                            />
-                        </svg>
-                        My Products
-                    </Link>
+                            <svg
+                                class="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <path
+                                    d="M4 7h16M4 12h16M4 17h10"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
+                            My Products
+                        </Link>
+                    </div>
                 </div>
 
 
@@ -599,7 +601,7 @@ const submit = () => {
                         <div class="grid gap-5 px-5 py-5 sm:grid-cols-2">
 
                             <!-- PRODUCT NAME -->
-                            <div class="sm:col-span-2">
+                            <div>
                                 <label
                                     for="name"
                                     class="block text-xs font-semibold text-[#1F2937]"
@@ -621,7 +623,6 @@ const submit = () => {
                                     {{ form.errors.name }}
                                 </p>
                             </div>
-
 
                             <!-- CATEGORY -->
                             <div>
@@ -670,9 +671,8 @@ const submit = () => {
                                 </p>
                             </div>
 
-
                             <!-- SLUG -->
-                            <div>
+                            <div class="sm:col-span-2">
                                 <label
                                     class="block text-xs font-semibold text-[#1F2937]"
                                 >

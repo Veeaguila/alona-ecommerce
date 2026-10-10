@@ -682,6 +682,11 @@ Route::middleware([
         'update',
     ])->name('seller.products.update');
 
+    Route::delete('/seller/products/{product}', [
+        SellerProductController::class,
+        'destroy',
+    ])->name('seller.products.destroy');
+
     Route::patch('/seller/products/{product}/archive', [
         SellerProductController::class,
         'archive',

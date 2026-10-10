@@ -376,12 +376,6 @@ onBeforeUnmount(() => {
                                         Select category
                                     </option>
 
-                                    <!--
-                                        IMPORTANT:
-                                        Categories come directly from the database
-                                        through SellerProductController.
-                                        No hard-coded marketplace categories here.
-                                    -->
                                     <option
                                         v-for="category in props.categories"
                                         :key="category.id"
@@ -852,8 +846,7 @@ onBeforeUnmount(() => {
                                         </button>
                                     </div>
 
-                                    <div class="grid gap-4 sm:grid-cols-3">
-
+                                    <div class="grid gap-3 sm:grid-cols-3">
                                         <!-- COLOR -->
                                         <div>
                                             <label
@@ -866,7 +859,7 @@ onBeforeUnmount(() => {
                                             <select
                                                 :id="`variant-color-${index}`"
                                                 v-model="variant.color"
-                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
                                             >
                                                 <option value="">
                                                     Select Color
@@ -883,7 +876,7 @@ onBeforeUnmount(() => {
 
                                             <p
                                                 v-if="form.errors[`variants.${index}.color`]"
-                                                class="mt-1.5 text-[10px] text-[#E85D5D]"
+                                                class="mt-1 text-[10px] text-[#E85D5D]"
                                             >
                                                 {{ form.errors[`variants.${index}.color`] }}
                                             </p>
@@ -901,7 +894,7 @@ onBeforeUnmount(() => {
                                             <select
                                                 :id="`variant-size-${index}`"
                                                 v-model="variant.size"
-                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
                                             >
                                                 <option value="">
                                                     Select Size
@@ -918,7 +911,7 @@ onBeforeUnmount(() => {
 
                                             <p
                                                 v-if="form.errors[`variants.${index}.size`]"
-                                                class="mt-1.5 text-[10px] text-[#E85D5D]"
+                                                class="mt-1 text-[10px] text-[#E85D5D]"
                                             >
                                                 {{ form.errors[`variants.${index}.size`] }}
                                             </p>
@@ -939,12 +932,12 @@ onBeforeUnmount(() => {
                                                 type="number"
                                                 min="0"
                                                 placeholder="0"
-                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2.5 text-xs text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
                                             />
 
                                             <p
                                                 v-if="form.errors[`variants.${index}.stock`]"
-                                                class="mt-1.5 text-[10px] text-[#E85D5D]"
+                                                class="mt-1 text-[10px] text-[#E85D5D]"
                                             >
                                                 {{ form.errors[`variants.${index}.stock`] }}
                                             </p>

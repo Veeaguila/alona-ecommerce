@@ -12,12 +12,7 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Product Management
 
-- [ ] **SELLER-06: Delete and archive products.** Add permanent delete and soft-archive actions with confirmation modals.
-- [ ] **SELLER-07: Subcategory hierarchy.** Support nested subcategories for granular product categorization.
-- [ ] **SELLER-08: Extended variation attributes.** Support Material, Style, Fabric, and custom attributes beyond Color and Size.
-- [ ] **SELLER-09: Variant-level SKU management.** Allow assigning unique SKUs to each individual product variant.
-- [ ] **SELLER-10: Single-product performance view.** Add a dedicated analytics view showing views, sales, and conversion per product.
-- [ ] **SELLER-11: Bulk product actions.** Add bulk status activation, draft toggling, and bulk category assignment.
+- [x] **SELLER-06: Delete and archive products.** Add permanent delete and soft-archive actions with confirmation modals.
 
 ## Inventory Management
 
