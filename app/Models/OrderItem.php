@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderItem extends Model
 {
+    public function parcel(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Parcel::class);
+    }
+
     /**
      * All supported order-item fulfillment statuses.
      *

@@ -31,7 +31,7 @@ const showCancelForm = ref(false)
 
 const processForm = useForm({})
 const packForm = useForm({})
-const readyForPickupForm = useForm({})
+const readyForPickupForm = useForm({ collection_address: '' })
 
 const cancelForm = useForm({
     reason: '',
@@ -578,6 +578,13 @@ const formatMoney = (value) => {
             id="seller-order-page"
             class="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8"
         >
+            <div v-if="item.parcel" class="mb-4 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm">
+                <p class="font-semibold">Courier reference: {{ item.parcel.order_id }}</p>
+                <p>Pickup status: {{ item.parcel.pickup_requests?.[0]?.status || 'pending' }}</p>
+                <p>Courier status: {{ item.parcel.status?.replaceAll('_', ' ') }}</p>
+                <p v-if="item.parcel.failure_reason">Delivery failure: {{ item.parcel.failure_reason }}</p>
+                <p>Collection address: {{ item.parcel.collection_address || 'Contact the sorting center to confirm the collection address.' }}</p>
+            </div>
             <!-- Header -->
             <div
                 class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -699,6 +706,11 @@ const formatMoney = (value) => {
                         </button>
 
                         <!-- Packed → Ready for Pickup -->
+                        <label v-if="canReadyForPickup" class="text-sm text-gray-700">
+                            Collection address (optional; uses your seller address)
+                            <input v-model="readyForPickupForm.collection_address" type="text" maxlength="1000" class="mt-1 block w-full rounded-lg border-gray-300" />
+                            <span v-if="readyForPickupForm.errors.collection_address" class="text-red-600">{{ readyForPickupForm.errors.collection_address }}</span>
+                        </label>
                         <button
                             v-if="canReadyForPickup"
                             type="button"

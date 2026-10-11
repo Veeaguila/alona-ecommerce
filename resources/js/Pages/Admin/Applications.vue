@@ -106,6 +106,9 @@ const roleLabel = (role) => {
         case 'rider':
             return 'Courier'
 
+        case 'sorting_center':
+            return 'Sorting center'
+
         default:
             return role || 'Unknown'
     }
@@ -705,6 +708,7 @@ const goToPage = (url) => {
                                     Seller
                                 </option>
 
+                                <option value="sorting_center">Sorting center</option>
                                 <option value="rider">
                                     Courier
                                 </option>

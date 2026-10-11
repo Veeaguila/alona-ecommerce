@@ -65,13 +65,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use \Laravel\Sanctum\HasApiTokens, HasFactory, Notifiable;
 
     /*
     |--------------------------------------------------------------------------
     | Buyer relationships
     |--------------------------------------------------------------------------
     */
+
+    public function sortingCenter(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SortingCenter::class);
+    }
+
+    public function rider(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Rider::class);
+    }
 
     public function cartItems(): HasMany
     {

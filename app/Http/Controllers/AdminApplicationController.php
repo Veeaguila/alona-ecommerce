@@ -19,7 +19,7 @@ class AdminApplicationController extends Controller
     public function index(Request $request)
     {
         $query = User::query()
-            ->whereIn('usertype', ['buyer', 'seller', 'rider'])
+            ->whereIn('usertype', ['buyer', 'seller', 'rider', 'sorting_center'])
             ->whereIn('status', ['pending', 'approved', 'rejected'])
             ->latest();
 
@@ -133,7 +133,7 @@ class AdminApplicationController extends Controller
         abort_unless(
             in_array(
                 $user->usertype,
-                ['buyer', 'seller', 'rider'],
+                ['buyer', 'seller', 'rider', 'sorting_center'],
                 true
             ),
             404
@@ -185,7 +185,7 @@ class AdminApplicationController extends Controller
         abort_unless(
             in_array(
                 $user->usertype,
-                ['buyer', 'seller', 'rider'],
+                ['buyer', 'seller', 'rider', 'sorting_center'],
                 true
             ),
             404
@@ -195,6 +195,12 @@ class AdminApplicationController extends Controller
             'status' => 'approved',
             'rejection_reason' => null,
         ]);
+
+        if ($user->usertype === 'sorting_center') {
+            $user->sortingCenter()->update(['approval_status' => 'approved']);
+        } elseif ($user->usertype === 'rider') {
+            $user->rider()->update(['approval_status' => 'approved']);
+        }
 
         $this->notifyApplicant(
             $user,
@@ -222,7 +228,7 @@ class AdminApplicationController extends Controller
         abort_unless(
             in_array(
                 $user->usertype,
-                ['buyer', 'seller', 'rider'],
+                ['buyer', 'seller', 'rider', 'sorting_center'],
                 true
             ),
             404
@@ -240,6 +246,12 @@ class AdminApplicationController extends Controller
             'status' => 'rejected',
             'rejection_reason' => $validated['reason'],
         ]);
+
+        if ($user->usertype === 'sorting_center') {
+            $user->sortingCenter()->update(['approval_status' => 'rejected']);
+        } elseif ($user->usertype === 'rider') {
+            $user->rider()->update(['approval_status' => 'rejected']);
+        }
 
         $this->notifyApplicant(
             $user,
