@@ -32,9 +32,12 @@ const props = defineProps({
     },
 })
 
+const page = usePage()
+const user = computed(() => page.props.auth?.user ?? null)
+const isGuestUser = computed(() => Boolean(props.isGuest || !user.value))
 const product = computed(() => props.product || {})
 const pageLayout = computed(() =>
-    props.isGuest ? GuestLayout : BuyerLayout
+    isGuestUser.value ? GuestLayout : BuyerLayout
 )
 
 /*
@@ -183,7 +186,7 @@ const reviewDate = date => {
 
 const safeRoute = (name, params = undefined, fallback = '#') => {
     try {
-        if (props.isGuest) {
+        if (isGuestUser.value) {
             const guestRoutes = {
                 'buyer.products': 'guest.products',
                 'buyer.product': 'guest.product',
@@ -503,8 +506,6 @@ const canPurchase = computed(() =>
 |--------------------------------------------------------------------------
 */
 
-const page = usePage()
-
 const authModalOpen = ref(false)
 
 function requireLogin() {
@@ -542,7 +543,7 @@ function prepareCartForm() {
 */
 
 function addToCart() {
-    if (props.isGuest) {
+    if (isGuestUser.value) {
         requireLogin()
         return
     }
@@ -575,7 +576,7 @@ function addToCart() {
 */
 
 function buyNow() {
-    if (props.isGuest) {
+    if (isGuestUser.value) {
         requireLogin()
         return
     }
@@ -616,7 +617,7 @@ function buyNow() {
 */
 
 function messageSeller() {
-    if (props.isGuest) {
+    if (isGuestUser.value) {
         requireLogin()
         return
     }
@@ -668,7 +669,7 @@ const reportReasons = [
 ]
 
 function openReportModal() {
-    if (props.isGuest) {
+    if (isGuestUser.value) {
         requireLogin()
         return
     }
@@ -713,7 +714,7 @@ const breadcrumbs = computed(() => {
     const crumbs = [
         {
             label: 'Home',
-            href: props.isGuest
+            href: isGuestUser.value
                 ? '/'
                 : safeRoute(
                     'buyer.dashboard',
@@ -994,7 +995,7 @@ const breadcrumbs = computed(() => {
                                             </p>
 
                                             <Link
-                                                v-if="!props.isGuest"
+                                                v-if="product.seller?.id"
                                                 :href="
                                                     safeRoute(
                                                         'buyer.store.show',
@@ -1049,7 +1050,7 @@ const breadcrumbs = computed(() => {
                                         <!-- VISIT STORE -->
 
                                         <Link
-                                            v-if="!props.isGuest"
+                                            v-if="product.seller?.id"
                                             :href="
                                                 safeRoute(
                                                     'buyer.store.show',
@@ -1094,7 +1095,7 @@ const breadcrumbs = computed(() => {
                                     <!-- MOBILE VISIT STORE -->
 
                                     <Link
-                                        v-if="!props.isGuest"
+                                        v-if="product.seller?.id"
                                         :href="
                                             safeRoute(
                                                 'buyer.store.show',
@@ -1717,8 +1718,16 @@ const breadcrumbs = computed(() => {
                             </div>
                         </div>
 
+                        <button
+                            v-if="isGuestUser"
+                            type="button"
+                            @click="requireLogin"
+                            class="inline-flex items-center justify-center rounded-lg bg-[#087F8C] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#16A6A0]"
+                        >
+                            See all reviews
+                        </button>
                         <Link
-                            v-if="!props.isGuest"
+                            v-else
                             :href="
                                 safeRoute(
                                     'buyer.product.reviews',
@@ -2106,4 +2115,10 @@ const breadcrumbs = computed(() => {
             </div>
         </div>
     </component>
+
+    <AuthModal
+        :show="authModalOpen"
+        mode="login"
+        @close="authModalOpen = false"
+    />
 </template>

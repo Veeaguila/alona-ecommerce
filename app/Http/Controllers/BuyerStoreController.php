@@ -12,7 +12,11 @@ class BuyerStoreController extends Controller
 {
     public function show(Request $request, User $seller): Response
     {
-        abort_unless($seller->usertype === 'seller' && $seller->status === 'active', 404);
+        abort_unless(
+            $seller->usertype === 'seller' &&
+            in_array($seller->status, ['active', 'approved'], true),
+            404
+        );
 
         $sort = $request->input('sort', 'latest');
         $search = trim((string) $request->input('search', ''));

@@ -38,6 +38,32 @@ class AdminSettingsController extends Controller
             ->orderBy('id')
             ->get();
 
+        $whyAlonaSetting = PlatformSetting::where('key', 'home.why_alona')->first();
+        $whyAlona = $whyAlonaSetting && $whyAlonaSetting->value
+            ? json_decode($whyAlonaSetting->value, true)
+            : [
+                'eyebrow' => 'WHY ALONA',
+                'title' => 'Shopping should feel effortless.',
+                'description' => 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.',
+                'cards' => [
+                    [
+                        'number' => '01',
+                        'title' => 'Curated for you',
+                        'description' => 'Discover products selected from different categories in one simple marketplace.',
+                    ],
+                    [
+                        'number' => '02',
+                        'title' => 'Trusted sellers',
+                        'description' => 'Shop from sellers who are part of the Alona marketplace community.',
+                    ],
+                    [
+                        'number' => '03',
+                        'title' => 'Simple shopping',
+                        'description' => 'Find products, compare choices, and shop without unnecessary steps.',
+                    ],
+                ],
+            ];
+
         return Inertia::render('Admin/Settings', [
             'title' => 'Platform Settings',
             'eyebrow' => 'Settings',
@@ -48,6 +74,7 @@ class AdminSettingsController extends Controller
             'announcements' => $announcements,
             'policies' => $policies,
             'faqs' => $faqs,
+            'whyAlona' => $whyAlona,
         ]);
     }
 
@@ -455,6 +482,48 @@ class AdminSettingsController extends Controller
         return back()->with(
             'status',
             'FAQ deleted successfully.'
+        );
+    }
+
+    public function updateWhyAlona(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'eyebrow' => ['nullable', 'string', 'max:100'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:1000'],
+            'cards' => ['required', 'array', 'size:3'],
+            'cards.*.title' => ['required', 'string', 'max:100'],
+            'cards.*.description' => ['required', 'string', 'max:500'],
+        ]);
+
+        $cards = [];
+        foreach ($data['cards'] as $index => $card) {
+            $cards[] = [
+                'number' => sprintf('%02d', $index + 1),
+                'title' => trim($card['title']),
+                'description' => trim($card['description']),
+            ];
+        }
+
+        $payload = [
+            'eyebrow' => trim($data['eyebrow'] ?: 'WHY ALONA'),
+            'title' => trim($data['title']),
+            'description' => trim($data['description']),
+            'cards' => $cards,
+        ];
+
+        PlatformSetting::updateOrCreate(
+            ['key' => 'home.why_alona'],
+            [
+                'value' => json_encode($payload),
+                'description' => 'Why Alona promotional banner on Buyer and Guest homepage.',
+                'is_active' => true,
+            ]
+        );
+
+        return back()->with(
+            'status',
+            '"Why Alona" banner updated successfully.'
         );
     }
 }

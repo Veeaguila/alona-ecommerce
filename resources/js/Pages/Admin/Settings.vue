@@ -43,6 +43,11 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+
+    whyAlona: {
+        type: Object,
+        default: null,
+    },
 })
 
 /*
@@ -231,6 +236,57 @@ const cancelPlatformSetting = () => {
     platformSettingForm.is_active = true
 
     showPlatformSettingForm.value = false
+}
+
+/*
+|--------------------------------------------------------------------------
+| Why Alona Banner Form
+|--------------------------------------------------------------------------
+*/
+
+const defaultWhyAlona = {
+    eyebrow: 'WHY ALONA',
+    title: 'Shopping should feel effortless.',
+    description: 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.',
+    cards: [
+        {
+            number: '01',
+            title: 'Curated for you',
+            description: 'Discover products selected from different categories in one simple marketplace.',
+        },
+        {
+            number: '02',
+            title: 'Trusted sellers',
+            description: 'Shop from sellers who are part of the Alona marketplace community.',
+        },
+        {
+            number: '03',
+            title: 'Simple shopping',
+            description: 'Find products, compare choices, and shop without unnecessary steps.',
+        },
+    ],
+}
+
+const whyAlonaForm = useForm({
+    eyebrow: props.whyAlona?.eyebrow ?? defaultWhyAlona.eyebrow,
+    title: props.whyAlona?.title ?? defaultWhyAlona.title,
+    description: props.whyAlona?.description ?? defaultWhyAlona.description,
+    cards: (props.whyAlona?.cards && props.whyAlona.cards.length === 3)
+        ? JSON.parse(JSON.stringify(props.whyAlona.cards))
+        : JSON.parse(JSON.stringify(defaultWhyAlona.cards)),
+})
+
+const submitWhyAlona = () => {
+    whyAlonaForm.post(route('admin.settings.why-alona.update'), {
+        preserveScroll: true,
+    })
+}
+
+const resetWhyAlona = () => {
+    whyAlonaForm.eyebrow = defaultWhyAlona.eyebrow
+    whyAlonaForm.title = defaultWhyAlona.title
+    whyAlonaForm.description = defaultWhyAlona.description
+    whyAlonaForm.cards = JSON.parse(JSON.stringify(defaultWhyAlona.cards))
 }
 
 /*
@@ -1781,6 +1837,214 @@ const activeSection = computed(() => {
                         <p class="mt-1 text-[10px] text-[#94A3B8]">Click Add FAQ to create the first frequently asked question.</p>
                     </div>
                 </div>
+            </section>
+
+            <!-- =========================================================
+                 "WHY ALONA" MARKETPLACE BANNER SETTINGS
+            ========================================================== -->
+
+            <section
+                class="mt-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+            >
+                <!-- Section Header -->
+                <div class="border-b border-[#E5E7EB] px-5 py-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#16A6A0]"></span>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]">
+                                    Marketplace Homepage Banner
+                                </p>
+                            </div>
+                            <h2 class="mt-1 text-base font-bold text-[#1F2937]">
+                                "Why Alona" Feature Section
+                            </h2>
+                            <p class="mt-1 text-xs text-[#64748B]">
+                                Customize the 3-feature value proposition banner displayed on both Guest and Buyer dashboards.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                                @click="resetWhyAlona"
+                            >
+                                Reset to Default
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="whyAlonaForm.processing"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
+                                @click="submitWhyAlona"
+                            >
+                                {{ whyAlonaForm.processing ? 'Saving...' : 'Save Banner Changes' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form @submit.prevent="submitWhyAlona" class="p-5 sm:p-6 space-y-6">
+                    <!-- Live Preview -->
+                    <div class="overflow-hidden rounded-2xl border border-[#C9D7D5] bg-[#087F8C] p-6 text-white shadow-inner sm:p-8">
+                        <div class="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+                            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#F4B942]">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#F4B942]"></span>
+                                Live Storefront Preview
+                            </span>
+                            <span class="text-[10px] text-teal-100/70">Shown on Guest &amp; Buyer Home</span>
+                        </div>
+
+                        <div class="grid items-center gap-6 lg:grid-cols-[1fr_1.8fr] xl:gap-8">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.22em] text-[#F4B942]">
+                                    {{ whyAlonaForm.eyebrow || 'WHY ALONA' }}
+                                </p>
+                                <h3 class="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
+                                    {{ whyAlonaForm.title || 'Shopping should feel effortless.' }}
+                                </h3>
+                                <p class="mt-3 text-xs leading-5 text-teal-50/90">
+                                    {{ whyAlonaForm.description || 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.' }}
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div
+                                    v-for="(card, idx) in whyAlonaForm.cards"
+                                    :key="idx"
+                                    class="flex min-h-[140px] flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur"
+                                >
+                                    <span class="text-[11px] font-bold text-[#F4B942]">
+                                        {{ card.number || String(idx + 1).padStart(2, '0') }}
+                                    </span>
+                                    <div class="mt-4">
+                                        <h4 class="text-xs font-bold text-white">
+                                            {{ card.title || `Card ${idx + 1}` }}
+                                        </h4>
+                                        <p class="mt-1 text-[11px] leading-4 text-teal-50/80">
+                                            {{ card.description || 'Card description here.' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Banner Left Side Inputs -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-xs font-bold text-[#334155]">
+                                Eyebrow Tagline
+                            </label>
+                            <input
+                                v-model="whyAlonaForm.eyebrow"
+                                type="text"
+                                placeholder="e.g. WHY ALONA"
+                                class="mt-1.5 w-full rounded-xl border border-[#DCE5E3] px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#94A3B8] transition focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                            />
+                            <p v-if="whyAlonaForm.errors.eyebrow" class="mt-1 text-[11px] text-red-500">
+                                {{ whyAlonaForm.errors.eyebrow }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-[#334155]">
+                                Banner Headline / Title
+                            </label>
+                            <input
+                                v-model="whyAlonaForm.title"
+                                type="text"
+                                placeholder="e.g. Shopping should feel effortless."
+                                class="mt-1.5 w-full rounded-xl border border-[#DCE5E3] px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#94A3B8] transition focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                            />
+                            <p v-if="whyAlonaForm.errors.title" class="mt-1 text-[11px] text-red-500">
+                                {{ whyAlonaForm.errors.title }}
+                            </p>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-[#334155]">
+                                Banner Description
+                            </label>
+                            <textarea
+                                v-model="whyAlonaForm.description"
+                                rows="2"
+                                placeholder="e.g. Alona brings products and sellers together through a marketplace designed to keep discovering simple."
+                                class="mt-1.5 w-full rounded-xl border border-[#DCE5E3] px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#94A3B8] transition focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                            ></textarea>
+                            <p v-if="whyAlonaForm.errors.description" class="mt-1 text-[11px] text-red-500">
+                                {{ whyAlonaForm.errors.description }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 3 Feature Cards Inputs -->
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                            Feature Cards (3 Columns)
+                        </h3>
+                        <p class="mt-0.5 text-[11px] text-[#94A3B8]">
+                            Configure the title and copy for each of the 3 cards.
+                        </p>
+
+                        <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div
+                                v-for="(card, index) in whyAlonaForm.cards"
+                                :key="index"
+                                class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 transition hover:border-[#C9D7D5]"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <span class="rounded-md bg-[#087F8C]/10 px-2 py-0.5 text-[10px] font-black text-[#087F8C]">
+                                        Card #{{ card.number || String(index + 1).padStart(2, '0') }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 space-y-3">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-[#475569]">
+                                            Card Title
+                                        </label>
+                                        <input
+                                            v-model="card.title"
+                                            type="text"
+                                            class="mt-1 w-full rounded-lg border border-[#DCE5E3] bg-white px-3 py-2 text-xs text-[#1F2937] placeholder-[#94A3B8] transition focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-[#475569]">
+                                            Card Description
+                                        </label>
+                                        <textarea
+                                            v-model="card.description"
+                                            rows="3"
+                                            class="mt-1 w-full rounded-lg border border-[#DCE5E3] bg-white px-3 py-2 text-xs text-[#1F2937] placeholder-[#94A3B8] transition focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Submit -->
+                    <div class="flex items-center justify-end gap-3 border-t border-[#E5E7EB] pt-4">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                            @click="resetWhyAlona"
+                        >
+                            Reset to Default
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="whyAlonaForm.processing"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
+                        >
+                            {{ whyAlonaForm.processing ? 'Saving Changes...' : 'Save Banner Changes' }}
+                        </button>
+                    </div>
+                </form>
             </section>
 
             <!-- =========================================================

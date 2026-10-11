@@ -268,6 +268,11 @@ Route::get('/buyer/categories', [
     'index',
 ])->name('buyer.categories');
 
+Route::get('/buyer/category/{category:slug}', [
+    BuyerCategoryController::class,
+    'show',
+])->name('buyer.category.show');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1190,6 +1195,11 @@ Route::prefix('admin')
             AdminSettingsController::class,
             'destroyPlatformSetting',
         ])->name('admin.platform-settings.destroy');
+
+        Route::post('/settings/why-alona', [
+            AdminSettingsController::class,
+            'updateWhyAlona',
+        ])->name('admin.settings.why-alona.update');
 
         Route::get('/settings/faqs', [
             AdminSettingsController::class,

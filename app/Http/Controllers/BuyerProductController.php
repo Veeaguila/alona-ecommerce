@@ -249,6 +249,7 @@ class BuyerProductController extends Controller
             'product' => $product,
             'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
+            'isGuest' => !auth()->check(),
         ]);
     }
 }

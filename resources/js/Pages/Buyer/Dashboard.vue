@@ -55,6 +55,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+
+    whyAlona: {
+        type: Object,
+        default: null,
+    },
 });
 
 const pageLayout = computed(() =>
@@ -884,21 +889,17 @@ const hasCategoryImage = category => {
 */
 
 const goToCategory = category => {
-    const destination =
-        safeRoute('buyer.products')
+    const slug = category?.slug ?? slugify(category?.name)
+    if (!slug) return
 
-    if (destination === '#') {
-        return
+    try {
+        router.visit(route('buyer.category.show', slug))
+    } catch (e) {
+        const destination = safeRoute('buyer.products')
+        if (destination !== '#') {
+            router.get(destination, { category: slug })
+        }
     }
-
-    /*
-     * Use the database slug.
-     */
-    router.get(destination, {
-        category:
-            category?.slug ??
-            category?.name,
-    })
 }
 
 /*
@@ -907,15 +908,59 @@ const goToCategory = category => {
 |--------------------------------------------------------------------------
 */
 
+const totalProductsCount = computed(() => {
+    const val = Number(props.marketplaceStats?.products)
+    if (Number.isFinite(val) && val > 0) return val
+    return Array.isArray(props.products) ? props.products.length : 0
+})
+
+const totalCategoriesCount = computed(() => {
+    const val = Number(props.marketplaceStats?.categories)
+    if (Number.isFinite(val) && val > 0) return val
+    return Array.isArray(props.categories) ? props.categories.length : 0
+})
+
+const totalSellersCount = computed(() => {
+    return Number(props.marketplaceStats?.sellers ?? 0)
+})
+
 const marketplaceHighlights = computed(() => {
     const stats = props.marketplaceStats ?? {}
 
     return [
-        { key: 'products', icon: 'package', label: 'Approved products', value: Number(stats.products ?? 0) },
-        { key: 'sellers', icon: 'store', label: 'Active sellers', value: Number(stats.sellers ?? 0) },
-        { key: 'categories', icon: 'grid', label: 'Categories', value: Number(stats.categories ?? 0) },
+        { key: 'products', icon: 'package', label: 'Approved products', value: totalProductsCount.value },
+        { key: 'sellers', icon: 'store', label: 'Active sellers', value: totalSellersCount.value },
+        { key: 'categories', icon: 'grid', label: 'Categories', value: totalCategoriesCount.value },
         { key: 'orders', icon: 'truck', label: 'Orders delivered', value: Number(stats.orders_delivered ?? 0) },
     ]
+})
+
+const whyAlonaData = computed(() => {
+    const data = props.whyAlona || {}
+    const defaultCards = [
+        {
+            number: '01',
+            title: 'Curated for you',
+            description: 'Discover products selected from different categories in one simple marketplace.',
+        },
+        {
+            number: '02',
+            title: 'Trusted sellers',
+            description: 'Shop from sellers who are part of the Alona marketplace community.',
+        },
+        {
+            number: '03',
+            title: 'Simple shopping',
+            description: 'Find products, compare choices, and shop without unnecessary steps.',
+        },
+    ]
+
+    return {
+        eyebrow: data.eyebrow || 'WHY ALONA',
+        title: data.title || 'Shopping should feel effortless.',
+        description: data.description || 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.',
+        cards: Array.isArray(data.cards) && data.cards.length === 3 ? data.cards : defaultCards,
+    }
 })
 
 /*
@@ -1010,7 +1055,7 @@ onUnmounted(() => {
                                 <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
                                     <div class="hero-item mb-5 flex items-center gap-3">
                                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"><Icon name="store" class="h-4 w-4" /></span>
-                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">{{ Number(marketplaceStats.sellers ?? 0).toLocaleString() }} sellers • {{ Number(marketplaceStats.products ?? 0).toLocaleString() }} products</span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">{{ totalProductsCount.toLocaleString() }} products • {{ totalCategoriesCount.toLocaleString() }} categories</span>
                                     </div>
 
                                     <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
@@ -1050,7 +1095,7 @@ onUnmounted(() => {
                                             <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"><Icon name="package" class="h-5 w-5" /></div>
                                             <div>
                                                 <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Products</p>
-                                                <p class="text-xs font-extrabold text-gray-900">{{ Number(marketplaceStats.products ?? 0).toLocaleString() }} available</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalProductsCount.toLocaleString() }} available</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1060,7 +1105,7 @@ onUnmounted(() => {
                                             <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"><Icon name="grid" class="h-4 w-4" /></div>
                                             <div>
                                                 <p class="text-[9px] font-bold text-gray-400">CATEGORIES</p>
-                                                <p class="text-xs font-extrabold text-gray-900">{{ Number(marketplaceStats.categories ?? 0).toLocaleString() }} to explore</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalCategoriesCount.toLocaleString() }} to explore</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2431,60 +2476,58 @@ onUnmounted(() => {
                 >
 
                     <div
-                        class="grid gap-10 lg:grid-cols-[.8fr_1.2fr]"
+                        class="grid items-center gap-8 lg:grid-cols-[1fr_1.8fr] xl:gap-12"
                     >
 
                         <div>
 
                             <p
-                                class="text-[10px] font-black uppercase tracking-[0.22em] text-[#F4B942]"
+                                class="text-xs font-black uppercase tracking-[0.22em] text-[#F4B942]"
                             >
-                                Why Alona
+                                {{ whyAlonaData.eyebrow }}
                             </p>
 
                             <h2
-                                class="mt-3 max-w-md text-3xl font-black leading-tight tracking-[-0.03em] text-white sm:text-4xl"
+                                class="mt-3 text-3xl font-black leading-tight tracking-[-0.03em] text-white sm:text-4xl lg:text-[40px]"
                             >
-                                Shopping should feel
-                                effortless.
+                                {{ whyAlonaData.title }}
                             </h2>
 
                             <p
-                                class="mt-4 max-w-md text-sm leading-6 text-teal-50"
+                                class="mt-4 max-w-xl text-sm leading-6 text-teal-50"
                             >
-                                Alona brings products and
-                                sellers together through a
-                                marketplace designed to keep
-                                discovering simple.
+                                {{ whyAlonaData.description }}
                             </p>
 
                         </div>
 
                         <div
-                            class="grid grid-cols-2 gap-4 sm:grid-cols-4"
+                            class="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:gap-5"
                         >
 
                             <div
-                                v-for="item in marketplaceHighlights"
-                                :key="item.key"
-                                class="rounded-[24px] border border-white/10 bg-white/[0.07] p-5 transition duration-300 hover:-translate-y-1 hover:bg-white/10"
+                                v-for="(card, index) in whyAlonaData.cards"
+                                :key="index"
+                                class="flex min-h-[175px] flex-col justify-between rounded-[26px] border border-white/10 bg-white/[0.07] p-6 transition duration-300 hover:-translate-y-1 hover:bg-white/10"
                             >
 
-                                <span class="text-[#F4B942]">
-                                    <Icon :name="item.icon" class="h-5 w-5" />
+                                <span class="text-xs font-bold text-[#F4B942]">
+                                    {{ card.number || String(index + 1).padStart(2, '0') }}
                                 </span>
 
-                                <h3
-                                    class="mt-8 text-2xl font-black text-white"
-                                >
-                                    {{ item.value.toLocaleString() }}
-                                </h3>
+                                <div class="mt-6">
+                                    <h3
+                                        class="text-sm font-bold text-white"
+                                    >
+                                        {{ card.title }}
+                                    </h3>
 
-                                <p
-                                    class="mt-1 text-xs leading-5 text-teal-100"
-                                >
-                                    {{ item.label }}
-                                </p>
+                                    <p
+                                        class="mt-1.5 text-xs leading-relaxed text-teal-50/80"
+                                    >
+                                        {{ card.description }}
+                                    </p>
+                                </div>
 
                             </div>
 

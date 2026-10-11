@@ -709,7 +709,7 @@ onUnmounted(() => {
                 <div
                     class="ml-auto hidden shrink-0 items-center gap-1 md:flex"
                 >
-
+                    <template v-if="user">
                     <!-- ================================================= -->
                     <!-- MESSAGES -->
                     <!-- ================================================= -->
@@ -1602,6 +1602,23 @@ onUnmounted(() => {
                         </Transition>
 
                     </div>
+                    </template>
+
+                    <template v-else>
+                        <Link
+                            :href="safeRoute('login')"
+                            class="inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
+                        >
+                            Log in
+                        </Link>
+
+                        <Link
+                            :href="safeRoute('register')"
+                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
+                        >
+                            Sign Up
+                        </Link>
+                    </template>
 
                 </div>
 
@@ -2057,6 +2074,7 @@ onUnmounted(() => {
                         <!-- ================================================= -->
 
                         <div
+                            v-if="user"
                             class="mt-3 overflow-hidden rounded-2xl border border-[#E5E7EB]"
                         >
 
@@ -2510,6 +2528,27 @@ onUnmounted(() => {
 
                             </div>
 
+                        </div>
+
+                        <div
+                            v-else
+                            class="mt-3 flex gap-2"
+                        >
+                            <Link
+                                :href="safeRoute('login')"
+                                class="flex h-11 flex-1 items-center justify-center rounded-xl border border-[#087F8C] text-sm font-extrabold text-[#087F8C] transition hover:bg-[#E8F7F6]"
+                                @click="closeMenus"
+                            >
+                                Log in
+                            </Link>
+
+                            <Link
+                                :href="safeRoute('register')"
+                                class="flex h-11 flex-1 items-center justify-center rounded-xl bg-[#087F8C] text-sm font-extrabold text-white shadow-sm transition hover:bg-[#066B76]"
+                                @click="closeMenus"
+                            >
+                                Sign Up
+                            </Link>
                         </div>
 
                     </div>

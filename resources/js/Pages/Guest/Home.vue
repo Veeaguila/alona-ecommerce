@@ -30,6 +30,19 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    marketplaceStats: {
+        type: Object,
+        default: () => ({
+            products: 0,
+            sellers: 0,
+            categories: 0,
+            orders_delivered: 0,
+        }),
+    },
+    whyAlona: {
+        type: Object,
+        default: null,
+    },
 })
 </script>
 
@@ -42,6 +55,8 @@ defineProps({
         :top-selling-products="topSellingProducts"
         :promotions="promotions"
         :recently-viewed-products="recentlyViewedProducts"
+        :marketplace-stats="marketplaceStats"
+        :why-alona="whyAlona"
         is-guest
     />
 </template>

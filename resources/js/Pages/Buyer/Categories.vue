@@ -80,14 +80,18 @@ const getStyle = slug => {
 
 /*
 |--------------------------------------------------------------------------
-| PRODUCTS URL
+| CATEGORY URL
 |--------------------------------------------------------------------------
 */
 
-const productsUrl = category => {
-    return route('buyer.products', {
-        category: category.slug,
-    })
+const categoryUrl = category => {
+    try {
+        return route('buyer.category.show', category.slug)
+    } catch (e) {
+        return route('buyer.products', {
+            category: category.slug,
+        })
+    }
 }
 </script>
 
@@ -147,7 +151,7 @@ const productsUrl = category => {
                     <Link
                         v-for="category in categories"
                         :key="category.id"
-                        :href="productsUrl(category)"
+                        :href="categoryUrl(category)"
                         class="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/30 hover:shadow-md sm:p-5"
                     >
 

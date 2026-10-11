@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\RecentlyViewedProduct;
 use App\Models\Voucher;
@@ -336,6 +337,32 @@ if ($topSellingIds->isNotEmpty()) {
                 ->count(),
         ];
 
+        $whyAlonaSetting = PlatformSetting::where('key', 'home.why_alona')->where('is_active', true)->first();
+        $whyAlona = $whyAlonaSetting && $whyAlonaSetting->value
+            ? json_decode($whyAlonaSetting->value, true)
+            : [
+                'eyebrow' => 'WHY ALONA',
+                'title' => 'Shopping should feel effortless.',
+                'description' => 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.',
+                'cards' => [
+                    [
+                        'number' => '01',
+                        'title' => 'Curated for you',
+                        'description' => 'Discover products selected from different categories in one simple marketplace.',
+                    ],
+                    [
+                        'number' => '02',
+                        'title' => 'Trusted sellers',
+                        'description' => 'Shop from sellers who are part of the Alona marketplace community.',
+                    ],
+                    [
+                        'number' => '03',
+                        'title' => 'Simple shopping',
+                        'description' => 'Find products, compare choices, and shop without unnecessary steps.',
+                    ],
+                ],
+            ];
+
         return Inertia::render($guest ? 'Guest/Home' : 'Buyer/Dashboard', [
             'categories' => $categories,
 
@@ -352,6 +379,8 @@ if ($topSellingIds->isNotEmpty()) {
             'recentlyViewedProducts' => $recentlyViewedProducts,
 
             'marketplaceStats' => $marketplaceStats,
+
+            'whyAlona' => $whyAlona,
         ]);
     }
 
