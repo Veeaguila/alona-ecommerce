@@ -244,6 +244,7 @@ class SellerOrderController extends Controller
             'order.user',
             'variant',
             'statusHistories',
+            'parcel.pickupRequests',
         ]);
 
         return Inertia::render(
@@ -352,10 +353,18 @@ class SellerOrderController extends Controller
             'Only packed items can be marked as ready for pickup.'
         );
 
-        $orderItem->moveTo(
-            'ready_for_pickup',
-            'Seller packed the item and marked it ready for courier pickup.'
-        );
+        $pickup = $request->validate([
+            'collection_address' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $pickup): void {
+            $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
+            $orderItem->moveTo(
+                'ready_for_pickup',
+                'Seller packed the item and marked it ready for courier pickup.'
+            );
+            app(\App\Services\OrderItemPickup::class)->create($orderItem, $pickup['collection_address'] ?? null);
+        });
 
         return back()->with(
             'status',

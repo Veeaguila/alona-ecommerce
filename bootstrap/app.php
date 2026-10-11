@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -51,6 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
         */
 
         $middleware->alias([
+            'sorting_center.approved' => \App\Http\Middleware\EnsureSortingCenterApproved::class,
+            'rider.approved' => \App\Http\Middleware\EnsureRiderApproved::class,
             'buyer' => \App\Http\Middleware\EnsureBuyer::class,
             'seller' => \App\Http\Middleware\EnsureSeller::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,

@@ -1,0 +1,254 @@
+<template>
+  <sc-layout title="Delivery Management">
+    <div class="app-page-shell">
+      <!-- Unauthenticated State -->
+      <div v-if="!token" class="app-panel app-empty-state">
+        <h2 class="text-amber-950 app-section-title">Authentication required</h2>
+        <p class="mt-2 text-sm text-amber-800">Log in with an approved sorting center account to sort parcels.</p>
+        <a href="/sorting-center/login" class="mt-5 inline-flex app-button-primary">
+          Go to login
+        </a>
+      </div>
+
+      <template v-else>
+        <!-- Top Status & Actions Card -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 app-panel app-panel--padded app-toolbar">
+          <div>
+            <p class="text-sm font-semibold text-gray-600">Arrived & Unsorted Queue</p>
+            <div class="mt-1 flex items-baseline gap-2">
+              <span class="text-3xl font-bold text-[var(--app-primary)]">{{ parcels.length }}</span>
+              <span class="text-xs text-[var(--app-text-muted)] font-medium">parcels waiting for city service-area assignment</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            :disabled="loading"
+            class="inline-flex items-center justify-center disabled:opacity-50 app-button-secondary"
+            @click="loadData"
+          >
+            {{ loading ? 'Refreshing...' : 'Refresh' }}
+          </button>
+        </div>
+
+        <!-- Feedback Notification -->
+        <div
+          v-if="feedback.message"
+          :class="feedback.type === 'success' ? 'app-feedback--success' : 'app-feedback--error'"
+          class="app-feedback"
+          role="status"
+        >
+          <span>{{ feedback.message }}</span>
+          <button type="button" class="ml-4 font-bold hover:opacity-75" @click="feedback.message = ''">Close</button>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading && parcels.length === 0" class="text-center app-panel app-empty-state">
+          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#008B8B]"></div>
+          <p class="mt-4 text-sm text-gray-500">Loading parcels and areas...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="parcels.length === 0" class="text-center app-panel app-empty-state">
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-sm font-semibold text-emerald-600">
+            Clear
+          </div>
+          <h2 class="mt-4 app-section-title">Nothing Needs Sorting</h2>
+          <p class="mt-2 text-sm text-gray-500">All arrived parcels have been sorted to delivery areas.</p>
+        </div>
+
+        <!-- Parcel Sorting Grid -->
+        <div v-else class="grid gap-4 lg:grid-cols-2">
+          <article
+            v-for="parcel in parcels"
+            :key="parcel.id"
+            class="flex flex-col justify-between app-panel app-panel--padded"
+          >
+            <div>
+              <div class="flex items-start justify-between border-b border-[var(--app-border)] pb-4">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-text-muted)]">Order ID</p>
+                  <h3 class="mt-1 font-mono app-section-title">{{ parcel.order_id }}</h3>
+                </div>
+                <span class="rounded-full bg-[var(--app-primary)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
+                  Arrived
+                </span>
+              </div>
+
+              <div class="py-4">
+                <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-text-muted)]">Delivery Address</p>
+                <p class="mt-1 text-sm leading-6 text-gray-700 bg-gray-50 p-3 rounded-lg border border-[var(--app-border)]">
+                  {{ formatAddress(parcel) }}
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-[var(--app-border)]">
+              <label :for="`area-${parcel.id}`" class="block text-sm font-semibold text-gray-700 mb-1">
+                Assign City Service Area
+              </label>
+              <div class="flex flex-col gap-3 sm:flex-row">
+                <select
+                  :id="`area-${parcel.id}`"
+                  v-model="selectedAreas[parcel.id]"
+                  class="min-w-0 flex-1 app-input"
+                >
+                  <option value="">Choose {{ parcel.delivery_municipality || 'destination city area' }}</option>
+                  <option v-for="area in areasForParcel(parcel)" :key="area.id" :value="area.id">{{ area.name }}</option>
+                </select>
+                <button
+                  type="button"
+                  :disabled="!selectedAreas[parcel.id] || sortingId === parcel.id"
+                  class="disabled:cursor-not-allowed disabled:opacity-50 app-button-primary"
+                  @click="sortParcel(parcel.id)"
+                >
+                  {{ sortingId === parcel.id ? 'Assigning...' : 'Sort to Area' }}
+                </button>
+              </div>
+              <p v-if="areasForParcel(parcel).length === 0" class="mt-2 text-xs text-amber-700 font-medium">
+                No service area yet for {{ parcel.delivery_municipality || 'this destination' }}.
+                <input v-if="!parcel.delivery_municipality" v-model="parcel.destination_city" class="app-input mt-2" placeholder="Destination city from the delivery address" :aria-label="`Destination city for ${parcel.order_id}`" />
+                <button
+                  type="button"
+                  class="font-bold text-[var(--app-primary)] underline"
+                  :disabled="creatingArea || (!parcel.delivery_municipality && !parcel.destination_city?.trim())"
+                  @click="createCityArea(parcel)"
+                >
+                  {{ creatingArea ? 'Creating...' : 'Add this city' }}
+                </button>
+              </p>
+            </div>
+          </article>
+        </div>
+      </template>
+    </div>
+  </sc-layout>
+</template>
+
+<script>
+import { onMounted, reactive, ref } from 'vue';
+import ScLayout from './ScLayout.vue';
+
+export default {
+  name: 'DeliveryManagement',
+  components: {
+    ScLayout,
+  },
+  setup() {
+    const token = ref(localStorage.getItem('logistics_auth_token'));
+    const parcels = ref([]);
+    const areas = ref([]);
+    const selectedAreas = reactive({});
+    const loading = ref(false);
+    const sortingId = ref(null);
+    const creatingArea = ref(false);
+    const feedback = reactive({ message: '', type: 'success' });
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          Accept: 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          Authorization: `Bearer ${token.value}`,
+          ...(options.headers || {}),
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message || 'The request could not be completed.');
+      return data;
+    }
+
+    async function loadData() {
+      loading.value = true;
+      try {
+        const [parcelData, areaData] = await Promise.all([
+          requestJson('/api/sorting-center/parcels'),
+          requestJson('/api/sorting-center/areas'),
+        ]);
+        parcels.value = parcelData.data || [];
+        areas.value = areaData.data || [];
+      } catch (error) {
+        feedback.message = error.message;
+        feedback.type = 'error';
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function sortParcel(id) {
+      sortingId.value = id;
+      feedback.message = '';
+      try {
+        const data = await requestJson(`/api/sorting-center/parcels/${id}/sort`, {
+          method: 'POST',
+          body: JSON.stringify({ area_id: selectedAreas[id] }),
+        });
+        parcels.value = parcels.value.filter((parcel) => parcel.id !== id);
+        delete selectedAreas[id];
+        feedback.message = data.message;
+        feedback.type = 'success';
+      } catch (error) {
+        feedback.message = error.message;
+        feedback.type = 'error';
+      } finally {
+        sortingId.value = null;
+      }
+    }
+
+    function areasForParcel(parcel) {
+      const municipality = String(parcel.delivery_municipality || '').trim().toLocaleLowerCase();
+      if (!municipality) return areas.value;
+      return areas.value.filter((area) => area.name.trim().toLocaleLowerCase() === municipality);
+    }
+
+    async function createCityArea(parcel) {
+      creatingArea.value = true;
+      feedback.message = '';
+      try {
+        const data = await requestJson('/api/sorting-center/areas', {
+          method: 'POST',
+          body: JSON.stringify({ name: parcel.delivery_municipality || parcel.destination_city?.trim() }),
+        });
+        areas.value.push(data.data);
+        selectedAreas[parcel.id] = data.data.id;
+        feedback.message = data.message;
+        feedback.type = 'success';
+      } catch (error) {
+        feedback.message = error.message;
+        feedback.type = 'error';
+      } finally {
+        creatingArea.value = false;
+      }
+    }
+
+    function formatAddress(parcel) {
+      if (parcel?.delivery_address) return parcel.delivery_address;
+      return [
+        [parcel.delivery_house_number, parcel.delivery_street].filter(Boolean).join(' '),
+        parcel.delivery_barangay,
+        parcel.delivery_municipality,
+        parcel.delivery_province,
+      ].filter(Boolean).join(', ');
+    }
+
+    onMounted(loadData);
+
+    return {
+      token,
+      parcels,
+      areas,
+      selectedAreas,
+      loading,
+      sortingId,
+      creatingArea,
+      feedback,
+      loadData,
+      sortParcel,
+      areasForParcel,
+      createCityArea,
+      formatAddress,
+    };
+  },
+};
+</script>
