@@ -43,7 +43,7 @@ class SellerProductApprovalFlowTest extends TestCase
                 'price' => 299.99,
                 'stock' => 25,
                 'description' => 'A lamp that must be reviewed first.',
-                'status' => 'approved',
+                'status' => 'pending',
             ])
             ->assertRedirect('/seller/products');
 

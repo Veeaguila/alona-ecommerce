@@ -3,6 +3,8 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -41,6 +43,8 @@ class RegistrationTest extends TestCase
 
     public function test_seller_registration_can_be_created_with_pending_review(): void
     {
+        Storage::fake('local');
+
         $response = $this->post('/register/seller', [
             'last_name' => 'Seller',
             'first_name' => 'Test',
@@ -55,10 +59,13 @@ class RegistrationTest extends TestCase
             'barangay' => 'Barangay 1',
             'street_address' => '10 Seller Street',
             'store_name' => 'Seller Test Store',
+            'line_of_business' => 'Retail',
             'store_description' => 'Handmade items for everyday life.',
             'bank_name' => 'BDO',
             'bank_account_name' => 'Test Seller',
             'bank_account_number' => '1234567890',
+            'id' => UploadedFile::fake()->create('id.jpg', 100, 'image/jpeg'),
+            'business_permit' => UploadedFile::fake()->create('permit.pdf', 100, 'application/pdf'),
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
@@ -68,6 +75,7 @@ class RegistrationTest extends TestCase
             'usertype' => 'seller',
             'status' => 'pending',
             'store_name' => 'Seller Test Store',
+            'line_of_business' => 'Retail',
         ]);
 
         $this->assertGuest();

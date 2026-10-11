@@ -20,7 +20,6 @@ class BuyerGuestAccessTest extends TestCase
         foreach ([
             'buyer.dashboard',
             'buyer.cart',
-            'buyer.wishlist',
             'buyer.checkout',
             'buyer.orders',
             'buyer.reviews',

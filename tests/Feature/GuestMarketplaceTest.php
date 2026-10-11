@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class GuestMarketplaceTest extends TestCase
@@ -14,7 +15,10 @@ class GuestMarketplaceTest extends TestCase
 
     public function test_a_seller_listing_is_publicly_browsable_and_searchable(): void
     {
-        $seller = User::factory()->create(['usertype' => 'seller']);
+        $seller = User::factory()->create([
+            'usertype' => 'seller',
+            'status' => 'approved',
+        ]);
         $category = Category::create(['name' => 'Home & Living', 'slug' => 'home-living']);
 
         $this->actingAs($seller)
@@ -24,12 +28,14 @@ class GuestMarketplaceTest extends TestCase
                 'price' => 1250,
                 'stock' => 4,
                 'description' => 'A handcrafted bamboo lantern.',
-                'status' => 'approved',
+                'status' => 'pending',
             ])
             ->assertRedirect(route('seller.products'));
 
         $product = Product::where('name', 'Handmade Lantern')->firstOrFail();
         $this->assertSame($seller->id, $product->seller_id);
+
+        $product->update(['status' => 'approved']);
 
         auth()->logout();
 
@@ -48,6 +54,7 @@ class GuestMarketplaceTest extends TestCase
     {
         $seller = User::factory()->create([
             'usertype' => 'seller',
+            'status' => 'approved',
             'name' => 'Maria Seller',
         ]);
 
@@ -66,7 +73,10 @@ class GuestMarketplaceTest extends TestCase
 
         $this->get(route('buyer.product', $product))
             ->assertOk()
-            ->assertSee('Maria Seller')
-            ->assertSee('7 items available');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Buyer/Show')
+                ->where('product.seller.name', 'Maria Seller')
+                ->where('product.stock', 7)
+            );
     }
 }

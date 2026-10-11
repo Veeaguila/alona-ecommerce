@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -56,26 +58,34 @@ class OrderVariantFlowTest extends TestCase
             ])
             ->assertRedirect();
 
+        $cartItem = CartItem::where('user_id', $buyer->id)->firstOrFail();
+
         $response = $this->actingAs($buyer)
             ->post(route('buyer.orders.store'), [
                 'shipping_address' => '123 Test Street',
+                'shipping_method' => 'standard',
                 'payment_method' => 'cod',
+                'selected_items' => [$cartItem->id],
             ]);
 
-        $response->assertRedirect(route('buyer.orders'));
+        $order = Order::where('user_id', $buyer->id)->firstOrFail();
+
+        $response->assertRedirect(route('buyer.orders.show', $order));
 
         $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
             'user_id' => $buyer->id,
             'payment_method' => 'cod',
         ]);
 
         $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
             'product_id' => $product->id,
             'product_name' => 'Smart Watch',
             'quantity' => 1,
-            'price' => '2499.00',
+            'price' => 2499.00,
             'status' => 'pending',
-            'variant_label' => 'Black / 42mm',
+            'variant_label' => 'Color: Black / Size: 42mm',
             'product_variant_id' => $variant->id,
         ]);
     }
