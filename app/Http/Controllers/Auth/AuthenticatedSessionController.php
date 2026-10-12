@@ -4,45 +4,39 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\AccountDestination;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthenticatedSessionController extends Controller
 {
     public function create(): RedirectResponse
     {
-        return redirect('/');
+        return redirect('/?auth=login');
     }
 
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
-        if ($request->user()->status !== 'approved') {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'email' => 'Your account is awaiting approval or is currently unavailable.',
-            ]);
-        }
-
         $request->session()->regenerate();
 
-        $destination = match ($request->user()->usertype) {
-            'seller' => 'seller.dashboard',
-            'admin' => 'admin.dashboard',
-            default => 'buyer.dashboard',
-        };
+        $destination = app(AccountDestination::class)->route($request->user());
+        // Discard arbitrary cross-role intended URLs; dashboard routes enforce their own permissions.
+        $request->session()->forget('url.intended');
 
-        return redirect()->intended(
-            route($destination, absolute: false)
-        );
+        return redirect()->route($destination);
     }
 
     public function destroy(Request $request): RedirectResponse
     {
+        $token = $request->session()->get('logistics.web_token');
+        $accessToken = $token ? PersonalAccessToken::findToken($token) : null;
+        if ($accessToken?->tokenable_id === $request->user()?->id) {
+            $accessToken?->delete();
+        }
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

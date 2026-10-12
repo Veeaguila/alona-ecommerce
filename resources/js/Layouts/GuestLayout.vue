@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 
@@ -86,12 +86,12 @@ const goToDashboard = () => {
         user.value?.role ??
         'buyer'
 
-    const destination =
+    const destination = page.props.auth?.destination ?? (
         userType === 'admin'
             ? safeRoute('admin.dashboard')
             : userType === 'seller'
                 ? safeRoute('seller.dashboard')
-                : safeRoute('buyer.dashboard')
+                : safeRoute('buyer.dashboard'))
 
     if (destination !== '#') {
         router.visit(destination)
@@ -183,6 +183,14 @@ const handleEscape = event => {
     }
 }
 
+watch(() => page.url, url => {
+    const mode = new URLSearchParams(url.split('?')[1] ?? '').get('auth')
+    if (['register-logistics', 'register-rider'].includes(mode) && !isLoggedIn.value) {
+        router.visit(route(mode === 'register-rider' ? 'register.rider' : 'register.logistics'))
+        return
+    }
+    if (['login', 'register', 'register-buyer', 'register-seller'].includes(mode) && !isLoggedIn.value) openAuthModal(mode)
+}, { immediate: true })
 onMounted(() => {
     document.addEventListener('click', handleOutsideClick)
     document.addEventListener('keydown', handleEscape)
@@ -564,7 +572,7 @@ onUnmounted(() => {
         <!-- FOOTER -->
         <footer class="border-t border-[#E5E7EB] bg-white">
             <div
-                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8"
+                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-5 lg:px-8"
             >
 
                 <!-- BRAND -->
@@ -627,28 +635,28 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <!-- SELL WITH ALONA -->
-                <div>
+                <!-- PARTNER WITH ALONA -->
+                <div class="md:col-span-2 lg:col-span-3">
                     <h3
                         class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
                     >
-                        Sell with Alona
+                        Partner with Alona
                     </h3>
 
-                    <p
-                        class="mt-4 text-sm leading-6 text-[#64748B]"
-                    >
-                        Start selling your products and grow your business
-                        with Alona Marketplace.
-                    </p>
-
-                    <button
-                        type="button"
-                        class="mt-4 inline-flex rounded-xl bg-[#F4B942] px-4 py-2.5 text-xs font-extrabold text-[#1F2937] transition hover:-translate-y-0.5 hover:shadow-md"
-                        @click="openAuthModal('register-seller')"
-                    >
-                        Become a Seller
-                    </button>
+                    <div class="mt-4 grid gap-6 sm:grid-cols-3">
+                        <div class="flex flex-col items-start">
+                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Start selling your products and grow your business with Alona Marketplace.</p>
+                            <button type="button" class="mt-4 inline-flex rounded-xl bg-[#F4B942] px-4 py-2.5 text-xs font-extrabold text-[#1F2937] transition hover:-translate-y-0.5 hover:shadow-md" @click="openAuthModal('register-seller')">Become a Seller</button>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Manage deliveries and logistics services with Alona.</p>
+                            <Link :href="route('register.logistics')" class="mt-4 inline-flex rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066B76]">Become a Logistics Partner</Link>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Join our delivery network and start accepting deliveries.</p>
+                            <Link :href="route('register.rider')" class="mt-4 inline-flex rounded-xl border border-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#E8F7F6]">Become a Rider</Link>
+                        </div>
+                    </div>
                 </div>
             </div>
 

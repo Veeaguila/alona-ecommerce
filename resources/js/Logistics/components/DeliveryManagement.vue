@@ -11,6 +11,13 @@
       </div>
 
       <template v-else>
+        <form class="app-panel app-panel--padded space-y-4" @submit.prevent="saveCoverage">
+          <h2 class="app-section-title">Service area coverage</h2>
+          <p class="app-description">Declare the cities you serve so Riders can choose your Logistics Partner when applying.</p>
+          <p v-if="areas.some(area => area.city_code)" class="text-sm text-gray-600">Current coverage: {{ areas.filter(area => area.city_code).map(area => area.city_name || area.name).join(', ') }}</p>
+          <delivery-coverage-selector :form="coverageForm" />
+          <button type="submit" :disabled="savingCoverage || !coverageForm.coverage_city_codes.length" class="app-button-primary disabled:opacity-50">{{ savingCoverage ? 'Saving…' : 'Save service areas' }}</button>
+        </form>
         <!-- Top Status & Actions Card -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 app-panel app-panel--padded app-toolbar">
           <div>
@@ -93,7 +100,7 @@
                   class="min-w-0 flex-1 app-input"
                 >
                   <option value="">Choose {{ parcel.delivery_municipality || 'destination city area' }}</option>
-                  <option v-for="area in areasForParcel(parcel)" :key="area.id" :value="area.id">{{ area.name }}</option>
+                  <option v-for="area in areasForParcel(parcel)" :key="area.id" :value="area.id">{{ area.label || area.name }}</option>
                 </select>
                 <button
                   type="button"
@@ -127,11 +134,13 @@
 <script>
 import { onMounted, reactive, ref } from 'vue';
 import ScLayout from './ScLayout.vue';
+import DeliveryCoverageSelector from '@/Components/DeliveryCoverageSelector.vue';
 
 export default {
   name: 'DeliveryManagement',
   components: {
     ScLayout,
+    DeliveryCoverageSelector,
   },
   setup() {
     const token = ref(localStorage.getItem('logistics_auth_token'));
@@ -141,6 +150,8 @@ export default {
     const loading = ref(false);
     const sortingId = ref(null);
     const creatingArea = ref(false);
+    const savingCoverage = ref(false);
+    const coverageForm = reactive({ coverage_city_codes: [], errors: {} });
     const feedback = reactive({ message: '', type: 'success' });
 
     async function requestJson(url, options = {}) {
@@ -155,7 +166,11 @@ export default {
       });
       const data = await response.json();
 
-      if (!response.ok) throw new Error(data.message || 'The request could not be completed.');
+      if (!response.ok) {
+        const error = new Error(data.message || 'The request could not be completed.');
+        error.fields = data.errors || {};
+        throw error;
+      }
       return data;
     }
 
@@ -197,9 +212,27 @@ export default {
     }
 
     function areasForParcel(parcel) {
-      const municipality = String(parcel.delivery_municipality || '').trim().toLocaleLowerCase();
+      const normalize = name => String(name || '').trim().replace(/(^city of\s+|\s+city$)/gi, '').trim().toLocaleLowerCase();
+      const municipality = normalize(parcel.delivery_municipality);
       if (!municipality) return areas.value;
-      return areas.value.filter((area) => area.name.trim().toLocaleLowerCase() === municipality);
+      return areas.value.filter((area) => normalize(area.city_name || area.name) === municipality && (!area.province_name || !parcel.delivery_province || area.province_name.trim().toLocaleLowerCase() === parcel.delivery_province.trim().toLocaleLowerCase()));
+    }
+
+    async function saveCoverage() {
+      if (savingCoverage.value) return;
+      savingCoverage.value = true;
+      coverageForm.errors = {};
+      try {
+        const data = await requestJson('/api/sorting-center/coverage', { method: 'POST', body: JSON.stringify({ coverage_city_codes: coverageForm.coverage_city_codes }) });
+        coverageForm.coverage_city_codes = [];
+        await loadData();
+        feedback.message = data.message;
+        feedback.type = 'success';
+      } catch (error) {
+        coverageForm.errors = Object.fromEntries(Object.entries(error.fields || {}).map(([key, messages]) => [key, Array.isArray(messages) ? messages[0] : messages]));
+        feedback.message = error.message;
+        feedback.type = 'error';
+      } finally { savingCoverage.value = false; }
     }
 
     async function createCityArea(parcel) {
@@ -235,6 +268,9 @@ export default {
     onMounted(loadData);
 
     return {
+      coverageForm,
+      savingCoverage,
+      saveCoverage,
       token,
       parcels,
       areas,

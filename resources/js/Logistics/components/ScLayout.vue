@@ -127,9 +127,13 @@ export default {
       if (confirm('Are you sure you want to logout?')) {
         try {
           const token = localStorage.getItem('logistics_auth_token');
-          if (token) {
+          if (window.logisticsSession) {
+            // Web logout also revokes this session's token, including expired tokens.
+            const response = await fetch('/logout', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content } });
+            if (!response.ok) throw new Error('Unable to end your session. Please try again.');
+          } else if (token) {
             const response = await fetch('/api/logistics/logout', { method: 'POST', headers: { Accept: 'application/json', Authorization: 'Bearer ' + token } });
-            if (!response.ok) throw new Error('Unable to sign out. Please try again.');
+            if (!response.ok && response.status !== 401) throw new Error('Unable to sign out. Please try again.');
           }
           localStorage.removeItem('logistics_auth_token');
           localStorage.removeItem('logistics_auth_session');
@@ -139,6 +143,7 @@ export default {
           window.location.href = '/sorting-center/login';
         } catch (error) {
           console.error('Logout error:', error);
+          window.alert('Unable to sign out. Please try again.');
         }
       }
     };

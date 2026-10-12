@@ -4,32 +4,54 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PhilippineAddressService;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
+    private function prepareGoogle(Request $request, string $role): ?array
+    {
+        $identity = $request->session()->get('onboarding.google');
+        if (($identity['role'] ?? null) !== $role || ($identity['expires_at'] ?? 0) <= now()->timestamp) {
+            return null;
+        }
+        $password = Str::random(48);
+        $request->merge(['email' => $identity['email'], 'password' => $password, 'password_confirmation' => $password]);
+
+        return $identity;
+    }
+
+    private function completeGoogle(Request $request, User $user, ?array $identity): void
+    {
+        if (! $identity) {
+            return;
+        }
+        $user->forceFill(['google_id' => $identity['id'], 'email_verified_at' => now()])->save();
+        $request->session()->forget('onboarding.google');
+    }
+
     /**
      * Display the buyer registration view.
      */
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Auth/Register');
+        return redirect('/?auth=register-buyer&onboarding=1');
     }
 
     /**
      * Display the seller registration view.
      */
-    public function createSeller(): Response
+    public function createSeller(): RedirectResponse
     {
-        return Inertia::render('Auth/RegisterSeller');
+        return redirect('/?auth=register-seller&onboarding=1');
     }
 
     /**
@@ -39,6 +61,7 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $google = $this->prepareGoogle($request, 'buyer');
         $request->validate([
             'last_name' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
@@ -51,16 +74,18 @@ class RegisteredUserController extends Controller
                 'lowercase',
                 'email',
                 'max:255',
-                'unique:' . User::class,
+                'unique:'.User::class,
             ],
 
             'contact_no' => 'required|string|max:30',
             'birthday' => 'required|date|before:today',
             'age' => 'required|integer|min:1|max:120',
 
-            'province' => 'required|string|max:255',
-            'municipality' => 'required|string|max:255',
-            'barangay' => 'required|string|max:255',
+            'address_group' => ['required', Rule::in(array_keys(PhilippineAddressService::GROUPS))],
+            'region_code' => ['required', 'regex:/^\d{10}$/'],
+            'province_code' => ['nullable', 'regex:/^\d{10}$/'],
+            'city_code' => ['required', 'regex:/^\d{10}$/'],
+            'barangay_code' => ['required', 'regex:/^\d{10}$/'],
             'street_address' => 'required|string|max:1000',
 
             'id' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -72,12 +97,15 @@ class RegisteredUserController extends Controller
             ],
         ]);
 
+        $address = app(PhilippineAddressService::class)->validate($request->all());
+        $request->merge(['province' => $address['province'], 'municipality' => $address['city'], 'barangay' => $address['barangay']]);
+
         $fullName = trim(
-            $request->first_name .
-            ' ' .
+            $request->first_name.
+            ' '.
             ($request->middle_initial
-                ? $request->middle_initial . '. '
-                : '') .
+                ? $request->middle_initial.'. '
+                : '').
             $request->last_name
         );
 
@@ -95,12 +123,13 @@ class RegisteredUserController extends Controller
             'age' => Carbon::parse($request->birthday)->age,
 
             // Address
-            'address' => implode(', ', [
+            'address' => implode(', ', array_filter([
                 $request->street_address,
                 $request->barangay,
                 $request->municipality,
                 $request->province,
-            ]),
+            ])),
+            'address_geography' => collect($address)->only(['address_group', 'region_code', 'province_code', 'city_code', 'barangay_code', 'psgc_version'])->all(),
             'province' => $request->province,
             'municipality' => $request->municipality,
             'barangay' => $request->barangay,
@@ -115,6 +144,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $this->completeGoogle($request, $user, $google);
         event(new Registered($user));
 
         return redirect()
@@ -132,6 +162,7 @@ class RegisteredUserController extends Controller
      */
     public function storeSeller(Request $request): RedirectResponse
     {
+        $google = $this->prepareGoogle($request, 'seller');
         $request->validate([
             /*
             |--------------------------------------------------------------------------
@@ -149,7 +180,7 @@ class RegisteredUserController extends Controller
                 'lowercase',
                 'email',
                 'max:255',
-                'unique:' . User::class,
+                'unique:'.User::class,
             ],
 
             'contact_no' => 'required|string|max:30',
@@ -161,9 +192,11 @@ class RegisteredUserController extends Controller
             | Address
             |--------------------------------------------------------------------------
             */
-            'province' => 'required|string|max:255',
-            'municipality' => 'required|string|max:255',
-            'barangay' => 'required|string|max:255',
+            'address_group' => ['required', Rule::in(array_keys(PhilippineAddressService::GROUPS))],
+            'region_code' => ['required', 'regex:/^\d{10}$/'],
+            'province_code' => ['nullable', 'regex:/^\d{10}$/'],
+            'city_code' => ['required', 'regex:/^\d{10}$/'],
+            'barangay_code' => ['required', 'regex:/^\d{10}$/'],
             'street_address' => 'required|string|max:1000',
 
             /*
@@ -227,12 +260,15 @@ class RegisteredUserController extends Controller
         |--------------------------------------------------------------------------
         */
 
+        $address = app(PhilippineAddressService::class)->validate($request->all());
+        $request->merge(['province' => $address['province'], 'municipality' => $address['city'], 'barangay' => $address['barangay']]);
+
         $fullName = trim(
-            $request->first_name .
-            ' ' .
+            $request->first_name.
+            ' '.
             ($request->middle_initial
-                ? $request->middle_initial . '. '
-                : '') .
+                ? $request->middle_initial.'. '
+                : '').
             $request->last_name
         );
 
@@ -270,12 +306,13 @@ class RegisteredUserController extends Controller
             'age' => Carbon::parse($request->birthday)->age,
 
             // Address
-            'address' => implode(', ', [
+            'address' => implode(', ', array_filter([
                 $request->street_address,
                 $request->barangay,
                 $request->municipality,
                 $request->province,
-            ]),
+            ])),
+            'address_geography' => collect($address)->only(['address_group', 'region_code', 'province_code', 'city_code', 'barangay_code', 'psgc_version'])->all(),
             'province' => $request->province,
             'municipality' => $request->municipality,
             'barangay' => $request->barangay,
@@ -303,6 +340,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $this->completeGoogle($request, $user, $google);
         event(new Registered($user));
 
         return redirect()

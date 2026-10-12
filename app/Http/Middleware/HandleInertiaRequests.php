@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AccountDestination;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -33,6 +34,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+            'flash' => ['status' => fn () => $request->session()->get('status')],
 
             /*
             |--------------------------------------------------------------------------
@@ -41,6 +43,8 @@ class HandleInertiaRequests extends Middleware
             */
             'auth' => [
                 'user' => $user,
+                'destination' => $user ? route(app(AccountDestination::class)->route($user)) : null,
+                'googleOnboarding' => fn () => collect($request->session()->get('onboarding.google', []))->only(['name', 'email', 'role'])->all(),
             ],
 
             /*
@@ -84,15 +88,13 @@ class HandleInertiaRequests extends Middleware
             |--------------------------------------------------------------------------
             */
             'sellerCounts' => [
-                'notifications' =>
-                    $user?->usertype === 'seller'
+                'notifications' => $user?->usertype === 'seller'
                         ? $user->sellerNotifications()
                             ->whereNull('read_at')
                             ->count()
                         : 0,
 
-                'messages' =>
-                    $user?->usertype === 'seller'
+                'messages' => $user?->usertype === 'seller'
                         ? $user->conversationsAsSeller()
                             ->whereHas(
                                 'messages',

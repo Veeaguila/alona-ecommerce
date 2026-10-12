@@ -4,6 +4,8 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
+    partnerProfile: Object,
+    partnerDocuments: Object,
     title: {
         type: String,
         default: 'Applications',
@@ -47,6 +49,8 @@ const props = defineProps({
         }),
     },
 })
+
+const profileValue = value => Array.isArray(value) ? value.map(item => typeof item === 'object' && item ? item.name ?? item.code : item).join(', ') : value || 'Not applicable'
 
 const rows = computed(() => {
     return props.applications?.data ?? []
@@ -104,10 +108,10 @@ const roleLabel = (role) => {
             return 'Seller'
 
         case 'rider':
-            return 'Courier'
+            return 'Rider'
 
         case 'sorting_center':
-            return 'Sorting center'
+            return 'Logistics Partner'
 
         default:
             return role || 'Unknown'
@@ -345,6 +349,12 @@ const goToPage = (url) => {
                 </div>
 
                 <!-- DETAIL CONTENT -->
+
+                <section v-if="partnerProfile" class="space-y-5 border-b border-slate-200 p-5">
+                    <h2 class="text-lg font-semibold">Partner application details</h2>
+                    <dl class="grid gap-3 sm:grid-cols-2"><div v-for="(value, key) in partnerProfile.details" :key="key"><dt class="text-xs font-semibold capitalize text-slate-500">{{ key.replaceAll('_', ' ') }}</dt><dd class="mt-1 break-words text-sm">{{ profileValue(value) }}</dd></div></dl>
+                    <div class="flex flex-wrap gap-3"><a v-for="(url, key) in partnerDocuments" :key="key" :href="url" target="_blank" rel="noopener" class="rounded-xl border border-[#087F8C] px-4 py-2 text-sm text-[#087F8C]">Review {{ key.replaceAll('_', ' ') }}</a></div>
+                </section>
 
                 <div class="p-4 sm:p-5">
 

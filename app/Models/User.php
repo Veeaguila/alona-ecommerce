@@ -7,9 +7,11 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     // Basic account information
@@ -33,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'municipality',
     'barangay',
     'street_address',
+    'address_geography',
 
     // Registration documents
     'id_path',
@@ -41,6 +44,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     // Account / approval information
     'usertype',
     'status',
+    'rejection_reason',
     'password',
 
     // Seller store information
@@ -65,7 +69,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use \Laravel\Sanctum\HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /*
     |--------------------------------------------------------------------------
@@ -73,12 +77,17 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    public function sortingCenter(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function sortingCenter(): HasOne
     {
         return $this->hasOne(SortingCenter::class);
     }
 
-    public function rider(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function partnerApplication(): HasOne
+    {
+        return $this->hasOne(PartnerApplication::class);
+    }
+
+    public function rider(): HasOne
     {
         return $this->hasOne(Rider::class);
     }
@@ -195,6 +204,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'address_geography' => 'array',
             'email_verified_at' => 'datetime',
 
             // Personal information

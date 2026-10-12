@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
@@ -70,16 +71,16 @@ class AdminApplicationController extends Controller
                     'like',
                     "%{$search}%"
                 )
-                ->orWhere(
-                    'email',
-                    'like',
-                    "%{$search}%"
-                )
-                ->orWhere(
-                    'store_name',
-                    'like',
-                    "%{$search}%"
-                );
+                    ->orWhere(
+                        'email',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'store_name',
+                        'like',
+                        "%{$search}%"
+                    );
             });
         }
 
@@ -94,8 +95,7 @@ class AdminApplicationController extends Controller
 
             'eyebrow' => 'Registration management',
 
-            'description' =>
-                'Review buyer, seller, and courier applications, approve valid applications, and reject incomplete or non-compliant applications.',
+            'description' => 'Review buyer, seller, and courier applications, approve valid applications, and reject incomplete or non-compliant applications.',
 
             'active' => 'applications',
 
@@ -140,18 +140,16 @@ class AdminApplicationController extends Controller
         );
 
         return Inertia::render('Admin/Applications', [
-            'title' =>
-                ucfirst($user->usertype) . ' application',
+            'title' => ucfirst($user->usertype).' application',
 
-            'eyebrow' =>
-                'Application review',
+            'eyebrow' => 'Application review',
 
-            'description' =>
-                'Review the submitted profile details and either approve or reject this application.',
+            'description' => 'Review the submitted profile details and either approve or reject this application.',
 
-            'active' =>
-                'applications',
+            'active' => 'applications',
 
+            'partnerProfile' => $user->partnerApplication?->only(['details', 'address']),
+            'partnerDocuments' => collect($user->partnerApplication?->documents ?? [])->map(fn ($path, $key) => route('partner.documents', [$user, $key]))->all(),
             'application' => $user->only([
                 'id',
                 'name',
@@ -210,7 +208,7 @@ class AdminApplicationController extends Controller
 
         return back()->with(
             'status',
-            ucfirst($user->usertype) .
+            ucfirst($user->usertype).
                 ' application approved.'
         );
     }
@@ -256,13 +254,13 @@ class AdminApplicationController extends Controller
         $this->notifyApplicant(
             $user,
             'Your application was not approved.',
-            "Your application was rejected for the following reason:\n\n" .
+            "Your application was rejected for the following reason:\n\n".
                 $validated['reason']
         );
 
         return back()->with(
             'status',
-            ucfirst($user->usertype) .
+            ucfirst($user->usertype).
                 ' application rejected.'
         );
     }
@@ -278,17 +276,24 @@ class AdminApplicationController extends Controller
         string $subject,
         string $message
     ): void {
-        if (!filled($user->email)) {
+        if (! filled($user->email)) {
             return;
         }
 
-        Mail::raw(
-            $message,
-            function ($mail) use ($user, $subject) {
-                $mail
-                    ->to($user->email)
-                    ->subject($subject);
-            }
-        );
+        try {
+            Mail::raw(
+                $message,
+                function ($mail) use ($user, $subject) {
+                    $mail
+                        ->to($user->email)
+                        ->subject($subject);
+                }
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Application decision email could not be sent.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+        }
     }
 }
