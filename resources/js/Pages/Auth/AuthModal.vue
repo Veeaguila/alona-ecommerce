@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { useForm, usePage } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
+import PhilippineAddressSelector from '@/Components/PhilippineAddressSelector.vue'
 
 const props = defineProps({
     show: {
@@ -21,6 +22,25 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'update:mode'])
+const page = usePage()
+const googleIdentity = computed(() => page.props.auth?.googleOnboarding ?? {})
+const isGoogleOnboarding = computed(() => !!googleIdentity.value.email && googleIdentity.value.role === registrationType.value)
+const dialog = ref(null)
+let previouslyFocused
+let previousOverflow
+const trapFocus = event => {
+    if (event.key !== 'Tab') return
+    const elements = [...dialog.value.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled)')].filter(el => el.getClientRects().length)
+    const first = elements[0], last = elements.at(-1)
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+}
+watch(() => props.show, async show => {
+    if (typeof document === 'undefined') return
+    if (show) { previouslyFocused = document.activeElement; previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; await nextTick(); dialog.value?.querySelector('button')?.focus() }
+    else if (previousOverflow !== undefined) { document.body.style.overflow = previousOverflow; previouslyFocused?.focus() }
+}, { immediate: true })
+onUnmounted(() => { if (typeof document !== 'undefined' && previousOverflow !== undefined) document.body.style.overflow = previousOverflow })
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +89,7 @@ const registerForm = useForm({
     |--------------------------------------------------------------------------
     */
 
+    address_group: '', region_code: '', province_code: '', city_code: '', barangay_code: '',
     province: '',
     municipality: '',
     barangay: '',
@@ -116,320 +137,6 @@ const registerForm = useForm({
 /*
 |--------------------------------------------------------------------------
 | PHILIPPINE ADDRESS DATA
-|--------------------------------------------------------------------------
-*/
-
-const provinces = ref([])
-const municipalities = ref([])
-const barangays = ref([])
-
-const selectedProvinceCode = ref('')
-const selectedMunicipalityCode = ref('')
-
-const addressLoading = ref(false)
-const municipalityLoading = ref(false)
-const barangayLoading = ref(false)
-
-const addressError = ref('')
-
-/*
-|--------------------------------------------------------------------------
-| GENERIC API HELPER
-|--------------------------------------------------------------------------
-*/
-
-const fetchJson = async (url) => {
-    const response = await fetch(url, {
-        method: 'GET',
-
-        headers: {
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-
-        credentials: 'same-origin',
-    })
-
-    let data = null
-
-    try {
-        data = await response.json()
-    } catch {
-        data = null
-    }
-
-    if (!response.ok) {
-        const message =
-            data?.message ||
-            data?.error ||
-            `HTTP ${response.status}`
-
-        throw new Error(message)
-    }
-
-    return data
-}
-
-/*
-|--------------------------------------------------------------------------
-| NORMALIZE API RESPONSE
-|--------------------------------------------------------------------------
-*/
-
-const normalizeList = (data) => {
-    if (Array.isArray(data)) {
-        return data
-    }
-
-    if (Array.isArray(data?.data)) {
-        return data.data
-    }
-
-    if (Array.isArray(data?.results)) {
-        return data.results
-    }
-
-    return []
-}
-
-/*
-|--------------------------------------------------------------------------
-| LOAD PROVINCES
-|--------------------------------------------------------------------------
-*/
-
-const loadProvinces = async () => {
-    if (addressLoading.value) {
-        return
-    }
-
-    addressLoading.value = true
-    addressError.value = ''
-
-    try {
-        const data = await fetchJson(
-            '/api/philippines/provinces'
-        )
-
-        const list = normalizeList(data)
-
-        provinces.value = list
-
-        if (list.length === 0) {
-            throw new Error(
-                'No provinces were returned by the server.'
-            )
-        }
-    } catch (error) {
-        console.error(
-            'Province API error:',
-            error
-        )
-
-        provinces.value = []
-
-        addressError.value =
-            'Unable to load Philippine provinces. Please try again.'
-    } finally {
-        addressLoading.value = false
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| PROVINCE CHANGE
-|--------------------------------------------------------------------------
-*/
-
-const handleProvinceChange = async () => {
-    const provinceCode =
-        selectedProvinceCode.value
-
-    const selectedProvince =
-        provinces.value.find(
-            item =>
-                String(item.code) ===
-                String(provinceCode)
-        )
-
-    registerForm.province =
-        selectedProvince?.name || ''
-
-    registerForm.municipality = ''
-    registerForm.barangay = ''
-
-    selectedMunicipalityCode.value = ''
-
-    municipalities.value = []
-    barangays.value = []
-
-    addressError.value = ''
-
-    if (!selectedProvince) {
-        return
-    }
-
-    await loadMunicipalities(
-        selectedProvince.code
-    )
-}
-
-/*
-|--------------------------------------------------------------------------
-| LOAD MUNICIPALITIES / CITIES
-|--------------------------------------------------------------------------
-*/
-
-const loadMunicipalities = async (
-    provinceCode
-) => {
-    if (!provinceCode) {
-        return
-    }
-
-    municipalityLoading.value = true
-    addressError.value = ''
-
-    try {
-        const url =
-            `/api/philippines/provinces/${encodeURIComponent(
-                provinceCode
-            )}/cities-municipalities`
-
-        const data =
-            await fetchJson(url)
-
-        const list =
-            normalizeList(data)
-
-        municipalities.value = list
-
-        if (list.length === 0) {
-            addressError.value =
-                'No municipalities or cities were found for the selected province.'
-        }
-    } catch (error) {
-        console.error(
-            'Municipality API error:',
-            error
-        )
-
-        municipalities.value = []
-
-        addressError.value =
-            'Unable to load municipalities/cities. Please try again.'
-    } finally {
-        municipalityLoading.value = false
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| MUNICIPALITY / CITY CHANGE
-|--------------------------------------------------------------------------
-*/
-
-const handleMunicipalityChange = async () => {
-    const municipalityCode =
-        selectedMunicipalityCode.value
-
-    const selectedMunicipality =
-        municipalities.value.find(
-            item =>
-                String(item.code) ===
-                String(municipalityCode)
-        )
-
-    registerForm.municipality =
-        selectedMunicipality?.name || ''
-
-    registerForm.barangay = ''
-
-    barangays.value = []
-
-    addressError.value = ''
-
-    if (!selectedMunicipality) {
-        return
-    }
-
-    await loadBarangays(
-        selectedMunicipality.code
-    )
-}
-
-/*
-|--------------------------------------------------------------------------
-| LOAD BARANGAYS
-|--------------------------------------------------------------------------
-*/
-
-const loadBarangays = async (
-    municipalityCode
-) => {
-    if (!municipalityCode) {
-        return
-    }
-
-    barangayLoading.value = true
-    addressError.value = ''
-
-    try {
-        const url =
-            `/api/philippines/cities-municipalities/${encodeURIComponent(
-                municipalityCode
-            )}/barangays`
-
-        const data =
-            await fetchJson(url)
-
-        const list =
-            normalizeList(data)
-
-        barangays.value = list
-
-        if (list.length === 0) {
-            addressError.value =
-                'No barangays were found for the selected municipality/city.'
-        }
-    } catch (error) {
-        console.error(
-            'Barangay API error:',
-            error
-        )
-
-        barangays.value = []
-
-        addressError.value =
-            'Unable to load barangays. Please try again.'
-    } finally {
-        barangayLoading.value = false
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| BARANGAY CHANGE
-|--------------------------------------------------------------------------
-*/
-
-const handleBarangayChange = () => {
-    const selectedBarangay =
-        barangays.value.find(
-            item =>
-                String(item.name) ===
-                String(registerForm.barangay)
-        )
-
-    if (selectedBarangay) {
-        registerForm.barangay =
-            selectedBarangay.name
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| COMPUTED
 |--------------------------------------------------------------------------
 */
 
@@ -505,13 +212,13 @@ const resetRegistration = () => {
 
     stepError.value = ''
     registrationSuccess.value = ''
-    addressError.value = ''
 
-    selectedProvinceCode.value = ''
-    selectedMunicipalityCode.value = ''
 
-    municipalities.value = []
-    barangays.value = []
+
+
+
+
+
 
     registerForm.reset()
     registerForm.clearErrors()
@@ -532,7 +239,7 @@ const selectRegistrationType = (type) => {
 const startRegistration = () => {
     if (!registrationType.value) {
         stepError.value =
-            'Please choose whether you want to register as a buyer or seller.'
+            'Please choose how you want to join Alona.'
 
         return
     }
@@ -541,6 +248,7 @@ const startRegistration = () => {
     registrationSuccess.value = ''
     registrationStarted.value = true
     registrationStep.value = 1
+
 }
 
 /*
@@ -655,7 +363,7 @@ const validateCurrentStep = () => {
         }
 
         if (
-            !registerForm.password
+            !isGoogleOnboarding.value && !registerForm.password
         ) {
             stepError.value =
                 'Please create a password.'
@@ -664,7 +372,7 @@ const validateCurrentStep = () => {
         }
 
         if (
-            registerForm.password.length < 8
+            !isGoogleOnboarding.value && registerForm.password.length < 8
         ) {
             stepError.value =
                 'Your password must be at least 8 characters.'
@@ -673,7 +381,7 @@ const validateCurrentStep = () => {
         }
 
         if (
-            !registerForm.password_confirmation
+            !isGoogleOnboarding.value && !registerForm.password_confirmation
         ) {
             stepError.value =
                 'Please confirm your password.'
@@ -682,7 +390,7 @@ const validateCurrentStep = () => {
         }
 
         if (
-            registerForm.password !==
+            !isGoogleOnboarding.value && registerForm.password !==
             registerForm.password_confirmation
         ) {
             stepError.value =
@@ -740,42 +448,8 @@ const validateCurrentStep = () => {
     */
 
     if (registrationStep.value === 3) {
-        if (!registerForm.province) {
-            stepError.value =
-                'Please select your province.'
-
-            return false
-        }
-
-        if (
-            !selectedProvinceCode.value
-        ) {
-            stepError.value =
-                'Please select a valid province.'
-
-            return false
-        }
-
-        if (!registerForm.municipality) {
-            stepError.value =
-                'Please select your municipality or city.'
-
-            return false
-        }
-
-        if (
-            !selectedMunicipalityCode.value
-        ) {
-            stepError.value =
-                'Please select a valid municipality or city.'
-
-            return false
-        }
-
-        if (!registerForm.barangay) {
-            stepError.value =
-                'Please select your barangay.'
-
+        if (!registerForm.address_group || !registerForm.region_code || !registerForm.city_code || !registerForm.barangay_code) {
+            stepError.value = 'Please select your complete Philippine address.'
             return false
         }
 
@@ -1005,15 +679,15 @@ const closeOnBackground = (event) => {
 */
 
 watch(
-    () => props.show,
-    (show) => {
-        if (
-            show &&
-            provinces.value.length === 0 &&
-            !addressLoading.value
-        ) {
-            loadProvinces()
+    () => [props.show, props.mode],
+    ([show, mode]) => {
+        if (show) {
+            resetRegistration()
+            registrationType.value = { 'register-buyer': 'buyer', 'register-seller': 'seller' }[mode] ?? null
+            if (googleIdentity.value.email && googleIdentity.value.role === registrationType.value) registerForm.email = googleIdentity.value.email
+            if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('onboarding') === '1' && ['buyer', 'seller'].includes(registrationType.value)) startRegistration()
         }
+
     },
     {
         immediate: true,
@@ -1030,6 +704,7 @@ watch(
         >
             <div
                 class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl"
+                ref="dialog" role="dialog" aria-modal="true" aria-label="Alona account" tabindex="-1" @keydown.esc="close" @keydown="trapFocus"
             >
 
                 <!-- CLOSE -->
@@ -1132,7 +807,7 @@ watch(
 
                             <InputError
                                 class="mt-2"
-                                :message="loginForm.errors.email"
+                                :message="loginForm.errors.email || page.props.errors?.email"
                             />
 
                         </div>
@@ -1237,6 +912,7 @@ watch(
                                 <button
                                     type="button"
                                     @click="selectRegistrationType('buyer')"
+                                    :aria-pressed="registrationType === 'buyer'"
                                     :class="[
                                         'group w-full rounded-2xl border p-5 text-left transition',
                                         registrationType === 'buyer'
@@ -1323,6 +999,7 @@ watch(
                                 <button
                                     type="button"
                                     @click="selectRegistrationType('seller')"
+                                    :aria-pressed="registrationType === 'seller'"
                                     :class="[
                                         'group w-full rounded-2xl border p-5 text-left transition',
                                         registrationType === 'seller'
@@ -1429,19 +1106,13 @@ watch(
 
                             <!-- ADDRESS ERROR -->
 
-                            <div
-                                v-if="addressError"
-                                class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
-                            >
-                                {{ addressError }}
-                            </div>
-
                             <!-- NEXT -->
 
                             <button
                                 type="button"
                                 @click="startRegistration"
-                                class="mt-5 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0]"
+                                :disabled="!registrationType"
+                                class="mt-5 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Next
                             </button>
@@ -1600,6 +1271,7 @@ watch(
 
                                     <input
                                         id="register-email"
+                                        :disabled="isGoogleOnboarding"
                                         v-model="registerForm.email"
                                         type="email"
                                         autocomplete="email"
@@ -1616,7 +1288,7 @@ watch(
 
                                 <!-- PASSWORD -->
 
-                                <div>
+                                <div v-if="!isGoogleOnboarding">
 
                                     <label
                                         for="register-password"
@@ -1643,7 +1315,7 @@ watch(
 
                                 <!-- CONFIRM PASSWORD -->
 
-                                <div>
+                                <div v-if="!isGoogleOnboarding">
 
                                     <label
                                         for="register-password-confirmation"
@@ -1821,161 +1493,7 @@ watch(
                                 class="space-y-5"
                             >
 
-                                <!-- API ERROR -->
-
-                                <div
-                                    v-if="addressError"
-                                    class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
-                                >
-                                    {{ addressError }}
-                                </div>
-
-                                <!-- PROVINCE -->
-
-                                <div>
-
-                                    <label
-                                        for="register-province"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Province
-                                    </label>
-
-                                    <select
-                                        id="register-province"
-                                        v-model="selectedProvinceCode"
-                                        @change="handleProvinceChange"
-                                        :disabled="addressLoading"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    >
-
-                                        <option value="">
-                                            {{
-                                                addressLoading
-                                                    ? 'Loading provinces...'
-                                                    : 'Select province'
-                                            }}
-                                        </option>
-
-                                        <option
-                                            v-for="province in provinces"
-                                            :key="province.code"
-                                            :value="province.code"
-                                        >
-                                            {{ province.name }}
-                                        </option>
-
-                                    </select>
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.province"
-                                    />
-
-                                </div>
-
-                                <!-- MUNICIPALITY -->
-
-                                <div>
-
-                                    <label
-                                        for="register-municipality"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Municipality / City
-                                    </label>
-
-                                    <select
-                                        id="register-municipality"
-                                        v-model="selectedMunicipalityCode"
-                                        @change="handleMunicipalityChange"
-                                        :disabled="
-                                            !selectedProvinceCode ||
-                                            municipalityLoading
-                                        "
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    >
-
-                                        <option value="">
-                                            {{
-                                                municipalityLoading
-                                                    ? 'Loading municipalities...'
-                                                    : selectedProvinceCode
-                                                        ? 'Select municipality / city'
-                                                        : 'Select province first'
-                                            }}
-                                        </option>
-
-                                        <option
-                                            v-for="municipality in municipalities"
-                                            :key="municipality.code"
-                                            :value="municipality.code"
-                                        >
-                                            {{ municipality.name }}
-                                            {{
-                                                municipality.type
-                                                    ? ` (${municipality.type})`
-                                                    : ''
-                                            }}
-                                        </option>
-
-                                    </select>
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.municipality"
-                                    />
-
-                                </div>
-
-                                <!-- BARANGAY -->
-
-                                <div>
-
-                                    <label
-                                        for="register-barangay"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Barangay
-                                    </label>
-
-                                    <select
-                                        id="register-barangay"
-                                        v-model="registerForm.barangay"
-                                        @change="handleBarangayChange"
-                                        :disabled="
-                                            !selectedMunicipalityCode ||
-                                            barangayLoading
-                                        "
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60 focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    >
-
-                                        <option value="">
-                                            {{
-                                                barangayLoading
-                                                    ? 'Loading barangays...'
-                                                    : selectedMunicipalityCode
-                                                        ? 'Select barangay'
-                                                        : 'Select municipality first'
-                                            }}
-                                        </option>
-
-                                        <option
-                                            v-for="barangay in barangays"
-                                            :key="barangay.code"
-                                            :value="barangay.name"
-                                        >
-                                            {{ barangay.name }}
-                                        </option>
-
-                                    </select>
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.barangay"
-                                    />
-
-                                </div>
+                                <PhilippineAddressSelector :form="registerForm" />
 
                                 <!-- STREET -->
 
@@ -2007,7 +1525,7 @@ watch(
 
                                 <div
                                     v-if="
-                                        registerForm.province &&
+                                        registerForm.city_code &&
                                         registerForm.municipality &&
                                         registerForm.barangay
                                     "
@@ -2433,7 +1951,7 @@ watch(
 
                     <a
                         v-if="!registrationStarted"
-                        :href="route('google.redirect')"
+                        :href="route('google.redirect', { role: mode === 'login' ? undefined : registrationType || 'buyer' })"
                         class="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAF9]"
                     >
 
@@ -2464,6 +1982,7 @@ watch(
                                     ? "Don't have an Alona account?"
                                     : 'Already have an Alona account?'
                             }}
+                            <button v-if="mode !== 'login'" type="button" @click="switchToLogin" class="ml-1 font-semibold text-[#087F8C] hover:text-[#16A6A0]">Log in</button>
                         </p>
 
                         <button
@@ -2475,14 +1994,6 @@ watch(
                             Create an account
                         </button>
 
-                        <button
-                            v-else
-                            type="button"
-                            @click="switchToLogin"
-                            class="mt-2 text-sm font-semibold text-[#087F8C] hover:text-[#16A6A0]"
-                        >
-                            Log in
-                        </button>
 
                     </div>
 

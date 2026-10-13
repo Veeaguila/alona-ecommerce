@@ -1,13 +1,49 @@
 <?php
 
+use App\Http\Controllers\DeliveryCoverageController;
+use App\Http\Controllers\PartnerProfileController;
+use App\Http\Controllers\PartnerRegistrationController;
+use App\Http\Controllers\PhilippineAddressController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\PersonalAccessToken;
 
-Route::view('/sorting-center/login', 'sorting-center-login')->name('sorting-center.login');
-Route::view('/sorting-center/register', 'sorting-center-registration')->name('sorting-center.register');
+Route::redirect('/sorting-center/login', '/?auth=login')->name('sorting-center.login');
+Route::redirect('/sorting-center/register', '/register/logistics')->name('sorting-center.register');
 
 // These views contain only the UI shell; every data endpoint requires an approved account.
-Route::prefix('sorting-center')->group(function () {
+Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])->group(function () {
     foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests'] as $page) {
-        Route::view($page, 'sorting-center.'.$page)->name('sorting-center.'.$page);
+        Route::get($page, function (Request $request) use ($page) {
+            $token = $request->session()->get('logistics.web_token');
+            $accessToken = $token ? PersonalAccessToken::findToken($token) : null;
+            if (! $accessToken || $accessToken->tokenable_id !== $request->user()->id || $accessToken->expires_at?->isPast()) {
+                if ($accessToken?->tokenable_id === $request->user()->id) {
+                    $accessToken->delete();
+                }
+                $token = $request->user()->createToken('logistics-web', ['*'], now()->addHours(2))->plainTextToken;
+                $request->session()->put('logistics.web_token', $token);
+            }
+
+            return view('sorting-center.'.$page, ['logisticsSession' => [
+                'token' => $token, 'user' => $request->user()->only(['id', 'name', 'email']),
+                'sorting_center' => $request->user()->sortingCenter->only(['id', 'business_name']),
+            ]]);
+        })->name('sorting-center.'.$page);
     }
+});
+
+Route::get('/api/addresses/{level}', [PhilippineAddressController::class, 'index'])->middleware('throttle:120,1');
+Route::get('/api/delivery-coverage', [DeliveryCoverageController::class, 'index'])->middleware('throttle:120,1');
+Route::middleware('guest')->group(function () {
+    foreach (['logistics', 'rider'] as $role) {
+        Route::get('/register/'.$role, [PartnerRegistrationController::class, 'create'])->name('register.'.$role);
+        Route::post('/register/'.$role, [PartnerRegistrationController::class, 'store'])->middleware('throttle:6,1');
+    }
+});
+Route::middleware('auth')->group(function () {
+    Route::get('/application/status', [PartnerProfileController::class, 'status'])->name('application.status');
+    Route::patch('/partner/profile', [PartnerProfileController::class, 'update'])->name('partner.profile.update');
+    Route::get('/partner/documents/{user}/{document}', [PartnerProfileController::class, 'document'])->name('partner.documents');
+    Route::get('/rider/dashboard', [PartnerProfileController::class, 'rider'])->middleware('rider.approved')->name('rider.dashboard');
 });

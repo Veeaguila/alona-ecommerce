@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rider Assignment - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/js/logistics.js'])
+    @include('sorting-center.session')
 </head>
 <body class="font-sans antialiased bg-gray-50">
     <div id="app">

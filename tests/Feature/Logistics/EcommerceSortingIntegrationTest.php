@@ -12,13 +12,15 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Rider;
 use App\Models\SortingCenter;
+use App\Models\User;
 use App\Services\OrderItemPickup;
+use App\Services\PhilippineAddressService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -41,6 +43,7 @@ class EcommerceSortingIntegrationTest extends TestCase
             'subtotal' => 100, 'total' => 100, 'shipping_address' => '123 Recipient Street, Cebu City',
             'payment_method' => 'cod', 'status' => $status,
         ]);
+
         return $order->items()->create([
             'product_id' => $product->id, 'product_name' => $product->name,
             'price' => 100, 'quantity' => 1, 'status' => $status,
@@ -201,9 +204,11 @@ class EcommerceSortingIntegrationTest extends TestCase
     public function test_storefront_and_auth_routes_are_preserved_and_sorting_pages_have_separate_entry(): void
     {
         $this->get('/')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Guest/Home'));
-        $this->get('/login')->assertRedirect('/');
-        $this->get('/register')->assertOk();
-        $this->get('/sorting-center/login')->assertOk()->assertViewIs('sorting-center-login');
+        $this->get('/login')->assertRedirect('/?auth=login');
+        $this->get('/register')->assertRedirect('/?auth=register-buyer&onboarding=1');
+        $this->get('/sorting-center/login')->assertRedirect('/?auth=login');
+        $center = $this->center();
+        $this->actingAs($center->user);
         foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests'] as $page) {
             $this->get('/sorting-center/'.$page)->assertOk()->assertViewIs('sorting-center.'.$page);
         }
@@ -246,9 +251,19 @@ class EcommerceSortingIntegrationTest extends TestCase
 
     public function test_center_registration_creates_pending_usertype_account_and_blocks_operations(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
+        Notification::fake();
+        $addresses = app(PhilippineAddressService::class)->data();
+        $city = collect($addresses['cities'])->firstWhere('code', '1380600000');
+        $barangay = collect($addresses['barangays'])->firstWhere('city_code', $city['code']);
         $this->postJson('/api/sorting-center/register', [
             'business_name' => 'New center', 'email' => 'new-center@example.com',
+            'first_name' => 'New', 'last_name' => 'Partner', 'contact_no' => '09123456789',
+            'region_code' => '1300000000', 'province_code' => '', 'city_code' => $city['code'], 'barangay_code' => $barangay['code'],
+            'street' => 'Main Street', 'house_number' => '1', 'postal_code' => '1000', 'terms' => true, 'privacy' => true,
+            'business_type' => 'sole_proprietor', 'authorized_representative' => 'New Partner', 'registration_number' => 'DTI-123',
+            'business_email' => 'business@example.com', 'business_phone' => '09123456789', 'services' => 'Delivery',
+            'vehicle_types' => 'Motorcycles', 'fleet_count' => 2, 'coverage_city_codes' => [$city['code']], 'operating_hours' => '9 AM–5 PM',
             'password' => 'password', 'password_confirmation' => 'password',
             'id_doc' => UploadedFile::fake()->image('id.png'),
             'permit_doc' => UploadedFile::fake()->image('permit.png'),
@@ -257,7 +272,7 @@ class EcommerceSortingIntegrationTest extends TestCase
         $this->assertSame('sorting_center', $user->usertype);
         $this->assertSame('pending', $user->status);
         $this->assertSame('pending', $user->sortingCenter->approval_status);
-        $this->assertCount(2, Storage::disk('public')->allFiles());
+        $this->assertCount(2, Storage::disk('local')->allFiles());
         Sanctum::actingAs($user);
         $this->getJson('/api/sorting-center/dashboard')->assertForbidden();
     }

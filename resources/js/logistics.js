@@ -2,6 +2,13 @@ import './bootstrap';
 import '../css/logistics.css';
 import { createApp } from 'vue';
 
+// The marketplace login supplies the same scoped Sanctum identity used by the existing portal.
+if (window.logisticsSession) {
+    localStorage.setItem('logistics_auth_token', window.logisticsSession.token);
+    localStorage.setItem('logistics_auth_session', JSON.stringify(window.logisticsSession));
+    localStorage.setItem('sortingCenterName', window.logisticsSession.sorting_center.business_name);
+}
+
 const components = {
     'sorting-center-registration': () => import('./Logistics/components/SortingCenterRegistration.vue'),
     'sorting-center-login': () => import('./Logistics/components/SortingCenterLogin.vue'),

@@ -1,31 +1,40 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Logistics\RegisterSortingCenterController;
-use App\Http\Controllers\Logistics\LoginSortingCenterController;
-use App\Http\Controllers\Logistics\RegisterRiderController;
-use App\Http\Controllers\Logistics\LoginRiderController;
-use App\Http\Controllers\Logistics\RiderPickupController;
-use App\Http\Controllers\Logistics\RiderDeliveryController;
-use App\Http\Controllers\Logistics\RiderManagementController;
-use App\Http\Controllers\Logistics\PickupRequestController;
+use App\Http\Controllers\DeliveryCoverageController;
+use App\Http\Controllers\Logistics\DashboardController;
+use App\Http\Controllers\Logistics\DeliveryProofController;
 use App\Http\Controllers\Logistics\IncomingParcelController;
-use App\Http\Controllers\Logistics\ParcelSortingController;
+use App\Http\Controllers\Logistics\LoginRiderController;
+use App\Http\Controllers\Logistics\LoginSortingCenterController;
+use App\Http\Controllers\Logistics\MessageController;
 use App\Http\Controllers\Logistics\ParcelAssignmentController;
 use App\Http\Controllers\Logistics\ParcelMonitoringController;
-use App\Http\Controllers\Logistics\DashboardController;
+use App\Http\Controllers\Logistics\ParcelSortingController;
+use App\Http\Controllers\Logistics\PickupRequestController;
 use App\Http\Controllers\Logistics\ReportController;
+use App\Http\Controllers\Logistics\RiderDeliveryController;
+use App\Http\Controllers\Logistics\RiderManagementController;
+use App\Http\Controllers\Logistics\RiderPickupController;
+use App\Http\Controllers\Logistics\SellerPickupRequestController;
 use App\Http\Controllers\Logistics\SortingCenterDirectoryController;
-use App\Http\Controllers\Logistics\DeliveryProofController;
-use App\Http\Controllers\Logistics\MessageController;
+use App\Http\Controllers\PartnerProfileController;
+use App\Http\Controllers\PartnerRegistrationController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 // Public Sorting Center Auth
 Route::get('/sorting-centers', [SortingCenterDirectoryController::class, 'index']);
-Route::post('/sorting-center/register', [RegisterSortingCenterController::class, 'register']);
+Route::post('/sorting-center/register', [PartnerRegistrationController::class, 'store'])->middleware('throttle:6,1');
 Route::post('/sorting-center/login', [LoginSortingCenterController::class, 'login'])->middleware('throttle:6,1');
 
 // Public Rider Registration (for seeding & future Flutter Rider App)
-Route::post('/rider/register', [RegisterRiderController::class, 'register']);
+Route::post('/rider/register', [PartnerRegistrationController::class, 'store'])->middleware('throttle:6,1');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/partner/profile', [PartnerProfileController::class, 'status']);
+    Route::patch('/partner/profile', [PartnerProfileController::class, 'update']);
+    Route::get('/user', fn (Request $request) => $request->user()->only(['id', 'name', 'email', 'usertype', 'status']));
+});
 Route::post('/rider/login', [LoginRiderController::class, 'login'])->middleware('throttle:6,1');
 
 Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(function () {
@@ -47,6 +56,7 @@ Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(fu
 
 // Protected Sorting Center Management
 Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function () {
+    Route::post('/sorting-center/coverage', [DeliveryCoverageController::class, 'store'])->middleware('throttle:30,1');
     Route::get('/sorting-center/messages/recipients', [MessageController::class, 'recipients']);
     Route::get('/sorting-center/messages/conversations', [MessageController::class, 'conversations']);
     Route::get('/sorting-center/messages/conversations/{conversationId}', [MessageController::class, 'show']);
@@ -80,10 +90,11 @@ Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function (
 
 // Seller API Routes
 Route::middleware(['auth:sanctum', 'seller'])->prefix('seller')->group(function () {
-    Route::post('/pickup-requests', [App\Http\Controllers\Logistics\SellerPickupRequestController::class, 'store']);
+    Route::post('/pickup-requests', [SellerPickupRequestController::class, 'store']);
 });
 
-Route::post('/logistics/logout', function (\Illuminate\Http\Request $request) {
+Route::post('/logistics/logout', function (Request $request) {
     $request->user()->currentAccessToken()?->delete();
+
     return response()->json(['message' => 'Signed out.']);
 })->middleware('auth:sanctum');

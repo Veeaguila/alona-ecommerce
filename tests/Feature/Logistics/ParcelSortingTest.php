@@ -4,10 +4,10 @@ namespace Tests\Feature\Logistics;
 
 use App\Models\Area;
 use App\Models\Parcel;
-use Illuminate\Support\Str;
 use App\Models\SortingCenter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -114,6 +114,17 @@ class ParcelSortingTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonPath('message', 'The selected service area must match the parcel destination city.');
+    }
+
+    public function test_coded_area_cannot_match_a_same_named_city_in_another_province(): void
+    {
+        $center = $this->approvedSortingCenter();
+        $area = Area::create(['sorting_center_id' => $center->sortingCenter->id, 'name' => 'City of San Carlos', 'city_code' => '0105532000']);
+        $parcel = $this->parcel('AT_SORTING_CENTER', $center->sortingCenter->id);
+        $parcel->update(['delivery_municipality' => 'City of San Carlos', 'delivery_province' => 'Negros Occidental']);
+        Sanctum::actingAs($center);
+        $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/sort', ['area_id' => $area->id])->assertUnprocessable()
+            ->assertJsonPath('message', 'The selected service area must match the parcel destination province.');
     }
 
     public function test_sorting_center_can_create_a_city_service_area(): void

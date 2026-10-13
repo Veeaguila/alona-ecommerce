@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Logistics;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\Area;
 use App\Models\Parcel;
+use App\Services\DeliveryCoverageService;
+use App\Services\PhilippineAddressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ParcelSortingController extends Controller
 {
@@ -52,11 +53,22 @@ class ParcelSortingController extends Controller
     {
         $sortingCenterId = $request->user()->sortingCenter->id;
 
+        $geography = app(PhilippineAddressService::class)->data();
+        $cities = array_column($geography['cities'], null, 'code');
+        $provinces = array_column($geography['provinces'], 'name', 'code');
+        $regions = array_column($geography['regions'], 'name', 'code');
+
         return response()->json([
             'message' => 'Sorting areas retrieved successfully.',
             'data' => Area::where('sorting_center_id', $sortingCenterId)
                 ->orderBy('name')
-                ->get(['id', 'name', 'sorting_center_id']),
+                ->get(['id', 'name', 'sorting_center_id', 'city_code'])->map(function ($area) use ($cities, $provinces, $regions) {
+                    $city = $cities[$area->city_code] ?? null;
+
+                    return array_merge($area->toArray(), ['city_name' => $city['name'] ?? $area->name,
+                        'province_name' => $provinces[$city['province_code'] ?? ''] ?? null,
+                        'label' => $city ? implode(' · ', array_filter([$city['name'], $provinces[$city['province_code']] ?? null, $regions[$city['region_code']]])) : $area->name]);
+                }),
         ]);
     }
 
@@ -98,7 +110,7 @@ class ParcelSortingController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if (!$parcel) {
+            if (! $parcel) {
                 abort(response()->json([
                     'message' => 'Parcel not found.',
                 ], 422));
@@ -122,14 +134,17 @@ class ParcelSortingController extends Controller
                 ->where('sorting_center_id', $sortingCenterId)
                 ->first();
 
-            if (!$area) {
+            if (! $area) {
                 abort(response()->json([
                     'message' => 'The selected area does not belong to this sorting center.',
                     'area_id' => $validated['area_id'],
                 ], 422));
             }
 
-            if ($parcel->delivery_municipality !== '' && strcasecmp(trim($area->name), trim($parcel->delivery_municipality)) !== 0) {
+            $city = $area->city_code ? collect(app(PhilippineAddressService::class)->data()['cities'])->firstWhere('code', $area->city_code) : null;
+            $cityName = $city['name'] ?? $area->name;
+            $province = $city && $city['province_code'] ? collect(app(PhilippineAddressService::class)->data()['provinces'])->firstWhere('code', $city['province_code']) : null;
+            if ($parcel->delivery_municipality !== '' && DeliveryCoverageService::normalizeCityName($cityName) !== DeliveryCoverageService::normalizeCityName($parcel->delivery_municipality)) {
                 abort(response()->json([
                     'message' => 'The selected service area must match the parcel destination city.',
                     'delivery_municipality' => $parcel->delivery_municipality,
@@ -137,10 +152,14 @@ class ParcelSortingController extends Controller
                 ], 422));
             }
 
+            if ($province && $parcel->delivery_province !== '' && strcasecmp(trim($province['name']), trim($parcel->delivery_province)) !== 0) {
+                abort(response()->json(['message' => 'The selected service area must match the parcel destination province.', 'delivery_province' => $parcel->delivery_province], 422));
+            }
+
             $parcel->update([
                 // For ecommerce's free-text addresses, the operator explicitly
                 // classifies the destination by selecting its city service area.
-                'delivery_municipality' => $parcel->delivery_municipality ?: $area->name,
+                'delivery_municipality' => $parcel->delivery_municipality ?: $cityName,
                 'sorted_area_id' => $area->id,
                 'sorted_at' => now(),
             ]);
