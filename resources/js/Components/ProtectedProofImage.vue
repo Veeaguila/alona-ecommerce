@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <p v-if="error" role="alert">{{ error }}</p>
   <div v-else-if="imageUrl">
     <img :src="imageUrl" alt="Delivery proof" class="proof-image" />
