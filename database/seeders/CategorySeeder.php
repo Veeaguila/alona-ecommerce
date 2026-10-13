@@ -133,7 +133,7 @@ class CategorySeeder extends Seeder
             [
                 'name' => 'Gaming',
                 'slug' => 'gaming',
-                'image_path' => 'https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?auto=format&fit=crop&w=900&q=85',
+                'image_path' => 'http://unsplash.com/photos/video-game-console-and-controller-caNzzoxls8Q',
             ],
         ];
 
