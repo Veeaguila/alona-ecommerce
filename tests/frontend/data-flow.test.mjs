@@ -7,7 +7,7 @@ import * as Vue from 'vue';
 import { renderToString } from '@vue/server-renderer';
 
 function loadPage(name, fetch) {
-  const source = readFileSync(new URL(`../../resources/js/Logistics/components/${name}.vue`, import.meta.url), 'utf8');
+  const source = readFileSync(new URL(`../../resources/js/Pages/Logistics/${name}.vue`, import.meta.url), 'utf8');
   const { descriptor } = parse(source);
   const script = descriptor.script.content
     .replace(/^import .*;\r?\n/gm, '')

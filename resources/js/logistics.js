@@ -10,17 +10,17 @@ if (window.logisticsSession) {
 }
 
 const components = {
-    'sorting-center-registration': () => import('./Logistics/components/SortingCenterRegistration.vue'),
-    'sorting-center-login': () => import('./Logistics/components/SortingCenterLogin.vue'),
-    'order-management': () => import('./Logistics/components/OrderManagement.vue'),
-    'delivery-management': () => import('./Logistics/components/DeliveryManagement.vue'),
-    'rider-assignment': () => import('./Logistics/components/RiderAssignment.vue'),
-    'delivery-monitoring': () => import('./Logistics/components/DeliveryMonitoring.vue'),
-    dashboard: () => import('./Logistics/components/Dashboard.vue'),
-    'delivery-reports': () => import('./Logistics/components/DeliveryReports.vue'),
-    'delivery-proof-review': () => import('./Logistics/components/DeliveryProofReview.vue'),
-    messages: () => import('./Logistics/components/Messages.vue'),
-    'pickup-request-management': () => import('./Logistics/components/PickupRequestManagement.vue'),
+    'sorting-center-registration': () => import('./Pages/Logistics/SortingCenterRegistration.vue'),
+    'sorting-center-login': () => import('./Pages/Logistics/SortingCenterLogin.vue'),
+    'order-management': () => import('./Pages/Logistics/OrderManagement.vue'),
+    'delivery-management': () => import('./Pages/Logistics/DeliveryManagement.vue'),
+    'rider-assignment': () => import('./Pages/Logistics/RiderAssignment.vue'),
+    'delivery-monitoring': () => import('./Pages/Logistics/DeliveryMonitoring.vue'),
+    dashboard: () => import('./Pages/Logistics/Dashboard.vue'),
+    'delivery-reports': () => import('./Pages/Logistics/DeliveryReports.vue'),
+    'delivery-proof-review': () => import('./Pages/Logistics/DeliveryProofReview.vue'),
+    messages: () => import('./Pages/Logistics/Messages.vue'),
+    'pickup-request-management': () => import('./Pages/Logistics/PickupRequestManagement.vue'),
 };
 
 async function mountPage() {

@@ -42,6 +42,29 @@ function submit() {
         <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
             <div class="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm sm:p-8">
                 <div class="mb-8 text-center"><img src="/images/Alogo.png" alt="Alona" class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[#E8F7F6] p-2" /><h1 class="text-2xl font-semibold">{{ title }}</h1><p class="mt-2 text-sm text-[#64748B]">Complete your application. We’ll review your details before you access deliveries.</p></div>
+
+                <!-- ROLE TOGGLE TABS -->
+                <div class="mb-6 flex rounded-xl bg-[#F1F5F9] p-1">
+                    <Link
+                        :href="route('register.logistics')"
+                        :class="[
+                            'flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition',
+                            !rider ? 'bg-white text-[#087F8C] shadow-sm' : 'text-[#64748B] hover:text-[#1F2937]'
+                        ]"
+                    >
+                        Logistics Partner
+                    </Link>
+                    <Link
+                        :href="route('register.rider')"
+                        :class="[
+                            'flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition',
+                            rider ? 'bg-white text-[#087F8C] shadow-sm' : 'text-[#64748B] hover:text-[#1F2937]'
+                        ]"
+                    >
+                        Delivery Rider
+                    </Link>
+                </div>
+
                 <p v-if="failure" role="alert" tabindex="-1" class="mb-5 rounded-xl bg-red-50 p-4 text-sm text-red-600">{{ failure }}</p>
                 <p v-if="google" class="mb-6 rounded-xl bg-[#E8F7F6] p-4 text-sm">Continuing with Google as {{ google.email }}. Complete the details below.</p>
                 <a v-else :href="route('google.redirect', { role })" class="mb-6 block rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold">G &nbsp; Continue with Google</a>

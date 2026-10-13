@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
+import PartnerAuthModal from '@/Components/PartnerAuthModal.vue'
 
 const page = usePage()
 
@@ -9,6 +10,9 @@ const mobileOpen = ref(false)
 const searchQuery = ref('')
 const authModalOpen = ref(false)
 const authModalMode = ref('login')
+const partnerModalOpen = ref(false)
+const partnerModalRole = ref('logistics')
+const partnerModalTab = ref('signup')
 
 const user = computed(() => page.props.auth?.user ?? null)
 const isLoggedIn = computed(() => !!user.value)
@@ -67,6 +71,17 @@ const closeAuthModal = () => {
     authModalOpen.value = false
 }
 
+const openPartnerModal = (role = 'logistics', tab = 'signup') => {
+    partnerModalRole.value = role
+    partnerModalTab.value = tab
+    partnerModalOpen.value = true
+    closeMobileMenu()
+}
+
+const closePartnerModal = () => {
+    partnerModalOpen.value = false
+}
+
 /*
 |--------------------------------------------------------------------------
 | DASHBOARD
@@ -94,6 +109,10 @@ const goToDashboard = () => {
                 : safeRoute('buyer.dashboard'))
 
     if (destination !== '#') {
+        if (userType === 'sorting_center' || destination.includes('sorting-center')) {
+            window.location.assign(destination)
+            return
+        }
         router.visit(destination)
     }
 }
@@ -180,13 +199,18 @@ const handleEscape = event => {
     if (event.key === 'Escape') {
         closeMobileMenu()
         closeAuthModal()
+        closePartnerModal()
     }
 }
 
 watch(() => page.url, url => {
     const mode = new URLSearchParams(url.split('?')[1] ?? '').get('auth')
     if (['register-logistics', 'register-rider'].includes(mode) && !isLoggedIn.value) {
-        router.visit(route(mode === 'register-rider' ? 'register.rider' : 'register.logistics'))
+        openPartnerModal(mode === 'register-rider' ? 'rider' : 'logistics', 'signup')
+        return
+    }
+    if (['partner-login'].includes(mode) && !isLoggedIn.value) {
+        openPartnerModal('logistics', 'login')
         return
     }
     if (['login', 'register', 'register-buyer', 'register-seller'].includes(mode) && !isLoggedIn.value) openAuthModal(mode)
@@ -650,11 +674,11 @@ onUnmounted(() => {
                         </div>
                         <div class="flex flex-col items-start">
                             <p class="flex-1 text-sm leading-6 text-[#64748B]">Manage deliveries and logistics services with Alona.</p>
-                            <Link :href="route('register.logistics')" class="mt-4 inline-flex rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066B76]">Become a Logistics Partner</Link>
+                            <button type="button" class="mt-4 inline-flex rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066B76]" @click="openPartnerModal('logistics')">Become a Logistics Partner</button>
                         </div>
                         <div class="flex flex-col items-start">
                             <p class="flex-1 text-sm leading-6 text-[#64748B]">Join our delivery network and start accepting deliveries.</p>
-                            <Link :href="route('register.rider')" class="mt-4 inline-flex rounded-xl border border-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#E8F7F6]">Become a Rider</Link>
+                            <button type="button" class="mt-4 inline-flex rounded-xl border border-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#E8F7F6]" @click="openPartnerModal('rider')">Become a Rider</button>
                         </div>
                     </div>
                 </div>
@@ -677,12 +701,20 @@ onUnmounted(() => {
             </div>
         </footer>
 
-        <!-- AUTH MODAL -->
+        <!-- AUTH MODAL (BUYER & SELLER) -->
         <AuthModal
             :show="authModalOpen"
             :mode="authModalMode"
             @close="closeAuthModal"
             @update:mode="authModalMode = $event"
+        />
+
+        <!-- PARTNER AUTH MODAL (LOGISTICS & RIDER) -->
+        <PartnerAuthModal
+            :show="partnerModalOpen"
+            :initial-role="partnerModalRole"
+            :initial-tab="partnerModalTab"
+            @close="closePartnerModal"
         />
     </div>
 </template>

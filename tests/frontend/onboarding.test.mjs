@@ -169,7 +169,7 @@ test('a slow independent-city lookup remains available after choosing a province
 });
 test('portal logout ends the web session even with an expired API token', async () => {
  const requests=[], removed=[]; const window={ logisticsSession: {token:'expired'}, location:{href:''}, alert:()=>assert.fail('Unexpected logout error') };
- const {state,stop}=setup('Logistics/components/ScLayout.vue', {}, {
+ const {state,stop}=setup('Layouts/ScLayout.vue', {}, {
   fetch:async url=>{requests.push(url);return {ok:true}}, window, confirm:()=>true,
   document:{querySelector:()=>({content:'csrf'})}, localStorage:{getItem:()=> 'expired', removeItem:key=>removed.push(key)}
  });
@@ -177,7 +177,7 @@ test('portal logout ends the web session even with an expired API token', async 
 });
 test('failed web logout keeps credentials and shows an error', async () => {
  const removed=[],alerts=[]; const window={logisticsSession:{},location:{href:''},alert:message=>alerts.push(message)};
- const {state,stop}=setup('Logistics/components/ScLayout.vue', {}, {
+ const {state,stop}=setup('Layouts/ScLayout.vue', {}, {
   fetch:async()=>({ok:false}),window,confirm:()=>true,console:{error:()=>{}},
   document:{querySelector:()=>({content:'csrf'})},localStorage:{getItem:()=> 'token',removeItem:key=>removed.push(key)}
  });

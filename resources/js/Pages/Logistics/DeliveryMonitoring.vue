@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <sc-layout title="Delivery Monitoring">
     <div class="app-page-shell">
       <!-- Unauthenticated State -->
@@ -143,7 +143,7 @@
 
 <script>
 import { onMounted, onUnmounted, reactive, ref } from 'vue';
-import ScLayout from './ScLayout.vue';
+import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
   name: 'DeliveryMonitoring',

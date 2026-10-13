@@ -48,7 +48,7 @@
 
 <script>
 import { onMounted, reactive, ref } from 'vue';
-import ScLayout from './ScLayout.vue';
+import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
   name: 'Dashboard',

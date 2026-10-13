@@ -38,8 +38,8 @@
 </template>
 
 <script>
-import ProtectedProofImage from './ProtectedProofImage.vue';
-import ScLayout from './ScLayout.vue';
+import ProtectedProofImage from '@/Components/ProtectedProofImage.vue';
+import ScLayout from '@/Layouts/ScLayout.vue';
 export default {
   name: 'DeliveryProofReview',
   components: { ProtectedProofImage, ScLayout },

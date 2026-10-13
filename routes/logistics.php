@@ -15,6 +15,10 @@ Route::redirect('/sorting-center/register', '/register/logistics')->name('sortin
 Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])->group(function () {
     foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests'] as $page) {
         Route::get($page, function (Request $request) use ($page) {
+            if ($request->header('X-Inertia')) {
+                return \Inertia\Inertia::location($request->fullUrl());
+            }
+
             $token = $request->session()->get('logistics.web_token');
             $accessToken = $token ? PersonalAccessToken::findToken($token) : null;
             if (! $accessToken || $accessToken->tokenable_id !== $request->user()->id || $accessToken->expires_at?->isPast()) {

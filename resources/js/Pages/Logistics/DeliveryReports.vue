@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <sc-layout title="Delivery Reports">
     <div class="app-page-shell">
       <!-- Unauthenticated State -->
@@ -170,7 +170,7 @@
 <script>
 import { reactive, ref, nextTick, onBeforeUnmount } from 'vue';
 import Chart from 'chart.js/auto';
-import ScLayout from './ScLayout.vue';
+import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
   name: 'DeliveryReports',

@@ -8,7 +8,9 @@ use App\Services\AccountDestination;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 use Laravel\Sanctum\PersonalAccessToken;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -17,7 +19,7 @@ class AuthenticatedSessionController extends Controller
         return redirect('/?auth=login');
     }
 
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request): SymfonyResponse|RedirectResponse
     {
         $request->authenticate();
 
@@ -26,6 +28,10 @@ class AuthenticatedSessionController extends Controller
         $destination = app(AccountDestination::class)->route($request->user());
         // Discard arbitrary cross-role intended URLs; dashboard routes enforce their own permissions.
         $request->session()->forget('url.intended');
+
+        if (str_starts_with($destination, 'sorting-center.')) {
+            return Inertia::location(route($destination));
+        }
 
         return redirect()->route($destination);
     }

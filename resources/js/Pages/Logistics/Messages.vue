@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <sc-layout title="Messages">
     <div class="app-page-shell">
       <div v-if="!token" class="app-panel app-empty-state">
@@ -217,7 +217,7 @@
 
 <script>
 import { computed, onMounted, ref } from 'vue';
-import ScLayout from './ScLayout.vue';
+import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
   name: 'Messages',
