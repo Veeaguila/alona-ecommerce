@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ class BuyerConversationController extends Controller
      * Display the buyer conversations and the selected conversation
      * on the same page.
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|JsonResponse
     {
         $buyer = $request->user();
 
@@ -27,7 +28,7 @@ class BuyerConversationController extends Controller
         $conversations = $buyer->conversationsAsBuyer()
             ->with([
                 'seller:id,name,store_name',
-                'product:id,name,image_path',
+                'product:id,name,image_path,price',
                 'order:id,order_number,status',
 
                 // Only load the latest message for the conversation preview.
@@ -139,6 +140,14 @@ class BuyerConversationController extends Controller
         | On mobile, the Vue page can switch between the two sections.
         |--------------------------------------------------------------------------
         */
+        if ($request->wantsJson()) {
+            return response()->json([
+                'conversations' => $conversations,
+                'selectedConversation' => $selectedConversation,
+                'messages' => $messages,
+            ]);
+        }
+
         return Inertia::render('Buyer/Conversations', [
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
@@ -155,7 +164,7 @@ class BuyerConversationController extends Controller
     public function show(
         Request $request,
         Conversation $conversation
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         $buyer = $request->user();
 
         /*
@@ -179,6 +188,27 @@ class BuyerConversationController extends Controller
             ->update([
                 'read_at' => now(),
             ]);
+
+        if ($request->wantsJson()) {
+            $conversation->load([
+                'seller:id,name,store_name',
+                'product:id,name,image_path,price',
+                'order:id,order_number,status,created_at',
+            ]);
+
+            $messages = $conversation
+                ->messages()
+                ->with('sender:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            $conversation->unread_count = 0;
+
+            return response()->json([
+                'conversation' => $conversation,
+                'messages' => $messages,
+            ]);
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -206,7 +236,7 @@ class BuyerConversationController extends Controller
     public function store(
         Request $request,
         Conversation $conversation
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         $buyer = $request->user();
 
         /*
@@ -237,7 +267,7 @@ class BuyerConversationController extends Controller
         | Create message.
         |--------------------------------------------------------------------------
         */
-        $conversation->messages()->create([
+        $message = $conversation->messages()->create([
             'sender_id' => $buyer->id,
             'body' => trim($data['body']),
         ]);
@@ -250,6 +280,13 @@ class BuyerConversationController extends Controller
         $conversation->update([
             'last_message_at' => now(),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message->load('sender:id,name'),
+                'conversation_id' => $conversation->id,
+            ]);
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -269,7 +306,7 @@ class BuyerConversationController extends Controller
     public function start(
         Request $request,
         Product $product
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         /*
         |--------------------------------------------------------------------------
         | Product must have a seller.
@@ -310,6 +347,12 @@ class BuyerConversationController extends Controller
         ) {
             $conversation->update([
                 'product_id' => $product->id,
+            ]);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'conversation_id' => $conversation->id,
             ]);
         }
 

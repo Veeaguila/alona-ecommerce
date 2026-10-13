@@ -11,8 +11,13 @@ import {
     router,
     usePage,
 } from '@inertiajs/vue3'
+import FloatingChatWidget from '@/Components/FloatingChatWidget.vue'
 
 const page = usePage()
+
+const isConversationsPage = computed(() => {
+    return page.component === 'Buyer/Conversations'
+})
 
 /*
 |--------------------------------------------------------------------------
@@ -270,13 +275,8 @@ const searchProducts = () => {
 const openMessages = () => {
     closeMenus()
 
-    const destination = safeRoute(
-        'buyer.conversations',
-        safeRoute('buyer.messages')
-    )
-
-    if (destination !== '#') {
-        router.visit(destination)
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-buyer-chat'))
     }
 }
 
@@ -710,40 +710,6 @@ onUnmounted(() => {
                     class="ml-auto hidden shrink-0 items-center gap-1 md:flex"
                 >
                     <template v-if="user">
-                    <!-- ================================================= -->
-                    <!-- MESSAGES -->
-                    <!-- ================================================= -->
-
-                    <button
-                        type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        aria-label="Messages"
-                        title="Messages"
-                        @click="openMessages"
-                    >
-
-                        <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        >
-
-                            <path
-                                d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-4 2v-5.1A7.5 7.5 0 0 1 4.5 4.5 7.5 7.5 0 0 1 20 11.5Z"
-                                stroke-linejoin="round"
-                            />
-
-                            <path
-                                d="M8 11h.01M12 11h.01M16 11h.01"
-                                stroke-linecap="round"
-                                stroke-width="2.5"
-                            />
-
-                        </svg>
-
-                    </button>
 
 
                     <!-- ================================================= -->
@@ -1631,38 +1597,7 @@ onUnmounted(() => {
                     class="ml-auto flex items-center gap-1 md:hidden"
                 >
 
-                    <!-- MOBILE MESSAGES -->
 
-                    <button
-                        type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        aria-label="Messages"
-                        title="Messages"
-                        @click="openMessages"
-                    >
-
-                        <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        >
-
-                            <path
-                                d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-4 2v-5.1A7.5 7.5 0 0 1 4.5 4.5 7.5 7.5 0 0 1 20 11.5Z"
-                                stroke-linejoin="round"
-                            />
-
-                            <path
-                                d="M8 11h.01M12 11h.01M16 11h.01"
-                                stroke-linecap="round"
-                                stroke-width="2.5"
-                            />
-
-                        </svg>
-
-                    </button>
 
 
                     <!-- MOBILE CART -->
@@ -2812,6 +2747,9 @@ onUnmounted(() => {
             </div>
 
         </footer>
+
+        <!-- Floating Chat Widget (Shopee-Style Dock) -->
+        <FloatingChatWidget v-if="user && !isConversationsPage" />
 
     </div>
 
