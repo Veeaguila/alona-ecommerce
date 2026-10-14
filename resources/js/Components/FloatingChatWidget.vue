@@ -7,7 +7,7 @@ import {
     ref,
     watch,
 } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
 
@@ -341,11 +341,36 @@ const handleGlobalChatOpen = e => {
     isMinimized.value = false
 
     const detail = e.detail || {}
-    fetchConversations().then(() => {
+    fetchConversations().then(async () => {
         if (detail.conversationId) {
             const found = conversations.value.find(c => c.id === Number(detail.conversationId))
             if (found) {
                 selectConversation(found)
+            }
+        } else if (detail.sellerId) {
+            const found = conversations.value.find(c => Number(c.seller_id) === Number(detail.sellerId))
+            if (found) {
+                selectConversation(found)
+            } else if (detail.productId) {
+                try {
+                    const res = await fetch(`/buyer/conversations/start/${detail.productId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                    if (res.ok) {
+                        const data = await res.json()
+                        await fetchConversations()
+                        if (data.conversation_id) {
+                            const newConv = conversations.value.find(c => c.id === Number(data.conversation_id))
+                            if (newConv) selectConversation(newConv)
+                        }
+                    }
+                } catch (err) {}
             }
         }
     })
@@ -379,41 +404,35 @@ onUnmounted(() => {
 <template>
     <!-- FLOATING CHAT ROOT -->
     <div v-if="isBuyer" class="fixed z-50 bottom-4 right-4 sm:right-6 font-sans">
-        <!-- 1. MINIMIZED / CLOSED FLOATING PILL BUTTON (Alona Branded) -->
+        <!-- 1. FLOATING CHAT BUTTON (Circular FAB Icon Only) -->
         <button
             v-if="!isOpen"
             type="button"
             @click="toggleOpen"
-            class="group relative flex items-center gap-2.5 px-4 py-2.5 bg-white hover:bg-[#F0FAF9] text-[#087F8C] rounded-2xl shadow-[0_6px_25px_rgba(8,127,140,0.18)] border border-[#D5EFEF] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(8,127,140,0.24)] cursor-pointer"
+            class="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#087F8C] to-[#0A96A6] hover:from-[#066B76] hover:to-[#087F8C] text-white shadow-[0_8px_30px_rgba(8,127,140,0.38)] hover:shadow-[0_12px_36px_rgba(8,127,140,0.48)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 active:scale-95 cursor-pointer"
             aria-label="Open Alona Chat"
+            title="Chat with sellers"
         >
-            <!-- Alona Teal Chat Bubble Icon with Dots -->
-            <div class="relative flex items-center justify-center">
-                <svg
-                    class="w-5 h-5 text-[#087F8C] transition-transform duration-200 group-hover:scale-105"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                >
-                    <path
-                        d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
-                    />
-                    <circle cx="8" cy="11.25" r="1.2" fill="#FFFFFF" />
-                    <circle cx="12" cy="11.25" r="1.2" fill="#FFFFFF" />
-                    <circle cx="16" cy="11.25" r="1.2" fill="#FFFFFF" />
-                </svg>
+            <!-- Large Chat Bubble Icon with Dots -->
+            <svg
+                class="w-7 h-7 sm:w-8 sm:h-8 text-white transition-transform duration-200 group-hover:scale-110"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+            >
+                <path
+                    d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
+                />
+                <circle cx="8" cy="11.25" r="1.3" fill="#087F8C" />
+                <circle cx="12" cy="11.25" r="1.3" fill="#087F8C" />
+                <circle cx="16" cy="11.25" r="1.3" fill="#087F8C" />
+            </svg>
 
-                <!-- Unread Badge on Icon (Orange/Coral Accent) -->
-                <span
-                    v-if="totalUnreadCount > 0"
-                    class="absolute -top-1.5 -right-2 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black leading-none text-white bg-[#FF6B35] border-2 border-white rounded-full shadow-sm animate-pulse"
-                >
-                    {{ totalUnreadCount > 99 ? '99+' : totalUnreadCount }}
-                </span>
-            </div>
-
-            <!-- "Chat" Text in Alona Teal -->
-            <span class="text-sm font-extrabold tracking-tight text-[#087F8C]">
-                Chat
+            <!-- Unread Badge on Icon -->
+            <span
+                v-if="totalUnreadCount > 0"
+                class="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1 text-[11px] font-black leading-none text-white bg-[#EF4444] border-2 border-white rounded-full shadow-md animate-pulse"
+            >
+                {{ totalUnreadCount > 99 ? '99+' : totalUnreadCount }}
             </span>
         </button>
 
@@ -683,18 +702,17 @@ onUnmounted(() => {
                             </div>
 
                             <!-- Store link -->
-                            <a
+                            <Link
                                 v-if="selectedConversation.seller_id"
                                 :href="`/buyer/store/${selectedConversation.seller_id}`"
-                                target="_blank"
-                                class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-bold text-[#087F8C] bg-[#E8F7F6] hover:bg-[#087F8C] hover:text-white rounded-lg transition"
+                                class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-bold text-[#087F8C] bg-[#E8F7F6] hover:bg-[#087F8C] hover:text-white rounded-lg transition cursor-pointer"
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                                     <polyline points="9 22 9 12 15 12 15 22" />
                                 </svg>
                                 <span>Visit Store</span>
-                            </a>
+                            </Link>
                         </div>
 
                         <!-- Chat Timeline -->
@@ -740,13 +758,12 @@ onUnmounted(() => {
                                     </p>
                                 </div>
 
-                                <a
+                                <Link
                                     :href="`/buyer/product/${selectedConversation.product.id}`"
-                                    target="_blank"
-                                    class="shrink-0 px-3 py-1 text-[11px] font-bold text-[#087F8C] bg-[#E8F7F6] hover:bg-[#087F8C] hover:text-white rounded-lg transition"
+                                    class="shrink-0 px-3 py-1 text-[11px] font-bold text-[#087F8C] bg-[#E8F7F6] hover:bg-[#087F8C] hover:text-white rounded-lg transition cursor-pointer"
                                 >
                                     View Product
-                                </a>
+                                </Link>
                             </div>
 
                             <!-- Messages Loop -->

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BuyerDashboardController;
+use App\Http\Controllers\BuyerStoreController;
 use App\Http\Controllers\BuyerSupportController;
 use App\Http\Controllers\GuestProductController;
 use App\Http\Controllers\ProfileController;
@@ -27,6 +28,11 @@ Route::get('/product/{product}', [
     GuestProductController::class,
     'show',
 ])->name('guest.product');
+
+Route::get('/store/{seller}', [
+    BuyerStoreController::class,
+    'show',
+])->name('guest.store');
 
 Route::get('/help', [
     BuyerSupportController::class,
