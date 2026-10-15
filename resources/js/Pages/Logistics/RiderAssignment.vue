@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <sc-layout title="Rider Assignment">
     <div class="app-page-shell">
       <!-- Unauthenticated State -->

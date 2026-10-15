@@ -12,50 +12,50 @@
 
         <!-- Sidebar -->
         <aside
-            class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#E5E7EB] bg-white transition-transform duration-200 lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex h-full min-h-0 flex-col">
 
                 <!-- Logo -->
-                    <div
-                        class="relative flex h-[80px] shrink-0 items-center justify-center border-b border-[#E5E7EB] px-5"
+                <div
+                    class="relative flex h-[80px] shrink-0 items-center justify-center border-b border-white/10 px-5"
+                >
+                    <Link
+                        :href="route('seller.dashboard')"
+                        class="flex items-center justify-center rounded-xl bg-white px-3.5 py-1.5 shadow-sm transition hover:bg-slate-50"
+                        @click="closeSidebar"
                     >
-                        <Link
-                            :href="route('seller.dashboard')"
-                            class="flex items-center justify-center"
-                            @click="closeSidebar"
-                        >
-                            <img
-                                src="/images/alona.png"
-                                alt="Alona"
-                                class="block h-auto max-h-10 w-auto max-w-[170px] object-contain"
-                            />
-                        </Link>
+                        <img
+                            src="/images/alona.png"
+                            alt="Alona"
+                            class="block h-7 w-auto max-w-[150px] object-contain"
+                        />
+                    </Link>
 
-                        <!-- Mobile Close -->
-                        <button
-                            type="button"
-                            class="absolute right-3 rounded-lg p-2 text-slate-500 hover:bg-[#F8FAF9] hover:text-[#087F8C] lg:hidden"
-                            @click="closeSidebar"
-                            aria-label="Close sidebar"
+                    <!-- Mobile Close -->
+                    <button
+                        type="button"
+                        class="absolute right-3 rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
+                        @click="closeSidebar"
+                        aria-label="Close sidebar"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="1.8"
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
                 <!-- Scrollable Navigation -->
                 <div
                     class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
@@ -64,7 +64,7 @@
                     <!-- Workspace -->
                     <div class="pt-5">
                         <p
-                            class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400"
+                            class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-teal-100/70"
                         >
                             Workspace
                         </p>
@@ -77,8 +77,8 @@
                                 class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
                                 :class="
                                     isActive(item)
-                                        ? 'bg-[#E8F7F6] text-[#087F8C]'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-[#087F8C]'
+                                        ? 'bg-[#F5A711] text-[#043E44] font-bold shadow-md'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white'
                                 "
                                 @click="closeSidebar"
                             >
@@ -211,7 +211,7 @@
                     <!-- Configure -->
                     <div class="pt-7">
                         <p
-                            class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400"
+                            class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-teal-100/70"
                         >
                             Configure
                         </p>
@@ -224,8 +224,8 @@
                                 class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
                                 :class="
                                     isActive(item)
-                                        ? 'bg-[#E8F7F6] text-[#087F8C]'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-[#087F8C]'
+                                        ? 'bg-[#F5A711] text-[#043E44] font-bold shadow-md'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white'
                                 "
                                 @click="closeSidebar"
                             >
@@ -294,12 +294,12 @@
                 </div>
 
                 <!-- Store Status -->
-                <div class="shrink-0 border-t border-[#E5E7EB] bg-white p-3">
+                <div class="shrink-0 border-t border-white/10 bg-black/10 p-3">
                     <div
-                        class="flex items-center gap-3 rounded-xl bg-[#F8FAF9] px-3 py-3"
+                        class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-xs"
                     >
                         <span
-                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#087F8C] shadow-xs"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -318,17 +318,17 @@
                         </span>
 
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold text-slate-700">
+                            <p class="text-xs font-semibold text-white">
                                 Store status
                             </p>
 
                             <div class="mt-0.5 flex items-center gap-1.5">
                                 <span
-                                    class="h-1.5 w-1.5 rounded-full bg-[#22A06B]"
+                                    class="h-1.5 w-1.5 rounded-full bg-emerald-400"
                                 ></span>
 
                                 <span
-                                    class="truncate text-[11px] font-medium text-[#22A06B]"
+                                    class="truncate text-[11px] font-medium text-emerald-300"
                                 >
                                     Active
                                 </span>

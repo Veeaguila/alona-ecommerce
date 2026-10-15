@@ -88,4 +88,9 @@ class Product extends Model
         return $this->hasMany(ProductComplianceReview::class)
             ->latest('reviewed_at');
     }
+
+    public function stockAdjustments(): HasMany
+    {
+        return $this->hasMany(StockAdjustment::class)->latest();
+    }
 }

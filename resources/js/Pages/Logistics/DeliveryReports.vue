@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <sc-layout title="Delivery Reports">
     <div class="app-page-shell">
       <!-- Unauthenticated State -->

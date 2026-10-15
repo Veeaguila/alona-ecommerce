@@ -190,6 +190,11 @@ class User extends Authenticatable
         return $this->hasMany(SellerReview::class, 'seller_id');
     }
 
+    public function stockAdjustments(): HasMany
+    {
+        return $this->hasMany(StockAdjustment::class, 'seller_id')->latest();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Attribute casting

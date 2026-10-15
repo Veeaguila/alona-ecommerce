@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <sc-layout title="Dashboard">
     <div class="app-page-shell">
       <div v-if="!token" class="app-panel app-empty-state">

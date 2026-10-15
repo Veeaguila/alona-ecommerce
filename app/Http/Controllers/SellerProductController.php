@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\StockAdjustment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -239,11 +240,23 @@ class SellerProductController extends Controller
                 ->count(),
         ];
 
+        $recentAdjustments = StockAdjustment::query()
+            ->where('seller_id', $seller->id)
+            ->with([
+                'product:id,name,image_path',
+                'variant:id,product_id,color,size',
+                'user:id,name',
+            ])
+            ->latest()
+            ->take(25)
+            ->get();
+
         return Inertia::render(
             'Seller/StockMonitoring',
             [
                 'products' => $products,
                 'summary' => $summary,
+                'recent_adjustments' => $recentAdjustments,
 
                 'filters' => [
                     'search' => $search,
@@ -605,8 +618,27 @@ class SellerProductController extends Controller
             'images:id,product_id,image_path,sort_order',
         ]);
 
+        $typeFilter = $request->input('type', 'all');
+
+        $adjustments = $product->stockAdjustments()
+            ->with([
+                'variant:id,product_id,color,size',
+                'user:id,name,email',
+            ])
+            ->when(
+                $typeFilter && $typeFilter !== 'all',
+                fn ($q) => $q->where('type', $typeFilter)
+            )
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Seller/Inventory', [
             'product' => $product,
+            'adjustments' => $adjustments,
+            'filters' => [
+                'type' => $typeFilter,
+            ],
         ]);
     }
 
@@ -621,8 +653,10 @@ class SellerProductController extends Controller
         Request $request,
         Product $product
     ): RedirectResponse {
+        $seller = $request->user();
+
         abort_unless(
-            $product->seller_id === $request->user()->id,
+            $product->seller_id === $seller->id,
             403
         );
 
@@ -631,6 +665,24 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+            ],
+
+            'type' => [
+                'nullable',
+                'string',
+                Rule::in(['stock_in', 'stock_out', 'damage', 'return', 'manual']),
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'reference_number' => [
+                'nullable',
+                'string',
+                'max:100',
             ],
 
             'variants' => [
@@ -649,12 +701,23 @@ class SellerProductController extends Controller
                 'integer',
                 'min:0',
             ],
+
+            'variants.*.notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
         ]);
 
         DB::transaction(function () use (
             $validated,
-            $product
+            $product,
+            $seller
         ) {
+            $defaultType = $validated['type'] ?? null;
+            $defaultNotes = $validated['notes'] ?? null;
+            $refNumber = $validated['reference_number'] ?? null;
+
             foreach (
                 $validated['variants'] ?? []
                 as $variantData
@@ -668,9 +731,31 @@ class SellerProductController extends Controller
                     403
                 );
 
-                $variant->update([
-                    'stock' => $variantData['stock'],
-                ]);
+                $beforeStock = (int) $variant->stock;
+                $afterStock = (int) $variantData['stock'];
+                $diff = $afterStock - $beforeStock;
+
+                if ($diff !== 0) {
+                    $variant->update([
+                        'stock' => $afterStock,
+                    ]);
+
+                    $itemType = $defaultType ?? ($diff > 0 ? 'stock_in' : 'stock_out');
+                    $itemNotes = $variantData['notes'] ?? $defaultNotes ?? ($diff > 0 ? 'Stock replenished via inventory' : 'Stock adjusted via inventory');
+
+                    StockAdjustment::create([
+                        'seller_id' => $seller->id,
+                        'user_id' => $seller->id,
+                        'product_id' => $product->id,
+                        'product_variant_id' => $variant->id,
+                        'type' => $itemType,
+                        'quantity' => $diff,
+                        'before_stock' => $beforeStock,
+                        'after_stock' => $afterStock,
+                        'notes' => $itemNotes,
+                        'reference_number' => $refNumber,
+                    ]);
+                }
             }
 
             if ($product->variants()->exists()) {
@@ -682,16 +767,166 @@ class SellerProductController extends Controller
                     'stock' => $totalStock,
                 ]);
             } else {
-                $product->update([
-                    'stock' => $validated['stock'],
-                ]);
+                $beforeStock = (int) $product->stock;
+                $afterStock = (int) $validated['stock'];
+                $diff = $afterStock - $beforeStock;
+
+                if ($diff !== 0) {
+                    $product->update([
+                        'stock' => $afterStock,
+                    ]);
+
+                    $itemType = $defaultType ?? ($diff > 0 ? 'stock_in' : 'stock_out');
+                    $itemNotes = $defaultNotes ?? ($diff > 0 ? 'Stock replenished via inventory' : 'Stock adjusted via inventory');
+
+                    StockAdjustment::create([
+                        'seller_id' => $seller->id,
+                        'user_id' => $seller->id,
+                        'product_id' => $product->id,
+                        'product_variant_id' => null,
+                        'type' => $itemType,
+                        'quantity' => $diff,
+                        'before_stock' => $beforeStock,
+                        'after_stock' => $afterStock,
+                        'notes' => $itemNotes,
+                        'reference_number' => $refNumber,
+                    ]);
+                }
             }
         });
 
         return back()->with(
             'status',
-            'Inventory updated successfully.'
+            'Inventory updated and logged successfully.'
         );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOCK ADJUSTMENT AUDIT LOGGING (SELLER-13)
+    |--------------------------------------------------------------------------
+    */
+
+    public function adjustStock(
+        Request $request,
+        Product $product
+    ): RedirectResponse {
+        $seller = $request->user();
+
+        abort_unless(
+            $product->seller_id === $seller->id,
+            403
+        );
+
+        $validated = $request->validate([
+            'type' => [
+                'required',
+                'string',
+                Rule::in(['stock_in', 'stock_out', 'damage', 'return', 'manual']),
+            ],
+            'quantity' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+            'mode' => [
+                'nullable',
+                'string',
+                Rule::in(['add', 'subtract', 'set']),
+            ],
+            'product_variant_id' => [
+                'nullable',
+                'integer',
+                'exists:product_variants,id',
+            ],
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+            'reference_number' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+        ]);
+
+        return DB::transaction(function () use ($validated, $product, $seller) {
+            $variant = null;
+            if (!empty($validated['product_variant_id'])) {
+                $variant = $product->variants()
+                    ->whereKey($validated['product_variant_id'])
+                    ->first();
+
+                abort_unless($variant, 403, 'Variant not found for this product.');
+            } elseif ($product->variants()->exists()) {
+                return back()->withErrors([
+                    'product_variant_id' => 'Please select a variant for this product.',
+                ]);
+            }
+
+            $currentStock = $variant ? (int) $variant->stock : (int) $product->stock;
+            $type = $validated['type'];
+            $qty = (int) $validated['quantity'];
+            $mode = $validated['mode'] ?? null;
+
+            if ($type === 'stock_in' || $type === 'return') {
+                $delta = $qty;
+                $newStock = $currentStock + $qty;
+            } elseif ($type === 'damage' || $type === 'stock_out') {
+                if ($qty > $currentStock) {
+                    return back()->withErrors([
+                        'quantity' => "Cannot deduct {$qty} items. Current stock is only {$currentStock}.",
+                    ]);
+                }
+                $delta = -$qty;
+                $newStock = $currentStock - $qty;
+            } else { // manual
+                if ($mode === 'subtract') {
+                    if ($qty > $currentStock) {
+                        return back()->withErrors([
+                            'quantity' => "Cannot deduct {$qty} items. Current stock is only {$currentStock}.",
+                        ]);
+                    }
+                    $delta = -$qty;
+                    $newStock = $currentStock - $qty;
+                } elseif ($mode === 'set') {
+                    $newStock = $qty;
+                    $delta = $newStock - $currentStock;
+                } else { // add
+                    $delta = $qty;
+                    $newStock = $currentStock + $qty;
+                }
+            }
+
+            if ($variant) {
+                $variant->update(['stock' => $newStock]);
+                $product->update([
+                    'stock' => $product->variants()->sum('stock'),
+                ]);
+            } else {
+                $product->update(['stock' => $newStock]);
+            }
+
+            StockAdjustment::create([
+                'seller_id' => $seller->id,
+                'user_id' => $seller->id,
+                'product_id' => $product->id,
+                'product_variant_id' => $variant?->id,
+                'type' => $type,
+                'quantity' => $delta,
+                'before_stock' => $currentStock,
+                'after_stock' => $newStock,
+                'notes' => $validated['notes'] ?? null,
+                'reference_number' => $validated['reference_number'] ?? null,
+            ]);
+
+            return back()->with(
+                'status',
+                'Stock adjustment logged successfully.'
+            );
+        });
     }
 
 

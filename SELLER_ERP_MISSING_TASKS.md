@@ -17,7 +17,7 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 ## Inventory Management
 
 - [ ] **SELLER-12: Reserved vs available stock tracking.** Separate reserved checkout stock from available inventory.
-- [ ] **SELLER-13: Stock adjustment audit logging.** Log stock-in, stock-out, damages, returns, and manual adjustments with notes.
+- [x] **SELLER-13: Stock adjustment audit logging.** Log stock-in, stock-out, damages, returns, and manual adjustments with notes.
 - [ ] **SELLER-14: Inventory history and timeline.** Add an inventory movement ledger showing every quantity change over time.
 - [ ] **SELLER-15: Bulk stock updates.** Add a multi-product and multi-variant quick stock adjustment modal or table.
 - [ ] **SELLER-16: Customizable low-stock threshold.** Allow sellers to set custom low-stock alert thresholds per product or variant.

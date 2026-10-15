@@ -48,6 +48,7 @@ return [
 
         // Keep SSL certificate verification enabled.
         'verify' => env('GOOGLE_VERIFY_SSL', true),
+        'ca_bundle' => env('GOOGLE_CA_BUNDLE', storage_path('certs/cacert.pem')),
     ],
 
 ];

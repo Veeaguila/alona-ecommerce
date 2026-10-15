@@ -100,6 +100,11 @@ Route::middleware([
         'updateInventory',
     ])->name('seller.products.inventory.update');
 
+    Route::post('/seller/products/{product}/adjust-stock', [
+        SellerProductController::class,
+        'adjustStock',
+    ])->name('seller.products.adjust-stock');
+
 
     /*
     |--------------------------------------------------------------------------

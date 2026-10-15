@@ -29,7 +29,12 @@ class GoogleController extends Controller
         try {
             $google = $this->googleDriver()->user();
         } catch (\Throwable $e) {
-            Log::warning('Google authentication failed.', ['exception' => $e::class]);
+            $responseBody = method_exists($e, 'getResponse') && $e->getResponse() ? (string) $e->getResponse()->getBody() : null;
+            Log::warning('Google authentication failed.', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+                'response' => $responseBody,
+            ]);
 
             return redirect('/?auth=login')->withErrors(['email' => 'Google sign-in could not be completed. Please try again.']);
         }
@@ -67,6 +72,15 @@ class GoogleController extends Controller
 
     private function googleDriver()
     {
-        return Socialite::driver('google')->setHttpClient(new Client(['verify' => config('services.google.verify', true)]));
+        $verify = config('services.google.verify', true);
+        $caBundle = config('services.google.ca_bundle');
+
+        if ($verify !== false && $caBundle && file_exists($caBundle)) {
+            $verify = $caBundle;
+        } elseif ($verify !== false && file_exists(storage_path('certs/cacert.pem'))) {
+            $verify = storage_path('certs/cacert.pem');
+        }
+
+        return Socialite::driver('google')->setHttpClient(new Client(['verify' => $verify]));
     }
 }
