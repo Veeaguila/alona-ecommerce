@@ -310,6 +310,21 @@ Route::middleware([
         'reply',
     ])->name('seller.reviews.reply');
 
+    Route::post('/seller/reviews/{review}/report', [
+        SellerReviewController::class,
+        'report',
+    ])->name('seller.reviews.report');
+
+    Route::post('/seller/store-reviews/{sellerReview}/reply', [
+        SellerReviewController::class,
+        'replyStoreReview',
+    ])->name('seller.store-reviews.reply');
+
+    Route::post('/seller/store-reviews/{sellerReview}/report', [
+        SellerReviewController::class,
+        'reportStoreReview',
+    ])->name('seller.store-reviews.report');
+
 
     /*
     |--------------------------------------------------------------------------

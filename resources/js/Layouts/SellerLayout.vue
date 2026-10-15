@@ -167,6 +167,28 @@
                                     />
                                 </svg>
 
+                                <!-- Customer Reviews -->
+                                <svg
+                                    v-else-if="item.key === 'reviews'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M20 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 7.1l1.09 2.22 2.45.36-1.77 1.73.42 2.44L12 12.7l-2.19 1.15.42-2.44-1.77-1.73 2.45-.36L12 7.1z"
+                                    />
+                                </svg>
+
                                 <!-- Reports -->
                                 <svg
                                     v-else-if="item.key === 'reports'"
@@ -590,6 +612,11 @@ const navigation = [
         key: 'vouchers',
     },
     {
+        label: 'Customer Reviews',
+        href: route('seller.reviews'),
+        key: 'reviews',
+    },
+    {
         label: 'Sales Report',
         href: route('seller.reports'),
         key: 'reports',
@@ -654,6 +681,10 @@ const isActive = (item) => {
 
     if (item.key === 'vouchers') {
         return currentPath.value.startsWith('/seller/vouchers')
+    }
+
+    if (item.key === 'reviews') {
+        return currentPath.value.startsWith('/seller/reviews')
     }
 
     if (item.key === 'reports') {

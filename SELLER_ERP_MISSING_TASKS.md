@@ -39,10 +39,10 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Customer Feedback and Reviews
 
-- [ ] **SELLER-32: Report inappropriate review.** Allow sellers to report abusive or fraudulent reviews to platform admins.
-- [ ] **SELLER-33: Seller rating & review management.** View and manage direct store ratings alongside product reviews.
-- [ ] **SELLER-34: Review media viewer.** Let sellers view customer-uploaded photos and videos in a lightbox modal.
-- [ ] **SELLER-35: Rating distribution breakdown.** Display visual 1-star to 5-star rating breakdown graphs and statistics.
+- [x] **SELLER-32: Report inappropriate review.** Allow sellers to report abusive or fraudulent reviews to platform admins.
+- [x] **SELLER-33: Seller rating & review management.** View and manage direct store ratings alongside product reviews.
+- [x] **SELLER-34: Review media viewer.** Let sellers view customer-uploaded photos and videos in a lightbox modal.
+- [x] **SELLER-35: Rating distribution breakdown.** Display visual 1-star to 5-star rating breakdown graphs and statistics.
 
 ## Returns and Refunds
 

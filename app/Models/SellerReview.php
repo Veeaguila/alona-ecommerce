@@ -13,15 +13,24 @@ class SellerReview extends Model
         'order_id',
         'rating',
         'comment',
+        'media',
         'seller_reply',
         'seller_replied_at',
+        'is_reported',
+        'report_reason',
+        'report_notes',
+        'report_status',
+        'reported_at',
     ];
 
     protected function casts(): array
     {
         return [
             'rating' => 'integer',
+            'media' => 'array',
             'seller_replied_at' => 'datetime',
+            'is_reported' => 'boolean',
+            'reported_at' => 'datetime',
         ];
     }
 
