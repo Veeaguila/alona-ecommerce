@@ -96,20 +96,6 @@ class SellerFulfillmentWaybillAndPickupTest extends TestCase
         );
     }
 
-    public function test_seller_can_view_printable_packing_slip(): void
-    {
-        $response = $this->actingAs($this->seller)
-            ->get(route('seller.orders.packing-slip', $this->orderItem->id));
-
-        $response->assertStatus(200);
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('Seller/ShippingDocuments')
-            ->has('item')
-            ->where('initialTab', 'packing_slip')
-            ->where('item.id', $this->orderItem->id)
-        );
-    }
-
     public function test_seller_cannot_view_waybill_of_another_seller(): void
     {
         $otherSeller = User::factory()->create([

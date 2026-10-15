@@ -1,18 +1,18 @@
 <template>
-    <div class="min-h-screen bg-[#F8FAF9] text-[#1F2937]">
+    <div class="min-h-screen bg-[#F8FAF9] text-[#1F2937] print:bg-white print:min-h-0">
 
         <!-- Mobile Overlay -->
         <transition name="fade">
             <div
                 v-if="sidebarOpen"
-                class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+                class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden print:hidden"
                 @click="closeSidebar"
             ></div>
         </transition>
 
         <!-- Sidebar -->
         <aside
-            class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0 print:hidden"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex h-full min-h-0 flex-col">
@@ -340,11 +340,11 @@
         </aside>
 
         <!-- Main Content -->
-        <div class="lg:pl-[240px]">
+        <div class="lg:pl-[240px] print:pl-0">
 
             <!-- Header -->
             <header
-                class="sticky top-0 z-20 h-[68px] border-b border-[#E5E7EB] bg-white/95 backdrop-blur"
+                class="sticky top-0 z-20 h-[68px] border-b border-[#E5E7EB] bg-white/95 backdrop-blur print:hidden"
             >
                 <div
                     class="flex h-full items-center justify-between gap-3 px-4 sm:px-6"
@@ -507,7 +507,7 @@
 
             <!-- Page -->
             <main
-                class="min-h-[calc(100vh-68px)] px-4 py-5 sm:px-6 sm:py-6 lg:px-7"
+                class="min-h-[calc(100vh-68px)] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 print:min-h-0 print:p-0 print:m-0"
             >
                 <slot />
             </main>

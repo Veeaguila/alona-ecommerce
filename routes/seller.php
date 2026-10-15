@@ -227,11 +227,6 @@ Route::middleware([
         'waybill',
     ])->name('seller.orders.waybill');
 
-    Route::get('/seller/orders/{orderItem}/packing-slip', [
-        SellerOrderController::class,
-        'packingSlip',
-    ])->name('seller.orders.packing-slip');
-
     Route::get('/seller/orders/{orderItem}/shipping-documents', [
         SellerOrderController::class,
         'shippingDocuments',

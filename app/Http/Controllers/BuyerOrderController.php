@@ -10,6 +10,7 @@ use App\Models\OrderReturnRequest;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\SellerNotification;
+use App\Models\UserVoucher;
 use App\Models\Voucher;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -530,6 +531,24 @@ class BuyerOrderController extends Controller
             }
         }
 
+        if (
+            Schema::hasColumn('vouchers', 'per_customer_limit') &&
+            $voucher->per_customer_limit !== null
+        ) {
+            $userOrdersWithVoucher = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('voucher_id', $voucher->id)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+
+            if ($userOrdersWithVoucher >= (int) $voucher->per_customer_limit) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => "You have reached the maximum usage limit ({$voucher->per_customer_limit}) for this voucher.",
+                ], 422);
+            }
+        }
+
         $eligibleItems = $items->filter(
             function ($item) use ($voucher) {
                 if (!$item->product) {
@@ -543,8 +562,31 @@ class BuyerOrderController extends Controller
                     ) &&
                     $voucher->seller_id !== null
                 ) {
-                    return (int) $item->product->seller_id ===
-                        (int) $voucher->seller_id;
+                    if ((int) $item->product->seller_id !== (int) $voucher->seller_id) {
+                        return false;
+                    }
+                }
+
+                if (
+                    Schema::hasColumn('vouchers', 'target_type') &&
+                    $voucher->target_type === 'product' &&
+                    !empty($voucher->targeted_product_ids)
+                ) {
+                    $targeted = array_map('intval', (array) $voucher->targeted_product_ids);
+                    if (!in_array((int) $item->product_id, $targeted, true)) {
+                        return false;
+                    }
+                }
+
+                if (
+                    Schema::hasColumn('vouchers', 'target_type') &&
+                    $voucher->target_type === 'category' &&
+                    !empty($voucher->targeted_category_ids)
+                ) {
+                    $targetedCats = array_map('intval', (array) $voucher->targeted_category_ids);
+                    if (!in_array((int) $item->product->category_id, $targetedCats, true)) {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -592,9 +634,19 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
+        $shippingEstimate = 80.00;
+        if ($voucher->type === 'free_shipping') {
+            $shippingMethod = $request->input('shipping_method', 'standard');
+            $shippingEstimate = $this->calculateShippingFee($shippingMethod, $items, $eligibleSubtotal);
+            if ($shippingEstimate <= 0) {
+                $shippingEstimate = 80.00;
+            }
+        }
+
         $discount = $this->calculateVoucherDiscount(
             $voucher,
-            $eligibleSubtotal
+            $eligibleSubtotal,
+            $shippingEstimate
         );
 
         if ($discount <= 0) {
@@ -923,7 +975,30 @@ class BuyerOrderController extends Controller
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Seller-specific eligibility
+                    | Per-customer usage limit
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if (
+                        Schema::hasColumn('vouchers', 'per_customer_limit') &&
+                        $voucher->per_customer_limit !== null
+                    ) {
+                        $userOrdersWithVoucher = Order::query()
+                            ->where('user_id', $user->id)
+                            ->where('voucher_id', $voucher->id)
+                            ->where('status', '!=', 'cancelled')
+                            ->count();
+
+                        if ($userOrdersWithVoucher >= (int) $voucher->per_customer_limit) {
+                            throw ValidationException::withMessages([
+                                'voucher_code' => "You have reached the maximum usage limit ({$voucher->per_customer_limit}) for this voucher.",
+                            ]);
+                        }
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Seller-specific & Product/Category targeting eligibility
                     |--------------------------------------------------------------------------
                     */
 
@@ -940,10 +1015,31 @@ class BuyerOrderController extends Controller
                                 ) &&
                                 $voucher->seller_id !== null
                             ) {
-                                return (int)
-                                    $item->product->seller_id ===
-                                    (int)
-                                    $voucher->seller_id;
+                                if ((int) $item->product->seller_id !== (int) $voucher->seller_id) {
+                                    return false;
+                                }
+                            }
+
+                            if (
+                                Schema::hasColumn('vouchers', 'target_type') &&
+                                $voucher->target_type === 'product' &&
+                                !empty($voucher->targeted_product_ids)
+                            ) {
+                                $targeted = array_map('intval', (array) $voucher->targeted_product_ids);
+                                if (!in_array((int) $item->product_id, $targeted, true)) {
+                                    return false;
+                                }
+                            }
+
+                            if (
+                                Schema::hasColumn('vouchers', 'target_type') &&
+                                $voucher->target_type === 'category' &&
+                                !empty($voucher->targeted_category_ids)
+                            ) {
+                                $targetedCats = array_map('intval', (array) $voucher->targeted_category_ids);
+                                if (!in_array((int) $item->product->category_id, $targetedCats, true)) {
+                                    return false;
+                                }
                             }
 
                             return true;
@@ -1002,10 +1098,19 @@ class BuyerOrderController extends Controller
                     |--------------------------------------------------------------------------
                     */
 
+                    $shippingMethod = $data['shipping_method'];
+
+                    $shippingFee = $this->calculateShippingFee(
+                        $shippingMethod,
+                        $items,
+                        $subtotal
+                    );
+
                     $discount =
                         $this->calculateVoucherDiscount(
                             $voucher,
-                            $eligibleSubtotal
+                            $eligibleSubtotal,
+                            $shippingFee
                         );
 
                     if ($discount <= 0) {
@@ -1033,6 +1138,16 @@ class BuyerOrderController extends Controller
 
                         $voucher->refresh();
                     }
+
+                    if (Schema::hasTable('user_vouchers')) {
+                        UserVoucher::where('user_id', $user->id)
+                            ->where('voucher_id', $voucher->id)
+                            ->where('status', 'claimed')
+                            ->update([
+                                'status' => 'used',
+                                'used_at' => now(),
+                            ]);
+                    }
                 }
 
                 /*
@@ -1043,11 +1158,13 @@ class BuyerOrderController extends Controller
 
                 $shippingMethod = $data['shipping_method'];
 
-                $shippingFee = $this->calculateShippingFee(
-                    $shippingMethod,
-                    $items,
-                    max(0, $subtotal - $discount)
-                );
+                if (!isset($shippingFee)) {
+                    $shippingFee = $this->calculateShippingFee(
+                        $shippingMethod,
+                        $items,
+                        max(0, $subtotal - $discount)
+                    );
+                }
 
                 $savedPaymentMethod = null;
 
@@ -1996,30 +2113,41 @@ class BuyerOrderController extends Controller
      */
     private function calculateVoucherDiscount(
         Voucher $voucher,
-        float $eligibleSubtotal
+        float $eligibleSubtotal,
+        float $shippingFee = 0
     ): float {
-        if (
-            $eligibleSubtotal <= 0
-        ) {
+        if ($eligibleSubtotal <= 0) {
             return 0;
         }
 
-        $value =
-            (float) $voucher->value;
+        if ($voucher->type === 'free_shipping') {
+            $shipping = max(0, $shippingFee);
+            if (
+                Schema::hasColumn('vouchers', 'max_discount') &&
+                $voucher->max_discount !== null &&
+                (float) $voucher->max_discount > 0
+            ) {
+                return round(min($shipping, (float) $voucher->max_discount), 2);
+            }
+            return round($shipping, 2);
+        }
 
-        if (
-            $value <= 0
-        ) {
+        $value = (float) $voucher->value;
+
+        if ($value <= 0) {
             return 0;
         }
 
-        if (
-            $voucher->type ===
-            'percentage'
-        ) {
-            $discount =
-                $eligibleSubtotal *
-                ($value / 100);
+        if ($voucher->type === 'percentage') {
+            $discount = $eligibleSubtotal * ($value / 100);
+
+            if (
+                Schema::hasColumn('vouchers', 'max_discount') &&
+                $voucher->max_discount !== null &&
+                (float) $voucher->max_discount > 0
+            ) {
+                $discount = min($discount, (float) $voucher->max_discount);
+            }
         } else {
             $discount = $value;
         }

@@ -25,26 +25,17 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 ## Order Management and Fulfillment
 
 - [x] **SELLER-17: Waybill / Shipping label printing.** Generate printable carrier waybills with barcodes and customer routing info.
-- [x] **SELLER-18: Packing slip generator.** Generate printable packing slips formatted for warehouse order packing.
 - [x] **SELLER-19: Courier pickup scheduling.** Let sellers schedule courier pickup dates and assign preferred carrier partners.
 - [ ] **SELLER-20: Order review link.** Add direct navigation from completed order items to corresponding customer reviews.
 
-## Shipping and Delivery
-
-- [ ] **SELLER-21: Shipping management center.** Add a dedicated `/seller/shipping` dashboard page for dispatch operations.
-- [ ] **SELLER-22: Courier partner management.** Configure enabled couriers and shipping preferences.
-- [ ] **SELLER-23: Courier handover and manifests.** Generate handover manifests and track pickup history.
-- [ ] **SELLER-24: Failed delivery tracking.** Log delivery attempts and failed delivery reasons from carriers.
-- [ ] **SELLER-25: Flexible shipping rate rules.** Configure weight-based, tier-based, or regional shipping fee overrides.
-
 ## Promotions and Vouchers
 
-- [ ] **SELLER-26: Percentage discount cap.** Add a maximum discount amount cap (`max_discount`) for percentage vouchers.
-- [ ] **SELLER-27: Per-customer usage limit.** Restrict voucher claims and uses per individual buyer account.
-- [ ] **SELLER-28: Product and category targeting.** Restrict vouchers to specific products or product categories.
-- [ ] **SELLER-29: Free shipping vouchers.** Support seller-funded free shipping discount vouchers.
-- [ ] **SELLER-30: Voucher analytics & revenue attribution.** Track total discount cost and gross revenue generated per voucher.
-- [ ] **SELLER-31: Voucher expiration countdown.** Show real-time active, expiring-soon, and expired status badges.
+- [x] **SELLER-26: Percentage discount cap.** Add a maximum discount amount cap (`max_discount`) for percentage vouchers.
+- [x] **SELLER-27: Per-customer usage limit.** Restrict voucher claims and uses per individual buyer account.
+- [x] **SELLER-28: Product and category targeting.** Restrict vouchers to specific products or product categories.
+- [x] **SELLER-29: Free shipping vouchers.** Support seller-funded free shipping discount vouchers.
+- [x] **SELLER-30: Voucher analytics & revenue attribution.** Track total discount cost and gross revenue generated per voucher.
+- [x] **SELLER-31: Voucher expiration countdown.** Show real-time active, expiring-soon, and expired status badges.
 
 ## Customer Feedback and Reviews
 

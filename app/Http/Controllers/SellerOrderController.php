@@ -462,28 +462,6 @@ class SellerOrderController extends Controller
     }
 
     /**
-     * Warehouse packing slip generator (SELLER-18).
-     */
-    public function packingSlip(
-        Request $request,
-        OrderItem $orderItem
-    ): Response {
-        $this->authorizeOwnership($request, $orderItem);
-
-        $orderItem->load([
-            'product.seller',
-            'order.user',
-            'variant',
-            'parcel.pickupRequests',
-        ]);
-
-        return Inertia::render('Seller/ShippingDocuments', [
-            'item' => $orderItem,
-            'initialTab' => 'packing_slip',
-        ]);
-    }
-
-    /**
      * Unified shipping documents viewer.
      */
     public function shippingDocuments(

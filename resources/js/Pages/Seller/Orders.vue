@@ -806,10 +806,9 @@ watch(
                                         class="px-5 py-4 text-right"
                                     >
                                         <div class="inline-flex items-center justify-end gap-1.5">
-                                            <a
+                                            <Link
                                                 v-if="['packed', 'ready_for_pickup', 'shipped', 'out_for_delivery', 'delivered'].includes(order.status)"
                                                 :href="route('seller.orders.waybill', order.id)"
-                                                target="_blank"
                                                 title="Print Waybill / Shipping Label"
                                                 class="inline-flex h-8 items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2.5 text-xs font-semibold text-[#087F8C] transition hover:border-[#087F8C] hover:bg-[#087F8C] hover:text-white"
                                             >
@@ -819,7 +818,7 @@ watch(
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3Z" />
                                                 </svg>
                                                 <span>Waybill</span>
-                                            </a>
+                                            </Link>
 
                                             <Link
                                                 :href="
@@ -995,10 +994,9 @@ watch(
                             <div
                                 class="mt-4 flex items-center justify-end gap-2 border-t border-[#F1F5F9] pt-3"
                             >
-                                <a
+                                <Link
                                     v-if="['packed', 'ready_for_pickup', 'shipped', 'out_for_delivery', 'delivered'].includes(order.status)"
                                     :href="route('seller.orders.waybill', order.id)"
-                                    target="_blank"
                                     class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
                                 >
                                     <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1007,7 +1005,7 @@ watch(
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3Z" />
                                     </svg>
                                     Waybill
-                                </a>
+                                </Link>
 
                                 <Link
                                     :href="

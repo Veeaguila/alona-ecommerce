@@ -100,14 +100,16 @@ class BuyerVoucherController extends Controller
             ]);
         }
 
-        $alreadyClaimed = UserVoucher::query()
+        $userVoucherCount = UserVoucher::query()
             ->where('user_id', $user->id)
             ->where('voucher_id', $voucher->id)
-            ->exists();
+            ->count();
 
-        if ($alreadyClaimed) {
+        $perLimit = $voucher->per_customer_limit ?? 1;
+
+        if ($userVoucherCount >= $perLimit) {
             throw ValidationException::withMessages([
-                'voucher' => 'You have already claimed this voucher.',
+                'voucher' => "You have already reached the claim limit for this voucher ({$perLimit} per customer).",
             ]);
         }
 
@@ -119,9 +121,11 @@ class BuyerVoucherController extends Controller
         ]);
 
         if (Schema::hasTable('buyer_notifications')) {
-            $discountText = $voucher->type === 'percentage'
-                ? "{$voucher->value}% off"
-                : "₱" . number_format((float) $voucher->value, 2) . " off";
+            $discountText = match ($voucher->type) {
+                'free_shipping' => 'Free Shipping' . ($voucher->max_discount ? " (capped at ₱" . number_format((float) $voucher->max_discount, 2) . ")" : ''),
+                'percentage' => "{$voucher->value}% off" . ($voucher->max_discount ? " (capped at ₱" . number_format((float) $voucher->max_discount, 2) . ")" : ''),
+                default => "₱" . number_format((float) $voucher->value, 2) . " off",
+            };
 
             BuyerNotification::create([
                 'user_id' => $user->id,
