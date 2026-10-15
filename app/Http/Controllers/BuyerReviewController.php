@@ -163,7 +163,7 @@ class BuyerReviewController extends Controller
             }
         }
 
-        Review::create([
+        $review = Review::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
             'rating' => $validated['rating'],
@@ -173,19 +173,7 @@ class BuyerReviewController extends Controller
 
         $this->recalculateProductRating($product);
 
-        if ($product->seller_id && Schema::hasTable('seller_notifications')) {
-            try {
-                SellerNotification::create([
-                    'user_id' => $product->seller_id,
-                    'type' => 'review',
-                    'title' => 'New Product Review',
-                    'message' => "{$user->name} left a {$validated['rating']}-star review for \"{$product->name}\".",
-                    'url' => route('seller.reviews'),
-                ]);
-            } catch (\Throwable $e) {
-                // Ignore notification errors
-            }
-        }
+        \App\Services\SellerNotificationService::sendProductReviewAlert($review);
 
         return back()->with(
             'status',
@@ -319,7 +307,7 @@ class BuyerReviewController extends Controller
             ],
         ]);
 
-        SellerReview::updateOrCreate(
+        $sellerReview = SellerReview::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'seller_id' => $seller->id,
@@ -331,19 +319,7 @@ class BuyerReviewController extends Controller
             ]
         );
 
-        if (Schema::hasTable('seller_notifications')) {
-            try {
-                SellerNotification::create([
-                    'user_id' => $seller->id,
-                    'type' => 'review',
-                    'title' => 'New Store Rating',
-                    'message' => "{$user->name} rated your store {$validated['rating']} stars.",
-                    'url' => route('seller.reviews'),
-                ]);
-            } catch (\Throwable $e) {
-                // Ignore notification errors
-            }
-        }
+        \App\Services\SellerNotificationService::sendStoreReviewAlert($sellerReview);
 
         return back()->with(
             'status',

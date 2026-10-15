@@ -414,6 +414,11 @@ Route::middleware([
         'readAll',
     ])->name('seller.notifications.read-all');
 
+    Route::post('/seller/payout-requests', [
+        SellerNotificationController::class,
+        'storePayoutRequest',
+    ])->name('seller.payout-requests.store');
+
 
     /*
     |--------------------------------------------------------------------------

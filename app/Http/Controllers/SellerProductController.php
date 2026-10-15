@@ -474,6 +474,13 @@ class SellerProductController extends Controller
                 'min:0',
             ],
 
+            'low_stock_threshold' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
+            ],
+
             'description' => [
                 'nullable',
                 'string',
@@ -589,6 +596,11 @@ class SellerProductController extends Controller
         $product->update([
             'status' => 'pending',
         ]);
+
+        $freshProduct = $product->fresh();
+        if ($freshProduct && $freshProduct->isLowStock()) {
+            \App\Services\SellerNotificationService::sendLowStockAlert($freshProduct);
+        }
 
         return back()->with(
             'status',
@@ -794,6 +806,11 @@ class SellerProductController extends Controller
                 }
             }
         });
+
+        $freshProduct = $product->fresh();
+        if ($freshProduct && $freshProduct->isLowStock()) {
+            \App\Services\SellerNotificationService::sendLowStockAlert($freshProduct);
+        }
 
         return back()->with(
             'status',
@@ -1308,6 +1325,13 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+            ],
+
+            'low_stock_threshold' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
             ],
 
             'description' => [

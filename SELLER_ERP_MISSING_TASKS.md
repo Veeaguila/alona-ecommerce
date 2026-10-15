@@ -59,31 +59,12 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 - [x] **SELLER-43: Order snippet in chat.** Embed an interactive order reference card in buyer-seller chat threads.
 - [x] **SELLER-44: Seller-to-admin support chat.** Provide a direct chat channel between sellers and platform support admins.
 
-## Reports and Analytics
-
-- [ ] **SELLER-45: Category sales breakdown.** Show sales revenue and units sold distributed across product categories.
-- [ ] **SELLER-46: Cost of Goods Sold (COGS) & unit costs.** Track unit cost per product to calculate accurate net profit margins.
-- [ ] **SELLER-47: Voucher and promotional cost report.** Track total discount expenditures and promotion ROI.
-- [ ] **SELLER-48: Refund and return loss analytics.** Analyze refund deductions, return rates, and loss patterns.
-- [ ] **SELLER-49: Low-performing product reports.** Identify stagnant, slow-moving, and zero-sale inventory.
-- [ ] **SELLER-50: Product view-to-order conversion rates.** Track impressions, clicks, and conversion rates per product.
-- [ ] **SELLER-51: Export reports.** Allow exporting sales, orders, inventory, and financial reports to PDF, Excel, and CSV.
-
-## Finance and Payouts
-
-- [ ] **SELLER-52: Dedicated finance center.** Create a dedicated `/seller/finance` portal and balance ledger.
-- [ ] **SELLER-53: Available vs escrow balance tracker.** Display real-time settled wallet balance vs pending order escrow balance.
-- [ ] **SELLER-54: Payout request submission.** Allow sellers to submit withdrawal requests to Bank accounts, GCash, or Maya.
-- [ ] **SELLER-55: Payout transaction history.** Track payout statuses (Pending, Processing, Completed, Failed) with timestamps.
-- [ ] **SELLER-56: Itemized fee and deduction breakdown.** Itemize platform commissions, transaction fees, and shipping deductions.
-- [ ] **SELLER-57: Statement of accounts & payout receipts.** Download official billing statements and payout receipts.
-
 ## Notifications
 
-- [ ] **SELLER-58: Low-stock threshold alerts.** Send automated notifications when product stock falls below the threshold.
-- [ ] **SELLER-59: New review alerts.** Send automated notifications when a buyer submits a new product or store review.
-- [ ] **SELLER-60: Return and refund request alerts.** Send immediate notifications when a buyer requests a return or refund.
-- [ ] **SELLER-61: Payout status change alerts.** Notify sellers when payout requests are approved, processed, or rejected.
+- [x] **SELLER-58: Low-stock threshold alerts.** Send automated notifications when product stock falls below the threshold.
+- [x] **SELLER-59: New review alerts.** Send automated notifications when a buyer submits a new product or store review.
+- [x] **SELLER-60: Return and refund request alerts.** Send immediate notifications when a buyer requests a return or refund.
+- [x] **SELLER-61: Payout status change alerts.** Notify sellers when payout requests are approved, processed, or rejected.
 
 ## Store Management
 

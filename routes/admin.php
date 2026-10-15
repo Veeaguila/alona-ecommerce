@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminComplaintController;
 use App\Http\Controllers\AdminComplianceController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminMessageController;
+use App\Http\Controllers\AdminPayoutStatusController;
 use App\Http\Controllers\AdminReportingController;
 use App\Http\Controllers\AdminSellerApplicationController;
 use App\Http\Controllers\AdminSettingsController;
@@ -265,6 +266,23 @@ Route::prefix('admin')
             AdminMessageController::class,
             'store',
         ])->name('admin.messages.store');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PAYOUT REQUESTS & STATUS ALERTS (SELLER-61)
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/payout-requests', [
+            AdminPayoutStatusController::class,
+            'index',
+        ])->name('admin.payout-requests');
+
+        Route::patch('/payout-requests/{payout}/status', [
+            AdminPayoutStatusController::class,
+            'updateStatus',
+        ])->name('admin.payout-requests.status');
 
     });
 

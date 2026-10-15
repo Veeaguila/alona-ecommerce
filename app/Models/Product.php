@@ -21,6 +21,7 @@ class Product extends Model
         'price',
         'old_price',
         'stock',
+        'low_stock_threshold',
         'image_path',
         'status',
         'is_featured',
@@ -35,7 +36,14 @@ class Product extends Model
             'old_price' => 'decimal:2',
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
+            'low_stock_threshold' => 'integer',
         ];
+    }
+
+    public function isLowStock(): bool
+    {
+        $threshold = $this->low_stock_threshold ?? 5;
+        return (int) $this->stock <= (int) $threshold;
     }
 
     /*

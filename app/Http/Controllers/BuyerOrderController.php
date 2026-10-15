@@ -2575,143 +2575,12 @@ class BuyerOrderController extends Controller
     private function notifySellerLowStock(
         CartItem $cartItem
     ): void {
-        if (
-            !$cartItem->product
-        ) {
+        if (!$cartItem->product) {
             return;
         }
 
-        $product =
-            $cartItem->product;
-
-        $sellerId =
-            $product->seller_id ??
-            null;
-
-        if (!$sellerId) {
-            return;
-        }
-
-        $stock =
-            $this->stockForProduct(
-                $product
-            );
-
-        if (
-            $stock > 5
-        ) {
-            return;
-        }
-
-        if (
-            !Schema::hasTable(
-                'seller_notifications'
-            )
-        ) {
-            return;
-        }
-
-        $columns =
-            Schema::getColumnListing(
-                'seller_notifications'
-            );
-
-        $data = [];
-
-        if (
-            in_array(
-                'user_id',
-                $columns,
-                true
-            )
-        ) {
-            $data['user_id'] =
-                $sellerId;
-        }
-
-        if (
-            in_array(
-                'seller_id',
-                $columns,
-                true
-            )
-        ) {
-            $data['seller_id'] =
-                $sellerId;
-        }
-
-        if (
-            in_array(
-                'title',
-                $columns,
-                true
-            )
-        ) {
-            $data['title'] =
-                'Low Stock Alert';
-        }
-
-        if (
-            in_array(
-                'message',
-                $columns,
-                true
-            )
-        ) {
-            $data['message'] =
-                $product->name .
-                ' now has only ' .
-                $stock .
-                ' item(s) remaining.';
-        }
-
-        if (
-            in_array(
-                'read_at',
-                $columns,
-                true
-            )
-        ) {
-            $data['read_at'] =
-                null;
-        }
-
-        if (
-            in_array(
-                'created_at',
-                $columns,
-                true
-            )
-        ) {
-            $data['created_at'] =
-                now();
-        }
-
-        if (
-            in_array(
-                'updated_at',
-                $columns,
-                true
-            )
-        ) {
-            $data['updated_at'] =
-                now();
-        }
-
-        if (
-            in_array(
-                'user_id',
-                $columns,
-                true
-            ) &&
-            empty($data['user_id'])
-        ) {
-            return;
-        }
-
-        DB::table(
-            'seller_notifications'
-        )->insert($data);
+        $product = $cartItem->product->fresh() ?? $cartItem->product;
+        \App\Services\SellerNotificationService::sendLowStockAlert($product);
     }
 
     /**
@@ -2856,18 +2725,6 @@ class BuyerOrderController extends Controller
         OrderReturnRequest $returnRequest,
         OrderItem $item
     ): void {
-        $sellerId = $returnRequest->seller_id;
-
-        if (!$sellerId || !Schema::hasTable('seller_notifications')) {
-            return;
-        }
-
-        $typeLabel = $returnRequest->type === 'refund_only' ? 'Refund Request' : 'Return & Refund Request';
-
-        SellerNotification::create([
-            'user_id' => $sellerId,
-            'title' => "New {$typeLabel} Received",
-            'message' => "Buyer requested a {$returnRequest->type} for {$item->product_name}. Reason: {$returnRequest->reason}",
-        ]);
+        \App\Services\SellerNotificationService::sendReturnRequestAlert($returnRequest);
     }
 }
