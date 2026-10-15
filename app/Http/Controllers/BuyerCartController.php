@@ -51,6 +51,15 @@ class BuyerCartController extends Controller
             404
         );
 
+        $seller = $product->seller;
+        if ($seller && $seller->vacation_mode) {
+            $storeName = $seller->store_name ?: $seller->name;
+            $msg = $seller->vacation_message ? ": {$seller->vacation_message}" : '.';
+            return back()->withErrors([
+                'cart' => "{$storeName} is currently on vacation mode and temporarily not accepting new orders{$msg}",
+            ]);
+        }
+
         $variantColumnExists = Schema::hasColumn(
             'cart_items',
             'product_variant_id'

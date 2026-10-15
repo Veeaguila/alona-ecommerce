@@ -68,10 +68,10 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Store Management
 
-- [ ] **SELLER-62: Store banner & branding upload.** Allow sellers to upload custom store cover banners and brand assets.
-- [ ] **SELLER-63: Operating hours schedule.** Configure store operating hours and response time schedules.
-- [ ] **SELLER-64: Store policies & terms.** Add customizable store shipping, warranty, and return policy pages.
-- [ ] **SELLER-65: Vacation mode.** Add a toggle to temporarily pause incoming orders and notify store visitors.
+- [x] **SELLER-62: Store banner & branding upload.** Allow sellers to upload custom store cover banners and brand assets.
+- [x] **SELLER-63: Operating hours schedule.** Configure store operating hours and response time schedules.
+- [x] **SELLER-64: Store policies & terms.** Add customizable store shipping, warranty, and return policy pages.
+- [x] **SELLER-65: Vacation mode.** Add a toggle to temporarily pause incoming orders and notify store visitors.
 
 ## Account and Security
 

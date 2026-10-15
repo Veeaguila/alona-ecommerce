@@ -271,6 +271,38 @@ const storeInitials = computed(() => {
     const name = props.seller.store_name || props.seller.name || 'Store'
     return name.slice(0, 2).toUpperCase()
 })
+
+// Schedule Modal (SELLER-63)
+const isScheduleModalOpen = ref(false)
+const openScheduleModal = () => {
+    isScheduleModalOpen.value = true
+}
+const closeScheduleModal = () => {
+    isScheduleModalOpen.value = false
+}
+
+const scheduleDays = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' },
+]
+
+const formatTime = (timeStr) => {
+    if (!timeStr) return ''
+    try {
+        const [h, m] = timeStr.split(':')
+        const d = new Date()
+        d.setHours(parseInt(h, 10))
+        d.setMinutes(parseInt(m, 10))
+        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    } catch (e) {
+        return timeStr
+    }
+}
 </script>
 
 <template>
@@ -282,11 +314,42 @@ const storeInitials = computed(() => {
             <div class="mx-auto w-full max-w-[1536px] min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10 space-y-6">
 
                 <!-- ============================================================== -->
+                <!-- VACATION MODE ALERT (SELLER-65) -->
+                <!-- ============================================================== -->
+                <div
+                    v-if="seller.vacation_mode"
+                    class="w-full rounded-2xl border border-amber-300 bg-amber-100/90 p-4 sm:p-5 shadow-xs flex items-start gap-3.5 sm:gap-4"
+                >
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="4" width="4" height="16" />
+                            <rect x="14" y="4" width="4" height="16" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-black text-amber-950 uppercase tracking-wide">Store on Vacation Mode</h3>
+                            <span class="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">Orders Paused</span>
+                        </div>
+                        <p class="text-xs text-amber-900 mt-1 leading-relaxed">
+                            {{ seller.vacation_message || 'This store has temporarily paused checkout and incoming orders. You may still browse products and message the seller.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ============================================================== -->
                 <!-- 1. STORE PROFILE HEADER (Alona Design System) -->
                 <!-- ============================================================== -->
                 <div class="w-full bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-                    <!-- Top Brand Banner with Alona Teal Gradient -->
-                    <div class="relative bg-gradient-to-r from-[#087F8C] via-[#0A96A6] to-[#065A63] text-white p-5 sm:p-7 lg:p-8">
+                    <!-- Top Brand Banner with Alona Teal Gradient or Custom Cover Banner (SELLER-62) -->
+                    <div
+                        class="relative text-white p-5 sm:p-7 lg:p-8 bg-cover bg-center overflow-hidden"
+                        :style="seller.store_banner_path ? { backgroundImage: `url(${imageUrl(seller.store_banner_path)})` } : {}"
+                        :class="!seller.store_banner_path ? 'bg-gradient-to-r from-[#087F8C] via-[#0A96A6] to-[#065A63]' : ''"
+                    >
+                        <!-- Dark overlay for custom banner image to maintain crisp readability -->
+                        <div v-if="seller.store_banner_path" class="absolute inset-0 bg-slate-950/65 backdrop-blur-[0.5px]"></div>
+
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
 
                             <!-- Left: Store Avatar & Identity -->
@@ -336,10 +399,45 @@ const storeInitials = computed(() => {
                                         </span>
                                     </div>
 
+                                    <!-- Store Tagline (SELLER-62) -->
+                                    <p
+                                        v-if="seller.store_tagline"
+                                        class="text-xs sm:text-sm font-semibold text-emerald-100/95 tracking-wide mt-1"
+                                    >
+                                        {{ seller.store_tagline }}
+                                    </p>
+
+                                    <!-- Operating Status & Response Time Pills (SELLER-63) -->
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <!-- Live Open/Closed Status Button -->
+                                        <button
+                                            type="button"
+                                            @click="openScheduleModal"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"
+                                            :class="seller.store_status?.is_open ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40 hover:bg-emerald-500/35' : 'bg-white/20 text-white/90 border border-white/30 hover:bg-white/30'"
+                                        >
+                                            <span class="h-2 w-2 rounded-full" :class="seller.store_status?.is_open ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'"></span>
+                                            <span>{{ seller.store_status?.status_label || 'Store Hours' }}</span>
+                                            <span class="text-[10px] opacity-80">({{ seller.store_status?.detail }})</span>
+                                            <svg class="h-3 w-3 ml-0.5 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10" />
+                                                <polyline points="12 6 12 12 16 14" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Response Time Commitment -->
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/15 text-white/90 border border-white/20 backdrop-blur-xs">
+                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                            </svg>
+                                            <span>{{ seller.response_time_label || 'Replies within the day' }}</span>
+                                        </span>
+                                    </div>
+
                                     <!-- Description if present in database -->
                                     <p
                                         v-if="seller.store_description"
-                                        class="text-xs sm:text-sm text-white/90 mt-1.5 max-w-2xl line-clamp-2 leading-relaxed"
+                                        class="text-xs sm:text-sm text-white/90 mt-2 max-w-2xl line-clamp-2 leading-relaxed"
                                     >
                                         {{ seller.store_description }}
                                     </p>
@@ -520,18 +618,43 @@ const storeInitials = computed(() => {
                     >
                         {{ cat.name }}
                     </button>
+
+                    <!-- STORE POLICIES & TERMS TAB (SELLER-64) -->
+                    <button
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                        :class="
+                            activeCategory === 'policies'
+                                ? 'border-[#087F8C] bg-[#087F8C] text-white shadow-xs'
+                                : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
+                        "
+                        @click="activeCategory = 'policies'"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        <span>Policies & Terms</span>
+                    </button>
                 </div>
 
                 <!-- ============================================================== -->
                 <!-- 3. REAL STORE VOUCHERS (Shows any voucher put by this store) -->
                 <!-- ============================================================== -->
                 <div
-                    v-if="vouchers && vouchers.length > 0"
+                    v-if="activeCategory !== 'policies' && vouchers && vouchers.length > 0"
                     class="relative w-full bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm"
                 >
                     <div class="flex items-center justify-between mb-3 px-1">
                         <div class="flex items-center gap-2">
-                            <span class="text-[#087F8C] text-base">🎟</span>
+                            <svg class="w-4 h-4 text-[#087F8C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z" />
+                                <path d="M13 5v2" />
+                                <path d="M13 17v2" />
+                                <path d="M13 11v2" />
+                            </svg>
                             <h2 class="text-sm font-extrabold text-slate-800">
                                 Store Vouchers & Discounts
                             </h2>
@@ -689,9 +812,103 @@ const storeInitials = computed(() => {
                 </div>
 
                 <!-- ============================================================== -->
+                <!-- STORE POLICIES & TERMS VIEW (SELLER-64) -->
+                <!-- ============================================================== -->
+                <div v-if="activeCategory === 'policies'" class="space-y-6 pt-2">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="h-10 w-10 rounded-xl bg-[#E8F7F6] text-[#087F8C] flex items-center justify-center shrink-0">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-extrabold text-slate-900">Store Terms & Policies</h2>
+                                <p class="text-xs text-slate-500">Official guidelines, warranty terms, and consumer fulfillment protocols for {{ seller.store_name || seller.name }}.</p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            @click="selectCategory('all')"
+                            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#087F8C] hover:underline"
+                        >
+                            <span>Back to All Products</span>
+                            <span>&rarr;</span>
+                        </button>
+                    </div>
+
+                    <div class="grid gap-5 md:grid-cols-3">
+                        <!-- Shipping Policy -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 text-[#087F8C] font-bold text-xs uppercase tracking-wider mb-2.5">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="1" y="3" width="15" height="13" />
+                                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                                        <circle cx="5.5" cy="18.5" r="2.5" />
+                                        <circle cx="18.5" cy="18.5" r="2.5" />
+                                    </svg>
+                                    <span>Shipping & Delivery</span>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-900 mb-2">Delivery Guidelines</h3>
+                                <div class="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+                                    {{ seller.shipping_policy || 'Standard platform shipping applies. Orders are packed carefully and handed over to platform partner couriers with live tracking provided.' }}
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-semibold">
+                                Flat Shipping Fee: ₱{{ Number(seller.shipping_fee || 0).toFixed(2) }}
+                            </div>
+                        </div>
+
+                        <!-- Warranty Policy -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider mb-2.5">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                    </svg>
+                                    <span>Warranty Coverage</span>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-900 mb-2">Quality & Authenticity Guarantee</h3>
+                                <div class="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+                                    {{ seller.warranty_policy || 'All products sold by this verified merchant are 100% genuine and covered by standard merchant replacement guarantees for factory defects.' }}
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-100 text-[11px] text-emerald-600 font-semibold">
+                                ✓ Verified Platform Merchant Guarantee
+                            </div>
+                        </div>
+
+                        <!-- Return & Refund Policy -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider mb-2.5">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="1 4 1 10 7 10" />
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                    </svg>
+                                    <span>Returns & Refunds</span>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-900 mb-2">{{ seller.return_policy_days || 7 }}-Day Return Protection</h3>
+                                <div class="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+                                    {{ seller.return_policy || 'Buyers can file a return or refund request within the guarantee period if items arrive damaged, defective, or incorrect.' }}
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-100 text-[11px] text-amber-700 font-semibold">
+                                Protected by Alona Buyer Guarantee
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================== -->
                 <!-- 5. ALL PRODUCTS SECTION (With Search, Filter, Sort) -->
                 <!-- ============================================================== -->
-                <div class="space-y-4 pt-2">
+                <div v-else class="space-y-4 pt-2">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
                         <div>
                             <h2 class="text-base font-extrabold text-slate-900">
@@ -848,7 +1065,9 @@ const storeInitials = computed(() => {
                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-full bg-[#E8F7F6] text-[#087F8C] flex items-center justify-center font-bold">
-                            🏛
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                            </svg>
                         </div>
                         <h3 class="text-sm font-extrabold text-slate-900">
                             Merchant Verification
@@ -911,6 +1130,81 @@ const storeInitials = computed(() => {
                     <button
                         type="button"
                         @click="closeBirModal"
+                        class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition cursor-pointer"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- WEEKLY OPERATING HOURS SCHEDULE MODAL (SELLER-63) -->
+        <!-- ============================================================== -->
+        <div
+            v-if="isScheduleModalOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            @click.self="closeScheduleModal"
+        >
+            <div class="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="h-9 w-9 rounded-xl bg-[#E8F7F6] text-[#087F8C] flex items-center justify-center">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-extrabold text-slate-900">Operating Schedule</h3>
+                            <p class="text-[11px] text-slate-500">{{ seller.store_name || seller.name }}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="closeScheduleModal"
+                        class="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Live Status & Response -->
+                <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-full" :class="seller.store_status?.is_open ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
+                        <span class="font-bold text-slate-800">{{ seller.store_status?.status_label }}</span>
+                        <span class="text-slate-500 text-[11px]">({{ seller.store_status?.detail }})</span>
+                    </div>
+                    <span class="text-[11px] font-semibold text-[#087F8C] bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                        {{ seller.response_time_label }}
+                    </span>
+                </div>
+
+                <!-- Schedule List -->
+                <div class="divide-y divide-slate-100 text-xs">
+                    <div
+                        v-for="day in scheduleDays"
+                        :key="day.key"
+                        class="flex items-center justify-between py-2.5 px-1"
+                    >
+                        <span class="font-semibold text-slate-800">{{ day.label }}</span>
+                        <span
+                            v-if="seller.operating_hours && seller.operating_hours[day.key] && seller.operating_hours[day.key].is_open"
+                            class="font-semibold text-slate-700"
+                        >
+                            {{ formatTime(seller.operating_hours[day.key].open) }} - {{ formatTime(seller.operating_hours[day.key].close) }}
+                        </span>
+                        <span v-else class="text-slate-400 font-medium italic">
+                            Closed
+                        </span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                    <button
+                        type="button"
+                        @click="closeScheduleModal"
                         class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition cursor-pointer"
                     >
                         Close

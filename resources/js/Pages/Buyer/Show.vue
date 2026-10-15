@@ -491,9 +491,12 @@ const totalPrice = computed(() =>
 |--------------------------------------------------------------------------
 */
 
+const isSellerOnVacation = computed(() => Boolean(seller.value?.vacation_mode))
+
 const canPurchase = computed(() =>
     Boolean(product.value.id) &&
     availableStock.value > 0 &&
+    !isSellerOnVacation.value &&
     (
         !hasVariants.value ||
         Boolean(selectedVariant.value)
@@ -1083,6 +1086,22 @@ const breadcrumbs = computed(() => {
                                         </Link>
                                     </div>
 
+                                    <!-- VACATION MODE ALERT (SELLER-65) -->
+                                    <div
+                                        v-if="isSellerOnVacation"
+                                        class="mt-3 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                                    >
+                                        <svg class="h-4 w-4 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <line x1="12" y1="8" x2="12" y2="12" />
+                                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                                        </svg>
+                                        <span>
+                                            <strong class="font-semibold">Store on Vacation:</strong>
+                                            {{ seller.vacation_message || 'Ordering from this store is temporarily paused.' }}
+                                        </span>
+                                    </div>
+
                                     <!-- STORE DESCRIPTION -->
 
                                     <p
@@ -1473,9 +1492,11 @@ const breadcrumbs = computed(() => {
                                     class="rounded-xl border border-[#087F8C] px-4 py-3 text-xs font-semibold text-[#087F8C] transition hover:bg-[#E8F7F6] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {{
-                                        cartForm.processing
-                                            ? 'Adding...'
-                                            : 'Add to Cart'
+                                        isSellerOnVacation
+                                            ? 'Store on Vacation'
+                                            : cartForm.processing
+                                                ? 'Adding...'
+                                                : 'Add to Cart'
                                     }}
                                 </button>
 
@@ -1489,9 +1510,11 @@ const breadcrumbs = computed(() => {
                                     class="rounded-xl bg-[#087F8C] px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {{
-                                        cartForm.processing
-                                            ? 'Processing...'
-                                            : 'Buy Now'
+                                        isSellerOnVacation
+                                            ? 'Store on Vacation'
+                                            : cartForm.processing
+                                                ? 'Processing...'
+                                                : 'Buy Now'
                                     }}
                                 </button>
                             </div>

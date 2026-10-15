@@ -806,6 +806,15 @@ class BuyerOrderController extends Controller
                         ]);
                     }
 
+                    if ($item->product->seller && $item->product->seller->vacation_mode) {
+                        $storeName = $item->product->seller->store_name ?: $item->product->seller->name;
+                        $msg = $item->product->seller->vacation_message ? ": {$item->product->seller->vacation_message}" : '.';
+                        throw ValidationException::withMessages([
+                            'selected_items' =>
+                                "Cannot place order: {$storeName} is currently on vacation mode and has temporarily paused order processing{$msg}",
+                        ]);
+                    }
+
                     $stock = $this->stockForCartItem(
                         $item
                     );
