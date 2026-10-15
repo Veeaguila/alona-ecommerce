@@ -8,6 +8,7 @@ use App\Http\Controllers\SellerOrderController;
 use App\Http\Controllers\SellerProductController;
 use App\Http\Controllers\SellerProductQuestionController;
 use App\Http\Controllers\SellerReportController;
+use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\SellerReviewController;
 use App\Http\Controllers\SellerSettingController;
 use App\Http\Controllers\SellerStoreController;
@@ -245,6 +246,33 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
+    | SELLER RETURNS & REFUNDS (SELLER-36 to SELLER-41)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/seller/returns', [
+        SellerReturnController::class,
+        'index',
+    ])->name('seller.returns');
+
+    Route::post('/seller/returns/{returnRequest}/decision', [
+        SellerReturnController::class,
+        'decision',
+    ])->name('seller.returns.decision');
+
+    Route::post('/seller/returns/{returnRequest}/tracking', [
+        SellerReturnController::class,
+        'updateTracking',
+    ])->name('seller.returns.tracking');
+
+    Route::post('/seller/returns/{returnRequest}/inspect-resolve', [
+        SellerReturnController::class,
+        'inspectAndResolve',
+    ])->name('seller.returns.inspect-resolve');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | SELLER REPORTS
     |--------------------------------------------------------------------------
     */
@@ -277,6 +305,11 @@ Route::middleware([
         SellerConversationController::class,
         'index',
     ])->name('seller.messages');
+
+    Route::post('/seller/messages/support', [
+        SellerConversationController::class,
+        'startAdminSupport',
+    ])->name('seller.messages.support');
 
     Route::get('/seller/messages/{conversation}', [
         SellerConversationController::class,

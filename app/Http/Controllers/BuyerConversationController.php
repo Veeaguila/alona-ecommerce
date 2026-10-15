@@ -91,9 +91,13 @@ class BuyerConversationController extends Controller
             |--------------------------------------------------------------------------
             */
             $selectedConversation->load([
-                'seller:id,name,store_name',
+                'seller:id,name,store_name,avatar',
                 'product:id,name,image_path,price',
-                'order:id,order_number,status,created_at',
+                'order' => fn ($q) => $q->with([
+                    'items.product:id,name,image_path,price',
+                    'items.variant:id,title,price',
+                    'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                ]),
             ]);
 
             /*
@@ -115,7 +119,14 @@ class BuyerConversationController extends Controller
             */
             $messages = $selectedConversation
                 ->messages()
-                ->with('sender:id,name')
+                ->with([
+                    'sender:id,name,avatar',
+                    'order' => fn ($q) => $q->with([
+                        'items.product:id,name,image_path,price',
+                        'items.variant:id,title,price',
+                        'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                    ]),
+                ])
                 ->orderBy('created_at')
                 ->get();
 
@@ -127,17 +138,18 @@ class BuyerConversationController extends Controller
             $selectedConversation->unread_count = 0;
         }
 
+        $buyerOrders = $selectedConversation && $selectedConversation->seller_id
+            ? \App\Models\Order::query()
+                ->where('user_id', $buyer->id)
+                ->whereHas('items.product', fn ($q) => $q->where('seller_id', $selectedConversation->seller_id))
+                ->latest()
+                ->limit(20)
+                ->get(['id', 'order_number', 'total', 'status', 'created_at'])
+            : collect();
+
         /*
         |--------------------------------------------------------------------------
         | Render ONE Vue page
-        |--------------------------------------------------------------------------
-        |
-        | Conversations.vue now contains:
-        |
-        | LEFT  = conversation list
-        | RIGHT = selected conversation messages
-        |
-        | On mobile, the Vue page can switch between the two sections.
         |--------------------------------------------------------------------------
         */
         if ($request->wantsJson()) {
@@ -145,6 +157,7 @@ class BuyerConversationController extends Controller
                 'conversations' => $conversations,
                 'selectedConversation' => $selectedConversation,
                 'messages' => $messages,
+                'buyerOrders' => $buyerOrders,
             ]);
         }
 
@@ -152,6 +165,7 @@ class BuyerConversationController extends Controller
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
             'messages' => $messages,
+            'buyerOrders' => $buyerOrders,
         ]);
     }
 
@@ -255,12 +269,33 @@ class BuyerConversationController extends Controller
         |--------------------------------------------------------------------------
         */
         $data = $request->validate([
-            'body' => [
-                'required',
-                'string',
-                'max:2000',
-            ],
+            'body' => ['nullable', 'string', 'max:5000', 'required_without_all:attachment,order_id'],
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
+            'order_id' => ['nullable', 'exists:orders,id'],
         ]);
+
+        $attachmentPath = null;
+        $attachmentName = null;
+        $attachmentType = null;
+        $attachmentSize = null;
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $attachmentName = $file->getClientOriginalName();
+            $attachmentSize = $file->getSize();
+            $mime = $file->getMimeType();
+            $attachmentType = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            $attachmentPath = $file->store('chat_attachments', 'public');
+        }
+
+        $bodyText = $data['body'] ?? '';
+        if (trim($bodyText) === '') {
+            if ($attachmentName) {
+                $bodyText = "Sent an attachment: {$attachmentName}";
+            } elseif (!empty($data['order_id'])) {
+                $bodyText = "Shared an order reference";
+            }
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -269,7 +304,12 @@ class BuyerConversationController extends Controller
         */
         $message = $conversation->messages()->create([
             'sender_id' => $buyer->id,
-            'body' => trim($data['body']),
+            'body' => $bodyText,
+            'attachment_path' => $attachmentPath,
+            'attachment_name' => $attachmentName,
+            'attachment_type' => $attachmentType,
+            'attachment_size' => $attachmentSize,
+            'order_id' => $data['order_id'] ?? null,
         ]);
 
         /*
@@ -281,9 +321,28 @@ class BuyerConversationController extends Controller
             'last_message_at' => now(),
         ]);
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('seller_notifications') && $conversation->seller_id) {
+            try {
+                \App\Models\SellerNotification::create([
+                    'user_id' => $conversation->seller_id,
+                    'type' => 'customer_message',
+                    'title' => "New message from {$buyer->name}",
+                    'message' => \Illuminate\Support\Str::limit($bodyText, 120),
+                    'url' => route('seller.messages.show', $conversation->id),
+                ]);
+            } catch (\Throwable $e) {}
+        }
+
         if ($request->wantsJson()) {
             return response()->json([
-                'message' => $message->load('sender:id,name'),
+                'message' => $message->load([
+                    'sender:id,name,avatar',
+                    'order' => fn ($q) => $q->with([
+                        'items.product:id,name,image_path,price',
+                        'items.variant:id,title,price',
+                        'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                    ]),
+                ]),
                 'conversation_id' => $conversation->id,
             ]);
         }

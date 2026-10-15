@@ -46,18 +46,18 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Returns and Refunds
 
-- [ ] **SELLER-36: Dedicated returns center.** Create a dedicated `/seller/returns` page and controller linked to `OrderReturnRequest`.
-- [ ] **SELLER-37: Return request status filtering.** Filter requests by Pending, Approved, Rejected, Item Returned, and Refunded.
-- [ ] **SELLER-38: Seller return decisioning.** Allow sellers to approve or reject return requests with rejection reasons and instructions.
-- [ ] **SELLER-39: Return parcel tracking.** Track return shipping carrier milestones and return waybill tracking numbers.
-- [ ] **SELLER-40: Return item inspection & resolution.** Confirm returned item receipt and trigger refund resolution.
-- [ ] **SELLER-41: Refund history ledger.** Maintain an itemized ledger of all approved and issued refunds with transaction logs.
+- [x] **SELLER-36: Dedicated returns center.** Create a dedicated `/seller/returns` page and controller linked to `OrderReturnRequest`.
+- [x] **SELLER-37: Return request status filtering.** Filter requests by Pending, Approved, Rejected, Item Returned, and Refunded.
+- [x] **SELLER-38: Seller return decisioning.** Allow sellers to approve or reject return requests with rejection reasons and instructions.
+- [x] **SELLER-39: Return parcel tracking.** Track return shipping carrier milestones and return waybill tracking numbers.
+- [x] **SELLER-40: Return item inspection & resolution.** Confirm returned item receipt and trigger refund resolution.
+- [x] **SELLER-41: Refund history ledger.** Maintain an itemized ledger of all approved and issued refunds with transaction logs.
 
 ## Chat and Messaging
 
-- [ ] **SELLER-42: Media attachment in chat.** Support sending and viewing images and files in customer chat threads.
-- [ ] **SELLER-43: Order snippet in chat.** Embed an interactive order reference card in buyer-seller chat threads.
-- [ ] **SELLER-44: Seller-to-admin support chat.** Provide a direct chat channel between sellers and platform support admins.
+- [x] **SELLER-42: Media attachment in chat.** Support sending and viewing images and files in customer chat threads.
+- [x] **SELLER-43: Order snippet in chat.** Embed an interactive order reference card in buyer-seller chat threads.
+- [x] **SELLER-44: Seller-to-admin support chat.** Provide a direct chat channel between sellers and platform support admins.
 
 ## Reports and Analytics
 

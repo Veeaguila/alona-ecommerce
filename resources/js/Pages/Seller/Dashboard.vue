@@ -508,7 +508,7 @@ const statusClass = (status) => {
                     <Link
                         v-for="card in pipelineCards"
                         :key="card.key"
-                        :href="route('seller.orders', { status: card.statusFilter })"
+                        :href="card.key === 'returned' ? route('seller.returns') : route('seller.orders', { status: card.statusFilter })"
                         class="group relative flex flex-col justify-between rounded-xl border border-slate-200/90 bg-white p-3.5 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-xs"
                     >
                         <!-- Top Row: Stage & Pill -->

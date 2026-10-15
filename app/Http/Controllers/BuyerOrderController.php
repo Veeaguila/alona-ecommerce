@@ -1938,6 +1938,53 @@ class BuyerOrderController extends Controller
         );
     }
 
+    /**
+     * Buyer submits return shipping tracking details.
+     */
+    public function shipReturnRequest(
+        Request $request,
+        OrderReturnRequest $returnRequest
+    ): RedirectResponse {
+        abort_unless((int) $returnRequest->buyer_id === (int) $request->user()->id, 403);
+
+        if ($returnRequest->status !== 'approved') {
+            throw ValidationException::withMessages([
+                'status' => 'Tracking can only be submitted for approved return requests.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'return_carrier' => 'required|string|max:100',
+            'return_tracking_number' => 'required|string|max:100',
+            'return_waybill_url' => 'nullable|string|max:2048',
+        ]);
+
+        $returnRequest->update([
+            'return_carrier' => $validated['return_carrier'],
+            'return_tracking_number' => $validated['return_tracking_number'],
+            'return_waybill_url' => $validated['return_waybill_url'] ?? $returnRequest->return_waybill_url,
+            'return_shipping_status' => 'in_transit',
+            'buyer_shipped_at' => now(),
+        ]);
+
+        $returnRequest->addShippingMilestone(
+            'in_transit',
+            'Parcel Shipped by Buyer',
+            'Buyer Drop-off / Dispatch',
+            "Carrier: {$validated['return_carrier']} | Tracking: {$validated['return_tracking_number']}"
+        );
+
+        if (Schema::hasTable('seller_notifications')) {
+            SellerNotification::create([
+                'user_id' => $returnRequest->seller_id,
+                'title' => 'Buyer Shipped Return Item',
+                'message' => "Buyer has shipped returned item for Order #{$returnRequest->order->order_number} via {$validated['return_carrier']} (Tracking: {$validated['return_tracking_number']}).",
+            ]);
+        }
+
+        return back()->with('status', 'Return shipping details submitted successfully. Seller has been notified.');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | HELPERS

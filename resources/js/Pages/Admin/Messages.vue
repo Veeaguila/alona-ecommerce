@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -39,8 +40,13 @@ const props = defineProps({
     },
 })
 
+const lightboxImage = ref(null)
+const fileInput = ref(null)
+const attachmentPreview = ref(null)
+
 const form = useForm({
     body: '',
+    attachment: null,
 })
 
 const formatDate = (value) => {
@@ -70,18 +76,54 @@ const isAdminMessage = (message) => {
     )
 }
 
-const submitMessage = () => {
-    if (!props.conversation || !form.body.trim()) {
-        return
+const isImageFile = (msg) => {
+    if (msg.attachment_type === 'image') return true
+    const ext = (msg.attachment_name || msg.attachment_path || '').split('.').pop().toLowerCase()
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)
+}
+
+const formatFileSize = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / 1048576).toFixed(1) + ' MB'
+}
+
+const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    form.attachment = file
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            attachmentPreview.value = event.target.result
+        }
+        reader.readAsDataURL(file)
+    } else {
+        attachmentPreview.value = null
     }
+}
+
+const clearAttachment = () => {
+    form.attachment = null
+    attachmentPreview.value = null
+    if (fileInput.value) {
+        fileInput.value.value = ''
+    }
+}
+
+const submitMessage = () => {
+    if (!props.conversation) return
+    if (!form.body.trim() && !form.attachment) return
 
     form.post(
         route('admin.messages.store', props.conversation.id),
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 form.reset('body')
+                clearAttachment()
             },
         }
     )
@@ -535,14 +577,77 @@ const submitMessage = () => {
 
                                 <!-- MESSAGE BUBBLE -->
                                 <div
-                                    class="rounded-xl px-3.5 py-2.5 text-xs leading-5 shadow-sm sm:text-[13px]"
+                                    class="rounded-xl px-3.5 py-2.5 text-xs leading-5 shadow-sm sm:text-[13px] space-y-2"
                                     :class="
                                         isAdminMessage(message)
                                             ? 'rounded-br-sm bg-[#087F8C] text-white'
                                             : 'rounded-bl-sm border border-[#E5E7EB] bg-white text-[#1F2937]'
                                     "
                                 >
-                                    {{ message.body }}
+                                    <!-- Embedded Order Snippet (SELLER-43) -->
+                                    <div
+                                        v-if="message.order"
+                                        :class="[
+                                            'rounded-lg border p-2.5 text-xs',
+                                            isAdminMessage(message)
+                                                ? 'border-white/20 bg-white/10 text-white'
+                                                : 'border-[#E5E7EB] bg-[#F8FAF9] text-[#1F2937]'
+                                        ]"
+                                    >
+                                        <div class="flex items-center justify-between gap-2 border-b pb-1.5 mb-1.5" :class="isAdminMessage(message) ? 'border-white/15' : 'border-[#E5E7EB]'">
+                                            <span class="font-bold">Order #{{ message.order.order_number }}</span>
+                                            <span class="rounded px-1.5 py-0.5 text-[9px] font-bold border uppercase" :class="isAdminMessage(message) ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 text-slate-700 border-slate-200'">
+                                                {{ message.order.status }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] font-semibold">Total: ₱{{ Number(message.order.total).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+                                    </div>
+
+                                    <!-- Media Attachment (SELLER-42) -->
+                                    <div v-if="message.attachment_path" class="pt-1">
+                                        <div
+                                            v-if="isImageFile(message)"
+                                            class="group relative overflow-hidden rounded-lg border max-w-sm cursor-pointer"
+                                            :class="isAdminMessage(message) ? 'border-white/20' : 'border-[#E5E7EB]'"
+                                            @click="lightboxImage = message.attachment_url"
+                                        >
+                                            <img
+                                                :src="message.attachment_url"
+                                                :alt="message.attachment_name || 'Attachment'"
+                                                class="max-h-56 w-full object-cover transition duration-200 group-hover:scale-105"
+                                            />
+                                        </div>
+
+                                        <div
+                                            v-else
+                                            class="flex items-center gap-2.5 rounded-lg border p-2 text-xs max-w-sm"
+                                            :class="isAdminMessage(message) ? 'border-white/20 bg-white/10' : 'border-[#CBD5E1] bg-slate-50 text-[#1F2937]'"
+                                        >
+                                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-teal-50 text-[#087F8C]">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate font-semibold text-[11px]">{{ message.attachment_name || 'Attached File' }}</p>
+                                                <p class="text-[9px] opacity-75">{{ formatFileSize(message.attachment_size) }}</p>
+                                            </div>
+                                            <a
+                                                :href="message.attachment_url"
+                                                target="_blank"
+                                                download
+                                                class="rounded p-1 hover:bg-white/20"
+                                            >
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <p v-if="message.body" class="whitespace-pre-wrap break-words">
+                                        {{ message.body }}
+                                    </p>
                                 </div>
 
                                 <!-- TIMESTAMP -->
@@ -616,9 +721,35 @@ const submitMessage = () => {
                         class="border-t border-[#E5E7EB] bg-white p-4 sm:p-5"
                         @submit.prevent="submitMessage"
                     >
+                        <!-- ATTACHMENT PREVIEW CHIP -->
+                        <div
+                            v-if="form.attachment"
+                            class="mb-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700"
+                        >
+                            <div class="flex items-center gap-2 min-w-0">
+                                <svg class="h-3.5 w-3.5 text-[#087F8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                <span class="truncate">{{ form.attachment.name }}</span>
+                            </div>
+                            <button type="button" @click="clearAttachment" class="text-slate-400 hover:text-rose-600">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
                         <div
                             class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-2"
                         >
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                @change="handleFileSelect"
+                                class="hidden"
+                            />
+
                             <textarea
                                 v-model="form.body"
                                 rows="3"
@@ -631,27 +762,42 @@ const submitMessage = () => {
                             <div
                                 class="flex items-center justify-between gap-3 border-t border-[#E5E7EB] pt-2"
                             >
-                                <!-- FORM MESSAGE -->
-                                <p
-                                    v-if="form.errors.body"
-                                    class="px-2 text-[10px] font-medium text-[#E85D5D]"
-                                >
-                                    {{ form.errors.body }}
-                                </p>
+                                <div class="flex items-center gap-2">
+                                    <!-- ATTACH FILE BUTTON -->
+                                    <button
+                                        type="button"
+                                        @click="$refs.fileInput.click()"
+                                        title="Attach document or image"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#64748B] hover:border-[#087F8C] hover:text-[#087F8C]"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                        </svg>
+                                        Attach
+                                    </button>
 
-                                <p
-                                    v-else
-                                    class="px-2 text-[10px] text-[#94A3B8]"
-                                >
-                                    Messages are sent from the admin account.
-                                </p>
+                                    <!-- FORM MESSAGE -->
+                                    <p
+                                        v-if="form.errors.body"
+                                        class="px-2 text-[10px] font-medium text-[#E85D5D]"
+                                    >
+                                        {{ form.errors.body }}
+                                    </p>
+
+                                    <p
+                                        v-else
+                                        class="px-2 text-[10px] text-[#94A3B8]"
+                                    >
+                                        Messages are sent from the admin account.
+                                    </p>
+                                </div>
 
                                 <!-- SEND BUTTON -->
                                 <button
                                     type="submit"
                                     :disabled="
                                         form.processing ||
-                                        !form.body.trim()
+                                        (!form.body.trim() && !form.attachment)
                                     "
                                     class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#087F8C] px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#066D77] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
@@ -734,6 +880,30 @@ const submitMessage = () => {
                     </div>
 
                 </section>
+            </div>
+        </div>
+
+        <!-- Lightbox Modal -->
+        <div
+            v-if="lightboxImage"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            @click="lightboxImage = null"
+        >
+            <div class="relative max-h-[90vh] max-w-[90vw]" @click.stop>
+                <img
+                    :src="lightboxImage"
+                    alt="Enlarged Attachment"
+                    class="max-h-[85vh] max-w-[85vw] rounded-xl object-contain shadow-2xl"
+                />
+                <button
+                    type="button"
+                    @click="lightboxImage = null"
+                    class="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-800 shadow-lg hover:bg-slate-100"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
     </AdminLayout>

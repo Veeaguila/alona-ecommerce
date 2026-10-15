@@ -150,6 +150,23 @@
                                     />
                                 </svg>
 
+                                <!-- Returns & Refunds -->
+                                <svg
+                                    v-else-if="item.key === 'returns'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M16 15v-1a4 4 0 00-4-4H4m0 0l4 4m-4-4l4-4m12 5v2a3 3 0 01-3 3H9"
+                                    />
+                                </svg>
+
                                 <!-- Vouchers -->
                                 <svg
                                     v-else-if="item.key === 'vouchers'"
@@ -607,6 +624,11 @@ const navigation = [
         key: 'orders',
     },
     {
+        label: 'Returns & Refunds',
+        href: route('seller.returns'),
+        key: 'returns',
+    },
+    {
         label: 'Vouchers',
         href: route('seller.vouchers'),
         key: 'vouchers',
@@ -677,6 +699,10 @@ const isActive = (item) => {
 
     if (item.key === 'orders') {
         return currentPath.value.startsWith('/seller/orders')
+    }
+
+    if (item.key === 'returns') {
+        return currentPath.value.startsWith('/seller/returns')
     }
 
     if (item.key === 'vouchers') {

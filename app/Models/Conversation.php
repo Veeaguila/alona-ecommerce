@@ -8,7 +8,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Conversation extends Model
 {
-    protected $fillable = ['buyer_id', 'seller_id', 'product_id', 'order_id', 'last_message_at'];
+    protected $fillable = [
+        'type',
+        'buyer_id',
+        'seller_id',
+        'admin_id',
+        'product_id',
+        'order_id',
+        'subject',
+        'status',
+        'last_message_at',
+    ];
 
     protected function casts(): array
     {
@@ -25,6 +35,11 @@ class Conversation extends Model
         return $this->belongsTo(User::class, 'seller_id');
     }
 
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -38,5 +53,10 @@ class Conversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(ConversationMessage::class);
+    }
+
+    public function isSupport(): bool
+    {
+        return $this->type === 'seller_admin';
     }
 }

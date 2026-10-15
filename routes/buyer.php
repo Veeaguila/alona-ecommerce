@@ -175,6 +175,11 @@ Route::middleware([
         'cancelReturnRequest',
     ])->name('buyer.return-requests.cancel');
 
+    Route::post('/buyer/return-requests/{returnRequest}/ship', [
+        BuyerOrderController::class,
+        'shipReturnRequest',
+    ])->name('buyer.return-requests.ship');
+
 });
 
 

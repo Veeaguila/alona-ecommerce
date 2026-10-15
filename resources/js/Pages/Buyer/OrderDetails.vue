@@ -123,8 +123,10 @@ const getReturnStatusBadge = status => {
     const s = normalizeStatus(status)
     const map = {
         pending: { label: 'Pending Seller Review', color: 'bg-[#FFF7E6] text-[#A66A00] ring-1 ring-[#F4B942]/30' },
-        approved: { label: 'Return Approved', color: 'bg-[#EAF8F1] text-[#17784F] ring-1 ring-[#22A06B]/20' },
+        approved: { label: 'Return Authorized', color: 'bg-[#EBF5FF] text-[#1E40AF] ring-1 ring-[#3B82F6]/20' },
         rejected: { label: 'Return Rejected', color: 'bg-[#FDECEC] text-[#B94242] ring-1 ring-[#E85D5D]/20' },
+        item_returned: { label: 'Item Returned / In Inspection', color: 'bg-[#F3E8FF] text-[#6B21A8] ring-1 ring-[#9333EA]/20' },
+        refunded: { label: 'Refund Issued', color: 'bg-[#EAF8F1] text-[#17784F] ring-1 ring-[#22A06B]/20' },
         completed: { label: 'Refund Completed', color: 'bg-[#EAF8F1] text-[#17784F] ring-1 ring-[#22A06B]/20' },
         cancelled: { label: 'Request Cancelled', color: 'bg-[#F1F5F9] text-[#64748B] ring-1 ring-[#E5E7EB]' },
     }
@@ -665,6 +667,34 @@ const imageUrl = path => {
                                                     <p class="font-extrabold text-[#9A3412]">Seller Decision / Response:</p>
                                                     <p class="mt-0.5 leading-relaxed">
                                                         {{ item.latest_return_request.seller_response || item.latest_return_request.admin_response }}
+                                                    </p>
+                                                </div>
+
+                                                <!-- RETURN INSTRUCTIONS & WAREHOUSE ADDRESS -->
+                                                <div
+                                                    v-if="item.latest_return_request.return_instructions || item.latest_return_request.return_warehouse_address"
+                                                    class="mt-2.5 rounded-lg border border-blue-200 bg-blue-50/70 p-2.5 text-xs text-blue-950"
+                                                >
+                                                    <p class="font-extrabold text-blue-900">Return Instructions:</p>
+                                                    <p class="mt-0.5 leading-relaxed">
+                                                        {{ item.latest_return_request.return_instructions }}
+                                                    </p>
+                                                    <p v-if="item.latest_return_request.return_warehouse_address" class="mt-1 font-semibold text-blue-800">
+                                                        Ship to Warehouse: <span class="font-normal">{{ item.latest_return_request.return_warehouse_address }}</span>
+                                                    </p>
+                                                </div>
+
+                                                <!-- RETURN SHIPPING TRACKING -->
+                                                <div
+                                                    v-if="item.latest_return_request.return_tracking_number"
+                                                    class="mt-2.5 rounded-lg border border-indigo-200 bg-indigo-50/70 p-2.5 text-xs text-indigo-950"
+                                                >
+                                                    <p class="font-extrabold text-indigo-900">Return Carrier & Waybill Tracking:</p>
+                                                    <p class="mt-0.5 font-mono font-bold text-indigo-800">
+                                                        {{ item.latest_return_request.return_carrier }}: {{ item.latest_return_request.return_tracking_number }}
+                                                    </p>
+                                                    <p class="mt-0.5 text-[11px] text-indigo-700 capitalize">
+                                                        Status: {{ item.latest_return_request.return_shipping_status?.replace(/_/g, ' ') }}
                                                     </p>
                                                 </div>
 
