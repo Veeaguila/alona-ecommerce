@@ -15,12 +15,17 @@ class PickupRequest extends Model
         'seller_id',
         'sorting_center_id',
         'status',
+        'scheduled_date',
+        'time_slot',
+        'carrier_partner',
+        'notes',
         'requested_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'scheduled_date' => 'date',
             'requested_at' => 'datetime',
         ];
     }

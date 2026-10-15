@@ -510,12 +510,79 @@ const saveNote = () => {
 
 /*
 |--------------------------------------------------------------------------
-| Print Waybill
+| Print Waybill & Shipping Documents
 |--------------------------------------------------------------------------
 */
 
 const printOrder = () => {
-    window.print()
+    window.open(route('seller.orders.waybill', item.value.id), '_blank')
+}
+
+/*
+|--------------------------------------------------------------------------
+| Courier Pickup Scheduling (SELLER-19)
+|--------------------------------------------------------------------------
+*/
+
+const showPickupModal = ref(false)
+
+const getTomorrowDate = () => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().split('T')[0]
+}
+
+const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0]
+}
+
+const setQuickDate = (offsetDays) => {
+    const d = new Date()
+    d.setDate(d.getDate() + offsetDays)
+    pickupForm.scheduled_date = d.toISOString().split('T')[0]
+}
+
+const pickupForm = useForm({
+    scheduled_date: item.value?.scheduled_pickup_date || item.value?.parcel?.pickup_requests?.[0]?.scheduled_date || getTomorrowDate(),
+    time_slot: item.value?.pickup_time_slot || item.value?.parcel?.pickup_requests?.[0]?.time_slot || 'morning',
+    carrier_partner: item.value?.preferred_carrier || item.value?.courier_name || 'Alona Express Fleet',
+    collection_address: item.value?.parcel?.collection_address || item.value?.seller?.address || item.value?.seller?.pickup_address || '',
+    notes: item.value?.pickup_notes || '',
+})
+
+const openPickupModal = () => {
+    pickupForm.clearErrors()
+    if (!pickupForm.scheduled_date) {
+        pickupForm.scheduled_date = getTomorrowDate()
+    }
+    if (!pickupForm.collection_address) {
+        pickupForm.collection_address = item.value?.parcel?.collection_address || item.value?.seller?.address || item.value?.seller?.pickup_address || ''
+    }
+    showPickupModal.value = true
+}
+
+const submitPickupSchedule = () => {
+    pickupForm.post(
+        route('seller.orders.schedule-pickup', item.value.id),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showPickupModal.value = false
+            },
+        }
+    )
+}
+
+const formatTimeSlot = (slot) => {
+    switch (slot) {
+        case 'morning':
+            return 'Morning (9:00 AM – 1:00 PM)'
+        case 'afternoon':
+            return 'Afternoon (1:00 PM – 5:00 PM)'
+        case 'anytime':
+        default:
+            return 'Anytime (9:00 AM – 6:00 PM)'
+    }
 }
 
 /*
@@ -624,18 +691,34 @@ const formatMoney = (value) => {
                     </p>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        @click="printOrder"
-                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+                <div class="flex flex-wrap items-center gap-2">
+                    <a
+                        :href="route('seller.orders.waybill', item.id)"
+                        target="_blank"
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                     >
-                        🖨️ Print Waybill
-                    </button>
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.282.68-2.43 1.96-2.43h6.64c1.28 0 2.2 1.148 1.96 2.43a2.986 2.986 0 0 1-2.93 2.421H9.65a2.986 2.986 0 0 1-2.93-2.421Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-8.25A3.375 3.375 0 0 0 4.5 11.625v2.625m15 0a2.25 2.25 0 0 1-2.25 2.25h-.75m3-2.25V9a3 3 0 0 0-3-3h-9a3 3 0 0 0-3 3v5.25m3 2.25h-.75A2.25 2.25 0 0 1 4.5 14.25m3 2.25h9a2.25 2.25 0 0 0 2.25-2.25" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3Z" />
+                        </svg>
+                        Print Waybill
+                    </a>
+
+                    <a
+                        :href="route('seller.orders.packing-slip', item.id)"
+                        target="_blank"
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                        </svg>
+                        Packing Slip
+                    </a>
 
                     <Link
                         :href="route('seller.orders')"
-                        class="inline-flex items-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800"
+                        class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
                     >
                         ← Back to Orders
                     </Link>
@@ -727,6 +810,19 @@ const formatMoney = (value) => {
                             }}
                         </button>
 
+                        <!-- Courier Pickup Scheduling Button (SELLER-19) -->
+                        <button
+                            v-if="['processing', 'packed', 'ready_for_pickup'].includes(currentStatus)"
+                            type="button"
+                            @click="openPickupModal"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-[#087F8C] bg-[#E8F7F6] px-4 py-2 text-sm font-bold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
+                        >
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                            </svg>
+                            <span>{{ item.scheduled_pickup_date ? 'Reschedule Courier Pickup' : 'Schedule Courier Pickup' }}</span>
+                        </button>
+
                         <!-- Seller Cancellation -->
                         <button
                             v-if="canCancel"
@@ -737,6 +833,39 @@ const formatMoney = (value) => {
                             Cancel Order
                         </button>
                     </div>
+                </div>
+
+                <!-- Courier Pickup Scheduled Banner (SELLER-19) -->
+                <div
+                    v-if="item.scheduled_pickup_date"
+                    class="mt-4 rounded-xl border border-teal-200 bg-teal-50/80 p-4 text-xs text-teal-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white font-bold text-base shadow-xs">
+                            🚚
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm text-teal-950 flex flex-wrap items-center gap-2">
+                                <span>Courier Pickup Scheduled:</span>
+                                <span class="rounded-md bg-teal-100 px-2 py-0.5 font-mono text-teal-900 border border-teal-300">
+                                    {{ item.scheduled_pickup_date }}
+                                </span>
+                                <span class="font-semibold text-teal-700">({{ formatTimeSlot(item.pickup_time_slot) }})</span>
+                            </div>
+                            <div class="text-[11px] text-teal-800 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span>Carrier: <strong class="text-teal-950">{{ item.preferred_carrier || item.courier_name || 'Alona Express Fleet' }}</strong></span>
+                                <span v-if="item.pickup_notes" class="italic text-teal-700">• Note: "{{ item.pickup_notes }}"</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="openPickupModal"
+                        class="inline-flex shrink-0 items-center justify-center rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-bold text-teal-800 shadow-xs hover:bg-teal-100 transition"
+                    >
+                        Change Schedule
+                    </button>
                 </div>
 
                 <!-- Logistics Notice -->
@@ -2073,6 +2202,213 @@ const formatMoney = (value) => {
                         Please attach this waybill to the package.
                     </p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Courier Pickup Scheduling Modal (SELLER-19) -->
+        <div
+            v-if="showPickupModal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+        >
+            <!-- Overlay -->
+            <div
+                class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+                @click="showPickupModal = false"
+            ></div>
+
+            <!-- Modal Panel -->
+            <div
+                class="relative z-10 w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
+            >
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between border-b border-gray-100 bg-[#F4FBFA] px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#087F8C] text-white shadow-sm">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75a1.5 1.5 0 0 0-1.5-1.5h-9a1.5 1.5 0 0 0-1.5 1.5v10.5m12-10.5h-9" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">
+                                Schedule Courier Pickup
+                            </h3>
+                            <p class="text-xs text-gray-500">
+                                Order #{{ orderNumber }} &bull; {{ productName }}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showPickupModal = false"
+                        class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form @submit.prevent="submitPickupSchedule" class="p-6 space-y-5">
+                    <!-- Pickup Date -->
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-sm font-semibold text-gray-800">
+                                Pickup Date <span class="text-red-500">*</span>
+                            </label>
+                            <!-- Quick date pills -->
+                            <div class="flex items-center gap-1.5 text-xs">
+                                <button
+                                    type="button"
+                                    @click="setQuickDate(0)"
+                                    class="rounded-md border border-gray-200 px-2 py-0.5 text-gray-600 hover:border-[#087F8C] hover:text-[#087F8C]"
+                                >
+                                    Today
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="setQuickDate(1)"
+                                    class="rounded-md border border-gray-200 px-2 py-0.5 text-gray-600 hover:border-[#087F8C] hover:text-[#087F8C]"
+                                >
+                                    Tomorrow
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="setQuickDate(2)"
+                                    class="rounded-md border border-gray-200 px-2 py-0.5 text-gray-600 hover:border-[#087F8C] hover:text-[#087F8C]"
+                                >
+                                    In 2 Days
+                                </button>
+                            </div>
+                        </div>
+                        <input
+                            type="date"
+                            v-model="pickupForm.scheduled_date"
+                            :min="getTodayDate()"
+                            required
+                            class="mt-1.5 block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm font-medium text-gray-900 shadow-sm focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                        />
+                        <p v-if="pickupForm.errors.scheduled_date" class="mt-1 text-xs text-red-600">
+                            {{ pickupForm.errors.scheduled_date }}
+                        </p>
+                    </div>
+
+                    <!-- Time Slot -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">
+                            Preferred Time Window <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                            <button
+                                type="button"
+                                @click="pickupForm.time_slot = 'morning'"
+                                :class="pickupForm.time_slot === 'morning' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
+                                class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
+                            >
+                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Morning</span>
+                                <span class="mt-0.5 text-xs text-gray-600">9 AM – 1 PM</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="pickupForm.time_slot = 'afternoon'"
+                                :class="pickupForm.time_slot === 'afternoon' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
+                                class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
+                            >
+                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Afternoon</span>
+                                <span class="mt-0.5 text-xs text-gray-600">1 PM – 5 PM</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="pickupForm.time_slot = 'anytime'"
+                                :class="pickupForm.time_slot === 'anytime' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
+                                class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
+                            >
+                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Full Day</span>
+                                <span class="mt-0.5 text-xs text-gray-600">9 AM – 6 PM</span>
+                            </button>
+                        </div>
+                        <p v-if="pickupForm.errors.time_slot" class="mt-1 text-xs text-red-600">
+                            {{ pickupForm.errors.time_slot }}
+                        </p>
+                    </div>
+
+                    <!-- Carrier Partner -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">
+                            Assigned Carrier Partner <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            v-model="pickupForm.carrier_partner"
+                            class="mt-1.5 block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm font-medium text-gray-900 shadow-sm focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                        >
+                            <option value="Alona Express Fleet">Alona Express Fleet (Standard Fleet Dispatch)</option>
+                            <option value="J&T Express Partner">J&T Express Partner (Integrated Hub)</option>
+                            <option value="Flash Express Partner">Flash Express Partner (Rapid Transit)</option>
+                            <option value="NinjaVan Partner">NinjaVan Partner (Local Logistics)</option>
+                        </select>
+                        <p v-if="pickupForm.errors.carrier_partner" class="mt-1 text-xs text-red-600">
+                            {{ pickupForm.errors.carrier_partner }}
+                        </p>
+                    </div>
+
+                    <!-- Warehouse / Collection Address -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">
+                            Pickup / Warehouse Address <span class="text-xs font-normal text-gray-500">(Optional - defaults to seller profile)</span>
+                        </label>
+                        <input
+                            type="text"
+                            v-model="pickupForm.collection_address"
+                            placeholder="Enter warehouse gate, building name, or exact pickup location"
+                            class="mt-1.5 block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                        />
+                        <p v-if="pickupForm.errors.collection_address" class="mt-1 text-xs text-red-600">
+                            {{ pickupForm.errors.collection_address }}
+                        </p>
+                    </div>
+
+                    <!-- Pickup Notes -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">
+                            Instructions for Courier Rider <span class="text-xs font-normal text-gray-500">(Optional)</span>
+                        </label>
+                        <textarea
+                            v-model="pickupForm.notes"
+                            rows="2"
+                            placeholder="e.g., Ring bell at Gate 2, fragile electronics package, call before arriving..."
+                            class="mt-1.5 block w-full rounded-xl border border-gray-300 px-3.5 py-2 text-sm text-gray-900 shadow-sm focus:border-[#087F8C] focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                        ></textarea>
+                        <p v-if="pickupForm.errors.notes" class="mt-1 text-xs text-red-600">
+                            {{ pickupForm.errors.notes }}
+                        </p>
+                    </div>
+
+                    <!-- Footer actions -->
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                        <button
+                            type="button"
+                            @click="showPickupModal = false"
+                            class="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="pickupForm.processing"
+                            class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#066570] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <svg v-if="pickupForm.processing" class="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                            </svg>
+                            <span>{{ pickupForm.processing ? 'Scheduling...' : 'Confirm Pickup Request' }}</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </SellerLayout>

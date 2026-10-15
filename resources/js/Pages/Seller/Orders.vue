@@ -805,31 +805,48 @@ watch(
                                     <td
                                         class="px-5 py-4 text-right"
                                     >
-                                        <Link
-                                            :href="
-                                                route(
-                                                    'seller.order.details',
-                                                    order.id
-                                                )
-                                            "
-                                            class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs font-semibold text-[#64748B] transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        >
-                                            View
-
-                                            <svg
-                                                class="h-3.5 w-3.5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <a
+                                                v-if="['packed', 'ready_for_pickup', 'shipped', 'out_for_delivery', 'delivered'].includes(order.status)"
+                                                :href="route('seller.orders.waybill', order.id)"
+                                                target="_blank"
+                                                title="Print Waybill / Shipping Label"
+                                                class="inline-flex h-8 items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2.5 text-xs font-semibold text-[#087F8C] transition hover:border-[#087F8C] hover:bg-[#087F8C] hover:text-white"
                                             >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="1.8"
-                                                    d="M9 5l7 7-7 7"
-                                                />
-                                            </svg>
-                                        </Link>
+                                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.282.68-2.43 1.96-2.43h6.64c1.28 0 2.2 1.148 1.96 2.43a2.986 2.986 0 0 1-2.93 2.421H9.65a2.986 2.986 0 0 1-2.93-2.421Z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-8.25A3.375 3.375 0 0 0 4.5 11.625v2.625m15 0a2.25 2.25 0 0 1-2.25 2.25h-.75m3-2.25V9a3 3 0 0 0-3-3h-9a3 3 0 0 0-3 3v5.25m3 2.25h-.75A2.25 2.25 0 0 1 4.5 14.25m3 2.25h9a2.25 2.25 0 0 0 2.25-2.25" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3Z" />
+                                                </svg>
+                                                <span>Waybill</span>
+                                            </a>
+
+                                            <Link
+                                                :href="
+                                                    route(
+                                                        'seller.order.details',
+                                                        order.id
+                                                    )
+                                                "
+                                                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs font-semibold text-[#64748B] transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                            >
+                                                View
+
+                                                <svg
+                                                    class="h-3.5 w-3.5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1.8"
+                                                        d="M9 5l7 7-7 7"
+                                                    />
+                                                </svg>
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -976,8 +993,22 @@ watch(
 
                             <!-- Action -->
                             <div
-                                class="mt-4 flex justify-end border-t border-[#F1F5F9] pt-3"
+                                class="mt-4 flex items-center justify-end gap-2 border-t border-[#F1F5F9] pt-3"
                             >
+                                <a
+                                    v-if="['packed', 'ready_for_pickup', 'shipped', 'out_for_delivery', 'delivered'].includes(order.status)"
+                                    :href="route('seller.orders.waybill', order.id)"
+                                    target="_blank"
+                                    class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
+                                >
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.282.68-2.43H15.32c1.28 0 2.2 1.148 1.96 2.43a2.986 2.986 0 0 1-2.93 2.421H9.65a2.986 2.986 0 0 1-2.93-2.421Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-8.25A3.375 3.375 0 0 0 4.5 11.625v2.625m15 0a2.25 2.25 0 0 1-2.25 2.25h-.75m3-2.25V9a3 3 0 0 0-3-3h-9a3 3 0 0 0-3 3v5.25m3 2.25h-.75A2.25 2.25 0 0 1 4.5 14.25m3 2.25h9a2.25 2.25 0 0 0 2.25-2.25" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18h12v3a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3Z" />
+                                    </svg>
+                                    Waybill
+                                </a>
+
                                 <Link
                                     :href="
                                         route(

@@ -217,6 +217,26 @@ Route::middleware([
         'readyForPickup',
     ])->name('seller.orders.ready-for-pickup');
 
+    Route::post('/seller/orders/{orderItem}/schedule-pickup', [
+        SellerOrderController::class,
+        'schedulePickup',
+    ])->name('seller.orders.schedule-pickup');
+
+    Route::get('/seller/orders/{orderItem}/waybill', [
+        SellerOrderController::class,
+        'waybill',
+    ])->name('seller.orders.waybill');
+
+    Route::get('/seller/orders/{orderItem}/packing-slip', [
+        SellerOrderController::class,
+        'packingSlip',
+    ])->name('seller.orders.packing-slip');
+
+    Route::get('/seller/orders/{orderItem}/shipping-documents', [
+        SellerOrderController::class,
+        'shippingDocuments',
+    ])->name('seller.orders.shipping-documents');
+
     Route::patch('/seller/orders/{orderItem}/cancel', [
         SellerOrderController::class,
         'cancel',

@@ -24,9 +24,9 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Order Management and Fulfillment
 
-- [ ] **SELLER-17: Waybill / Shipping label printing.** Generate printable carrier waybills with barcodes and customer routing info.
-- [ ] **SELLER-18: Packing slip generator.** Generate printable packing slips formatted for warehouse order packing.
-- [ ] **SELLER-19: Courier pickup scheduling.** Let sellers schedule courier pickup dates and assign preferred carrier partners.
+- [x] **SELLER-17: Waybill / Shipping label printing.** Generate printable carrier waybills with barcodes and customer routing info.
+- [x] **SELLER-18: Packing slip generator.** Generate printable packing slips formatted for warehouse order packing.
+- [x] **SELLER-19: Courier pickup scheduling.** Let sellers schedule courier pickup dates and assign preferred carrier partners.
 - [ ] **SELLER-20: Order review link.** Add direct navigation from completed order items to corresponding customer reviews.
 
 ## Shipping and Delivery

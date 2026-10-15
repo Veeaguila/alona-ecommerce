@@ -355,6 +355,10 @@ class SellerOrderController extends Controller
 
         $pickup = $request->validate([
             'collection_address' => ['nullable', 'string', 'max:1000'],
+            'scheduled_date' => ['nullable', 'date'],
+            'time_slot' => ['nullable', 'string', 'in:morning,afternoon,anytime'],
+            'carrier_partner' => ['nullable', 'string', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $pickup): void {
@@ -363,13 +367,142 @@ class SellerOrderController extends Controller
                 'ready_for_pickup',
                 'Seller packed the item and marked it ready for courier pickup.'
             );
-            app(\App\Services\OrderItemPickup::class)->create($orderItem, $pickup['collection_address'] ?? null);
+            app(\App\Services\OrderItemPickup::class)->create(
+                $orderItem,
+                $pickup['collection_address'] ?? null,
+                $pickup
+            );
         });
 
         return back()->with(
             'status',
             'Order marked as ready for pickup.'
         );
+    }
+
+    /**
+     * Schedule or reschedule courier pickup (SELLER-19).
+     */
+    public function schedulePickup(
+        Request $request,
+        OrderItem $orderItem
+    ): RedirectResponse {
+        $this->authorizeOwnership(
+            $request,
+            $orderItem
+        );
+
+        abort_unless(
+            in_array($orderItem->status, ['processing', 'packed', 'ready_for_pickup'], true),
+            422,
+            'Pickup can only be scheduled for processing, packed, or ready for pickup orders.'
+        );
+
+        $validated = $request->validate([
+            'scheduled_date' => ['required', 'date'],
+            'time_slot' => ['required', 'string', 'in:morning,afternoon,anytime'],
+            'carrier_partner' => ['required', 'string', 'max:100'],
+            'collection_address' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $validated): void {
+            $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
+
+            if ($orderItem->status === 'packed') {
+                $orderItem->moveTo(
+                    'ready_for_pickup',
+                    'Seller scheduled courier pickup for ' . $validated['scheduled_date'] . ' (' . $validated['time_slot'] . ').'
+                );
+            }
+
+            if ($orderItem->status === 'ready_for_pickup') {
+                app(\App\Services\OrderItemPickup::class)->create(
+                    $orderItem,
+                    $validated['collection_address'] ?? null,
+                    $validated
+                );
+            } else {
+                $orderItem->update([
+                    'scheduled_pickup_date' => $validated['scheduled_date'],
+                    'pickup_time_slot' => $validated['time_slot'],
+                    'preferred_carrier' => $validated['carrier_partner'],
+                    'pickup_notes' => $validated['notes'] ?? null,
+                    'courier_name' => $validated['carrier_partner'],
+                ]);
+            }
+        });
+
+        return back()->with(
+            'status',
+            'Courier pickup scheduled successfully for ' . $validated['scheduled_date'] . ' (' . ucfirst($validated['time_slot']) . ') with ' . $validated['carrier_partner'] . '.'
+        );
+    }
+
+    /**
+     * Waybill view and thermal/A4 printing (SELLER-17).
+     */
+    public function waybill(
+        Request $request,
+        OrderItem $orderItem
+    ): Response {
+        $this->authorizeOwnership($request, $orderItem);
+
+        $orderItem->load([
+            'product.seller',
+            'order.user',
+            'variant',
+            'parcel.pickupRequests',
+        ]);
+
+        return Inertia::render('Seller/ShippingDocuments', [
+            'item' => $orderItem,
+            'initialTab' => 'waybill',
+        ]);
+    }
+
+    /**
+     * Warehouse packing slip generator (SELLER-18).
+     */
+    public function packingSlip(
+        Request $request,
+        OrderItem $orderItem
+    ): Response {
+        $this->authorizeOwnership($request, $orderItem);
+
+        $orderItem->load([
+            'product.seller',
+            'order.user',
+            'variant',
+            'parcel.pickupRequests',
+        ]);
+
+        return Inertia::render('Seller/ShippingDocuments', [
+            'item' => $orderItem,
+            'initialTab' => 'packing_slip',
+        ]);
+    }
+
+    /**
+     * Unified shipping documents viewer.
+     */
+    public function shippingDocuments(
+        Request $request,
+        OrderItem $orderItem
+    ): Response {
+        $this->authorizeOwnership($request, $orderItem);
+
+        $orderItem->load([
+            'product.seller',
+            'order.user',
+            'variant',
+            'parcel.pickupRequests',
+        ]);
+
+        return Inertia::render('Seller/ShippingDocuments', [
+            'item' => $orderItem,
+            'initialTab' => $request->query('tab', 'waybill'),
+        ]);
     }
 
     /**

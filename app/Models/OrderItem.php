@@ -51,6 +51,10 @@ class OrderItem extends Model
         'status',
         'courier_name',
         'tracking_number',
+        'scheduled_pickup_date',
+        'pickup_time_slot',
+        'preferred_carrier',
+        'pickup_notes',
         'seller_note',
         'packed_at',
         'shipped_at',
@@ -63,6 +67,7 @@ class OrderItem extends Model
         return [
             'price' => 'decimal:2',
             'quantity' => 'integer',
+            'scheduled_pickup_date' => 'date',
             'packed_at' => 'datetime',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
