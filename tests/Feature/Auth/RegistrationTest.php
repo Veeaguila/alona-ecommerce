@@ -443,4 +443,56 @@ class RegistrationTest extends TestCase
         $response2->assertOk();
         $this->assertDatabaseHas('users', ['email' => 'fifty.chars@example.com', 'first_name' => $name50A, 'last_name' => $name50B]);
     }
+
+    public function test_tc_buy_007_underage_buyer_is_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 17-year-old registration (18 years minus 1 day)
+        $underageBirthday = now()->subYears(18)->addDay()->toDateString();
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => $underageBirthday,
+            'email' => 'underage@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'birthday' => 'You must be at least 18 years old to register.',
+        ]);
+        $this->assertDatabaseMissing('users', ['email' => 'underage@example.com']);
+    }
+
+    public function test_tc_buy_007_age_18_limit_is_accepted(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // Exactly 18 years old today
+        $exact18Birthday = now()->subYears(18)->toDateString();
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => $exact18Birthday,
+            'email' => 'eighteen@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('users', [
+            'email' => 'eighteen@example.com',
+            'age' => 18,
+        ]);
+        $user = \App\Models\User::where('email', 'eighteen@example.com')->firstOrFail();
+        $this->assertEquals($exact18Birthday, \Illuminate\Support\Carbon::parse($user->birthday)->toDateString());
+    }
 }

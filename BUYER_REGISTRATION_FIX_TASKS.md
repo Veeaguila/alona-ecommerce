@@ -39,7 +39,7 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 3. Date of Birth / Minimum Age (`TC-BUY-007`)
 
-- [ ] **TC-BUY-007 — Age at the 18-year limit (FAIL)**
+- [x] **TC-BUY-007 — Age at the 18-year limit (FIXED)**
   - **Expected:** Born `10/17/2008` (17 years old) is rejected with a message that the buyer must be at least 18.
   - **Actual:** 17-year-old buyer is accepted. `RegisteredUserController.php` validates `'age' => 'required|integer|min:1|max:120'` and `AuthModal.vue` only checks `Number(registerForm.age) < 1`.
   - **What to Fix:** Enforce `'birthday' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()]` and `'age' => 'required|integer|min:18|max:120'` in `RegisteredUserController.php` and check `age >= 18` in `AuthModal.vue`.

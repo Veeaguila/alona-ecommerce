@@ -95,8 +95,8 @@ class RegisteredUserController extends Controller
             ],
 
             'contact_no' => 'required|string|max:30',
-            'birthday' => 'required|date|before:today',
-            'age' => 'nullable|integer|min:1|max:120',
+            'birthday' => ['required', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
+            'age' => 'nullable|integer|min:18|max:120',
 
             'address_group' => ['nullable', Rule::in(array_keys(PhilippineAddressService::GROUPS))],
             'region_code' => [$hasAddressGroup ? 'required' : 'nullable', 'regex:/^\d{10}$/'],
@@ -124,6 +124,9 @@ class RegisteredUserController extends Controller
             'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.',
             'middle_initial.regex' => 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.',
             'suffix.regex' => 'Suffix can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'birthday.before_or_equal' => 'You must be at least 18 years old to register.',
+            'birthday.before' => 'You must be at least 18 years old to register.',
+            'age.min' => 'You must be at least 18 years old to register.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
             'terms.accepted' => 'You must agree to the Terms and Privacy Policy.',
         ]);
@@ -234,6 +237,14 @@ class RegisteredUserController extends Controller
     {
         $google = $this->prepareGoogle($request, 'seller');
 
+        if ($request->filled('birthday') && ! $request->filled('age')) {
+            try {
+                $request->merge(['age' => Carbon::parse($request->input('birthday'))->age]);
+            } catch (\Throwable) {
+                // Handled by date validation below
+            }
+        }
+
         if ($request->has('email')) {
             $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
         }
@@ -259,8 +270,8 @@ class RegisteredUserController extends Controller
             ],
 
             'contact_no' => 'required|string|max:30',
-            'birthday' => 'required|date|before:today',
-            'age' => 'required|integer|min:1|max:120',
+            'birthday' => ['required', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
+            'age' => 'required|integer|min:18|max:120',
 
             /*
             |--------------------------------------------------------------------------
@@ -334,6 +345,9 @@ class RegisteredUserController extends Controller
             'last_name.min' => 'Last name must be at least 2 characters.',
             'last_name.max' => 'Last name may not be greater than 50 characters.',
             'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'birthday.before_or_equal' => 'You must be at least 18 years old to register.',
+            'birthday.before' => 'You must be at least 18 years old to register.',
+            'age.min' => 'You must be at least 18 years old to register.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
         ]);
 

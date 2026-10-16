@@ -516,6 +516,7 @@ const validateCurrentStep = () => {
 
     if (registrationStep.value === 2) {
         if (isSeller.value && !registerForm.sex) {
+            registerForm.setError('sex', 'Please select your sex.')
             stepError.value =
                 'Please select your sex.'
 
@@ -523,18 +524,32 @@ const validateCurrentStep = () => {
         }
 
         if (!registerForm.birthday) {
+            registerForm.setError('birthday', 'Please enter your birthday.')
             stepError.value =
                 'Please enter your birthday.'
 
             return false
         }
 
+        const calculatedAge = registerForm.age !== '' && registerForm.age !== null
+            ? Number(registerForm.age)
+            : Number(calculateAge(registerForm.birthday))
+
         if (
-            !registerForm.age ||
-            Number(registerForm.age) < 1
+            Number.isNaN(calculatedAge) ||
+            calculatedAge < 1
         ) {
+            registerForm.setError('birthday', 'Please enter a valid birthday.')
             stepError.value =
                 'Please enter a valid birthday.'
+
+            return false
+        }
+
+        if (calculatedAge < 18) {
+            registerForm.setError('birthday', 'You must be at least 18 years old to register.')
+            stepError.value =
+                'You must be at least 18 years old to register.'
 
             return false
         }
@@ -542,6 +557,7 @@ const validateCurrentStep = () => {
         if (
             !registerForm.contact_no.trim()
         ) {
+            registerForm.setError('contact_no', 'Please enter your contact number.')
             stepError.value =
                 'Please enter your contact number.'
 
@@ -1883,6 +1899,7 @@ watch(
                                     <input
                                         id="register-birthday"
                                         v-model="registerForm.birthday"
+                                        @input="registerForm.clearErrors('birthday', 'age'); stepError = ''"
                                         type="date"
                                         :max="new Date().toISOString().split('T')[0]"
                                         class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
