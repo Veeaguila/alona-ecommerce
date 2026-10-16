@@ -26,6 +26,13 @@ class BuyerOtpVerificationController extends Controller
         if ($email) {
             $email = Str::lower(trim((string) $email));
             $request->session()->put('otp_verification_email', $email);
+
+            $targetUser = $request->user() ?? User::where('email', $email)->first();
+            if ($targetUser && $targetUser->usertype === 'buyer' && ! $targetUser->hasVerifiedEmail()) {
+                if (! $targetUser->otp_code || ! $targetUser->otp_expires_at || now()->greaterThan($targetUser->otp_expires_at)) {
+                    $targetUser->generateAndSendOtp();
+                }
+            }
         }
 
         return Inertia::render('Auth/VerifyOtp', [
@@ -47,6 +54,10 @@ class BuyerOtpVerificationController extends Controller
 
         if ($email) {
             $request->merge(['email' => Str::lower(trim((string) $email))]);
+        }
+
+        if ($request->has('otp')) {
+            $request->merge(['otp' => trim((string) $request->input('otp'))]);
         }
 
         $request->validate([
@@ -93,10 +104,10 @@ class BuyerOtpVerificationController extends Controller
         event(new Verified($user));
         $request->session()->forget('otp_verification_email');
 
-        if ($request->wantsJson()) {
-            \Illuminate\Support\Facades\Auth::login($user);
-            $request->session()->regenerate();
+        \Illuminate\Support\Facades\Auth::login($user);
+        $request->session()->regenerate();
 
+        if ($request->wantsJson()) {
             return response()->json([
                 'status' => 'success',
                 'message' => 'Account created and verified successfully! Welcome to Alona.',
@@ -104,15 +115,9 @@ class BuyerOtpVerificationController extends Controller
             ]);
         }
 
-        if ($request->user()?->is($user)) {
-            return redirect()
-                ->route('buyer.dashboard')
-                ->with('status', 'Account created and verified successfully! Welcome to Alona.');
-        }
-
         return redirect()
-            ->route('login')
-            ->with('status', 'Account created and verified successfully! Welcome to Alona. You may now log in.');
+            ->route('buyer.dashboard')
+            ->with('status', 'Account created and verified successfully! Welcome to Alona.');
     }
 
     /**
@@ -140,6 +145,17 @@ class BuyerOtpVerificationController extends Controller
             throw ValidationException::withMessages([
                 'email' => 'We could not find an account with that email address.',
             ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Your email is already verified. Please log in.',
+                ]);
+            }
+
+            return redirect()->route('login')->with('status', 'Your email is already verified. Please log in.');
         }
 
         $user->generateAndSendOtp();

@@ -8,6 +8,10 @@ class AccountDestination
 {
     public function route(User $user): string
     {
+        if ($user->usertype === 'buyer' && ! $user->hasVerifiedEmail()) {
+            return 'verification.otp';
+        }
+
         if ($user->status !== 'approved') {
             return 'application.status';
         }

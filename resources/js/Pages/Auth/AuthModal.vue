@@ -118,6 +118,27 @@ const handleOtpInput = (event) => {
     }
 }
 
+const cleanMessage = (msg) => {
+    if (!msg) return ''
+    if (Array.isArray(msg)) {
+        msg = msg[0] || ''
+    }
+    if (typeof msg === 'object') {
+        const first = Object.values(msg)[0]
+        msg = Array.isArray(first) ? first[0] : first
+    }
+    let str = String(msg || '').trim()
+    if (str.startsWith('["') && str.endsWith('"]')) {
+        str = str.slice(2, -2)
+    } else if (str.startsWith('[') && str.endsWith(']')) {
+        str = str.slice(1, -1).trim()
+        if (str.startsWith('"') && str.endsWith('"')) {
+            str = str.slice(1, -1)
+        }
+    }
+    return str
+}
+
 const registerForm = useForm({
     /*
     |--------------------------------------------------------------------------
@@ -233,6 +254,23 @@ const stepDescription = computed(() => {
     }
 
     return 'Provide your store and required verification information.'
+})
+
+const visibleStepError = computed(() => {
+    if (!stepError.value) return ''
+    const cleanedStep = cleanMessage(stepError.value)
+    if (!cleanedStep) return ''
+
+    // Suppress stepError if it matches any field error currently rendered on the form
+    const hasMatchingFieldError = Object.values(registerForm.errors || {}).some((err) => {
+        return cleanMessage(err) === cleanedStep
+    })
+
+    if (hasMatchingFieldError) {
+        return ''
+    }
+
+    return cleanedStep
 })
 
 /*
@@ -812,16 +850,17 @@ const submitRegister = async () => {
                 console.error('Registration validation errors:', JSON.stringify(errors, null, 2))
                 if (errors.email) {
                     registrationStep.value = 1
-                    emailInUseAlert.value = errors.email
-                    stepError.value = errors.email
+                    emailInUseAlert.value = cleanMessage(errors.email)
+                    stepError.value = emailInUseAlert.value
                 } else if (errors.password) {
                     registrationStep.value = 1
-                    stepError.value = errors.password
+                    stepError.value = cleanMessage(errors.password)
                 } else if (errors.contact_no) {
                     registrationStep.value = 2
-                    stepError.value = errors.contact_no
+                    stepError.value = cleanMessage(errors.contact_no)
                 } else {
-                    stepError.value = 'Please correct the highlighted fields and try again.'
+                    const first = Object.values(errors)[0]
+                    stepError.value = cleanMessage(first) || 'Please correct the highlighted fields and try again.'
                 }
             },
             onSuccess: () => {
@@ -862,24 +901,29 @@ const submitRegister = async () => {
         if (!response.ok) {
             if (response.status === 422 && data.errors) {
                 registerForm.clearErrors()
-                registerForm.setError(data.errors)
+                const flattened = {}
+                for (const [key, val] of Object.entries(data.errors)) {
+                    flattened[key] = cleanMessage(val)
+                }
+                registerForm.setError(flattened)
+
                 if (data.errors.email) {
                     registrationStep.value = 1
-                    emailInUseAlert.value = data.errors.email[0] || 'This email address is already registered. Please log in instead or use another email.'
+                    emailInUseAlert.value = cleanMessage(data.errors.email) || 'This email address is already registered. Please log in instead or use another email.'
                     stepError.value = emailInUseAlert.value
                 } else if (data.errors.password) {
                     registrationStep.value = 1
-                    stepError.value = data.errors.password[0]
+                    stepError.value = cleanMessage(data.errors.password)
                 } else if (data.errors.contact_no) {
                     registrationStep.value = 2
-                    stepError.value = data.errors.contact_no[0]
+                    stepError.value = cleanMessage(data.errors.contact_no)
                 } else {
                     emailInUseAlert.value = ''
-                    const firstError = Object.values(data.errors)[0]?.[0]
-                    stepError.value = firstError || 'Please correct the highlighted fields and try again.'
+                    const firstError = Object.values(data.errors)[0]
+                    stepError.value = cleanMessage(firstError) || 'Please correct the highlighted fields and try again.'
                 }
             } else {
-                stepError.value = data.message || 'An error occurred during registration. Please try again.'
+                stepError.value = cleanMessage(data.message) || 'An error occurred during registration. Please try again.'
             }
             return
         }
@@ -1188,9 +1232,10 @@ watch(
 
                         <div
                             v-if="otpError"
-                            class="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+                            class="rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
+                            role="alert"
                         >
-                            {{ otpError }}
+                            {{ cleanMessage(otpError) }}
                         </div>
 
                         <form
@@ -1599,9 +1644,10 @@ watch(
 
                             <div
                                 v-if="stepError"
-                                class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
+                                class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
+                                role="alert"
                             >
-                                {{ stepError }}
+                                {{ cleanMessage(stepError) }}
                             </div>
 
                             <!-- ADDRESS ERROR -->
@@ -1663,45 +1709,6 @@ watch(
 
                                 </div>
 
-                            </div>
-
-                            <!-- EMAIL ALREADY IN USE ALERT -->
-                            <div
-                                v-if="emailInUseAlert"
-                                class="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm"
-                                role="alert"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <h4 class="text-sm font-semibold text-amber-950">
-                                            Email Address Already in Use
-                                        </h4>
-                                        <p class="mt-1 text-xs leading-5 text-amber-800">
-                                            {{ emailInUseAlert }}
-                                        </p>
-                                        <div class="mt-3 flex items-center gap-3">
-                                            <button
-                                                type="button"
-                                                @click="switchToLogin"
-                                                class="rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700"
-                                            >
-                                                Log in to this account &rarr;
-                                            </button>
-                                            <button
-                                                type="button"
-                                                @click="emailInUseAlert = ''"
-                                                class="text-xs font-medium text-amber-800 hover:text-amber-950 underline"
-                                            >
-                                                Use another email
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             <!-- ================================================= -->
@@ -2501,10 +2508,11 @@ watch(
                             <!-- ERROR -->
 
                             <div
-                                v-if="stepError"
-                                class="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
+                                v-if="visibleStepError"
+                                class="mt-5 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
+                                role="alert"
                             >
-                                {{ stepError }}
+                                {{ visibleStepError }}
                             </div>
 
                             <!-- NAVIGATION -->

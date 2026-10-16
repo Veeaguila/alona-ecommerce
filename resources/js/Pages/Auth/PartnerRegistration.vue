@@ -65,7 +65,7 @@ function submit() {
                     </Link>
                 </div>
 
-                <p v-if="failure" role="alert" tabindex="-1" class="mb-5 rounded-xl bg-red-50 p-4 text-sm text-red-600">{{ failure }}</p>
+                <div v-if="failure" role="alert" tabindex="-1" class="mb-5 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">{{ failure }}</div>
                 <p v-if="google" class="mb-6 rounded-xl bg-[#E8F7F6] p-4 text-sm">Continuing with Google as {{ google.email }}. Complete the details below.</p>
                 <a v-else :href="route('google.redirect', { role })" class="mb-6 block rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold">G &nbsp; Continue with Google</a>
                 <form @submit.prevent="submit" class="space-y-8">

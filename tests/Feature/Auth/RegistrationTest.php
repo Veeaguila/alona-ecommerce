@@ -738,4 +738,190 @@ class RegistrationTest extends TestCase
         $validResponse->assertOk();
         $this->assertDatabaseHas('users', ['email' => 'strong@example.com']);
     }
+
+    public function test_tc_buy_023_verify_with_correct_otp_approves_buyer_and_redirects_to_dashboard(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $user = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+        ]);
+        $user->generateAndSendOtp();
+        $otp = $user->otp_code;
+
+        $response = $this->post('/verify-otp', [
+            'email' => $user->email,
+            'otp' => $otp,
+        ]);
+
+        $response->assertRedirect(route('buyer.dashboard'));
+        $user->refresh();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertEquals('approved', $user->status);
+        $this->assertNull($user->otp_code);
+        $this->assertNull($user->otp_expires_at);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_tc_buy_024_verify_with_incorrect_otp_fails(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $user = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+        ]);
+        $user->generateAndSendOtp();
+
+        $response = $this->postJson('/verify-otp', [
+            'email' => $user->email,
+            'otp' => '000000',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['otp' => 'Invalid verification code.']);
+        $user->refresh();
+        $this->assertNull($user->email_verified_at);
+        $this->assertEquals('unverified', $user->status);
+    }
+
+    public function test_tc_buy_025_otp_in_wrong_format_is_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $user = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+        ]);
+        $user->generateAndSendOtp();
+
+        $invalidFormats = ['12345', '1234567', 'abcdef', '12345a'];
+
+        foreach ($invalidFormats as $invalidOtp) {
+            $response = $this->postJson('/verify-otp', [
+                'email' => $user->email,
+                'otp' => $invalidOtp,
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['otp']);
+        }
+    }
+
+    public function test_tc_buy_026_verify_with_expired_otp_fails(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $user = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+            'otp_code' => '654321',
+            'otp_expires_at' => now()->subMinutes(1),
+        ]);
+
+        $response = $this->postJson('/verify-otp', [
+            'email' => $user->email,
+            'otp' => '654321',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['otp' => 'OTP has expired. Please request a new code.']);
+        $user->refresh();
+        $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_tc_buy_027_resend_otp_invalidates_old_code_and_sends_new_one(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $user = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+            'otp_code' => '111111',
+            'otp_expires_at' => now()->addMinutes(5),
+        ]);
+
+        $response = $this->postJson('/verify-otp/resend', [
+            'email' => $user->email,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'success']);
+
+        $user->refresh();
+        $this->assertNotEquals('111111', $user->otp_code);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $user->otp_code);
+        $this->assertTrue(now()->lessThanOrEqualTo($user->otp_expires_at));
+
+        // Old code fails
+        $oldCodeResponse = $this->postJson('/verify-otp', [
+            'email' => $user->email,
+            'otp' => '111111',
+        ]);
+        $oldCodeResponse->assertStatus(422);
+
+        // New code succeeds
+        $newCodeResponse = $this->postJson('/verify-otp', [
+            'email' => $user->email,
+            'otp' => $user->otp_code,
+        ]);
+        $newCodeResponse->assertOk();
+    }
+
+    public function test_tc_buy_028_login_before_verifying_email_redirects_to_otp_screen(): void
+    {
+        // 1. Unverified buyer with status 'unverified'
+        $unverifiedBuyer = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'unverified',
+            'password' => \Illuminate\Support\Facades\Hash::make('Mamimili@2026'),
+        ]);
+
+        $loginResponse = $this->post('/login', [
+            'email' => $unverifiedBuyer->email,
+            'password' => 'Mamimili@2026',
+        ]);
+
+        $loginResponse->assertRedirect(route('verification.otp'));
+
+        // Log out so subsequent login test starts as guest
+        $this->post('/logout');
+
+        // 2. Admin mistakenly marked buyer 'approved' while email_verified_at is still null
+        $unverifiedApprovedBuyer = \App\Models\User::factory()->unverified()->create([
+            'usertype' => 'buyer',
+            'status' => 'approved',
+            'password' => \Illuminate\Support\Facades\Hash::make('Mamimili@2026'),
+        ]);
+
+        $loginResponse2 = $this->post('/login', [
+            'email' => $unverifiedApprovedBuyer->email,
+            'password' => 'Mamimili@2026',
+        ]);
+
+        $loginResponse2->assertRedirect(route('verification.otp'));
+
+        // 3. Directly hitting buyer dashboard as unverified buyer is blocked by EnsureBuyer middleware
+        $directAccess = $this->actingAs($unverifiedApprovedBuyer)->get(route('buyer.dashboard'));
+        $directAccess->assertRedirect(route('verification.otp'));
+    }
+
+    public function test_tc_buy_029_login_with_verified_account_lands_on_buyer_dashboard(): void
+    {
+        $verifiedBuyer = \App\Models\User::factory()->create([
+            'usertype' => 'buyer',
+            'status' => 'approved',
+            'email_verified_at' => now(),
+            'password' => \Illuminate\Support\Facades\Hash::make('Mamimili@2026'),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $verifiedBuyer->email,
+            'password' => 'Mamimili@2026',
+        ]);
+
+        $this->assertAuthenticatedAs($verifiedBuyer);
+        $response->assertRedirect(route('buyer.dashboard'));
+    }
 }

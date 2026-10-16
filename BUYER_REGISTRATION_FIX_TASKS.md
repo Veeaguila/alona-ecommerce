@@ -105,25 +105,25 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 7. Email Verification (OTP) & Login State Transition (`TC-BUY-023` to `TC-BUY-029`)
 
-- [ ] **TC-BUY-023 — Verify with the correct OTP (BLOCKED)**
-- [ ] **TC-BUY-024 — Verify with an incorrect OTP (BLOCKED)**
-- [ ] **TC-BUY-025 — OTP in the wrong format (BLOCKED)**
-- [ ] **TC-BUY-026 — Verify with an expired OTP (BLOCKED)**
-- [ ] **TC-BUY-027 — Resend OTP (BLOCKED)**
+- [x] **TC-BUY-023 — Verify with the correct OTP (FIXED)**
+- [x] **TC-BUY-024 — Verify with an incorrect OTP (FIXED)**
+- [x] **TC-BUY-025 — OTP in the wrong format (FIXED)**
+- [x] **TC-BUY-026 — Verify with an expired OTP (FIXED)**
+- [x] **TC-BUY-027 — Resend OTP (FIXED)**
   - **Reason:** A 6-digit OTP email verification flow (with 5-minute expiry and OTP input screen) is not implemented (`MustVerifyEmail` is commented out in `app/Models/User.php`, and buyer registration uses Admin approval instead of OTP).
   - **What to Fix:**
     - Add `otp_code` and `otp_expires_at` (5-minute expiry) to `users`.
     - Send 6-digit OTP email upon buyer registration and show the OTP verification screen.
     - Implement `POST /verify-otp` (validates 6 numeric digits, checks expiry and code match, sets `email_verified_at = now()` and `status = 'approved'`) and `POST /verify-otp/resend` (invalidates old OTP and emails a new 6-digit OTP).
 
-- [ ] **TC-BUY-028 — Log in before verifying the email (FAIL)**
+- [x] **TC-BUY-028 — Log in before verifying the email (FIXED)**
   - **Expected:** User is denied access and shown the email verification page or asked to verify their email.
   - **Actual:**
     - If `status = 'pending'`, logging in redirects to `/application/status` stating the account awaits Administrator Approval (not email verification).
     - If an Admin sets `status = 'approved'` while `email_verified_at` is still `null`, `app/Services/AccountDestination.php` and `app/Http/Middleware/EnsureBuyer.php` do not check `hasVerifiedEmail()` for buyers, granting full access to `/buyer/dashboard` with an unverified email.
   - **What to Fix:** Check `hasVerifiedEmail()` for buyers in `AccountDestination.php` and `EnsureBuyer.php` and redirect unverified buyers to the OTP verification page.
 
-- [ ] **TC-BUY-029 — Log in with the new verified account (FAIL without admin approval)**
+- [x] **TC-BUY-029 — Log in with the new verified account (FIXED)**
   - **Expected:** After verifying OTP, buyer logs in immediately and lands on the buyer home page (`/buyer/dashboard`).
   - **Actual:** Because buyer accounts start with `status = 'pending'`, the buyer is redirected to `/application/status` instead of `/buyer/dashboard` until an Admin manually approves the buyer in `/admin/applications`.
   - **What to Fix:** Automatically set buyer `status = 'approved'` upon successful 6-digit OTP verification so verified buyers can immediately log in to `/buyer/dashboard`.

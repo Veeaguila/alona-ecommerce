@@ -11,8 +11,8 @@ const profileForm = useForm({ contact_no: props.profile?.details?.contact_no ?? 
         <img src="/images/Alogo.png" alt="Alona" class="mb-5 h-14 w-14" /><h1 class="text-2xl font-semibold">Your application</h1><p class="mt-2 text-slate-500">{{ name }} · {{ email }}</p>
         <p class="mt-6 rounded-xl bg-[#E8F7F6] p-4 text-[#087F8C]">Account: {{ status }} · Application: {{ approvalStatus }}</p>
         <p v-if="page.props.flash?.status" role="status" class="mt-4 text-sm text-[#087F8C]">{{ page.props.flash.status === 'verification-link-sent' ? 'A new verification link has been sent to your email.' : page.props.flash.status }}</p>
-        <p v-if="page.props.errors?.email" role="alert" class="mt-4 text-sm text-red-600">{{ page.props.errors.email }}</p>
-        <p v-if="reason" class="mt-4 text-sm text-red-600">Review feedback: {{ reason }}</p>
+        <div v-if="page.props.errors?.email" role="alert" class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">{{ page.props.errors.email }}</div>
+        <div v-if="reason" class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">Review feedback: {{ reason }}</div>
         <div v-if="!verified" class="mt-5"><p class="text-sm">Check your email for a verification link. Approval and email verification are required before operations.</p><button type="button" @click="router.post(route('verification.send'))" class="mt-3 font-semibold text-[#087F8C]">Resend verification email</button></div>
         <p v-if="!destination" class="mt-5 text-sm text-slate-500">{{ ['rejected', 'suspended'].includes(status) ? 'Your account currently has no access to operations. Contact support for help with the review.' : status === 'approved' && !verified ? 'Your application is approved. Verify your email to access operations.' : 'Your application is being reviewed. Return here after signing in to check its status.' }}</p>
         <a v-if="destination" :href="destination" class="mt-6 inline-block rounded-xl bg-[#087F8C] px-5 py-3 font-semibold text-white">Open dashboard</a>

@@ -518,7 +518,7 @@ const submitApplication = () => {
                     </div>
 
                     <!-- STEP ERROR BANNER -->
-                    <div v-if="stepError" role="alert" class="mt-4 rounded-xl bg-red-50 p-3.5 text-sm font-medium text-red-600">
+                    <div v-if="stepError" role="alert" class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">
                         {{ stepError }}
                     </div>
 

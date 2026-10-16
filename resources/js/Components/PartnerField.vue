@@ -9,7 +9,7 @@ defineEmits(['update:modelValue'])
             <option value="">Choose an option</option><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
         <input v-else :id="name" :type="type" :value="type === 'file' ? undefined : modelValue" :required="required" :disabled="disabled" :accept="type === 'file' ? '.jpg,.jpeg,.png,.pdf' : undefined" :autocomplete="type === 'password' ? 'new-password' : undefined" :aria-invalid="!!error" :aria-describedby="error ? name + '-error' : undefined" @input="$emit('update:modelValue', type === 'file' ? $event.target.files[0] : $event.target.value)" class="partner-input" />
-        <p v-if="error" :id="name + '-error'" role="alert" class="mt-1 text-sm text-red-600">{{ error }}</p>
+        <div v-if="error" :id="name + '-error'" role="alert" class="mt-2 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">{{ error }}</div>
     </div>
 </template>
 <style scoped>

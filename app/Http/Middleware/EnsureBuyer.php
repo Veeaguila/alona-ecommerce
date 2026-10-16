@@ -10,8 +10,14 @@ class EnsureBuyer
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->usertype === 'buyer', 403);
-        abort_unless($request->user()?->status === 'approved', 403);
+        $user = $request->user();
+        abort_unless($user?->usertype === 'buyer', 403);
+
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.otp');
+        }
+
+        abort_unless($user->status === 'approved', 403);
 
         return $next($request);
     }
