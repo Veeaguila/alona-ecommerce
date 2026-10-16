@@ -11,6 +11,8 @@ use Tests\TestCase;
 
 class RiderProfileTest extends TestCase
 {
+    private int $seq = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -18,14 +20,18 @@ class RiderProfileTest extends TestCase
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
         $this->artisan('migrate:fresh', ['--force' => true])->assertExitCode(0);
         Storage::fake('local');
+        $this->seq = 0;
     }
 
     private function fixture(): User
     {
+        $this->seq++;
+        $contact = $this->seq === 1 ? '09170000001' : sprintf('0917%07d', $this->seq);
+        $plate = $this->seq === 1 ? 'TEST-1' : 'TEST-'.$this->seq;
         $user = User::factory()->create(['usertype' => 'rider', 'status' => 'approved', 'name' => 'Actual Rider',
-            'contact_no' => '09170000001', 'birthday' => '2000-01-02', 'address' => 'Existing address']);
+            'contact_no' => $contact, 'birthday' => '2000-01-02', 'address' => 'Existing address']);
         Rider::create(['user_id' => $user->id, 'name' => $user->name, 'contact' => $user->contact_no,
-            'birthday' => '2000-01-02', 'vehicle_type' => 'motorcycle', 'plate_number' => 'TEST-1',
+            'birthday' => '2000-01-02', 'vehicle_type' => 'motorcycle', 'plate_number' => $plate,
             'approval_status' => 'approved', 'is_active' => true]);
         PartnerApplication::create(['user_id' => $user->id, 'role' => 'rider', 'details' => ['contact_no' => $user->contact_no, 'vehicle_type' => 'motorcycle'],
             'address' => [], 'documents' => ['id_doc' => 'untouched.pdf'], 'terms_accepted_at' => now(), 'privacy_accepted_at' => now()]);

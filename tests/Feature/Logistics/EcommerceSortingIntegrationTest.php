@@ -72,7 +72,7 @@ class EcommerceSortingIntegrationTest extends TestCase
         $this->assertSame('pending', $parcel->pickupRequests()->first()->status);
         $this->assertSame('ready_for_pickup', $item->fresh()->status);
         $this->assertSame($parcel->order_id, $item->fresh()->tracking_number);
-        $this->assertSame('Alona Logistics', $item->fresh()->courier_name);
+        $this->assertSame('Alona Express', $item->fresh()->courier_name);
         $this->assertSame($parcel->id, app(OrderItemPickup::class)->create($item)->id);
         $this->assertDatabaseCount('parcels', 1);
         $this->assertDatabaseCount('pickup_requests', 1);
