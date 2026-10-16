@@ -37,6 +37,10 @@ Route::middleware([
         SellerDashboardController::class,
         'index',
     ])->name('seller.dashboard');
+    Route::get('/seller/dashboard', [
+        SellerDashboardController::class,
+        'index',
+    ]);
 
 
     /*

@@ -35,6 +35,10 @@ Route::prefix('admin')
             AdminDashboardController::class,
             'index',
         ])->name('admin.dashboard');
+        Route::get('/dashboard', [
+            AdminDashboardController::class,
+            'index',
+        ]);
 
 
         /*

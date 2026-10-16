@@ -127,3 +127,19 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
   - **Expected:** After verifying OTP, buyer logs in immediately and lands on the buyer home page (`/buyer/dashboard`).
   - **Actual:** Because buyer accounts start with `status = 'pending'`, the buyer is redirected to `/application/status` instead of `/buyer/dashboard` until an Admin manually approves the buyer in `/admin/applications`.
   - **What to Fix:** Automatically set buyer `status = 'approved'` upon successful 6-digit OTP verification so verified buyers can immediately log in to `/buyer/dashboard`.
+
+---
+
+## 8. Form Integrity, Boundaries & Access Control (`TC-BUY-002`, `003`, `005`, `008`, `010`, `017`, `019`, `020`, `022`, `030`)
+
+- [x] **TC-BUY-002 — Submit a completely empty form (PASS)**: Form blocked with required field validations; no account created.
+- [x] **TC-BUY-003 — Leave one required field blank at a time (PASS)**: Each required field independently blocked with specific required message.
+- [x] **TC-BUY-005 — Name with ñ and allowed punctuation (PASS)**: Accepts `Niño Angelo` and `Peñaflor-O'Hara` accurately.
+- [x] **TC-BUY-008 — Date of birth in the future (PASS)**: Future dates prevented via HTML picker `:max` constraint and rejected by backend `before_or_equal:subYears(18)`.
+- [x] **TC-BUY-010 — Email that is already registered (PASS)**: Blocked with custom alert `"This email address is already registered. Please log in instead or use another email."`.
+- [x] **TC-BUY-017 — Password length at the limit (PASS)**: 7 characters (`Bili@26`) rejected; 8 characters (`Bili@202`) accepted.
+- [x] **TC-BUY-019 — Confirm Password does not match (PASS)**: Blocked with password mismatch validation error.
+- [x] **TC-BUY-020 — Password is hidden while typing & toggle icon (PASS)**: Dots hidden by default; show/hide eye toggle buttons switch to plain text and back.
+- [x] **TC-BUY-022 — Click Register several times quickly (PASS)**: Double-click prevented by `:disabled="registerForm.processing"` and backend uniqueness constraints.
+- [x] **TC-BUY-030 — Open another role's pages (PASS)**: Buyer access to `/seller/dashboard`, `/admin/dashboard`, `/sorting-center/dashboard`, and `/rider/dashboard` denied with 403 Forbidden / redirect.
+

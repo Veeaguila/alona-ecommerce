@@ -924,4 +924,143 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticatedAs($verifiedBuyer);
         $response->assertRedirect(route('buyer.dashboard'));
     }
+
+    public function test_tc_buy_002_submit_completely_empty_form(): void
+    {
+        $response = $this->postJson('/register', []);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'first_name',
+            'last_name',
+            'email',
+            'birthday',
+            'contact_no',
+            'password',
+            'terms',
+        ]);
+    }
+
+    public function test_tc_buy_003_leave_one_required_field_blank_at_a_time(): void
+    {
+        $baseData = [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'email' => 'juanmiguel.delacruz@example.com',
+            'mobile_number' => '09171234567',
+            'contact_no' => '09171234567',
+            'birthday' => '1998-05-14',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ];
+
+        $requiredFields = ['first_name', 'last_name', 'email', 'contact_no', 'birthday', 'password'];
+
+        foreach ($requiredFields as $field) {
+            $testData = $baseData;
+            unset($testData[$field]);
+
+            $response = $this->postJson('/register', $testData);
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors([$field]);
+        }
+    }
+
+    public function test_tc_buy_008_date_of_birth_in_the_future(): void
+    {
+        $tomorrow = now()->addDay()->toDateString();
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'email' => 'juanmiguel.delacruz@example.com',
+            'contact_no' => '09171234567',
+            'birthday' => $tomorrow,
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['birthday']);
+    }
+
+    public function test_tc_buy_017_password_length_at_the_limit(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 7 characters: Bili@26 (reject)
+        $reject = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'email' => 'buyer.test01@example.com',
+            'contact_no' => '09171234567',
+            'birthday' => '1998-05-14',
+            'password' => 'Bili@26',
+            'password_confirmation' => 'Bili@26',
+            'terms' => true,
+        ]);
+        $reject->assertStatus(422);
+        $reject->assertJsonValidationErrors(['password']);
+
+        // 8 characters: Bili@202 (accept)
+        $accept = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'email' => 'buyer.test01@example.com',
+            'contact_no' => '09171234567',
+            'birthday' => '1998-05-14',
+            'password' => 'Bili@202',
+            'password_confirmation' => 'Bili@202',
+            'terms' => true,
+        ]);
+        $accept->assertOk();
+    }
+
+    public function test_tc_buy_019_confirm_password_does_not_match(): void
+    {
+        $response = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'email' => 'buyer.test02@example.com',
+            'contact_no' => '09171234568',
+            'birthday' => '1998-05-14',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2027',
+            'terms' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['password']);
+    }
+
+    public function test_tc_buy_030_buyer_cannot_access_other_role_dashboards(): void
+    {
+        $verifiedBuyer = \App\Models\User::factory()->create([
+            'usertype' => 'buyer',
+            'status' => 'approved',
+            'email_verified_at' => now(),
+        ]);
+
+        // 1. Seller Dashboard (/seller/dashboard) -> 403 Forbidden
+        $sellerResponse = $this->actingAs($verifiedBuyer)->get('/seller/dashboard');
+        $this->assertEquals(403, $sellerResponse->status());
+
+        // 2. Admin Dashboard (/admin and /admin/dashboard) -> 403 Forbidden
+        $adminResponse = $this->actingAs($verifiedBuyer)->get('/admin');
+        $this->assertEquals(403, $adminResponse->status());
+
+        $adminDashboardResponse = $this->actingAs($verifiedBuyer)->get('/admin/dashboard');
+        $this->assertEquals(403, $adminDashboardResponse->status());
+
+        // 3. Sorting Center / Logistics Dashboard -> 403 or redirect
+        $sortingResponse = $this->actingAs($verifiedBuyer)->get('/sorting-center/dashboard');
+        $this->assertTrue(in_array($sortingResponse->status(), [403, 302]));
+
+        // 4. Rider Dashboard -> 403 or redirect
+        $riderResponse = $this->actingAs($verifiedBuyer)->get('/rider/dashboard');
+        $this->assertTrue(in_array($riderResponse->status(), [403, 302]));
+    }
 }
+
