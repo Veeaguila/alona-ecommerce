@@ -91,12 +91,12 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 6. Password Complexity & UI Toggle (`TC-BUY-018`, `TC-BUY-020`)
 
-- [ ] **TC-BUY-018 — Password missing a required character type (FAIL)**
+- [x] **TC-BUY-018 — Password missing a required character type (FIXED)**
   - **Expected:** Passwords missing uppercase (`mamimili@2026`), lowercase (`MAMIMILI@2026`), number (`Mamimili@abcd`), or special character (`Mamimili2026`) are rejected.
   - **Actual:** All 4 weak passwords are accepted. `Rules\Password::defaults()` is not configured with `->mixedCase()->numbers()->symbols()` in `app/Providers/AppServiceProvider.php`, so it only checks `min:8`.
   - **What to Fix:** Configure `Password::min(8)->max(64)->mixedCase()->numbers()->symbols()` in `AppServiceProvider.php` and validate complexity in `AuthModal.vue`.
 
-- [ ] **TC-BUY-020 — Password is hidden while typing & show/hide icon (FAIL)**
+- [x] **TC-BUY-020 — Password is hidden while typing & show/hide icon (FIXED)**
   - **Expected:** Characters are hidden as dots by default; clicking the show/hide icon reveals the password, then hides it again.
   - **Actual:** Characters are hidden by default (`type="password"`), but no show/hide password eye icon exists in `AuthModal.vue`.
   - **What to Fix:** Add show/hide eye toggle buttons to the Password and Confirm Password fields in `AuthModal.vue`.

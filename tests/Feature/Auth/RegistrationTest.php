@@ -40,8 +40,8 @@ class RegistrationTest extends TestCase
             'municipality' => 'Cebu City',
             'barangay' => 'Barangay Central',
             'street_address' => '1 Test Street',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
             'terms' => true,
         ]);
 
@@ -145,8 +145,8 @@ class RegistrationTest extends TestCase
             'line_of_business' => 'Handmade goods',
             'id' => UploadedFile::fake()->create('id.pdf', 5, 'application/pdf'),
             'business_permit' => UploadedFile::fake()->create('permit.pdf', 5, 'application/pdf'),
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
         ]);
 
         $this->assertDatabaseHas('users', [
@@ -693,5 +693,49 @@ class RegistrationTest extends TestCase
             'email' => 'juana@example.com',
             'contact_no' => '09170000002',
         ]);
+    }
+
+    public function test_tc_buy_018_password_missing_required_character_type(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $invalidPasswords = [
+            'mamimili@2026', // missing uppercase
+            'MAMIMILI@2026', // missing lowercase
+            'Mamimili@abcd', // missing number
+            'Mamimili2026',  // missing symbol
+        ];
+
+        foreach ($invalidPasswords as $idx => $invalidPassword) {
+            $response = $this->postJson('/register', [
+                'first_name' => 'Juan',
+                'last_name' => 'Cruz',
+                'birthday' => '1995-01-01',
+                'email' => "weak{$idx}@example.com",
+                'contact_no' => sprintf('091800000%02d', $idx),
+                'password' => $invalidPassword,
+                'password_confirmation' => $invalidPassword,
+                'terms' => true,
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['password']);
+            $this->assertDatabaseMissing('users', ['email' => "weak{$idx}@example.com"]);
+        }
+
+        // Compliant password with uppercase, lowercase, number, and symbol passes
+        $validResponse = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Cruz',
+            'birthday' => '1995-01-01',
+            'email' => 'strong@example.com',
+            'contact_no' => '09180000099',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $validResponse->assertOk();
+        $this->assertDatabaseHas('users', ['email' => 'strong@example.com']);
     }
 }

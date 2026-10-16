@@ -72,6 +72,10 @@ const emailInUseAlert = ref('')
 const accountCreatedSuccess = ref('')
 const accountVerifiedSuccess = ref('')
 
+const showRegisterPassword = ref(false)
+const showRegisterPasswordConfirmation = ref(false)
+const showLoginPassword = ref(false)
+
 const isVerifyingOtp = ref(false)
 const otpEmail = ref('')
 const otpCode = ref('')
@@ -272,6 +276,9 @@ const resetRegistration = () => {
     emailInUseAlert.value = ''
     accountCreatedSuccess.value = ''
     accountVerifiedSuccess.value = ''
+    showRegisterPassword.value = false
+    showRegisterPasswordConfirmation.value = false
+    showLoginPassword.value = false
     if (resendTimer) {
         clearInterval(resendTimer)
         resendTimer = null
@@ -485,41 +492,56 @@ const validateCurrentStep = () => {
             return false
         }
 
-        if (
-            !isGoogleOnboarding.value && !registerForm.password
-        ) {
-            stepError.value =
-                'Please create a password.'
+        if (!isGoogleOnboarding.value) {
+            const pwd = registerForm.password || ''
 
-            return false
-        }
+            if (!pwd) {
+                registerForm.setError('password', 'Please create a password.')
+                stepError.value = 'Please create a password.'
+                return false
+            }
 
-        if (
-            !isGoogleOnboarding.value && registerForm.password.length < 8
-        ) {
-            stepError.value =
-                'Your password must be at least 8 characters.'
+            if (pwd.length < 8) {
+                registerForm.setError('password', 'Your password must be at least 8 characters.')
+                stepError.value = 'Your password must be at least 8 characters.'
+                return false
+            }
 
-            return false
-        }
+            if (pwd.length > 64) {
+                registerForm.setError('password', 'Your password may not be greater than 64 characters.')
+                stepError.value = 'Your password may not be greater than 64 characters.'
+                return false
+            }
 
-        if (
-            !isGoogleOnboarding.value && !registerForm.password_confirmation
-        ) {
-            stepError.value =
-                'Please confirm your password.'
+            const hasUpper = /[A-Z]/.test(pwd) || /\p{Lu}/u.test(pwd)
+            const hasLower = /[a-z]/.test(pwd) || /\p{Ll}/u.test(pwd)
+            const hasNumber = /[0-9]/.test(pwd) || /\p{N}/u.test(pwd)
+            const hasSymbol = /[\p{P}\p{S}\W_]/u.test(pwd)
 
-            return false
-        }
+            if (!hasUpper || !hasLower || !hasNumber || !hasSymbol) {
+                const missing = []
+                if (!hasUpper) missing.push('an uppercase letter')
+                if (!hasLower) missing.push('a lowercase letter')
+                if (!hasNumber) missing.push('a number')
+                if (!hasSymbol) missing.push('a symbol')
 
-        if (
-            !isGoogleOnboarding.value && registerForm.password !==
-            registerForm.password_confirmation
-        ) {
-            stepError.value =
-                'The passwords do not match.'
+                const msg = `Password must contain at least ${missing.join(', ')}.`
+                registerForm.setError('password', msg)
+                stepError.value = msg
+                return false
+            }
 
-            return false
+            if (!registerForm.password_confirmation) {
+                registerForm.setError('password_confirmation', 'Please confirm your password.')
+                stepError.value = 'Please confirm your password.'
+                return false
+            }
+
+            if (registerForm.password !== registerForm.password_confirmation) {
+                registerForm.setError('password_confirmation', 'The passwords do not match.')
+                stepError.value = 'The passwords do not match.'
+                return false
+            }
         }
     }
 
@@ -792,6 +814,9 @@ const submitRegister = async () => {
                     registrationStep.value = 1
                     emailInUseAlert.value = errors.email
                     stepError.value = errors.email
+                } else if (errors.password) {
+                    registrationStep.value = 1
+                    stepError.value = errors.password
                 } else if (errors.contact_no) {
                     registrationStep.value = 2
                     stepError.value = errors.contact_no
@@ -842,6 +867,9 @@ const submitRegister = async () => {
                     registrationStep.value = 1
                     emailInUseAlert.value = data.errors.email[0] || 'This email address is already registered. Please log in instead or use another email.'
                     stepError.value = emailInUseAlert.value
+                } else if (data.errors.password) {
+                    registrationStep.value = 1
+                    stepError.value = data.errors.password[0]
                 } else if (data.errors.contact_no) {
                     registrationStep.value = 2
                     stepError.value = data.errors.contact_no[0]
@@ -1293,15 +1321,31 @@ watch(
 
                             </div>
 
-                            <input
-                                id="login-password"
-                                v-model="loginForm.password"
-                                type="password"
-                                autocomplete="current-password"
-                                required
-                                placeholder="Enter your password"
-                                class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                            />
+                            <div class="relative mt-2">
+                                <input
+                                    id="login-password"
+                                    v-model="loginForm.password"
+                                    :type="showLoginPassword ? 'text' : 'password'"
+                                    autocomplete="current-password"
+                                    required
+                                    placeholder="Enter your password"
+                                    class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                />
+                                <button
+                                    type="button"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    :aria-label="showLoginPassword ? 'Hide password' : 'Show password'"
+                                    @click="showLoginPassword = !showLoginPassword"
+                                >
+                                    <svg v-if="showLoginPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                    <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                    </svg>
+                                </button>
+                            </div>
 
                             <InputError
                                 class="mt-2"
@@ -1824,14 +1868,30 @@ watch(
                                         Password
                                     </label>
 
-                                    <input
-                                        id="register-password"
-                                        v-model="registerForm.password"
-                                        type="password"
-                                        autocomplete="new-password"
-                                        placeholder="At least 8 characters"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    />
+                                    <div class="relative mt-2">
+                                        <input
+                                            id="register-password"
+                                            v-model="registerForm.password"
+                                            :type="showRegisterPassword ? 'text' : 'password'"
+                                            autocomplete="new-password"
+                                            placeholder="At least 8 characters"
+                                            class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                            :aria-label="showRegisterPassword ? 'Hide password' : 'Show password'"
+                                            @click="showRegisterPassword = !showRegisterPassword"
+                                        >
+                                            <svg v-if="showRegisterPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                            </svg>
+                                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
                                     <InputError
                                         class="mt-2"
@@ -1851,14 +1911,30 @@ watch(
                                         Confirm password
                                     </label>
 
-                                    <input
-                                        id="register-password-confirmation"
-                                        v-model="registerForm.password_confirmation"
-                                        type="password"
-                                        autocomplete="new-password"
-                                        placeholder="Repeat your password"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    />
+                                    <div class="relative mt-2">
+                                        <input
+                                            id="register-password-confirmation"
+                                            v-model="registerForm.password_confirmation"
+                                            :type="showRegisterPasswordConfirmation ? 'text' : 'password'"
+                                            autocomplete="new-password"
+                                            placeholder="Repeat your password"
+                                            class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                            :aria-label="showRegisterPasswordConfirmation ? 'Hide password' : 'Show password'"
+                                            @click="showRegisterPasswordConfirmation = !showRegisterPasswordConfirmation"
+                                        >
+                                            <svg v-if="showRegisterPasswordConfirmation" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                            </svg>
+                                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
                                     <InputError
                                         class="mt-2"
