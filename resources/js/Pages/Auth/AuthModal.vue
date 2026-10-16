@@ -447,9 +447,14 @@ const validateCurrentStep = () => {
             return false
         }
 
+        if (registerForm.email) {
+            registerForm.email = registerForm.email.trim().toLowerCase()
+        }
+
         if (
-            !registerForm.email.trim()
+            !registerForm.email
         ) {
+            registerForm.setError('email', 'Please enter your email address.')
             stepError.value =
                 'Please enter your email address.'
 
@@ -464,6 +469,7 @@ const validateCurrentStep = () => {
                 registerForm.email
             )
         ) {
+            registerForm.setError('email', 'Please enter a valid email address.')
             stepError.value =
                 'Please enter a valid email address.'
 
@@ -739,6 +745,10 @@ const submitLogin = () => {
 */
 
 const submitRegister = async () => {
+    if (registerForm.email) {
+        registerForm.email = registerForm.email.trim().toLowerCase()
+    }
+
     if (!validateCurrentStep()) {
         return
     }
@@ -1762,6 +1772,7 @@ watch(
                                         :disabled="isGoogleOnboarding"
                                         v-model="registerForm.email"
                                         @input="emailInUseAlert = ''; registerForm.clearErrors('email'); stepError = ''"
+                                        @blur="registerForm.email = (registerForm.email || '').trim().toLowerCase()"
                                         type="email"
                                         autocomplete="email"
                                         placeholder="you@example.com"

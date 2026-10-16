@@ -495,4 +495,56 @@ class RegistrationTest extends TestCase
         $user = \App\Models\User::where('email', 'eighteen@example.com')->firstOrFail();
         $this->assertEquals($exact18Birthday, \Illuminate\Support\Carbon::parse($user->birthday)->toDateString());
     }
+
+    public function test_tc_buy_009_email_with_missing_tld_or_invalid_format_is_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $invalidEmails = [
+            'juanmiguel.delacruz@example',
+            'plainaddress',
+            '@missingusername.com',
+            'user@.com.my',
+        ];
+
+        foreach ($invalidEmails as $invalidEmail) {
+            $response = $this->postJson('/register', [
+                'first_name' => 'Juan',
+                'last_name' => 'Dela Cruz',
+                'birthday' => '1999-05-15',
+                'email' => $invalidEmail,
+                'contact_no' => '09171234567',
+                'password' => 'Mamimili@2026',
+                'password_confirmation' => 'Mamimili@2026',
+                'terms' => true,
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['email']);
+        }
+    }
+
+    public function test_tc_buy_012_email_with_spaces_before_and_after_is_trimmed_and_saved(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => '   buyer.test01@example.com   ',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('users', [
+            'email' => 'buyer.test01@example.com',
+        ]);
+        $this->assertDatabaseMissing('users', [
+            'email' => '   buyer.test01@example.com   ',
+        ]);
+    }
 }

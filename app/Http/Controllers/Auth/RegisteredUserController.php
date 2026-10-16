@@ -90,6 +90,7 @@ class RegisteredUserController extends Controller
                 'string',
                 'lowercase',
                 'email',
+                'regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/',
                 'max:255',
                 'unique:'.User::class,
             ],
@@ -127,6 +128,8 @@ class RegisteredUserController extends Controller
             'birthday.before_or_equal' => 'You must be at least 18 years old to register.',
             'birthday.before' => 'You must be at least 18 years old to register.',
             'age.min' => 'You must be at least 18 years old to register.',
+            'email.regex' => 'Please enter a valid email address.',
+            'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
             'terms.accepted' => 'You must agree to the Terms and Privacy Policy.',
         ]);
@@ -265,6 +268,7 @@ class RegisteredUserController extends Controller
                 'string',
                 'lowercase',
                 'email',
+                'regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/',
                 'max:255',
                 'unique:'.User::class,
             ],
@@ -348,6 +352,8 @@ class RegisteredUserController extends Controller
             'birthday.before_or_equal' => 'You must be at least 18 years old to register.',
             'birthday.before' => 'You must be at least 18 years old to register.',
             'age.min' => 'You must be at least 18 years old to register.',
+            'email.regex' => 'Please enter a valid email address.',
+            'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
         ]);
 

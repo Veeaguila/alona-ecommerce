@@ -48,7 +48,7 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 4. Email Validation (`TC-BUY-009`, `TC-BUY-011`, `TC-BUY-012`)
 
-- [ ] **TC-BUY-009 — Email in an invalid format (FAIL on backend for missing TLD)**
+- [x] **TC-BUY-009 — Email in an invalid format (FIXED)**
   - **Expected:** All 5 invalid emails (including `juanmiguel.delacruz@example` with no `.com`) are rejected.
   - **Actual:** While the frontend regex in `AuthModal.vue` blocks it, the backend rule `'email'` in `RegisteredUserController.php` uses default RFC validation without a TLD regex, so `juanmiguel.delacruz@example` is accepted by the backend and creates an account.
   - **What to Fix:** Add `'regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/'` to the `email` validation rules in `RegisteredUserController.php`.
@@ -58,7 +58,7 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
   - **Actual:** Fails with *"The email field must be lowercase."* instead of a duplicate-email message because `RegisteredUserController.php` uses Laravel's `'lowercase'` validation rule without lowercasing the input first. (Any new email typed with capital letters is also rejected).
   - **What to Fix:** Normalize `$request->merge(['email' => Str::lower(trim((string) $request->input('email')))])` before running `$request->validate(...)` in `RegisteredUserController.php`.
 
-- [ ] **TC-BUY-012 — Email with spaces before and after (FAIL in UI)**
+- [x] **TC-BUY-012 — Email with spaces before and after (FIXED)**
   - **Expected:** `"  buyer.test01@example.com  "` has spaces removed and is saved as `buyer.test01@example.com`.
   - **Actual:** Blocked in `AuthModal.vue` Step 1 with *"Please enter a valid email address."* because `emailPattern.test(registerForm.email)` tests the raw string before trimming spaces.
   - **What to Fix:** Trim and lowercase `registerForm.email` (`registerForm.email = registerForm.email.trim().toLowerCase()`) before validating in `AuthModal.vue`.
