@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $fillable = [
+        'delivery_fee_payer',
+        'shipping_fee_before_discount',
+        'shipping_discount',
         'user_id',
         'voucher_id',
         'voucher_code',
@@ -32,6 +35,8 @@ class Order extends Model
         return [
             'subtotal' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
+            'shipping_fee_before_discount' => 'decimal:2',
+            'shipping_discount' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
             'cancelled_at' => 'datetime',
@@ -71,6 +76,7 @@ class Order extends Model
     public function syncStatusFromItems(): void
     {
         $statuses = $this->items()
+            ->when($this->delivery_fee_payer === 'seller', fn ($query) => $query->orderBy('id')->lockForUpdate())
             ->pluck('status');
 
         if ($statuses->isEmpty()) {

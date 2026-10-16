@@ -13,9 +13,13 @@ class LoginRiderController extends Controller
 {
     public function login(LoginRiderRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)
-            ->where('usertype', 'rider')
-            ->first();
+        $email = trim($request->email);
+        $riders = User::where('usertype', 'rider');
+        $user = (clone $riders)->where('email', $email)->first();
+        // New partner registrations canonicalize email; preserve exact legacy matches.
+        if (! $user && strtolower($email) !== $email) {
+            $user = $riders->where('email', strtolower($email))->first();
+        }
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([

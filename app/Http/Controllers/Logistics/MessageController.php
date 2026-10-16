@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Logistics;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\SortingCenterConversation;
-use App\Models\SortingCenterMessage;
 use App\Models\Rider;
 use App\Models\SortingCenter;
+use App\Models\SortingCenterConversation;
+use App\Models\SortingCenterMessage;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -115,13 +114,16 @@ class MessageController extends Controller
             $recipient = $conversation->participants->firstWhere('id', '!=', $user->id);
             abort_unless($recipient, 404);
             $recipientId = $recipient->id;
+            if (! $this->recipientUsers($user, $centerId)->contains('id', $recipientId)) {
+                throw ValidationException::withMessages(['recipient_id' => 'This account is no longer an eligible messaging recipient.']);
+            }
         } else {
             $recipientId = $request->validate([
                 'recipient_id' => ['required', 'integer', 'exists:users,id'],
             ])['recipient_id'];
             $recipient = $this->recipientUsers($user, $centerId)
                 ->firstWhere('id', (int) $recipientId);
-            if (!$recipient) {
+            if (! $recipient) {
                 throw ValidationException::withMessages([
                     'recipient_id' => 'This account is not an eligible messaging recipient.',
                 ]);
@@ -139,7 +141,7 @@ class MessageController extends Controller
                     ->has('participants', '=', 2)
                     ->first();
 
-                if (!$conversation) {
+                if (! $conversation) {
                     $conversation = SortingCenterConversation::create([
                         'sorting_center_id' => $centerId,
                         'created_by' => $user->id,
@@ -194,6 +196,8 @@ class MessageController extends Controller
                 ->where('is_active', true)
                 ->firstOrFail();
 
+            abort_unless($rider->sorting_center_id && $rider->sortingCenter, 403, 'A sorting center assignment is required for messaging.');
+
             return [$user, $rider->sorting_center_id, $rider->sortingCenter];
         }
 
@@ -206,8 +210,7 @@ class MessageController extends Controller
             return User::query()
                 ->whereIn('id', Rider::query()
                     ->where('sorting_center_id', $centerId)
-                    ->where('approval_status', 'approved')
-                    ->where('is_active', true)
+                    ->operationallyEligible()
                     ->select('user_id'))
                 ->orderBy('name')
                 ->get(['id', 'name', 'usertype']);
@@ -223,8 +226,7 @@ class MessageController extends Controller
         $riderUsers = User::query()
             ->whereIn('id', Rider::query()
                 ->where('sorting_center_id', $centerId)
-                ->where('approval_status', 'approved')
-                ->where('is_active', true)
+                ->operationallyEligible()
                 ->select('user_id'))
             ->where('id', '!=', $user->id)
             ->orderBy('name')

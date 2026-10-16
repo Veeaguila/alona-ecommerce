@@ -15,6 +15,9 @@ class VerifyEmailController extends Controller
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
+        if (($request->user()->partnerApplication?->details['registration_version'] ?? null) === 2) {
+            return redirect()->route('application.status')->withErrors(['otp' => 'Enter the six-digit code sent to your email.']);
+        }
         if (in_array($request->user()->usertype, ['sorting_center', 'rider'], true)) {
             if ($request->user()->markEmailAsVerified()) {
                 event(new Verified($request->user()));

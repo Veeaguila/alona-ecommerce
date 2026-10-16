@@ -8,6 +8,7 @@ use App\Services\AccountDestination;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -52,8 +53,19 @@ class GoogleController extends Controller
         $role = $request->session()->pull('google.signup_role', 'buyer');
         if ($user) {
             $request->session()->forget('onboarding.google');
-            $user->update(['google_id' => $google->getId(), 'avatar' => $google->getAvatar()]);
-            $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
+            $user = DB::transaction(function () use ($user, $google): User {
+                // Serialize against Rider photo uploads and preserve their explicitly chosen picture.
+                $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                $changes = ['google_id' => $google->getId()];
+                if ($locked->usertype !== 'rider' || !is_string($locked->avatar) || !str_starts_with($locked->avatar, 'rider-avatars/'.$locked->id.'/')) {
+                    $changes['avatar'] = $google->getAvatar();
+                }
+                $locked->update($changes);
+                return $locked;
+            });
+            if (($user->partnerApplication?->details['registration_version'] ?? null) !== 2) {
+                $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
+            }
             Auth::login($user, true);
             $request->session()->regenerate();
             $request->session()->forget('url.intended');

@@ -93,6 +93,21 @@ const markRead = (notification) => {
     )
 }
 
+const deliveryUrl = (notification) => {
+    const url = notification?.url
+    return notification?.type === 'delivery' && typeof url === 'string' && /^\/seller\/orders\/[1-9][0-9]*$/.test(url) ? url : null
+}
+
+const openDelivery = (notification) => {
+    const url = deliveryUrl(notification)
+    if (!url) return
+    if (notification.read_at) return router.visit(url)
+    router.patch(route('seller.notifications.read', notification.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => router.visit(url),
+    })
+}
+
 const markAllRead = () => {
     if (!unreadCount.value) {
         return
@@ -577,6 +592,9 @@ const notificationTheme = (type) => {
 
                                 <!-- Actions -->
                                 <div class="flex items-center gap-2">
+                                    <button v-if="deliveryUrl(notification)" type="button" @click="openDelivery(notification)" class="inline-flex w-fit shrink-0 rounded-lg border border-[#BFE3E0] px-3 py-2 text-xs font-semibold text-[#087F8C] hover:bg-[#E8F7F6]">
+                                        View delivery details
+                                    </button>
                                     <button
                                         v-if="!notification.read_at"
                                         type="button"

@@ -208,6 +208,10 @@ Route::middleware([
         'show',
     ])->name('seller.order.details');
 
+    Route::get('/seller/orders/{orderItem}/delivery-proofs/{proof}', [
+        \App\Http\Controllers\SellerDeliveryProofController::class, 'file',
+    ])->name('seller.delivery-proofs.file');
+
     Route::patch('/seller/orders/{orderItem}/process', [
         SellerOrderController::class,
         'process',

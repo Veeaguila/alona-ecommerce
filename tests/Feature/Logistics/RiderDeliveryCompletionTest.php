@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Logistics;
 
-use App\Models\Parcel;
 use App\Models\DeliveryProof;
+use App\Models\Parcel;
 use App\Models\Rider;
 use App\Models\SortingCenter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -20,6 +23,8 @@ class RiderDeliveryCompletionTest extends TestCase
         $this->freezeTime();
         [$user, $rider] = $this->riderUser();
         $parcel = $this->parcel($rider->id);
+        Storage::fake('local');
+        Storage::disk('local')->put('delivery-proofs/test.jpg', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6WQAAAABJRU5ErkJggg=='));
         DeliveryProof::create([
             'parcel_id' => $parcel->id,
             'rider_id' => $rider->id,
@@ -71,12 +76,12 @@ class RiderDeliveryCompletionTest extends TestCase
 
     public function test_proof_files_require_authentication_and_center_ownership(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         [$user, $rider] = $this->riderUser();
         $parcel = $this->parcel($rider->id);
         $parcel->update(['sorting_center_id' => $rider->sorting_center_id]);
         $path = 'delivery-proofs/private.jpg';
-        \Illuminate\Support\Facades\Storage::disk('local')->put($path, 'private proof bytes');
+        Storage::disk('local')->put($path, 'private proof bytes');
         $proof = DeliveryProof::create([
             'parcel_id' => $parcel->id, 'rider_id' => $rider->id,
             'type' => 'PHOTO', 'file_path' => $path, 'captured_at' => now(),
@@ -94,18 +99,18 @@ class RiderDeliveryCompletionTest extends TestCase
 
     public function test_uploaded_proofs_are_stored_privately(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('local');
+        Storage::fake('public');
         [$user, $rider] = $this->riderUser();
         $parcel = $this->parcel($rider->id);
         Sanctum::actingAs($user);
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1sAAAAASUVORK5CYII=');
-        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('proof.png', $png);
+        $file = UploadedFile::fake()->createWithContent('proof.png', $png);
         $response = $this->postJson("/api/rider/deliveries/{$parcel->id}/upload-proof", ['file' => $file])
             ->assertCreated();
         $path = $response->json('data.file_path');
-        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($path);
-        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertExists($path);
+        Storage::disk('public')->assertMissing($path);
     }
 
     public function test_rider_must_upload_proof_before_marking_delivery_as_delivered(): void
@@ -116,7 +121,7 @@ class RiderDeliveryCompletionTest extends TestCase
 
         $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver")
             ->assertUnprocessable()
-            ->assertJsonPath('message', 'Upload delivery proof before marking this parcel as delivered.');
+            ->assertJsonPath('code', 'valid_photo_required');
 
         $this->assertDatabaseHas('parcels', [
             'id' => $parcel->id,
@@ -187,6 +192,75 @@ class RiderDeliveryCompletionTest extends TestCase
         $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver")
             ->assertUnprocessable()
             ->assertJsonPath('message', 'This delivery is no longer out for delivery.');
+    }
+
+    public function test_delivery_list_reports_only_the_assigned_riders_proof_state(): void
+    {
+        [$user, $rider] = $this->riderUser();
+        $parcel = $this->parcel($rider->id);
+        Sanctum::actingAs($user);
+        $this->getJson('/api/rider/deliveries')->assertOk()
+            ->assertJsonPath('data.0.has_delivery_proof', false);
+        DeliveryProof::create(['parcel_id' => $parcel->id, 'rider_id' => $rider->id,
+            'type' => 'PHOTO', 'file_path' => 'delivery-proofs/test.png', 'captured_at' => now()]);
+        $this->getJson('/api/rider/deliveries')->assertOk()
+            ->assertJsonPath('data.0.has_delivery_proof', true);
+    }
+
+    public function test_history_and_counts_are_owned_paginated_and_do_not_change_active_list(): void
+    {
+        [$user, $rider] = $this->riderUser();
+        [, $other] = $this->riderUser();
+        $this->parcel($rider->id, 'DELIVERED');
+        $this->parcel($rider->id, 'FAILED_RETURNED');
+        $this->parcel($other->id, 'DELIVERED');
+        Sanctum::actingAs($user);
+        $this->getJson('/api/rider/deliveries?view=history&per_page=1')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.last_page', 2)->assertJsonPath('summary.DELIVERED', 1)
+            ->assertJsonPath('summary.FAILED_RETURNED', 1)->assertJsonPath('summary.active', 0);
+        $this->getJson('/api/rider/deliveries?view=history&per_page=1&page=2')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('meta.current_page', 2);
+        $this->getJson('/api/rider/deliveries')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/rider/deliveries?view=history&per_page=10000')->assertUnprocessable();
+    }
+
+    public function test_other_riders_proof_upload_is_denied_without_storing_a_file(): void
+    {
+        Storage::fake('local');
+        [$user] = $this->riderUser();
+        [, $other] = $this->riderUser();
+        $parcel = $this->parcel($other->id);
+        Sanctum::actingAs($user);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1sAAAAASUVORK5CYII=');
+        $this->postJson("/api/rider/deliveries/{$parcel->id}/upload-proof", [
+            'file' => UploadedFile::fake()->createWithContent('proof.png', $png),
+        ])->assertForbidden();
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_failed_proof_record_creation_removes_the_private_file(): void
+    {
+        Storage::fake('local');
+        [$user, $rider] = $this->riderUser();
+        $parcel = $this->parcel($rider->id);
+        Sanctum::actingAs($user);
+        $event = 'eloquent.creating: '.DeliveryProof::class;
+        Event::listen($event, fn () => throw new \RuntimeException('Simulated proof persistence failure'));
+        $this->withoutExceptionHandling();
+        try {
+            $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1sAAAAASUVORK5CYII=');
+            $this->postJson("/api/rider/deliveries/{$parcel->id}/upload-proof", [
+                'file' => UploadedFile::fake()->createWithContent('proof.png', $png),
+            ]);
+            $this->fail('The simulated persistence error must propagate.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('Simulated proof persistence failure', $error->getMessage());
+        } finally {
+            Event::forget($event);
+        }
+        $this->assertDatabaseCount('delivery_proofs', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     private function riderUser(): array

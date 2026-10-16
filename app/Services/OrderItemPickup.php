@@ -12,6 +12,9 @@ class OrderItemPickup
     public function create(OrderItem $item, ?string $collectionAddress = null, array $scheduling = []): Parcel
     {
         return DB::transaction(function () use ($item, $collectionAddress, $scheduling): Parcel {
+            $finance = app(SellerShipmentFinance::class);
+            $shipment = $finance->lockItem($item->id);
+            $finance->assertMutable($shipment);
             $item = OrderItem::query()->with(['order.user', 'product.seller'])->lockForUpdate()->findOrFail($item->id);
             abort_unless($item->status === 'ready_for_pickup', 422, 'The item must be ready for pickup.');
             $existing = Parcel::where('order_item_id', $item->id)->first();
@@ -41,8 +44,7 @@ class OrderItemPickup
                 ]);
                 return $existing;
             }
-
-            $seller = $item->product->seller;
+            $seller = $shipment ? \App\Models\User::findOrFail($shipment->seller_id) : $item->product->seller;
             $buyer = $item->order->user;
             // Preserve the order's free-text destination, rather than substituting
             // the buyer's current profile address.

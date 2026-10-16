@@ -247,10 +247,17 @@ class SellerOrderController extends Controller
             'parcel.pickupRequests',
         ]);
 
+        $deliveryService = app(\App\Services\SellerParcelDelivery::class);
+        $delivery = $deliveryService->details($orderItem, (int) $request->user()->id);
+        $unverifiedLink = $orderItem->parcel && $delivery === null;
+        if ($unverifiedLink) $orderItem->unsetRelation('parcel');
+
         return Inertia::render(
             'Seller/OrderDetails',
             [
                 'orderItem' => $orderItem,
+                'deliveryDetails' => $delivery,
+                'deliveryLinkUnverified' => $unverifiedLink,
             ]
         );
     }
@@ -362,6 +369,9 @@ class SellerOrderController extends Controller
         ]);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $pickup): void {
+            app(\App\Services\SellerShipmentFinance::class)->assertMutable(
+                app(\App\Services\SellerShipmentFinance::class)->lockItem($orderItem->id)
+            );
             $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
             $orderItem->moveTo(
                 'ready_for_pickup',
@@ -554,6 +564,11 @@ class SellerOrderController extends Controller
          * Non-variant product:
          * restore main product stock.
          */
+        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $request, $data): void {
+        $finance = app(\App\Services\SellerShipmentFinance::class);
+        $finance->assertMutable($finance->lockItem($orderItem->id));
+        $orderItem = OrderItem::with('product', 'variant', 'order')->lockForUpdate()->findOrFail($orderItem->id);
+        abort_unless(in_array($orderItem->status, ['pending', 'processing', 'packed'], true), 422, 'This item can no longer be cancelled.');
         if ($orderItem->variant) {
             $orderItem->variant->increment(
                 'stock',
@@ -598,6 +613,7 @@ class SellerOrderController extends Controller
                 "from order #{$orderItem->order->order_number}.",
         ]);
 
+        });
         return back()->with(
             'status',
             'Order cancelled and stock restored.'

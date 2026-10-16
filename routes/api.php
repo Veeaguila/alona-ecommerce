@@ -33,16 +33,24 @@ Route::post('/rider/register', [PartnerRegistrationController::class, 'store'])-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/partner/profile', [PartnerProfileController::class, 'status']);
     Route::patch('/partner/profile', [PartnerProfileController::class, 'update']);
+    Route::patch('/rider/profile', [\App\Http\Controllers\Logistics\RiderProfileController::class, 'update']);
+    Route::get('/rider/profile-photo', [\App\Http\Controllers\Logistics\RiderProfileController::class, 'photo']);
+    Route::post('/rider/profile-photo', [\App\Http\Controllers\Logistics\RiderProfileController::class, 'uploadPhoto'])->middleware('throttle:20,1');
+    // Own notifications remain readable while approval is pending/rejected.
+    Route::get('/rider/notifications', [\App\Http\Controllers\Logistics\RiderNotificationController::class, 'index']);
+    Route::post('/rider/notifications/{id}/read', [\App\Http\Controllers\Logistics\RiderNotificationController::class, 'read']);
     Route::get('/user', fn (Request $request) => $request->user()->only(['id', 'name', 'email', 'usertype', 'status']));
 });
 Route::post('/rider/login', [LoginRiderController::class, 'login'])->middleware('throttle:6,1');
 
 Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(function () {
+    Route::get('/earnings', [\App\Http\Controllers\DeliveryFinanceController::class, 'rider']);
     Route::get('/pickups/available', [RiderPickupController::class, 'available']);
     Route::get('/pickups/mine', [RiderPickupController::class, 'mine']);
     Route::post('/pickups/{parcelId}/accept', [RiderPickupController::class, 'accept']);
     Route::post('/pickups/{parcelId}/confirm', [RiderPickupController::class, 'confirm']);
     Route::get('/deliveries', [RiderDeliveryController::class, 'index']);
+    Route::get('/deliveries/lookup', [RiderDeliveryController::class, 'lookup'])->middleware('throttle:60,1');
     Route::post('/deliveries/{parcelId}/start', [RiderDeliveryController::class, 'start']);
     Route::post('/deliveries/{parcelId}/deliver', [RiderDeliveryController::class, 'deliver']);
     Route::post('/deliveries/{parcelId}/upload-proof', [RiderDeliveryController::class, 'uploadProof']);
@@ -90,6 +98,7 @@ Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function (
 
 // Seller API Routes
 Route::middleware(['auth:sanctum', 'seller'])->prefix('seller')->group(function () {
+    Route::get('/delivery-charges', [\App\Http\Controllers\DeliveryFinanceController::class, 'seller']);
     Route::post('/pickup-requests', [SellerPickupRequestController::class, 'store']);
 });
 

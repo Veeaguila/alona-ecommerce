@@ -183,3 +183,29 @@ test('failed web logout keeps credentials and shows an error', async () => {
  });
  await state.logout(); assert.deepEqual(removed,[]); assert.equal(window.location.href,''); assert.equal(alerts.length,1); stop();
 });
+
+function partnerModal(role) {
+    const visits = [], posts = [];
+    const result = setup('Components/PartnerAuthModal.vue', { show: false, initialRole: role, initialTab: 'signup' }, {
+        usePage: () => ({ props: {} }), router: { visit: url => visits.push(url) }, route: name => name,
+        useForm: initial => Vue.reactive({ ...initial, errors: {}, reset() {}, clearErrors() {}, post: url => posts.push(url) }),
+        InputError: {}, PartnerField: {}, PhilippineAddressSelector: {}, DeliveryCoverageSelector: {},
+    });
+    return { ...result, visits, posts };
+}
+test('Logistics popup opens session-bound registration instead of posting the legacy contract', () => {
+    const { state, visits, posts, stop } = partnerModal('logistics');
+    state.startRegistration();
+    assert.deepEqual(visits, ['register.logistics']);
+    assert.equal(state.registrationStarted.value, false);
+    state.submitApplication();
+    assert.deepEqual(visits, ['register.logistics', 'register.logistics']);
+    assert.deepEqual(posts, []); stop();
+});
+test('Rider popup still starts its existing registration steps', () => {
+    const { state, visits, stop } = partnerModal('rider');
+    state.startRegistration();
+    assert.equal(state.registrationStarted.value, true);
+    assert.equal(state.currentStep.value, 1);
+    assert.deepEqual(visits, []); stop();
+});

@@ -24,6 +24,9 @@ Route::prefix('admin')
         'admin',
     ])
     ->group(function () {
+        Route::get('/delivery-finance', [\App\Http\Controllers\DeliveryFinanceController::class, 'index']);
+        Route::post('/delivery-charges/{id}/record-collection', [\App\Http\Controllers\DeliveryFinanceController::class, 'collect']);
+        Route::post('/rider-earnings/{id}/record-payout', [\App\Http\Controllers\DeliveryFinanceController::class, 'payout']);
 
         /*
         |--------------------------------------------------------------------------

@@ -8,7 +8,11 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    deliveryDetails: { type: Object, default: null },
+    deliveryLinkUnverified: { type: Boolean, default: false },
 })
+
+const failedProofs = ref({})
 
 const item = computed(() => props.orderItem)
 
@@ -652,6 +656,23 @@ const formatMoney = (value) => {
                 <p v-if="item.parcel.failure_reason">Delivery failure: {{ item.parcel.failure_reason }}</p>
                 <p>Collection address: {{ item.parcel.collection_address || 'Contact the sorting center to confirm the collection address.' }}</p>
             </div>
+            <p v-if="deliveryLinkUnverified" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Delivery proof is unavailable because this parcel has no verified Seller/order-item link. Contact Logistics with the order reference.
+            </p>
+            <section v-if="deliveryDetails?.status === 'DELIVERED'" class="mb-5 rounded-lg border border-teal-200 bg-white p-5" aria-label="Delivery proof">
+                <h2 class="text-lg font-semibold text-[#087F8C]">Delivery confirmed</h2>
+                <p class="mt-1 text-sm text-gray-600">{{ deliveryDetails.reference }} · {{ formatDate(deliveryDetails.delivered_at) }}</p>
+                <p v-if="!deliveryDetails.proofs.length" class="mt-3 text-sm text-gray-600">No available PHOTO proof is recorded for this delivery. Its historical delivery status is unchanged.</p>
+                <div v-for="proof in deliveryDetails.proofs" :key="proof.id" class="mt-4">
+                    <template v-if="proof.available && !failedProofs[proof.id]">
+                        <img :src="proof.file_url" alt="Photo proof of this delivery" class="max-h-80 w-full rounded-lg object-contain bg-gray-50" loading="lazy" @error="failedProofs[proof.id] = true" />
+                        <a :href="proof.file_url" target="_blank" rel="noopener" class="mt-2 inline-block text-sm font-semibold text-[#087F8C] underline">Open delivery photo</a>
+                    </template>
+                    <p v-else class="text-sm text-amber-800">This delivery photo is unavailable. Refresh or contact Logistics.</p>
+                    <p class="mt-2 text-xs text-gray-500">Photo recorded: {{ formatDate(proof.recorded_at) }}</p>
+                    <p v-if="proof.notes" class="mt-1 whitespace-pre-wrap text-sm text-gray-700">{{ proof.notes }}</p>
+                </div>
+            </section>
             <!-- Header -->
             <div
                 class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"

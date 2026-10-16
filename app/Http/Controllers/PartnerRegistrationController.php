@@ -75,6 +75,7 @@ class PartnerRegistrationController extends Controller
                     $rider = Rider::create([
                         'user_id' => $user->id, 'sorting_center_id' => $input['sorting_center_id'] ?? null, 'name' => $name,
                         'contact' => $input['contact_no'], 'birthday' => $input['birthday'], 'province' => $address['province'],
+                        'sex' => $input['sex'] ?? null,
                         'municipality' => $address['city'], 'barangay' => $address['barangay'], 'street' => $address['street'], 'house_number' => $address['house_number'],
                         'vehicle_type' => $input['vehicle_type'], 'plate_number' => $input['plate_number'] ?? '',
                         'or_cr_doc_url' => $documents['or_cr_doc'] ?? null, 'license_doc_url' => $documents['license_doc'] ?? null,

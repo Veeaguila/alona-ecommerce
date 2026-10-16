@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
@@ -198,6 +199,11 @@ class AdminApplicationController extends Controller
             404
         );
 
+        DB::transaction(function () use ($user) {
+        $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        if (($user->partnerApplication?->details['registration_version'] ?? null) === 2) {
+            abort_unless($user->hasVerifiedEmail() && $user->status === 'pending', 409, 'Only verified pending logistics applications can be approved.');
+        }
         $user->update([
             'status' => 'approved',
             'rejection_reason' => null,
@@ -208,6 +214,7 @@ class AdminApplicationController extends Controller
         } elseif ($user->usertype === 'rider') {
             $user->rider()->update(['approval_status' => 'approved']);
         }
+        });
 
         $this->notifyApplicant(
             $user,
@@ -249,6 +256,11 @@ class AdminApplicationController extends Controller
             ],
         ]);
 
+        DB::transaction(function () use ($user, $validated) {
+        $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        if (($user->partnerApplication?->details['registration_version'] ?? null) === 2) {
+            abort_unless($user->hasVerifiedEmail() && $user->status === 'pending', 409, 'Only verified pending logistics applications can be rejected.');
+        }
         $user->update([
             'status' => 'rejected',
             'rejection_reason' => $validated['reason'],
@@ -259,6 +271,7 @@ class AdminApplicationController extends Controller
         } elseif ($user->usertype === 'rider') {
             $user->rider()->update(['approval_status' => 'rejected']);
         }
+        });
 
         $this->notifyApplicant(
             $user,

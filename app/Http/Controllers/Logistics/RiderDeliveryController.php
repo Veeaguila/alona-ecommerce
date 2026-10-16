@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Logistics;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\DeliveryProof;
 use App\Models\Parcel;
 use Illuminate\Http\JsonResponse;
@@ -13,30 +12,64 @@ use Illuminate\Support\Facades\Storage;
 
 class RiderDeliveryController extends Controller
 {
+    private function deliveryQuery(int $riderId): \Illuminate\Database\Eloquent\Builder
+    {
+        return Parcel::query()->where('assigned_rider_id', $riderId)
+            ->with('sortedArea:id,name')->select([
+                'id', 'buyer_id', 'order_id', 'status', 'order_item_id',
+                'delivery_address', 'collection_address', 'delivery_province',
+                'delivery_municipality', 'delivery_barangay', 'delivery_street',
+                'delivery_house_number', 'assigned_rider_id', 'assigned_at', 'sorted_area_id',
+            ]);
+    }
+
+    private function appendDetails(\Illuminate\Database\Eloquent\Collection $parcels, int $riderId): void
+    {
+        app(\App\Services\RiderParcelDetails::class)->append($parcels, false);
+        $parcels->loadExists([
+            'deliveryProofs as has_delivery_proof' => fn ($query) => $query->where('rider_id', $riderId),
+        ]);
+        $parcels->load(['deliveryProofs' => fn ($query) => $query->where('rider_id', $riderId)->where('type', 'PHOTO')
+            ->select(['id', 'parcel_id', 'rider_id', 'type', 'file_path'])]);
+        foreach ($parcels as $parcel) {
+            $parcel->setAttribute('has_valid_photo_proof', $parcel->deliveryProofs->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto()));
+            $parcel->unsetRelation('deliveryProofs');
+        }
+    }
+
+    public function lookup(Request $request): JsonResponse
+    {
+        $input = $request->validate(['reference' => ['required', 'string', 'max:50', 'regex:/^ITEM-[1-9][0-9]*$/i']]);
+        $riderId = (int) $request->user()->rider->id;
+        $parcel = $this->deliveryQuery($riderId)->where('order_id', strtoupper($input['reference']))->first();
+        // An unauthorized scan must not disclose whether another Rider owns the reference.
+        if (!$parcel) return response()->json(['message' => 'Parcel not found in your assignments.', 'code' => 'parcel_not_found'], 404);
+        if (in_array($parcel->status, ['DELIVERED', 'FAILED_RETURNED'], true)) {
+            return response()->json(['message' => 'This parcel is already completed or returned. Check Delivery History.', 'code' => 'parcel_completed'], 409);
+        }
+        if (!in_array($parcel->status, ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY'], true)) {
+            return response()->json(['message' => 'This parcel is not ready for delivery.', 'code' => 'parcel_not_ready'], 422);
+        }
+        $this->appendDetails(new \Illuminate\Database\Eloquent\Collection([$parcel]), $riderId);
+
+        return response()->json(['data' => $parcel])->header('Cache-Control', 'private, no-store');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $riderId = $request->user()->rider?->id;
+        $input = $request->validate(['view' => ['sometimes', 'in:active,history'],
+            'page' => ['sometimes', 'integer', 'min:1'], 'per_page' => ['sometimes', 'integer', 'min:1', 'max:100']]);
+        if (($input['view'] ?? 'active') === 'history') {
+            return $this->history((int) $riderId, (int) ($input['per_page'] ?? 20));
+        }
 
-        $deliveries = Parcel::query()
-            ->where('assigned_rider_id', $riderId)
+        $deliveries = $this->deliveryQuery((int) $riderId)
             ->whereIn('status', ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY'])
-            ->with('sortedArea:id,name')
             ->orderByDesc('assigned_at')
-            ->get([
-                'id',
-                'order_id',
-                'status',
-                'order_item_id',
-                'delivery_address',
-                'collection_address',
-                'delivery_province',
-                'delivery_municipality',
-                'delivery_barangay',
-                'delivery_street',
-                'delivery_house_number',
-                'assigned_rider_id',
-                'assigned_at',
-            ]);
+            ->get();
+
+        $this->appendDetails($deliveries, (int) $riderId);
 
         return response()->json([
             'message' => 'Assigned deliveries retrieved successfully.',
@@ -44,13 +77,33 @@ class RiderDeliveryController extends Controller
         ]);
     }
 
+    private function history(int $riderId, int $perPage): JsonResponse
+    {
+        $owned = Parcel::query()->where('assigned_rider_id', $riderId);
+        $counts = (clone $owned)->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+        $history = (clone $owned)->whereIn('status', ['DELIVERED', 'FAILED_RETURNED'])
+            ->orderByDesc('updated_at')->orderByDesc('id')
+            ->paginate($perPage, ['id', 'order_id', 'status', 'delivery_address', 'delivery_province',
+                'delivery_municipality', 'delivery_barangay', 'delivery_street', 'delivery_house_number',
+                'delivered_at', 'updated_at', 'failure_reason']);
+
+        return response()->json(['data' => $history->items(),
+            'meta' => ['current_page' => $history->currentPage(), 'last_page' => $history->lastPage(),
+                'per_page' => $history->perPage(), 'total' => $history->total()],
+            'summary' => ['DELIVERED' => (int) ($counts['DELIVERED'] ?? 0),
+                'FAILED_RETURNED' => (int) ($counts['FAILED_RETURNED'] ?? 0),
+                'active' => (int) ($counts['AT_SORTING_CENTER'] ?? 0) + (int) ($counts['OUT_FOR_DELIVERY'] ?? 0)]]);
+    }
+
     public function start(Request $request, int $parcelId): JsonResponse
     {
         $riderId = $request->user()->rider?->id;
         $parcel = DB::transaction(function () use ($parcelId, $riderId): Parcel {
+            $finance = app(\App\Services\SellerShipmentFinance::class);
+            $shipment = $finance->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
 
-            if (!$parcel) {
+            if (! $parcel) {
                 abort(response()->json(['message' => 'Delivery not found.'], 404));
             }
 
@@ -62,6 +115,7 @@ class RiderDeliveryController extends Controller
                 abort(response()->json(['message' => 'This delivery is not waiting to be started.'], 422));
             }
 
+            $finance->dispatch($shipment, (int) $riderId);
             $parcel->update([
                 'status' => 'OUT_FOR_DELIVERY',
                 'assigned_at' => now(),
@@ -96,9 +150,11 @@ class RiderDeliveryController extends Controller
     {
         $riderId = $request->user()->rider?->id;
         $parcel = DB::transaction(function () use ($parcelId, $riderId, $status, $attributes): Parcel {
+            $finance = app(\App\Services\SellerShipmentFinance::class);
+            $shipment = $finance->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
 
-            if (!$parcel) {
+            if (! $parcel) {
                 abort(response()->json(['message' => 'Delivery not found.'], 404));
             }
 
@@ -110,9 +166,11 @@ class RiderDeliveryController extends Controller
                 abort(response()->json(['message' => 'This delivery is no longer out for delivery.'], 422));
             }
 
-            if ($status === 'DELIVERED' && !$parcel->deliveryProofs()->where('rider_id', $riderId)->exists()) {
+            if ($status === 'DELIVERED' && ! $parcel->deliveryProofs()->where('rider_id', $riderId)->where('type', 'PHOTO')
+                ->lockForUpdate()->get()->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto())) {
                 abort(response()->json([
-                    'message' => 'Upload delivery proof before marking this parcel as delivered.',
+                    'message' => 'Upload an accessible delivery PHOTO before marking this parcel as delivered.',
+                    'code' => 'valid_photo_required',
                 ], 422));
             }
 
@@ -121,6 +179,10 @@ class RiderDeliveryController extends Controller
                 'delivered_at' => $status === 'DELIVERED' ? now() : null,
             ], $attributes));
 
+            if ($status === 'DELIVERED') {
+                app(\App\Services\SellerParcelDelivery::class)->notifyDelivered($parcel);
+                $finance->recognize($shipment);
+            }
             return $parcel->fresh();
         });
 
@@ -134,41 +196,44 @@ class RiderDeliveryController extends Controller
     {
         $riderId = $request->user()->rider?->id;
         $validated = $request->validate([
-            'file' => ['required', 'file', 'image', 'max:20480'],
+            'file' => ['required', 'file', 'image', 'max:20480', 'dimensions:max_width=6000,max_height=6000'],
             'type' => ['nullable', 'string', 'in:PHOTO,SIGNATURE'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
+        $path = null;
+        try {
+            $proof = DB::transaction(function () use ($request, $parcelId, $riderId, $validated, &$path): DeliveryProof {
+                $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
+                abort_unless($parcel, 404, 'Delivery not found.');
+                abort_unless((int) $parcel->assigned_rider_id === (int) $riderId, 403, 'This delivery is not assigned to you.');
+                abort_unless($parcel->status === 'OUT_FOR_DELIVERY', 422, 'This delivery is no longer out for delivery.');
+                // Retried requests with the same photo reuse the existing proof under the parcel lock.
+                $type = $validated['type'] ?? 'PHOTO';
+                $uploadHash = hash_file('sha256', $request->file('file')->getRealPath());
+                foreach ($parcel->deliveryProofs()->where('rider_id', $riderId)->where('type', $type)->get() as $existing) {
+                    $existingPath = $existing->privateFilePath();
+                    $existingHash = $existingPath ? @hash_file('sha256', $existingPath) : false;
+                    if (is_string($uploadHash) && is_string($existingHash) && hash_equals($uploadHash, $existingHash)) {
+                        $existing->update(['notes' => $validated['notes'] ?? null]);
+                        return $existing;
+                    }
+                }
+                $path = $request->file('file')->store('delivery-proofs', 'local');
+                abort_unless($path, 500, 'Delivery proof could not be saved.');
 
-        $parcel = Parcel::query()->whereKey($parcelId)->first();
-
-        if (!$parcel) {
-            abort(response()->json(['message' => 'Delivery not found.'], 404));
+                return DeliveryProof::query()->create([
+                    'parcel_id' => $parcel->id, 'rider_id' => $riderId,
+                    'type' => $validated['type'] ?? 'PHOTO', 'file_path' => $path,
+                    'notes' => $validated['notes'] ?? null, 'captured_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $error) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+            throw $error;
         }
 
-        if ((int) $parcel->assigned_rider_id !== (int) $riderId) {
-            abort(response()->json(['message' => 'This delivery is not assigned to you.'], 403));
-        }
-
-        if ($parcel->status !== 'OUT_FOR_DELIVERY') {
-            abort(response()->json(['message' => 'This delivery is no longer out for delivery.'], 422));
-        }
-
-        $file = $request->file('file');
-        $path = $file->store('delivery-proofs', 'local');
-        abort_unless($path, 500, 'Delivery proof could not be saved.');
-
-        $proof = DeliveryProof::query()->create([
-            'parcel_id' => $parcel->id,
-            'rider_id' => $riderId,
-            'type' => $validated['type'] ?? 'PHOTO',
-            'file_path' => $path,
-            'notes' => $validated['notes'] ?? null,
-            'captured_at' => now(),
-        ]);
-
-        return response()->json([
-            'message' => 'Delivery proof uploaded successfully.',
-            'data' => $proof,
-        ], 201);
+        return response()->json(['message' => 'Delivery proof uploaded successfully.', 'data' => $proof], 201);
     }
 }
