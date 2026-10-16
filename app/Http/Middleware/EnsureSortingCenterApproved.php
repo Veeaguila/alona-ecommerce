@@ -27,6 +27,9 @@ class EnsureSortingCenterApproved
         }
 
         if ($user->usertype !== 'sorting_center') {
+            if (! $request->expectsJson()) {
+                abort(403, 'Forbidden. This action is restricted to sorting centers.');
+            }
             return response()->json([
                 'message' => 'Forbidden. This action is restricted to sorting centers.',
             ], 403);

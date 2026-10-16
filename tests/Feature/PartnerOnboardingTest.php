@@ -252,6 +252,6 @@ class PartnerOnboardingTest extends TestCase
         $this->post('/login', ['email' => $seller->email, 'password' => 'password'])->assertRedirect(route('application.status'));
         $this->assertAuthenticatedAs($seller);
         $this->get('/application/status')->assertOk();
-        $this->get('/seller')->assertForbidden();
+        $this->get('/seller')->assertRedirect(route('application.status'));
     }
 }

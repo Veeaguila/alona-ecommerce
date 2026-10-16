@@ -35,7 +35,13 @@ Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])
             ]]);
         })->name('sorting-center.'.$page);
     }
+    Route::get('/riders', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'index'])->name('sorting-center.riders');
+    Route::post('/riders', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'store'])->name('sorting-center.riders.store');
+    Route::post('/riders/{id}/resend-activation', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'resendActivation'])->name('sorting-center.riders.resend');
 });
+
+Route::get('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'show'])->name('rider.activate');
+Route::post('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'activate'])->name('rider.activate.submit');
 
 Route::get('/api/addresses/{level}', [PhilippineAddressController::class, 'index'])->middleware('throttle:120,1');
 Route::get('/api/delivery-coverage', [DeliveryCoverageController::class, 'index'])->middleware('throttle:120,1');

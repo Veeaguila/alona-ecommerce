@@ -82,7 +82,15 @@ class PartnerProfileController extends Controller
 
     public function rider(Request $request)
     {
-        return Inertia::render('Rider/Dashboard', ['rider' => $request->user()->rider->only(['name', 'vehicle_type', 'approval_status']),
-            'parcels' => $request->user()->rider->assignedParcels()->latest()->limit(30)->get(['id', 'order_id', 'status', 'delivery_address'])]);
+        $rider = $request->user()->rider;
+        $sortingCenter = $rider?->sortingCenter;
+
+        return Inertia::render('Rider/Dashboard', [
+            'rider' => $rider ? array_merge($rider->only(['name', 'vehicle_type', 'approval_status']), [
+                'company_name' => $sortingCenter?->business_name ?? $sortingCenter?->name ?? 'Logistics',
+                'sorting_center' => $sortingCenter?->only(['id', 'business_name', 'name']),
+            ]) : null,
+            'parcels' => $rider?->assignedParcels()->latest()->limit(30)->get(['id', 'order_id', 'status', 'delivery_address']) ?? [],
+        ]);
     }
 }

@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', fn (Request $request) => $request->user()->only(['id', 'name', 'email', 'usertype', 'status']));
 });
 Route::post('/rider/login', [LoginRiderController::class, 'login'])->middleware('throttle:6,1');
+Route::get('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'show']);
+Route::post('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'activate']);
 
 Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(function () {
     Route::get('/earnings', [\App\Http\Controllers\DeliveryFinanceController::class, 'rider']);
@@ -71,6 +73,8 @@ Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function (
     Route::post('/sorting-center/messages', [MessageController::class, 'send']);
     Route::post('/sorting-center/messages/conversations/{conversationId}', [MessageController::class, 'send']);
     Route::get('/sorting-center/riders', [RiderManagementController::class, 'index']);
+    Route::post('/sorting-center/riders', [RiderManagementController::class, 'store']);
+    Route::post('/sorting-center/riders/{id}/resend-activation', [RiderManagementController::class, 'resendActivation']);
     Route::post('/sorting-center/riders/{id}/approve', [RiderManagementController::class, 'approve']);
     Route::post('/sorting-center/riders/{id}/reject', [RiderManagementController::class, 'reject']);
     Route::post('/sorting-center/riders/{id}/activate', [RiderManagementController::class, 'activate']);

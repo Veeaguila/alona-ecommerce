@@ -27,6 +27,10 @@ class Rider extends Model
         'house_number',
         'vehicle_type',
         'plate_number',
+        'license_number',
+        'license_expiry',
+        'activation_token',
+        'activation_token_expires_at',
         'or_cr_doc_url',
         'license_doc_url',
         'approval_status',
@@ -38,6 +42,8 @@ class Rider extends Model
         return [
             'approval_status' => 'string',
             'birthday' => 'date',
+            'license_expiry' => 'date',
+            'activation_token_expires_at' => 'datetime',
             'is_active' => 'boolean',
         ];
     }

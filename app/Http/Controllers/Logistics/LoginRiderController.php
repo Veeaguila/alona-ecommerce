@@ -27,6 +27,12 @@ class LoginRiderController extends Controller
             ], 401);
         }
 
+        if ($user->status === 'pending_activation' || $user->rider?->approval_status === 'pending_activation' || ! empty($user->rider?->activation_token)) {
+            return response()->json([
+                'message' => 'Your account is pending activation. Please check your email to activate your account.',
+            ], 403);
+        }
+
         if (!in_array($user->status, ['approved', 'pending'], true)) {
             return response()->json(['message' => 'Your account is unavailable.'], 403);
         }

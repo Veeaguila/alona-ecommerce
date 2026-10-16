@@ -50,6 +50,15 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $user = Auth::user();
+        if ($user && $user->usertype === 'rider' && ($user->status === 'pending_activation' || $user->rider?->approval_status === 'pending_activation' || ! empty($user->rider?->activation_token))) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Your account is pending activation. Please check your email to activate your account.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

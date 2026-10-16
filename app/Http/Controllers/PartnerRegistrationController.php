@@ -22,7 +22,11 @@ class PartnerRegistrationController extends Controller
 {
     public function create(Request $request)
     {
-        $role = str_contains($request->path(), 'rider') ? 'rider' : 'sorting_center';
+        if (str_contains($request->path(), 'rider')) {
+            return redirect('/?auth=login');
+        }
+
+        $role = 'sorting_center';
         $identity = $request->session()->get('onboarding.google');
         if ($identity && ($identity['role'] !== $role || ($identity['expires_at'] ?? 0) <= now()->timestamp)) {
             $identity = null;
