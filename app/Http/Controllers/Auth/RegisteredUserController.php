@@ -78,11 +78,11 @@ class RegisteredUserController extends Controller
         $hasAddressGroup = $request->filled('address_group');
 
         $request->validate([
-            'last_name' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:50',
-            'middle_initial' => 'nullable|string|max:50',
-            'suffix' => 'nullable|string|max:20',
+            'last_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'first_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'middle_name' => ['nullable', 'string', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'middle_initial' => ['nullable', 'string', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'suffix' => ['nullable', 'string', 'max:20', "regex:/^[\pL\s\-'.]+$/u"],
             'sex' => 'nullable|in:Male,Female,Other',
 
             'email' => [
@@ -115,6 +115,15 @@ class RegisteredUserController extends Controller
 
             'terms' => ['accepted'],
         ], [
+            'first_name.min' => 'First name must be at least 2 characters.',
+            'first_name.max' => 'First name may not be greater than 50 characters.',
+            'first_name.regex' => 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'last_name.min' => 'Last name must be at least 2 characters.',
+            'last_name.max' => 'Last name may not be greater than 50 characters.',
+            'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'middle_initial.regex' => 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'suffix.regex' => 'Suffix can only contain letters, spaces, hyphens, apostrophes, and periods.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
             'terms.accepted' => 'You must agree to the Terms and Privacy Policy.',
         ]);
@@ -235,9 +244,9 @@ class RegisteredUserController extends Controller
             | Personal Information
             |--------------------------------------------------------------------------
             */
-            'last_name' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
-            'middle_initial' => 'nullable|string|size:1',
+            'last_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'first_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'middle_initial' => ['nullable', 'string', 'size:1', "regex:/^[\pL]+$/u"],
             'sex' => 'required|in:Male,Female,Other',
 
             'email' => [
@@ -319,6 +328,12 @@ class RegisteredUserController extends Controller
                 Rules\Password::defaults(),
             ],
         ], [
+            'first_name.min' => 'First name must be at least 2 characters.',
+            'first_name.max' => 'First name may not be greater than 50 characters.',
+            'first_name.regex' => 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'last_name.min' => 'Last name must be at least 2 characters.',
+            'last_name.max' => 'Last name may not be greater than 50 characters.',
+            'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
         ]);
 

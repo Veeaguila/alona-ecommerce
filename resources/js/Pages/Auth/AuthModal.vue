@@ -379,21 +379,71 @@ const validateCurrentStep = () => {
     */
 
     if (registrationStep.value === 1) {
-        if (
-            !registerForm.first_name.trim()
-        ) {
+        const namePattern = /^[\p{L}\s'.-]+$/u
+
+        const firstName = registerForm.first_name.trim()
+        if (!firstName) {
+            registerForm.setError('first_name', 'Please enter your first name.')
             stepError.value =
                 'Please enter your first name.'
 
             return false
         }
 
-        if (
-            !registerForm.last_name.trim()
-        ) {
+        if (firstName.length < 2) {
+            registerForm.setError('first_name', 'First name must be at least 2 characters.')
+            stepError.value = 'First name must be at least 2 characters.'
+            return false
+        }
+
+        if (firstName.length > 50) {
+            registerForm.setError('first_name', 'First name may not be greater than 50 characters.')
+            stepError.value = 'First name may not be greater than 50 characters.'
+            return false
+        }
+
+        if (!namePattern.test(firstName)) {
+            registerForm.setError('first_name', 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.')
+            stepError.value = 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.'
+            return false
+        }
+
+        const lastName = registerForm.last_name.trim()
+        if (!lastName) {
+            registerForm.setError('last_name', 'Please enter your last name.')
             stepError.value =
                 'Please enter your last name.'
 
+            return false
+        }
+
+        if (lastName.length < 2) {
+            registerForm.setError('last_name', 'Last name must be at least 2 characters.')
+            stepError.value = 'Last name must be at least 2 characters.'
+            return false
+        }
+
+        if (lastName.length > 50) {
+            registerForm.setError('last_name', 'Last name may not be greater than 50 characters.')
+            stepError.value = 'Last name may not be greater than 50 characters.'
+            return false
+        }
+
+        if (!namePattern.test(lastName)) {
+            registerForm.setError('last_name', 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.')
+            stepError.value = 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.'
+            return false
+        }
+
+        if (registerForm.middle_name && registerForm.middle_name.trim() && !namePattern.test(registerForm.middle_name.trim())) {
+            registerForm.setError('middle_name', 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.')
+            stepError.value = 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.'
+            return false
+        }
+
+        if (registerForm.suffix && registerForm.suffix.trim() && !namePattern.test(registerForm.suffix.trim())) {
+            registerForm.setError('suffix', 'Suffix can only contain letters, spaces, hyphens, apostrophes, and periods.')
+            stepError.value = 'Suffix can only contain letters, spaces, hyphens, apostrophes, and periods.'
             return false
         }
 
@@ -1580,6 +1630,7 @@ watch(
                                     <input
                                         id="register-first-name"
                                         v-model="registerForm.first_name"
+                                        @input="registerForm.clearErrors('first_name'); stepError = ''"
                                         type="text"
                                         autocomplete="given-name"
                                         placeholder="Enter your first name"
@@ -1607,6 +1658,7 @@ watch(
                                     <input
                                         id="register-last-name"
                                         v-model="registerForm.last_name"
+                                        @input="registerForm.clearErrors('last_name'); stepError = ''"
                                         type="text"
                                         autocomplete="family-name"
                                         placeholder="Enter your last name"
@@ -1637,7 +1689,7 @@ watch(
                                         <input
                                             id="register-middle-name"
                                             v-model="registerForm.middle_name"
-                                            @input="registerForm.middle_initial = registerForm.middle_name ? registerForm.middle_name.trim().charAt(0) : ''"
+                                            @input="registerForm.middle_initial = registerForm.middle_name ? registerForm.middle_name.trim().charAt(0) : ''; registerForm.clearErrors('middle_name', 'middle_initial'); stepError = ''"
                                             type="text"
                                             maxlength="50"
                                             placeholder="Enter middle name"
@@ -1664,6 +1716,7 @@ watch(
                                         <input
                                             id="register-suffix"
                                             v-model="registerForm.suffix"
+                                            @input="registerForm.clearErrors('suffix'); stepError = ''"
                                             type="text"
                                             maxlength="20"
                                             placeholder="Jr., Sr., III"

@@ -25,12 +25,12 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 2. Name Validation (`TC-BUY-004`, `TC-BUY-006`)
 
-- [ ] **TC-BUY-004 — Name with numbers or symbols (FAIL)**
+- [x] **TC-BUY-004 — Name with numbers or symbols (FIXED)**
   - **Expected:** `Juan Miguel123` and `Dela Cruz@#` are rejected; only letters (including `ñ/Ñ`), spaces, hyphen (`-`), apostrophe (`'`), and period (`.`) allowed.
   - **Actual:** Accepted and saved. `RegisteredUserController.php` only validates `'required|string|max:255'` with no character pattern check.
   - **What to Fix:** Add `regex:/^[\pL\s\-\'.]+$/u` validation to `first_name` and `last_name` (and middle name) in `RegisteredUserController.php` and `AuthModal.vue`.
 
-- [ ] **TC-BUY-006 — Name length at the limits (FAIL)**
+- [x] **TC-BUY-006 — Name length at the limits (FIXED)**
   - **Expected:** 1 character (`J`) and 51 characters are rejected; 2 and 50 characters are accepted.
   - **Actual:** 1-character (`J`) and 51-character names are both accepted. The backend rule is `max:255` with no `min:2` or `max:50` constraint.
   - **What to Fix:** Enforce `min:2|max:50` on `first_name` and `last_name` in `RegisteredUserController.php` and `AuthModal.vue`.

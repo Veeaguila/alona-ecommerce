@@ -236,4 +236,211 @@ class RegistrationTest extends TestCase
             'email' => 'This email address is already registered. Please log in instead or use another email.',
         ]);
     }
+
+    public function test_tc_buy_004_names_with_numbers_or_symbols_are_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 1. First name with numbers
+        $response1 = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel123',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'juan123@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response1->assertStatus(422);
+        $response1->assertJsonValidationErrors([
+            'first_name' => 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+        ]);
+
+        // 2. Last name with symbols
+        $response2 = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz@#',
+            'birthday' => '1999-05-15',
+            'email' => 'delacruz_sym@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response2->assertStatus(422);
+        $response2->assertJsonValidationErrors([
+            'last_name' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+        ]);
+
+        // 3. Middle name with numbers/symbols
+        $response3 = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'middle_name' => 'Santos123',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'santos123@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response3->assertStatus(422);
+        $response3->assertJsonValidationErrors([
+            'middle_name' => 'Middle name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+        ]);
+
+        // 4. Suffix with invalid characters
+        $response4 = $this->postJson('/register', [
+            'first_name' => 'Juan Miguel',
+            'last_name' => 'Dela Cruz',
+            'suffix' => 'Jr!#',
+            'birthday' => '1999-05-15',
+            'email' => 'suffix_invalid@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response4->assertStatus(422);
+        $response4->assertJsonValidationErrors([
+            'suffix' => 'Suffix can only contain letters, spaces, hyphens, apostrophes, and periods.',
+        ]);
+    }
+
+    public function test_tc_buy_004_valid_names_with_special_allowed_characters_and_enye_are_accepted(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Niño Mary-Ann',
+            'middle_name' => "D'Angelo",
+            'last_name' => 'Peña-Reyes',
+            'suffix' => 'Jr.',
+            'birthday' => '1999-05-15',
+            'email' => 'nino.maryann@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'email' => 'nino.maryann@example.com',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'nino.maryann@example.com',
+            'first_name' => 'Niño Mary-Ann',
+            'middle_name' => "D'Angelo",
+            'last_name' => 'Peña-Reyes',
+            'suffix' => 'Jr.',
+        ]);
+    }
+
+    public function test_tc_buy_006_name_length_at_the_limits_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 1. 1-character first name
+        $response1 = $this->postJson('/register', [
+            'first_name' => 'J',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'j_delacruz@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response1->assertStatus(422);
+        $response1->assertJsonValidationErrors([
+            'first_name' => 'First name must be at least 2 characters.',
+        ]);
+
+        // 2. 1-character last name
+        $response2 = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'D',
+            'birthday' => '1999-05-15',
+            'email' => 'juan_d@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response2->assertStatus(422);
+        $response2->assertJsonValidationErrors([
+            'last_name' => 'Last name must be at least 2 characters.',
+        ]);
+
+        // 3. 51-character first name
+        $response3 = $this->postJson('/register', [
+            'first_name' => str_repeat('A', 51),
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'longfirst@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response3->assertStatus(422);
+        $response3->assertJsonValidationErrors([
+            'first_name' => 'First name may not be greater than 50 characters.',
+        ]);
+
+        // 4. 51-character last name
+        $response4 = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => str_repeat('B', 51),
+            'birthday' => '1999-05-15',
+            'email' => 'longlast@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response4->assertStatus(422);
+        $response4->assertJsonValidationErrors([
+            'last_name' => 'Last name may not be greater than 50 characters.',
+        ]);
+    }
+
+    public function test_tc_buy_006_name_length_at_the_limits_accepted(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 2 characters each
+        $response1 = $this->postJson('/register', [
+            'first_name' => 'Jo',
+            'last_name' => 'Li',
+            'birthday' => '1999-05-15',
+            'email' => 'jo.li@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response1->assertOk();
+        $this->assertDatabaseHas('users', ['email' => 'jo.li@example.com', 'first_name' => 'Jo', 'last_name' => 'Li']);
+
+        // 50 characters each
+        $name50A = str_repeat('A', 50);
+        $name50B = str_repeat('B', 50);
+        $response2 = $this->postJson('/register', [
+            'first_name' => $name50A,
+            'last_name' => $name50B,
+            'birthday' => '1999-05-15',
+            'email' => 'fifty.chars@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response2->assertOk();
+        $this->assertDatabaseHas('users', ['email' => 'fifty.chars@example.com', 'first_name' => $name50A, 'last_name' => $name50B]);
+    }
 }
