@@ -19,7 +19,7 @@ class BuyerOtpVerificationController extends Controller
      */
     public function show(Request $request): Response
     {
-        abort_if($request->user() && $request->user()->usertype !== 'buyer', 403);
+        abort_if($request->user() && ! in_array($request->user()->usertype, ['buyer', 'seller'], true), 403);
         $email = $request->user()?->email
             ?? $request->query('email')
             ?? $request->session()->get('otp_verification_email');
@@ -49,7 +49,7 @@ class BuyerOtpVerificationController extends Controller
      */
     public function verify(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
-        abort_if($request->user() && $request->user()->usertype !== 'buyer', 403);
+        abort_if($request->user() && ! in_array($request->user()->usertype, ['buyer', 'seller'], true), 403);
         $email = $request->user()?->email
             ?? $request->input('email')
             ?? $request->session()->get('otp_verification_email');
@@ -70,7 +70,7 @@ class BuyerOtpVerificationController extends Controller
             'otp.regex' => 'The verification code must be a 6-digit number.',
         ]);
 
-        $user = User::where('usertype', 'buyer')->where('email', $request->input('email'))->first();
+        $user = User::whereIn('usertype', ['buyer', 'seller'])->where('email', $request->input('email'))->first();
 
         if (! $user) {
             throw ValidationException::withMessages([
@@ -137,7 +137,7 @@ class BuyerOtpVerificationController extends Controller
      */
     public function resend(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
-        abort_if($request->user() && $request->user()->usertype !== 'buyer', 403);
+        abort_if($request->user() && ! in_array($request->user()->usertype, ['buyer', 'seller'], true), 403);
         $email = $request->user()?->email
             ?? $request->input('email')
             ?? $request->session()->get('otp_verification_email');
@@ -150,7 +150,7 @@ class BuyerOtpVerificationController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $user = User::where('usertype', 'buyer')->where('email', $request->input('email'))->first();
+        $user = User::whereIn('usertype', ['buyer', 'seller'])->where('email', $request->input('email'))->first();
 
         if (! $user) {
             throw ValidationException::withMessages([

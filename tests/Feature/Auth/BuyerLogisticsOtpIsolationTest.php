@@ -14,7 +14,7 @@ class BuyerLogisticsOtpIsolationTest extends TestCase
     public function test_buyer_challenges_cannot_verify_or_reissue_codes_for_another_role(): void
     {
         Notification::fake();
-        foreach (['sorting_center', 'rider', 'seller', 'admin'] as $role) {
+        foreach (['sorting_center', 'rider', 'admin'] as $role) {
             $user = User::factory()->unverified()->create(['usertype' => $role, 'status' => 'unverified',
                 'otp_code' => '123456', 'otp_expires_at' => now()->addMinutes(5)]);
             $this->postJson('/verify-otp/resend', ['email' => $user->email])->assertUnprocessable();
