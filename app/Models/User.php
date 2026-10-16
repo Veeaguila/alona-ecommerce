@@ -37,14 +37,20 @@ use Laravel\Sanctum\HasApiTokens;
     'municipality',
     'barangay',
     'street_address',
+    'postal_code',
     'address_geography',
 
     // Registration documents
     'id_path',
     'business_permit_path',
+    'dti_certificate_path',
+    'sec_certificate_path',
+    'bir_2303_path',
 
     // Account / approval information
     'usertype',
+    'seller_type',
+    'tin',
     'status',
     'rejection_reason',
     'password',

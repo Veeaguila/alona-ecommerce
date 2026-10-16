@@ -8,7 +8,7 @@ class AccountDestination
 {
     public function route(User $user): string
     {
-        if ($user->usertype === 'buyer' && ! $user->hasVerifiedEmail()) {
+        if (in_array($user->usertype, ['buyer', 'seller'], true) && ! $user->hasVerifiedEmail()) {
             return 'verification.otp';
         }
 

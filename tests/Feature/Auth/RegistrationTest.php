@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -137,6 +138,9 @@ class RegistrationTest extends TestCase
             'municipality' => 'Quezon City',
             'barangay' => 'Barangay 1',
             'street_address' => '10 Seller Street',
+            'postal_code' => '1100',
+            'seller_type' => 'individual',
+            'tin' => '123-456-789-000',
             'store_name' => 'Seller Test Store',
             'store_description' => 'Handmade items for everyday life.',
             'bank_name' => 'BDO',
@@ -145,6 +149,7 @@ class RegistrationTest extends TestCase
             'line_of_business' => 'Handmade goods',
             'id' => UploadedFile::fake()->create('id.pdf', 5, 'application/pdf'),
             'business_permit' => UploadedFile::fake()->create('permit.pdf', 5, 'application/pdf'),
+            'terms' => true,
             'password' => 'Mamimili@2026',
             'password_confirmation' => 'Mamimili@2026',
         ]);
@@ -152,12 +157,20 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'seller@example.com',
             'usertype' => 'seller',
-            'status' => 'pending',
+            'status' => 'unverified',
             'store_name' => 'Seller Test Store',
         ]);
 
         $this->assertGuest();
-        $response->assertRedirect(route('login', absolute: false));
+        $response->assertRedirect(route('verification.otp'));
+
+        $user = User::where('email', 'seller@example.com')->firstOrFail();
+        $verifyResponse = $this->actingAs($user)->post('/verify-otp', [
+            'otp' => $user->otp_code,
+        ]);
+
+        $verifyResponse->assertRedirect(route('application.status'));
+        $this->assertSame('pending', $user->fresh()->status);
     }
 
     public function test_buyer_can_register_and_verify_via_modal_json_flow(): void

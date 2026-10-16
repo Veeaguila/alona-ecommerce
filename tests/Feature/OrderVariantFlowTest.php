@@ -56,13 +56,18 @@ class OrderVariantFlowTest extends TestCase
             ])
             ->assertRedirect();
 
+        $cartItem = \App\Models\CartItem::where('user_id', $buyer->id)->firstOrFail();
+
         $response = $this->actingAs($buyer)
             ->post(route('buyer.orders.store'), [
                 'shipping_address' => '123 Test Street',
+                'shipping_method' => 'standard',
                 'payment_method' => 'cod',
+                'selected_items' => [$cartItem->id],
             ]);
 
-        $response->assertRedirect(route('buyer.orders'));
+        $order = \App\Models\Order::where('user_id', $buyer->id)->firstOrFail();
+        $response->assertRedirect(route('buyer.orders.show', $order));
 
         $this->assertDatabaseHas('orders', [
             'user_id' => $buyer->id,
@@ -75,7 +80,7 @@ class OrderVariantFlowTest extends TestCase
             'quantity' => 1,
             'price' => '2499.00',
             'status' => 'pending',
-            'variant_label' => 'Black / 42mm',
+            'variant_label' => 'Color: Black / Size: 42mm',
             'product_variant_id' => $variant->id,
         ]);
     }

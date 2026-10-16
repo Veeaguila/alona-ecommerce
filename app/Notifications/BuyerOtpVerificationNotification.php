@@ -32,7 +32,7 @@ class BuyerOtpVerificationNotification extends Notification
         return (new MailMessage)
             ->subject('Your Alona 6-Digit Email Verification Code')
             ->greeting('Hello ' . ($notifiable->first_name ?? $notifiable->name) . '!')
-            ->line('Thank you for registering as a Buyer on Alona.')
+            ->line('Thank you for registering on Alona.')
             ->line('Please use the following 6-digit One-Time Password (OTP) to verify your email address:')
             ->line('**' . $this->otpCode . '**')
             ->line('This verification code will expire in 5 minutes.')

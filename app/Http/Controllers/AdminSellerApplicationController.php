@@ -33,7 +33,10 @@ class AdminSellerApplicationController extends Controller
     {
         abort_unless($user->usertype === 'seller', 404);
 
-        $user->update(['status' => 'approved']);
+        $user->update([
+            'status' => 'approved',
+            'rejection_reason' => null,
+        ]);
 
         return back()->with('status', 'Seller application approved.');
     }
@@ -48,6 +51,7 @@ class AdminSellerApplicationController extends Controller
 
         $user->update([
             'status' => 'rejected',
+            'rejection_reason' => $validated['reason'],
         ]);
 
         return back()->with('status', 'Seller application rejected.');

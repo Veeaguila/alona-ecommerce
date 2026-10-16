@@ -169,6 +169,7 @@ const registerForm = useForm({
     municipality: '',
     barangay: '',
     street_address: '',
+    postal_code: '',
 
     /*
     |--------------------------------------------------------------------------
@@ -177,6 +178,8 @@ const registerForm = useForm({
     */
 
     store_name: '',
+    seller_type: 'Sole Proprietorship',
+    tin: '',
     line_of_business: '',
     store_description: '',
 
@@ -198,6 +201,9 @@ const registerForm = useForm({
 
     id: null,
     business_permit: null,
+    dti_certificate: null,
+    sec_certificate: null,
+    bir_2303: null,
 
     /*
     |--------------------------------------------------------------------------
@@ -796,9 +802,47 @@ const handleBusinessPermitUpload = (event) => {
         registerForm.clearErrors(
             'business_permit'
         )
-
         stepError.value = ''
     }
+}
+
+const handleDtiUpload = (event) => {
+    const file = event.target.files?.[0] ?? null
+    registerForm.dti_certificate = file
+    if (file) {
+        registerForm.clearErrors('dti_certificate')
+        stepError.value = ''
+    }
+}
+
+const handleSecUpload = (event) => {
+    const file = event.target.files?.[0] ?? null
+    registerForm.sec_certificate = file
+    if (file) {
+        registerForm.clearErrors('sec_certificate')
+        stepError.value = ''
+    }
+}
+
+const handleBirUpload = (event) => {
+    const file = event.target.files?.[0] ?? null
+    registerForm.bir_2303 = file
+    if (file) {
+        registerForm.clearErrors('bir_2303')
+        stepError.value = ''
+    }
+}
+
+const formatTin = () => {
+    let val = (registerForm.tin || '').replace(/\D/g, '').substring(0, 12)
+    let parts = []
+    if (val.length > 0) parts.push(val.substring(0, 3))
+    if (val.length > 3) parts.push(val.substring(3, 6))
+    if (val.length > 6) parts.push(val.substring(6, 9))
+    if (val.length > 9) parts.push(val.substring(9, 12))
+    registerForm.tin = parts.join('-')
+    registerForm.clearErrors('tin')
+    stepError.value = ''
 }
 
 /*
@@ -865,7 +909,7 @@ const submitRegister = async () => {
             },
             onSuccess: () => {
                 emailInUseAlert.value = ''
-                registrationSuccess.value = 'Seller account application submitted successfully! Please wait for administrator approval.'
+                window.location.href = '/verify-otp'
             },
         })
         return
@@ -2096,7 +2140,7 @@ watch(
                                 </div>
 
                                 <!-- TERMS & PRIVACY POLICY -->
-                                <div v-if="!isSeller" class="pt-2">
+                                <div class="pt-2">
                                     <label for="register-terms" class="flex cursor-pointer items-start gap-3">
                                         <input
                                             id="register-terms"
@@ -2156,6 +2200,32 @@ watch(
                                         :message="registerForm.errors.street_address"
                                     />
 
+                                </div>
+
+                                <!-- POSTAL CODE -->
+                                <div>
+                                    <label
+                                        for="register-postal-code"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        Postal Code
+                                        <span class="text-red-500">*</span>
+                                    </label>
+
+                                    <input
+                                        id="register-postal-code"
+                                        v-model="registerForm.postal_code"
+                                        @input="registerForm.clearErrors('postal_code'); stepError = ''"
+                                        type="text"
+                                        maxlength="4"
+                                        placeholder="e.g. 1121"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                    />
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.postal_code"
+                                    />
                                 </div>
 
                                 <!-- ADDRESS INFORMATION -->
@@ -2241,6 +2311,59 @@ watch(
                                         :message="registerForm.errors.store_name"
                                     />
 
+                                </div>
+
+                                <!-- SELLER TYPE -->
+                                <div>
+                                    <label
+                                        for="register-seller-type"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        Seller Type
+                                        <span class="text-red-500">*</span>
+                                    </label>
+
+                                    <select
+                                        id="register-seller-type"
+                                        v-model="registerForm.seller_type"
+                                        @change="registerForm.clearErrors('seller_type'); stepError = ''"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                    >
+                                        <option value="Sole Proprietorship">Sole Proprietorship</option>
+                                        <option value="Individual">Individual</option>
+                                        <option value="Corporation">Corporation</option>
+                                    </select>
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.seller_type"
+                                    />
+                                </div>
+
+                                <!-- TIN -->
+                                <div>
+                                    <label
+                                        for="register-tin"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        Taxpayer Identification Number (TIN)
+                                        <span class="text-red-500">*</span>
+                                    </label>
+
+                                    <input
+                                        id="register-tin"
+                                        v-model="registerForm.tin"
+                                        @input="formatTin"
+                                        type="text"
+                                        maxlength="15"
+                                        placeholder="000-000-000-000"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                    />
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.tin"
+                                    />
                                 </div>
 
                                 <!-- LINE OF BUSINESS -->
@@ -2420,18 +2543,74 @@ watch(
 
                                 </div>
 
-                                <!-- BUSINESS PERMIT -->
+                                <!-- DTI CERTIFICATE (Sole Proprietorship) -->
+                                <div v-if="registerForm.seller_type === 'Sole Proprietorship'">
+                                    <label
+                                        for="seller-dti-cert"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        DTI Certificate of Business Name Registration
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="seller-dti-cert"
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.pdf"
+                                        @change="handleDtiUpload"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                    />
+                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
+                                    <InputError class="mt-2" :message="registerForm.errors.dti_certificate" />
+                                </div>
 
+                                <!-- SEC CERTIFICATE (Corporation) -->
+                                <div v-if="registerForm.seller_type === 'Corporation'">
+                                    <label
+                                        for="seller-sec-cert"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        SEC Certificate of Registration
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="seller-sec-cert"
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.pdf"
+                                        @change="handleSecUpload"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                    />
+                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
+                                    <InputError class="mt-2" :message="registerForm.errors.sec_certificate" />
+                                </div>
+
+                                <!-- BIR FORM 2303 -->
+                                <div v-if="['Sole Proprietorship', 'Corporation'].includes(registerForm.seller_type)">
+                                    <label
+                                        for="seller-bir-cert"
+                                        class="text-sm font-medium text-[#1F2937]"
+                                    >
+                                        BIR Certificate of Registration (Form 2303)
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="seller-bir-cert"
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.pdf"
+                                        @change="handleBirUpload"
+                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                    />
+                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
+                                    <InputError class="mt-2" :message="registerForm.errors.bir_2303" />
+                                </div>
+
+                                <!-- MAYOR'S / BUSINESS PERMIT -->
                                 <div>
-
                                     <label
                                         for="seller-business-permit"
                                         class="text-sm font-medium text-[#1F2937]"
                                     >
-                                        Business Permit
-                                        <span class="text-red-500">
-                                            *
-                                        </span>
+                                        Mayor's / Business Permit
+                                        <span class="text-slate-400 font-normal">(optional)</span>
                                     </label>
 
                                     <input

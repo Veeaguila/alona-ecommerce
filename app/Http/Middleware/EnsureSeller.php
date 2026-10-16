@@ -10,8 +10,20 @@ class EnsureSeller
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->usertype === 'seller', 403);
-        abort_unless($request->user()?->status === 'approved', 403);
+        $user = $request->user();
+        abort_unless($user?->usertype === 'seller', 403);
+
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.otp');
+        }
+
+        if ($user->status !== 'approved') {
+            if ($user->status === 'rejected' && $request->routeIs('seller.account.documents.update')) {
+                return $next($request);
+            }
+
+            return redirect()->route('application.status');
+        }
 
         return $next($request);
     }

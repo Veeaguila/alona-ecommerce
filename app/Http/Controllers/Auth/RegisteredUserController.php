@@ -275,6 +275,19 @@ class RegisteredUserController extends Controller
             $request->merge(['contact_no' => $contact]);
         }
 
+        if ($request->has('seller_type')) {
+            $rawType = strtolower(trim((string) $request->input('seller_type')));
+            $map = [
+                'individual' => 'Individual',
+                'sole proprietorship' => 'Sole Proprietorship',
+                'sole_proprietorship' => 'Sole Proprietorship',
+                'corporation' => 'Corporation',
+            ];
+            if (isset($map[$rawType])) {
+                $request->merge(['seller_type' => $map[$rawType]]);
+            }
+        }
+
         $request->validate([
             /*
             |--------------------------------------------------------------------------
@@ -283,7 +296,9 @@ class RegisteredUserController extends Controller
             */
             'last_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
             'first_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
-            'middle_initial' => ['nullable', 'string', 'size:1', "regex:/^[\pL]+$/u"],
+            'middle_name' => ['nullable', 'string', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'middle_initial' => ['nullable', 'string', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
+            'suffix' => ['nullable', 'string', 'max:20', "regex:/^[\pL\s\-'.]+$/u"],
             'sex' => 'required|in:Male,Female,Other',
 
             'email' => [
@@ -316,13 +331,16 @@ class RegisteredUserController extends Controller
             'city_code' => ['required', 'regex:/^\d{10}$/'],
             'barangay_code' => ['required', 'regex:/^\d{10}$/'],
             'street_address' => 'required|string|max:1000',
+            'postal_code' => ['required', 'string', 'regex:/^\d{4}$/'],
 
             /*
             |--------------------------------------------------------------------------
             | Business Information
             |--------------------------------------------------------------------------
             */
-            'store_name' => 'required|string|max:150',
+            'store_name' => ['required', 'string', 'min:3', 'max:30', 'unique:'.User::class.',store_name'],
+            'seller_type' => ['required', 'string', 'in:Individual,Sole Proprietorship,Corporation'],
+            'tin' => ['required', 'string', 'regex:/^\d{3}-\d{3}-\d{3}-\d{3}$/', 'unique:'.User::class.',tin'],
 
             'line_of_business' => [
                 'required',
@@ -353,8 +371,32 @@ class RegisteredUserController extends Controller
                 'max:5120',
             ],
 
+            'dti_certificate' => [
+                Rule::requiredIf(fn () => $request->input('seller_type') === 'Sole Proprietorship'),
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+
+            'sec_certificate' => [
+                Rule::requiredIf(fn () => $request->input('seller_type') === 'Corporation'),
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+
+            'bir_2303' => [
+                Rule::requiredIf(fn () => in_array($request->input('seller_type'), ['Sole Proprietorship', 'Corporation'], true)),
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+
             'business_permit' => [
-                'required',
+                'nullable',
                 'file',
                 'mimes:jpg,jpeg,png,pdf',
                 'max:5120',
@@ -370,6 +412,7 @@ class RegisteredUserController extends Controller
                 'confirmed',
                 Rules\Password::defaults(),
             ],
+            'terms' => ['required', 'accepted'],
         ], [
             'first_name.min' => 'First name must be at least 2 characters.',
             'first_name.max' => 'First name may not be greater than 50 characters.',
@@ -385,6 +428,16 @@ class RegisteredUserController extends Controller
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
             'contact_no.regex' => 'Please enter a valid 11-digit Philippine mobile number starting with 09.',
             'contact_no.unique' => 'This mobile number is already registered. Please use another mobile number.',
+            'store_name.min' => 'Shop name must be at least 3 characters.',
+            'store_name.max' => 'Shop name may not be greater than 30 characters.',
+            'store_name.unique' => 'This shop name is already taken. Please choose another shop name.',
+            'tin.regex' => 'Please enter a valid 12-digit TIN in the format 000-000-000-000.',
+            'tin.unique' => 'This TIN is already registered. Please use another TIN.',
+            'postal_code.regex' => 'Please enter a valid 4-digit postal code.',
+            'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy to continue.',
+            'dti_certificate.required' => 'The DTI Certificate is required for Sole Proprietorship registration.',
+            'sec_certificate.required' => 'The SEC Certificate is required for Corporation registration.',
+            'bir_2303.required' => 'The BIR Form 2303 is required for business registration.',
         ]);
 
         /*
@@ -399,10 +452,11 @@ class RegisteredUserController extends Controller
         $fullName = trim(
             $request->first_name.
             ' '.
-            ($request->middle_initial
-                ? $request->middle_initial.'. '
-                : '').
-            $request->last_name
+            ($request->middle_name
+                ? $request->middle_name.' '
+                : ($request->middle_initial ? $request->middle_initial.'. ' : '')).
+            $request->last_name.
+            ($request->suffix ? ' '.$request->suffix : '')
         );
 
         /*
@@ -411,11 +465,15 @@ class RegisteredUserController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $idPath = $request->file('id')->store('seller-ids');
+        $idPath = $request->file('id')->store('seller-ids', 'local');
 
-        $businessPermitPath = $request
-            ->file('business_permit')
-            ->store('seller-business-permits');
+        $businessPermitPath = $request->file('business_permit')?->store('seller-business-permits', 'local')
+            ?? $request->file('dti_certificate')?->store('seller-business-permits', 'local')
+            ?? $request->file('sec_certificate')?->store('seller-business-permits', 'local');
+
+        $dtiPath = $request->file('dti_certificate')?->store('seller-business-permits', 'local');
+        $secPath = $request->file('sec_certificate')?->store('seller-business-permits', 'local');
+        $birPath = $request->file('bir_2303')?->store('seller-business-permits', 'local');
 
         /*
         |--------------------------------------------------------------------------
@@ -429,7 +487,9 @@ class RegisteredUserController extends Controller
             // Personal information
             'last_name' => $request->last_name,
             'first_name' => $request->first_name,
-            'middle_initial' => $request->middle_initial,
+            'middle_name' => $request->middle_name,
+            'middle_initial' => $request->middle_initial ?: ($request->middle_name ? mb_substr(trim($request->middle_name), 0, 1) : null),
+            'suffix' => $request->suffix,
             'sex' => $request->sex,
             'email' => $request->email,
             'contact_no' => $request->contact_no,
@@ -450,13 +510,19 @@ class RegisteredUserController extends Controller
             'municipality' => $request->municipality,
             'barangay' => $request->barangay,
             'street_address' => $request->street_address,
+            'postal_code' => $request->postal_code,
 
             // Seller documents
             'id_path' => $idPath,
             'business_permit_path' => $businessPermitPath,
+            'dti_certificate_path' => $dtiPath,
+            'sec_certificate_path' => $secPath,
+            'bir_2303_path' => $birPath,
 
             // Business information
             'store_name' => $request->store_name,
+            'seller_type' => $request->seller_type,
+            'tin' => $request->tin,
             'line_of_business' => $request->line_of_business,
             'store_description' => $request->store_description,
 
@@ -467,7 +533,7 @@ class RegisteredUserController extends Controller
 
             // Seller account
             'usertype' => 'seller',
-            'status' => 'pending',
+            'status' => $google ? 'pending' : 'unverified',
 
             // Password
             'password' => Hash::make($request->password),
@@ -475,6 +541,26 @@ class RegisteredUserController extends Controller
 
         $this->completeGoogle($request, $user, $google);
         event(new Registered($user));
+
+        if (! $google) {
+            $user->generateAndSendOtp();
+            $request->session()->put('otp_verification_email', $user->email);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Seller application submitted! A 6-digit verification code has been sent to your email address.',
+                    'email' => $user->email,
+                ]);
+            }
+
+            return redirect()
+                ->route('verification.otp')
+                ->with(
+                    'status',
+                    'Seller application submitted! A 6-digit verification code has been sent to your email address.'
+                );
+        }
 
         return redirect()
             ->route('login')

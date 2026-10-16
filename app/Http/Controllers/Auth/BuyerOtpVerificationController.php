@@ -28,7 +28,7 @@ class BuyerOtpVerificationController extends Controller
             $request->session()->put('otp_verification_email', $email);
 
             $targetUser = $request->user() ?? User::where('email', $email)->first();
-            if ($targetUser && $targetUser->usertype === 'buyer' && ! $targetUser->hasVerifiedEmail()) {
+            if ($targetUser && in_array($targetUser->usertype, ['buyer', 'seller'], true) && ! $targetUser->hasVerifiedEmail()) {
                 if (! $targetUser->otp_code || ! $targetUser->otp_expires_at || now()->greaterThan($targetUser->otp_expires_at)) {
                     $targetUser->generateAndSendOtp();
                 }
@@ -94,9 +94,12 @@ class BuyerOtpVerificationController extends Controller
             ]);
         }
 
+        $isSeller = $user->usertype === 'seller';
+        $newStatus = $user->usertype === 'buyer' ? 'approved' : ($isSeller ? 'pending' : $user->status);
+
         $user->forceFill([
             'email_verified_at' => now(),
-            'status' => $user->usertype === 'buyer' ? 'approved' : $user->status,
+            'status' => $newStatus,
             'otp_code' => null,
             'otp_expires_at' => null,
         ])->save();
@@ -107,17 +110,22 @@ class BuyerOtpVerificationController extends Controller
         \Illuminate\Support\Facades\Auth::login($user);
         $request->session()->regenerate();
 
+        $destinationRoute = $isSeller ? 'application.status' : 'buyer.dashboard';
+        $message = $isSeller
+            ? 'Verification succeeds. Your application is waiting for administrator approval.'
+            : 'Account created and verified successfully! Welcome to Alona.';
+
         if ($request->wantsJson()) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Account created and verified successfully! Welcome to Alona.',
-                'redirect' => route('buyer.dashboard'),
+                'message' => $message,
+                'redirect' => route($destinationRoute),
             ]);
         }
 
         return redirect()
-            ->route('buyer.dashboard')
-            ->with('status', 'Account created and verified successfully! Welcome to Alona.');
+            ->route($destinationRoute)
+            ->with('status', $message);
     }
 
     /**
