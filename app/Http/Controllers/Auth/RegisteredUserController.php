@@ -75,6 +75,14 @@ class RegisteredUserController extends Controller
             $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
         }
 
+        if ($request->has('contact_no')) {
+            $contact = trim((string) $request->input('contact_no'));
+            if (preg_match('/^(?:\+63|63)(9\d{9})$/', $contact, $m)) {
+                $contact = '0'.$m[1];
+            }
+            $request->merge(['contact_no' => $contact]);
+        }
+
         $hasAddressGroup = $request->filled('address_group');
 
         $request->validate([
@@ -95,7 +103,12 @@ class RegisteredUserController extends Controller
                 'unique:'.User::class,
             ],
 
-            'contact_no' => 'required|string|max:30',
+            'contact_no' => [
+                'required',
+                'string',
+                'regex:/^09\d{9}$/',
+                'unique:'.User::class.',contact_no',
+            ],
             'birthday' => ['required', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
             'age' => 'nullable|integer|min:18|max:120',
 
@@ -131,6 +144,8 @@ class RegisteredUserController extends Controller
             'email.regex' => 'Please enter a valid email address.',
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
+            'contact_no.regex' => 'Please enter a valid 11-digit Philippine mobile number starting with 09.',
+            'contact_no.unique' => 'This mobile number is already registered. Please use another mobile number.',
             'terms.accepted' => 'You must agree to the Terms and Privacy Policy.',
         ]);
 
@@ -252,6 +267,14 @@ class RegisteredUserController extends Controller
             $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
         }
 
+        if ($request->has('contact_no')) {
+            $contact = trim((string) $request->input('contact_no'));
+            if (preg_match('/^(?:\+63|63)(9\d{9})$/', $contact, $m)) {
+                $contact = '0'.$m[1];
+            }
+            $request->merge(['contact_no' => $contact]);
+        }
+
         $request->validate([
             /*
             |--------------------------------------------------------------------------
@@ -273,7 +296,12 @@ class RegisteredUserController extends Controller
                 'unique:'.User::class,
             ],
 
-            'contact_no' => 'required|string|max:30',
+            'contact_no' => [
+                'required',
+                'string',
+                'regex:/^09\d{9}$/',
+                'unique:'.User::class.',contact_no',
+            ],
             'birthday' => ['required', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
             'age' => 'required|integer|min:18|max:120',
 
@@ -355,6 +383,8 @@ class RegisteredUserController extends Controller
             'email.regex' => 'Please enter a valid email address.',
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
+            'contact_no.regex' => 'Please enter a valid 11-digit Philippine mobile number starting with 09.',
+            'contact_no.unique' => 'This mobile number is already registered. Please use another mobile number.',
         ]);
 
         /*

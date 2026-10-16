@@ -67,22 +67,22 @@ This document tracks the failed and blocked test cases from the **Buyer Registra
 
 ## 5. Mobile Number Validation (`TC-BUY-013`, `TC-BUY-014`, `TC-BUY-015`, `TC-BUY-016`)
 
-- [ ] **TC-BUY-013 — Mobile number in an invalid format (FAIL)**
+- [x] **TC-BUY-013 — Mobile number in an invalid format (FIXED)**
   - **Expected:** `0917ABC4567`, `0917-123-456`, `12345678901`, `02-8123-4567` are all rejected.
   - **Actual:** All 4 invalid values are accepted and saved. `RegisteredUserController.php` only has `'contact_no' => 'required|string|max:30'`.
   - **What to Fix:** Validate `contact_no` against Philippine mobile format (`09XXXXXXXXX` or `+639XXXXXXXXX`) in `RegisteredUserController.php` and `AuthModal.vue`.
 
-- [ ] **TC-BUY-014 — Mobile number length at the limits (FAIL)**
+- [x] **TC-BUY-014 — Mobile number length at the limits (FIXED)**
   - **Expected:** 10 digits (`0917123456`) and 12 digits (`091712345678`) are rejected; 11 digits (`09170000001`) is accepted.
   - **Actual:** 10-digit and 12-digit numbers are both accepted because any string up to 30 characters is allowed.
   - **What to Fix:** Enforce exact 11-digit `09\d{9}` length after normalizing `+639` $\rightarrow$ `09`.
 
-- [ ] **TC-BUY-015 — Mobile number that is already registered (FAIL)**
+- [x] **TC-BUY-015 — Mobile number that is already registered (FIXED)**
   - **Expected:** Duplicate mobile number `09171234567` is rejected with a message that the mobile number is already in use.
   - **Actual:** Accepted. There is no `unique:users,contact_no` validation rule on `contact_no`, so multiple accounts can register with the same mobile number.
   - **What to Fix:** Add `'unique:users,contact_no'` validation rule in `RegisteredUserController.php`.
 
-- [ ] **TC-BUY-016 — Registered number entered in `+63` format (FAIL)**
+- [x] **TC-BUY-016 — Registered number entered in `+63` format (FIXED)**
   - **Expected:** `+639171234567` is normalized/recognized as identical to `09171234567` and rejected as a duplicate.
   - **Actual:** Accepted. Neither normalization (`+639...` $\rightarrow$ `09...`) nor uniqueness checking is implemented.
   - **What to Fix:** Normalize `+639XXXXXXXXX` to `09XXXXXXXXX` before validation so `unique:users,contact_no` catches duplicates across both formats.

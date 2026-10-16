@@ -435,13 +435,13 @@ class RegistrationTest extends TestCase
             'last_name' => $name50B,
             'birthday' => '1999-05-15',
             'email' => 'fifty.chars@example.com',
-            'contact_no' => '09171234567',
+            'contact_no' => '09170000050',
             'password' => 'Mamimili@2026',
             'password_confirmation' => 'Mamimili@2026',
             'terms' => true,
         ]);
         $response2->assertOk();
-        $this->assertDatabaseHas('users', ['email' => 'fifty.chars@example.com', 'first_name' => $name50A, 'last_name' => $name50B]);
+        $this->assertDatabaseHas('users', ['email' => 'fifty.chars@example.com', 'first_name' => $name50A, 'last_name' => $name50B, 'contact_no' => '09170000050']);
     }
 
     public function test_tc_buy_007_underage_buyer_is_rejected(): void
@@ -545,6 +545,153 @@ class RegistrationTest extends TestCase
         ]);
         $this->assertDatabaseMissing('users', [
             'email' => '   buyer.test01@example.com   ',
+        ]);
+    }
+
+    public function test_tc_buy_013_mobile_number_in_an_invalid_format_is_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $invalidNumbers = [
+            '0917ABC4567',
+            '0917-123-456',
+            '12345678901',
+            '02-8123-4567',
+        ];
+
+        foreach ($invalidNumbers as $invalidNumber) {
+            $response = $this->postJson('/register', [
+                'first_name' => 'Juan',
+                'last_name' => 'Dela Cruz',
+                'birthday' => '1999-05-15',
+                'email' => 'valid_format_' . uniqid() . '@example.com',
+                'contact_no' => $invalidNumber,
+                'password' => 'Mamimili@2026',
+                'password_confirmation' => 'Mamimili@2026',
+                'terms' => true,
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['contact_no']);
+        }
+    }
+
+    public function test_tc_buy_014_mobile_number_length_at_the_limits(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        // 10 digits
+        $response1 = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'ten_digits@example.com',
+            'contact_no' => '0917123456',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response1->assertStatus(422);
+        $response1->assertJsonValidationErrors(['contact_no']);
+
+        // 12 digits
+        $response2 = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'twelve_digits@example.com',
+            'contact_no' => '091712345678',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response2->assertStatus(422);
+        $response2->assertJsonValidationErrors(['contact_no']);
+
+        // 11 digits (accepted)
+        $response3 = $this->postJson('/register', [
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'birthday' => '1999-05-15',
+            'email' => 'eleven_digits@example.com',
+            'contact_no' => '09170000001',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+        $response3->assertOk();
+        $this->assertDatabaseHas('users', ['email' => 'eleven_digits@example.com', 'contact_no' => '09170000001']);
+    }
+
+    public function test_tc_buy_015_duplicate_mobile_number_is_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        \App\Models\User::factory()->create([
+            'email' => 'existing_phone_user@example.com',
+            'contact_no' => '09171234567',
+        ]);
+
+        $response = $this->postJson('/register', [
+            'first_name' => 'Maria',
+            'last_name' => 'Santos',
+            'birthday' => '1999-05-15',
+            'email' => 'new_user_same_phone@example.com',
+            'contact_no' => '09171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'contact_no' => 'This mobile number is already registered. Please use another mobile number.',
+        ]);
+        $this->assertDatabaseMissing('users', ['email' => 'new_user_same_phone@example.com']);
+    }
+
+    public function test_tc_buy_016_registered_number_entered_in_plus_63_format_is_normalized_and_rejected(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        \App\Models\User::factory()->create([
+            'email' => 'user_with_09@example.com',
+            'contact_no' => '09171234567',
+        ]);
+
+        // Trying to register with +639171234567 (same number in +63 format)
+        $response = $this->postJson('/register', [
+            'first_name' => 'Pedro',
+            'last_name' => 'Penduko',
+            'birthday' => '1999-05-15',
+            'email' => 'pedro@example.com',
+            'contact_no' => '+639171234567',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'contact_no' => 'This mobile number is already registered. Please use another mobile number.',
+        ]);
+
+        // Registering a new number in +63 format normalizes and saves as 09...
+        $response2 = $this->postJson('/register', [
+            'first_name' => 'Juana',
+            'last_name' => 'Change',
+            'birthday' => '1999-05-15',
+            'email' => 'juana@example.com',
+            'contact_no' => '+639170000002',
+            'password' => 'Mamimili@2026',
+            'password_confirmation' => 'Mamimili@2026',
+            'terms' => true,
+        ]);
+
+        $response2->assertOk();
+        $this->assertDatabaseHas('users', [
+            'email' => 'juana@example.com',
+            'contact_no' => '09170000002',
         ]);
     }
 }

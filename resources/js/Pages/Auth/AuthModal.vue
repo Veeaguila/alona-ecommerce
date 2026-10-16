@@ -363,6 +363,15 @@ watch(
     }
 )
 
+const normalizeContactNo = () => {
+    if (!registerForm.contact_no) return
+    let contact = registerForm.contact_no.trim()
+    if (/^(?:\+63|63)(9\d{9})$/.test(contact)) {
+        contact = '0' + contact.replace(/^(?:\+63|63)/, '')
+    }
+    registerForm.contact_no = contact
+}
+
 /*
 |--------------------------------------------------------------------------
 | STEP VALIDATION
@@ -560,12 +569,23 @@ const validateCurrentStep = () => {
             return false
         }
 
+        normalizeContactNo()
+
         if (
-            !registerForm.contact_no.trim()
+            !registerForm.contact_no
         ) {
             registerForm.setError('contact_no', 'Please enter your contact number.')
             stepError.value =
                 'Please enter your contact number.'
+
+            return false
+        }
+
+        const phonePattern = /^09\d{9}$/
+        if (!phonePattern.test(registerForm.contact_no)) {
+            registerForm.setError('contact_no', 'Please enter a valid 11-digit Philippine mobile number starting with 09.')
+            stepError.value =
+                'Please enter a valid 11-digit Philippine mobile number starting with 09.'
 
             return false
         }
@@ -748,6 +768,7 @@ const submitRegister = async () => {
     if (registerForm.email) {
         registerForm.email = registerForm.email.trim().toLowerCase()
     }
+    normalizeContactNo()
 
     if (!validateCurrentStep()) {
         return
@@ -771,6 +792,9 @@ const submitRegister = async () => {
                     registrationStep.value = 1
                     emailInUseAlert.value = errors.email
                     stepError.value = errors.email
+                } else if (errors.contact_no) {
+                    registrationStep.value = 2
+                    stepError.value = errors.contact_no
                 } else {
                     stepError.value = 'Please correct the highlighted fields and try again.'
                 }
@@ -818,6 +842,9 @@ const submitRegister = async () => {
                     registrationStep.value = 1
                     emailInUseAlert.value = data.errors.email[0] || 'This email address is already registered. Please log in instead or use another email.'
                     stepError.value = emailInUseAlert.value
+                } else if (data.errors.contact_no) {
+                    registrationStep.value = 2
+                    stepError.value = data.errors.contact_no[0]
                 } else {
                     emailInUseAlert.value = ''
                     const firstError = Object.values(data.errors)[0]?.[0]
@@ -1970,6 +1997,8 @@ watch(
                                     <input
                                         id="register-contact"
                                         v-model="registerForm.contact_no"
+                                        @input="registerForm.clearErrors('contact_no'); stepError = ''"
+                                        @blur="normalizeContactNo()"
                                         type="tel"
                                         autocomplete="tel"
                                         placeholder="09XXXXXXXXX"

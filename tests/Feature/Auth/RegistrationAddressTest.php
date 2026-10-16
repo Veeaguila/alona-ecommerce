@@ -21,7 +21,7 @@ class RegistrationAddressTest extends TestCase
 
         return [
             'first_name' => 'Address', 'last_name' => 'Test', 'sex' => 'Other',
-            'email' => $role.'@address.test', 'contact_no' => '09123456789',
+            'email' => $role.'@address.test', 'contact_no' => $role === 'buyer' ? '09123456789' : '09123456788',
             'birthday' => '2000-01-01', 'age' => 26, 'password' => 'password', 'password_confirmation' => 'password',
             'address_group' => 'south-luzon', 'region_code' => $city['region_code'],
             'province_code' => $city['province_code'], 'city_code' => $city['code'], 'barangay_code' => $barangay['code'],
