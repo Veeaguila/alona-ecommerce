@@ -18,7 +18,9 @@ use Laravel\Sanctum\HasApiTokens;
     'name',
     'last_name',
     'first_name',
+    'middle_name',
     'middle_initial',
+    'suffix',
     'sex',
     'email',
     'google_id',
@@ -46,6 +48,9 @@ use Laravel\Sanctum\HasApiTokens;
     'status',
     'rejection_reason',
     'password',
+    'otp_code',
+    'otp_expires_at',
+    'email_verified_at',
 
     // Seller store information
     'store_name',
@@ -74,6 +79,7 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden([
     'password',
     'remember_token',
+    'otp_code',
 ])]
 class User extends Authenticatable
 {
@@ -225,6 +231,7 @@ class User extends Authenticatable
         return [
             'address_geography' => 'array',
             'email_verified_at' => 'datetime',
+            'otp_expires_at' => 'datetime',
 
             // Personal information
             'birthday' => 'date',
@@ -243,6 +250,27 @@ class User extends Authenticatable
             'operating_hours' => 'array',
             'vacation_mode' => 'boolean',
         ];
+    }
+
+    /**
+     * Generate a 6-digit numeric OTP valid for 5 minutes and send the verification email.
+     */
+    public function generateAndSendOtp(): string
+    {
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $this->forceFill([
+            'otp_code' => $otp,
+            'otp_expires_at' => now()->addMinutes(5),
+        ])->save();
+
+        try {
+            $this->notify(new \App\Notifications\BuyerOtpVerificationNotification($otp));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to send Buyer OTP email: ' . $e->getMessage());
+        }
+
+        return $otp;
     }
 
     /*

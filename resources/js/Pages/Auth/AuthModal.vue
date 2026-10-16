@@ -40,7 +40,10 @@ watch(() => props.show, async show => {
     if (show) { previouslyFocused = document.activeElement; previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; await nextTick(); dialog.value?.querySelector('button')?.focus() }
     else if (previousOverflow !== undefined) { document.body.style.overflow = previousOverflow; previouslyFocused?.focus() }
 }, { immediate: true })
-onUnmounted(() => { if (typeof document !== 'undefined' && previousOverflow !== undefined) document.body.style.overflow = previousOverflow })
+onUnmounted(() => {
+    if (typeof document !== 'undefined' && previousOverflow !== undefined) document.body.style.overflow = previousOverflow
+    if (resendTimer) clearInterval(resendTimer)
+})
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +59,7 @@ const loginForm = useForm({
 
 /*
 |--------------------------------------------------------------------------
-| REGISTRATION
+| REGISTRATION & IN-MODAL OTP
 |--------------------------------------------------------------------------
 */
 
@@ -65,6 +68,51 @@ const registrationStarted = ref(false)
 const registrationStep = ref(1)
 const stepError = ref('')
 const registrationSuccess = ref('')
+const emailInUseAlert = ref('')
+const accountCreatedSuccess = ref('')
+const accountVerifiedSuccess = ref('')
+
+const isVerifyingOtp = ref(false)
+const otpEmail = ref('')
+const otpCode = ref('')
+const otpError = ref('')
+const otpSuccess = ref('')
+const isOtpSubmitting = ref(false)
+const isOtpResending = ref(false)
+const resendCooldown = ref(0)
+let resendTimer = null
+
+const startResendCooldown = (seconds = 60) => {
+    if (resendTimer) clearInterval(resendTimer)
+    resendCooldown.value = seconds
+    resendTimer = setInterval(() => {
+        if (resendCooldown.value > 0) {
+            resendCooldown.value--
+        } else {
+            clearInterval(resendTimer)
+            resendTimer = null
+        }
+    }, 1000)
+}
+
+const getCsrfToken = () => {
+    return (
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+        document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1] ||
+        ''
+    )
+}
+
+const handleOtpInput = (event) => {
+    otpCode.value = event.target.value.replace(/\D/g, '').slice(0, 6)
+    if (otpError.value) otpError.value = ''
+    if (otpCode.value.length === 6) {
+        submitModalVerifyOtp()
+    }
+}
 
 const registerForm = useForm({
     /*
@@ -75,7 +123,9 @@ const registerForm = useForm({
 
     last_name: '',
     first_name: '',
+    middle_name: '',
     middle_initial: '',
+    suffix: '',
 
     sex: '',
     email: '',
@@ -132,6 +182,7 @@ const registerForm = useForm({
 
     password: '',
     password_confirmation: '',
+    terms: false,
 })
 
 /*
@@ -145,7 +196,7 @@ const isSeller = computed(() => {
 })
 
 const totalSteps = computed(() => {
-    return isSeller.value ? 4 : 3
+    return isSeller.value ? 4 : 2
 })
 
 const stepTitle = computed(() => {
@@ -213,12 +264,19 @@ const resetRegistration = () => {
     stepError.value = ''
     registrationSuccess.value = ''
 
-
-
-
-
-
-
+    isVerifyingOtp.value = false
+    otpEmail.value = ''
+    otpCode.value = ''
+    otpError.value = ''
+    otpSuccess.value = ''
+    emailInUseAlert.value = ''
+    accountCreatedSuccess.value = ''
+    accountVerifiedSuccess.value = ''
+    if (resendTimer) {
+        clearInterval(resendTimer)
+        resendTimer = null
+    }
+    resendCooldown.value = 0
 
     registerForm.reset()
     registerForm.clearErrors()
@@ -407,7 +465,7 @@ const validateCurrentStep = () => {
     */
 
     if (registrationStep.value === 2) {
-        if (!registerForm.sex) {
+        if (isSeller.value && !registerForm.sex) {
             stepError.value =
                 'Please select your sex.'
 
@@ -437,6 +495,12 @@ const validateCurrentStep = () => {
             stepError.value =
                 'Please enter your contact number.'
 
+            return false
+        }
+
+        if (!isSeller.value && !registerForm.terms) {
+            registerForm.setError('terms', 'You must agree to the Terms and Privacy Policy.')
+            stepError.value = 'You must agree to the Terms and Privacy Policy.'
             return false
         }
     }
@@ -608,53 +672,200 @@ const submitLogin = () => {
 |--------------------------------------------------------------------------
 */
 
-const submitRegister = () => {
+const submitRegister = async () => {
     if (!validateCurrentStep()) {
         return
     }
 
     stepError.value = ''
     registrationSuccess.value = ''
+    emailInUseAlert.value = ''
 
-    const registrationRoute =
-        isSeller.value
-            ? route('register.seller')
-            : route('register')
-
-    registerForm.post(
-        registrationRoute,
-        {
+    if (isSeller.value) {
+        registerForm.post(route('register.seller'), {
             forceFormData: true,
-
             onStart: () => {
                 stepError.value = ''
                 registrationSuccess.value = ''
+                emailInUseAlert.value = ''
             },
-
             onError: (errors) => {
-            console.error(
-                'Registration validation errors:',
-                JSON.stringify(errors, null, 2)
-            )
-
-            stepError.value =
-                'Please correct the highlighted fields and try again.'
-        },
-
+                console.error('Registration validation errors:', JSON.stringify(errors, null, 2))
+                if (errors.email) {
+                    registrationStep.value = 1
+                    emailInUseAlert.value = errors.email
+                    stepError.value = errors.email
+                } else {
+                    stepError.value = 'Please correct the highlighted fields and try again.'
+                }
+            },
             onSuccess: () => {
-                registrationSuccess.value =
-                    isSeller.value
-                        ? 'Seller application submitted successfully.'
-                        : 'Registration submitted successfully.'
+                emailInUseAlert.value = ''
+                registrationSuccess.value = 'Seller account application submitted successfully! Please wait for administrator approval.'
             },
+        })
+        return
+    }
 
-            onFinish: () => {
-                console.log(
-                    'Registration request finished.'
-                )
-            },
+    // Buyer Registration (In-Modal OTP Flow)
+    registerForm.processing = true
+    stepError.value = ''
+    registrationSuccess.value = ''
+    emailInUseAlert.value = ''
+
+    try {
+        const payload = registerForm.data()
+        const formData = new FormData()
+        for (const [key, val] of Object.entries(payload)) {
+            if (val !== null && val !== undefined && val !== '') {
+                formData.append(key, typeof val === 'boolean' ? (val ? '1' : '0') : val)
+            }
         }
-    )
+
+        const response = await fetch(route('register'), {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: formData,
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            if (response.status === 422 && data.errors) {
+                registerForm.clearErrors()
+                registerForm.setError(data.errors)
+                if (data.errors.email) {
+                    registrationStep.value = 1
+                    emailInUseAlert.value = data.errors.email[0] || 'This email address is already registered. Please log in instead or use another email.'
+                    stepError.value = emailInUseAlert.value
+                } else {
+                    emailInUseAlert.value = ''
+                    const firstError = Object.values(data.errors)[0]?.[0]
+                    stepError.value = firstError || 'Please correct the highlighted fields and try again.'
+                }
+            } else {
+                stepError.value = data.message || 'An error occurred during registration. Please try again.'
+            }
+            return
+        }
+
+        // Successfully registered: display OTP Verification box right inside the modal!
+        isVerifyingOtp.value = true
+        otpEmail.value = registerForm.email
+        otpCode.value = ''
+        otpError.value = ''
+        emailInUseAlert.value = ''
+        accountCreatedSuccess.value = data.message || 'Account created successfully! A 6-digit verification code has been sent to your email address.'
+        otpSuccess.value = accountCreatedSuccess.value
+        startResendCooldown(60)
+    } catch (err) {
+        console.error('Registration submit error:', err)
+        stepError.value = 'Unable to complete registration. Please check your connection and try again.'
+    } finally {
+        registerForm.processing = false
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| IN-MODAL OTP VERIFICATION HANDLERS
+|--------------------------------------------------------------------------
+*/
+
+const submitModalVerifyOtp = async () => {
+    const code = otpCode.value.trim()
+    if (!code || !/^\d{6}$/.test(code)) {
+        otpError.value = 'Please enter a valid 6-digit verification code.'
+        return
+    }
+
+    otpError.value = ''
+    otpSuccess.value = ''
+    isOtpSubmitting.value = true
+
+    try {
+        const response = await fetch(route('verification.otp.verify'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                email: otpEmail.value,
+                otp: code,
+            }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            otpError.value = data.errors?.otp?.[0] || data.message || 'Invalid verification code.'
+            return
+        }
+
+        accountVerifiedSuccess.value = data.message || 'Account created and email verified successfully! Welcome to Alona.'
+        otpSuccess.value = accountVerifiedSuccess.value
+        setTimeout(() => {
+            close()
+            window.location.assign(data.redirect || route('buyer.dashboard'))
+        }, 1200)
+    } catch (err) {
+        console.error('OTP verification error:', err)
+        otpError.value = 'Unable to verify code. Please check your connection and try again.'
+    } finally {
+        isOtpSubmitting.value = false
+    }
+}
+
+const submitModalResendOtp = async () => {
+    if (isOtpResending.value || resendCooldown.value > 0) return
+
+    otpError.value = ''
+    otpSuccess.value = ''
+    isOtpResending.value = true
+
+    try {
+        const response = await fetch(route('verification.otp.resend'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                email: otpEmail.value,
+            }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            otpError.value = data.errors?.email?.[0] || data.message || 'Failed to resend code.'
+            return
+        }
+
+        otpSuccess.value = data.message || 'A new 6-digit verification code has been sent to your email address.'
+        startResendCooldown(60)
+    } catch (err) {
+        console.error('OTP resend error:', err)
+        otpError.value = 'Unable to resend code. Please try again.'
+    } finally {
+        isOtpResending.value = false
+    }
+}
+
+const backFromOtp = () => {
+    isVerifyingOtp.value = false
+    otpCode.value = ''
+    otpError.value = ''
+    otpSuccess.value = ''
 }
 
 /*
@@ -683,11 +894,15 @@ watch(
     ([show, mode]) => {
         if (show) {
             resetRegistration()
-            registrationType.value = { 'register-buyer': 'buyer', 'register-seller': 'seller' }[mode] ?? null
-            if (googleIdentity.value.email && googleIdentity.value.role === registrationType.value) registerForm.email = googleIdentity.value.email
-            if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('onboarding') === '1' && ['buyer', 'seller'].includes(registrationType.value)) startRegistration()
+            if (mode === 'verify-otp') {
+                isVerifyingOtp.value = true
+                otpEmail.value = page.props.auth?.user?.email || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('email') : '') || ''
+            } else {
+                registrationType.value = { 'register-buyer': 'buyer', 'register-seller': 'seller' }[mode] ?? null
+                if (googleIdentity.value.email && googleIdentity.value.role === registrationType.value) registerForm.email = googleIdentity.value.email
+                if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('onboarding') === '1' && ['buyer', 'seller'].includes(registrationType.value)) startRegistration()
+            }
         }
-
     },
     {
         immediate: true,
@@ -752,11 +967,13 @@ watch(
                             class="mt-4 text-2xl font-bold tracking-tight text-[#1F2937]"
                         >
                             {{
-                                mode === 'login'
-                                    ? 'Welcome back'
-                                    : registrationStarted
-                                        ? stepTitle
-                                        : 'Create your account'
+                                isVerifyingOtp
+                                    ? 'Verify your email'
+                                    : mode === 'login'
+                                        ? 'Welcome back'
+                                        : registrationStarted
+                                            ? stepTitle
+                                            : 'Create your account'
                             }}
                         </h2>
 
@@ -764,14 +981,150 @@ watch(
                             class="mt-2 text-sm leading-5 text-[#64748B]"
                         >
                             {{
-                                mode === 'login'
-                                    ? 'Sign in to continue shopping with Alona.'
-                                    : registrationStarted
-                                        ? stepDescription
-                                        : 'Choose how you want to join Alona.'
+                                isVerifyingOtp
+                                    ? `Enter the 6-digit code sent to ${otpEmail || 'your email'}. It expires in 5 minutes.`
+                                    : mode === 'login'
+                                        ? 'Sign in to continue shopping with Alona.'
+                                        : registrationStarted
+                                            ? stepDescription
+                                            : 'Choose how you want to join Alona.'
                             }}
                         </p>
 
+                    </div>
+
+                    <!-- ================================================= -->
+                    <!-- OTP VERIFICATION SCREEN -->
+                    <!-- ================================================= -->
+
+                    <div
+                        v-if="isVerifyingOtp"
+                        class="mt-6 space-y-5"
+                    >
+                        <!-- ACCOUNT CREATED SUCCESS ALERT -->
+                        <div
+                            v-if="accountCreatedSuccess && !accountVerifiedSuccess"
+                            class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                            role="status"
+                        >
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-semibold text-emerald-950">
+                                        Account Created Successfully!
+                                    </h4>
+                                    <p class="mt-1 text-xs leading-5 text-emerald-800">
+                                        A 6-digit verification code has been sent to <span class="font-bold underline">{{ otpEmail }}</span>. Please enter it below to activate your account.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ACCOUNT VERIFIED SUCCESS ALERT -->
+                        <div
+                            v-if="accountVerifiedSuccess"
+                            class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                            role="status"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-semibold text-emerald-950">
+                                        Email Verified Successfully!
+                                    </h4>
+                                    <p class="text-xs text-emerald-800 mt-0.5">
+                                        {{ accountVerifiedSuccess }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RESEND OTP SUCCESS NOTICE -->
+                        <div
+                            v-if="otpSuccess && !accountCreatedSuccess && !accountVerifiedSuccess"
+                            class="rounded-xl border border-emerald-200 bg-[#E8F7F6] px-4 py-3 text-sm font-medium text-[#087F8C]"
+                        >
+                            {{ otpSuccess }}
+                        </div>
+
+                        <div
+                            v-if="otpError"
+                            class="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+                        >
+                            {{ otpError }}
+                        </div>
+
+                        <form
+                            @submit.prevent="submitModalVerifyOtp"
+                            class="space-y-5"
+                        >
+                            <div>
+                                <label
+                                    for="modal-otp-code"
+                                    class="block text-sm font-medium text-[#1F2937]"
+                                >
+                                    6-Digit Verification Code
+                                </label>
+
+                                <input
+                                    id="modal-otp-code"
+                                    :value="otpCode"
+                                    @input="handleOtpInput"
+                                    type="text"
+                                    inputmode="numeric"
+                                    maxlength="6"
+                                    autocomplete="one-time-code"
+                                    placeholder="000000"
+                                    autofocus
+                                    class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-[#1F2937] outline-none transition placeholder:tracking-normal placeholder:font-normal focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                />
+
+                                <p class="mt-2 text-xs text-[#94A3B8]">
+                                    Please check your inbox (or spam folder) for the 6-digit code.
+                                </p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                :disabled="isOtpSubmitting || otpCode.trim().length !== 6"
+                                class="w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {{ isOtpSubmitting ? 'Verifying...' : 'Verify Account' }}
+                            </button>
+                        </form>
+
+                        <div class="flex items-center justify-between border-t border-[#E5E7EB] pt-5 text-sm">
+                            <button
+                                type="button"
+                                @click="submitModalResendOtp"
+                                :disabled="isOtpResending || resendCooldown > 0"
+                                class="font-semibold text-[#087F8C] hover:text-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {{
+                                    isOtpResending
+                                        ? 'Sending...'
+                                        : resendCooldown > 0
+                                            ? `Resend code in ${resendCooldown}s`
+                                            : 'Resend Code'
+                                }}
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="backFromOtp"
+                                class="font-medium text-[#64748B] hover:text-[#1F2937]"
+                            >
+                                Change details
+                            </button>
+                        </div>
                     </div>
 
                     <!-- ================================================= -->
@@ -779,7 +1132,7 @@ watch(
                     <!-- ================================================= -->
 
                     <form
-                        v-if="mode === 'login'"
+                        v-else-if="mode === 'login'"
                         class="mt-7"
                         @submit.prevent="submitLogin"
                     >
@@ -1165,6 +1518,45 @@ watch(
 
                             </div>
 
+                            <!-- EMAIL ALREADY IN USE ALERT -->
+                            <div
+                                v-if="emailInUseAlert"
+                                class="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm"
+                                role="alert"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-semibold text-amber-950">
+                                            Email Address Already in Use
+                                        </h4>
+                                        <p class="mt-1 text-xs leading-5 text-amber-800">
+                                            {{ emailInUseAlert }}
+                                        </p>
+                                        <div class="mt-3 flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                @click="switchToLogin"
+                                                class="rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700"
+                                            >
+                                                Log in to this account &rarr;
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="emailInUseAlert = ''"
+                                                class="text-xs font-medium text-amber-800 hover:text-amber-950 underline"
+                                            >
+                                                Use another email
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- ================================================= -->
                             <!-- STEP 1 -->
                             <!-- ================================================= -->
@@ -1228,34 +1620,61 @@ watch(
 
                                 </div>
 
-                                <!-- MIDDLE INITIAL -->
+                                <!-- MIDDLE NAME & SUFFIX -->
 
-                                <div>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <div class="sm:col-span-2">
+                                        <label
+                                            for="register-middle-name"
+                                            class="text-sm font-medium text-[#1F2937]"
+                                        >
+                                            Middle name
+                                            <span class="text-[#94A3B8]">
+                                                (optional)
+                                            </span>
+                                        </label>
 
-                                    <label
-                                        for="register-middle-initial"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Middle initial
-                                        <span class="text-[#94A3B8]">
-                                            (optional)
-                                        </span>
-                                    </label>
+                                        <input
+                                            id="register-middle-name"
+                                            v-model="registerForm.middle_name"
+                                            @input="registerForm.middle_initial = registerForm.middle_name ? registerForm.middle_name.trim().charAt(0) : ''"
+                                            type="text"
+                                            maxlength="50"
+                                            placeholder="Enter middle name"
+                                            class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        />
 
-                                    <input
-                                        id="register-middle-initial"
-                                        v-model="registerForm.middle_initial"
-                                        type="text"
-                                        maxlength="1"
-                                        placeholder="M"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm uppercase outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    />
+                                        <InputError
+                                            class="mt-2"
+                                            :message="registerForm.errors.middle_name || registerForm.errors.middle_initial"
+                                        />
+                                    </div>
 
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.middle_initial"
-                                    />
+                                    <div>
+                                        <label
+                                            for="register-suffix"
+                                            class="text-sm font-medium text-[#1F2937]"
+                                        >
+                                            Suffix
+                                            <span class="text-[#94A3B8]">
+                                                (optional)
+                                            </span>
+                                        </label>
 
+                                        <input
+                                            id="register-suffix"
+                                            v-model="registerForm.suffix"
+                                            type="text"
+                                            maxlength="20"
+                                            placeholder="Jr., Sr., III"
+                                            class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        />
+
+                                        <InputError
+                                            class="mt-2"
+                                            :message="registerForm.errors.suffix"
+                                        />
+                                    </div>
                                 </div>
 
                                 <!-- EMAIL -->
@@ -1273,6 +1692,7 @@ watch(
                                         id="register-email"
                                         :disabled="isGoogleOnboarding"
                                         v-model="registerForm.email"
+                                        @input="emailInUseAlert = ''; registerForm.clearErrors('email'); stepError = ''"
                                         type="email"
                                         autocomplete="email"
                                         placeholder="you@example.com"
@@ -1351,9 +1771,9 @@ watch(
                                 class="space-y-5"
                             >
 
-                                <!-- SEX -->
+                                <!-- SEX (Seller Only) -->
 
-                                <div>
+                                <div v-if="isSeller">
 
                                     <label
                                         for="register-sex"
@@ -1480,6 +1900,30 @@ watch(
                                         :message="registerForm.errors.contact_no"
                                     />
 
+                                </div>
+
+                                <!-- TERMS & PRIVACY POLICY -->
+                                <div v-if="!isSeller" class="pt-2">
+                                    <label for="register-terms" class="flex cursor-pointer items-start gap-3">
+                                        <input
+                                            id="register-terms"
+                                            v-model="registerForm.terms"
+                                            @change="registerForm.clearErrors('terms'); stepError = ''"
+                                            type="checkbox"
+                                            class="mt-1 h-4 w-4 rounded border-[#CBD5E1] text-[#087F8C] focus:ring-[#087F8C]"
+                                        />
+                                        <span class="text-sm leading-5 text-[#475569]">
+                                            I agree to the
+                                            <a href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline hover:text-[#16A6A0]">Terms and Conditions</a>
+                                            and
+                                            <a href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline hover:text-[#16A6A0]">Privacy Policy</a>.
+                                            <span class="text-red-500">*</span>
+                                        </span>
+                                    </label>
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.terms"
+                                    />
                                 </div>
 
                             </div>
@@ -1848,9 +2292,24 @@ watch(
 
                             <div
                                 v-if="registrationSuccess"
-                                class="mt-5 rounded-xl bg-[#E8F7F6] px-4 py-3 text-sm text-[#087F8C]"
+                                class="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                                role="status"
                             >
-                                {{ registrationSuccess }}
+                                <div class="flex items-start gap-3">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-semibold text-emerald-950">
+                                            Success!
+                                        </h4>
+                                        <p class="mt-1 text-xs leading-5 text-emerald-800">
+                                            {{ registrationSuccess }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- ERROR -->
@@ -1931,7 +2390,7 @@ watch(
                     <!-- ================================================= -->
 
                     <div
-                        v-if="!registrationStarted"
+                        v-if="!registrationStarted && !isVerifyingOtp"
                         class="my-6 flex items-center gap-3 text-xs text-[#94A3B8]"
                     >
 
@@ -1950,7 +2409,7 @@ watch(
                     </div>
 
                     <a
-                        v-if="!registrationStarted"
+                        v-if="!registrationStarted && !isVerifyingOtp"
                         :href="route('google.redirect', { role: mode === 'login' ? undefined : registrationType || 'buyer' })"
                         class="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAF9]"
                     >
@@ -1970,7 +2429,7 @@ watch(
                     <!-- ================================================= -->
 
                     <div
-                        v-if="!registrationStarted"
+                        v-if="!registrationStarted && !isVerifyingOtp"
                         class="mt-6 border-t border-[#E5E7EB] pt-6 text-center"
                     >
 

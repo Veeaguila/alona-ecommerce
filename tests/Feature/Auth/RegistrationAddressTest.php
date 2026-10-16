@@ -29,6 +29,7 @@ class RegistrationAddressTest extends TestCase
             'store_name' => 'Address Store', 'line_of_business' => 'Retail',
             'id' => UploadedFile::fake()->create('id.pdf', 5, 'application/pdf'),
             'business_permit' => UploadedFile::fake()->create('permit.pdf', 5, 'application/pdf'),
+            'terms' => true,
         ];
     }
 
@@ -38,14 +39,16 @@ class RegistrationAddressTest extends TestCase
         foreach (['buyer', 'seller'] as $role) {
             $input = $this->payload($role);
             $expected = app(PhilippineAddressService::class)->validate($input);
-            $this->post($role === 'buyer' ? '/register' : '/register/seller', $input)->assertSessionHasNoErrors()->assertRedirect(route('login'));
+            $this->post($role === 'buyer' ? '/register' : '/register/seller', $input)
+                ->assertSessionHasNoErrors()
+                ->assertRedirect($role === 'buyer' ? route('verification.otp') : route('login'));
             $user = User::where('email', $input['email'])->firstOrFail();
             $this->assertSame($expected['province'], $user->province);
             $this->assertSame($expected['city'], $user->municipality);
             $this->assertSame($expected['barangay'], $user->barangay);
             $this->assertSame($input['city_code'], $user->address_geography['city_code']);
             $this->assertSame('south-luzon', $user->address_geography['address_group']);
-            $this->assertSame('pending', $user->status);
+            $this->assertSame($role === 'buyer' ? 'unverified' : 'pending', $user->status);
         }
     }
 

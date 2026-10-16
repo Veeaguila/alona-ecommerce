@@ -59,14 +59,31 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $google = $this->prepareGoogle($request, 'buyer');
+
+        if ($request->filled('birthday') && ! $request->filled('age')) {
+            try {
+                $request->merge(['age' => Carbon::parse($request->input('birthday'))->age]);
+            } catch (\Throwable) {
+                // Handled by date validation below
+            }
+        }
+
+        if ($request->has('email')) {
+            $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
+        }
+
+        $hasAddressGroup = $request->filled('address_group');
+
         $request->validate([
             'last_name' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
-            'middle_initial' => 'nullable|string|size:1',
-            'sex' => 'required|in:Male,Female,Other',
+            'middle_name' => 'nullable|string|max:50',
+            'middle_initial' => 'nullable|string|max:50',
+            'suffix' => 'nullable|string|max:20',
+            'sex' => 'nullable|in:Male,Female,Other',
 
             'email' => [
                 'required',
@@ -79,14 +96,14 @@ class RegisteredUserController extends Controller
 
             'contact_no' => 'required|string|max:30',
             'birthday' => 'required|date|before:today',
-            'age' => 'required|integer|min:1|max:120',
+            'age' => 'nullable|integer|min:1|max:120',
 
-            'address_group' => ['required', Rule::in(array_keys(PhilippineAddressService::GROUPS))],
-            'region_code' => ['required', 'regex:/^\d{10}$/'],
+            'address_group' => ['nullable', Rule::in(array_keys(PhilippineAddressService::GROUPS))],
+            'region_code' => [$hasAddressGroup ? 'required' : 'nullable', 'regex:/^\d{10}$/'],
             'province_code' => ['nullable', 'regex:/^\d{10}$/'],
-            'city_code' => ['required', 'regex:/^\d{10}$/'],
-            'barangay_code' => ['required', 'regex:/^\d{10}$/'],
-            'street_address' => 'required|string|max:1000',
+            'city_code' => [$hasAddressGroup ? 'required' : 'nullable', 'regex:/^\d{10}$/'],
+            'barangay_code' => [$hasAddressGroup ? 'required' : 'nullable', 'regex:/^\d{10}$/'],
+            'street_address' => [$hasAddressGroup ? 'required' : 'nullable', 'string', 'max:1000'],
 
             'id' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
 
@@ -95,19 +112,37 @@ class RegisteredUserController extends Controller
                 'confirmed',
                 Rules\Password::defaults(),
             ],
+
+            'terms' => ['accepted'],
+        ], [
+            'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
+            'terms.accepted' => 'You must agree to the Terms and Privacy Policy.',
         ]);
 
-        $address = app(PhilippineAddressService::class)->validate($request->all());
-        $request->merge(['province' => $address['province'], 'municipality' => $address['city'], 'barangay' => $address['barangay']]);
+        $address = null;
+        if ($hasAddressGroup) {
+            $address = app(PhilippineAddressService::class)->validate($request->all());
+            $request->merge([
+                'province' => $address['province'],
+                'municipality' => $address['city'],
+                'barangay' => $address['barangay'],
+            ]);
+        }
 
-        $fullName = trim(
-            $request->first_name.
-            ' '.
-            ($request->middle_initial
-                ? $request->middle_initial.'. '
-                : '').
-            $request->last_name
-        );
+        $middleName = trim((string) ($request->input('middle_name') ?: $request->input('middle_initial') ?: ''));
+        $middleInitial = $middleName !== '' ? mb_substr($middleName, 0, 1) : null;
+        $suffix = trim((string) ($request->input('suffix') ?? ''));
+
+        $nameParts = array_filter([
+            trim((string) $request->first_name),
+            $middleName !== ''
+                ? (mb_strlen($middleName) === 1 ? $middleName.'.' : $middleName)
+                : null,
+            trim((string) $request->last_name),
+            $suffix !== '' ? $suffix : null,
+        ]);
+
+        $fullName = implode(' ', $nameParts);
 
         $user = User::create([
             'name' => $fullName,
@@ -115,7 +150,9 @@ class RegisteredUserController extends Controller
             // Personal information
             'last_name' => $request->last_name,
             'first_name' => $request->first_name,
-            'middle_initial' => $request->middle_initial,
+            'middle_name' => $middleName !== '' ? $middleName : null,
+            'middle_initial' => $middleInitial,
+            'suffix' => $suffix !== '' ? $suffix : null,
             'sex' => $request->sex,
             'email' => $request->email,
             'contact_no' => $request->contact_no,
@@ -123,35 +160,59 @@ class RegisteredUserController extends Controller
             'age' => Carbon::parse($request->birthday)->age,
 
             // Address
-            'address' => implode(', ', array_filter([
-                $request->street_address,
-                $request->barangay,
-                $request->municipality,
-                $request->province,
-            ])),
-            'address_geography' => collect($address)->only(['address_group', 'region_code', 'province_code', 'city_code', 'barangay_code', 'psgc_version'])->all(),
-            'province' => $request->province,
-            'municipality' => $request->municipality,
-            'barangay' => $request->barangay,
-            'street_address' => $request->street_address,
+            'address' => $hasAddressGroup
+                ? implode(', ', array_filter([
+                    $request->street_address,
+                    $request->barangay,
+                    $request->municipality,
+                    $request->province,
+                ]))
+                : null,
+            'address_geography' => $address
+                ? collect($address)->only(['address_group', 'region_code', 'province_code', 'city_code', 'barangay_code', 'psgc_version'])->all()
+                : null,
+            'province' => $hasAddressGroup ? $request->province : null,
+            'municipality' => $hasAddressGroup ? $request->municipality : null,
+            'barangay' => $hasAddressGroup ? $request->barangay : null,
+            'street_address' => $hasAddressGroup ? $request->street_address : null,
 
             // Buyer ID
             'id_path' => $request->file('id')?->store('buyer-ids'),
 
             // Account
             'usertype' => 'buyer',
-            'status' => 'pending',
+            'status' => $google ? 'approved' : 'unverified',
             'password' => Hash::make($request->password),
         ]);
 
         $this->completeGoogle($request, $user, $google);
         event(new Registered($user));
 
+        if (! $google) {
+            $user->generateAndSendOtp();
+            $request->session()->put('otp_verification_email', $user->email);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Account created successfully! A 6-digit verification code has been sent to your email address.',
+                    'email' => $user->email,
+                ]);
+            }
+
+            return redirect()
+                ->route('verification.otp')
+                ->with(
+                    'status',
+                    'Account created successfully! A 6-digit verification code has been sent to your email address.'
+                );
+        }
+
         return redirect()
             ->route('login')
             ->with(
                 'status',
-                'Registration submitted. Please wait for administrator approval. We will notify you by email.'
+                'Registration complete. You may now log in.'
             );
     }
 
@@ -163,6 +224,11 @@ class RegisteredUserController extends Controller
     public function storeSeller(Request $request): RedirectResponse
     {
         $google = $this->prepareGoogle($request, 'seller');
+
+        if ($request->has('email')) {
+            $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
+        }
+
         $request->validate([
             /*
             |--------------------------------------------------------------------------
@@ -252,6 +318,8 @@ class RegisteredUserController extends Controller
                 'confirmed',
                 Rules\Password::defaults(),
             ],
+        ], [
+            'email.unique' => 'This email address is already registered. Please log in instead or use another email.',
         ]);
 
         /*
