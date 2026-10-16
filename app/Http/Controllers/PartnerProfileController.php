@@ -48,9 +48,19 @@ class PartnerProfileController extends Controller
             && $user->rider?->sorting_center_id === $reviewer->sortingCenter?->id;
         abort_unless($reviewer->id === $user->id || ($reviewer->usertype === 'admin' && $reviewer->status === 'approved') || $ownsRider, 403);
         $path = $user->partnerApplication?->documents[$document] ?? null;
-        abort_unless($path && Storage::disk('local')->exists($path), 404);
+        if (! $path) {
+            if ($document === 'business_permit') {
+                $path = $user->business_permit_path;
+            } elseif (in_array($document, ['id', 'government_id'], true)) {
+                $path = $user->id_path;
+            }
+        }
+        $disk = ($path && Storage::disk('local')->exists($path))
+            ? 'local'
+            : (($path && Storage::disk('public')->exists($path)) ? 'public' : null);
+        abort_unless($path && $disk, 404);
 
-        return response()->file(Storage::disk('local')->path($path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return response()->file(Storage::disk($disk)->path($path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     public function rider(Request $request)

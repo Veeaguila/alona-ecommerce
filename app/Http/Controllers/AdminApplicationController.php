@@ -139,6 +139,14 @@ class AdminApplicationController extends Controller
             404
         );
 
+        $rawDocs = $user->partnerApplication?->documents ?? [];
+        if ($user->id_path && empty($rawDocs['government_id']) && empty($rawDocs['id'])) {
+            $rawDocs['government_id'] = $user->id_path;
+        }
+        if ($user->business_permit_path && empty($rawDocs['business_permit'])) {
+            $rawDocs['business_permit'] = $user->business_permit_path;
+        }
+
         return Inertia::render('Admin/Applications', [
             'title' => ucfirst($user->usertype).' application',
 
@@ -149,7 +157,7 @@ class AdminApplicationController extends Controller
             'active' => 'applications',
 
             'partnerProfile' => $user->partnerApplication?->only(['details', 'address']),
-            'partnerDocuments' => collect($user->partnerApplication?->documents ?? [])->map(fn ($path, $key) => route('partner.documents', [$user, $key]))->all(),
+            'partnerDocuments' => collect($rawDocs)->map(fn ($path, $key) => route('partner.documents', [$user, $key]))->all(),
             'application' => $user->only([
                 'id',
                 'name',
@@ -164,6 +172,7 @@ class AdminApplicationController extends Controller
                 'barangay',
                 'street_address',
                 'store_name',
+                'line_of_business',
                 'store_description',
                 'created_at',
             ]),

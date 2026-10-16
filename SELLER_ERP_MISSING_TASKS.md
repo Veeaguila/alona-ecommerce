@@ -75,8 +75,8 @@ Each checkbox is a separate task with a short description. Fully implemented fun
 
 ## Account and Security
 
-- [ ] **SELLER-66: Login session management.** Let sellers view, monitor, and revoke active login sessions across devices.
-- [ ] **SELLER-67: Business verification & document updates.** Allow re-uploading business permits and checking verification status.
+- [x] **SELLER-66: Login session management.** Let sellers view, monitor, and revoke active login sessions across devices.
+- [x] **SELLER-67: Business verification & document updates.** Allow re-uploading business permits and checking verification status.
 
 ## Help and Support
 

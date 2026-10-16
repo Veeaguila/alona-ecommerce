@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SellerAccountController;
 use App\Http\Controllers\SellerConversationController;
 use App\Http\Controllers\SellerCustomerController;
 use App\Http\Controllers\SellerDashboardController;
@@ -422,13 +423,49 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
-    | SELLER ACCOUNT
+    | SELLER ACCOUNT & SECURITY
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/seller/account', function () {
-        return redirect()->route('profile.edit');
-    })->name('seller.account');
+    Route::get('/seller/account', [
+        SellerAccountController::class,
+        'edit',
+    ])->name('seller.account');
+
+    Route::post('/seller/account/profile', [
+        SellerAccountController::class,
+        'updateProfile',
+    ])->name('seller.account.profile.update');
+
+    Route::patch('/seller/account/profile', [
+        SellerAccountController::class,
+        'updateProfile',
+    ]);
+
+    Route::post('/seller/account/documents', [
+        SellerAccountController::class,
+        'updateDocuments',
+    ])->name('seller.account.documents.update');
+
+    Route::put('/seller/account/password', [
+        SellerAccountController::class,
+        'updatePassword',
+    ])->name('seller.account.password.update');
+
+    Route::delete('/seller/account/sessions/{session}', [
+        SellerAccountController::class,
+        'revokeSession',
+    ])->name('seller.account.sessions.revoke');
+
+    Route::post('/seller/account/sessions/revoke-other', [
+        SellerAccountController::class,
+        'revokeOtherSessions',
+    ])->name('seller.account.sessions.revoke-other');
+
+    Route::delete('/seller/account', [
+        SellerAccountController::class,
+        'destroy',
+    ])->name('seller.account.destroy');
 
 });
 

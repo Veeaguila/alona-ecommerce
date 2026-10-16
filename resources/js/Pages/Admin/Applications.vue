@@ -350,10 +350,10 @@ const goToPage = (url) => {
 
                 <!-- DETAIL CONTENT -->
 
-                <section v-if="partnerProfile" class="space-y-5 border-b border-slate-200 p-5">
-                    <h2 class="text-lg font-semibold">Partner application details</h2>
-                    <dl class="grid gap-3 sm:grid-cols-2"><div v-for="(value, key) in partnerProfile.details" :key="key"><dt class="text-xs font-semibold capitalize text-slate-500">{{ key.replaceAll('_', ' ') }}</dt><dd class="mt-1 break-words text-sm">{{ profileValue(value) }}</dd></div></dl>
-                    <div class="flex flex-wrap gap-3"><a v-for="(url, key) in partnerDocuments" :key="key" :href="url" target="_blank" rel="noopener" class="rounded-xl border border-[#087F8C] px-4 py-2 text-sm text-[#087F8C]">Review {{ key.replaceAll('_', ' ') }}</a></div>
+                <section v-if="partnerProfile || (partnerDocuments && Object.keys(partnerDocuments).length)" class="space-y-5 border-b border-slate-200 p-5">
+                    <h2 class="text-lg font-semibold">Verification &amp; application documents</h2>
+                    <dl v-if="partnerProfile?.details" class="grid gap-3 sm:grid-cols-2"><div v-for="(value, key) in partnerProfile.details" :key="key"><dt class="text-xs font-semibold capitalize text-slate-500">{{ key.replaceAll('_', ' ') }}</dt><dd class="mt-1 break-words text-sm">{{ profileValue(value) }}</dd></div></dl>
+                    <div v-if="partnerDocuments && Object.keys(partnerDocuments).length" class="flex flex-wrap gap-3"><a v-for="(url, key) in partnerDocuments" :key="key" :href="url" target="_blank" rel="noopener" class="rounded-xl border border-[#087F8C] px-4 py-2 text-sm font-semibold text-[#087F8C] transition hover:bg-[#E8F7F6]">Review {{ key.replaceAll('_', ' ') }}</a></div>
                 </section>
 
                 <div class="p-4 sm:p-5">
