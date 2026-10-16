@@ -71,6 +71,7 @@ class PartnerRegistrationRequest extends FormRequest
             'operating_hours' => [$business ? 'required' : 'exclude', 'string', 'max:500'],
             'permit_doc' => [Rule::requiredIf($business && $this->input('business_type') !== 'individual'), 'nullable', $document],
             'birthday' => [Rule::requiredIf($this->isRider()), 'nullable', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
+            'sex' => [$this->isRider() ? 'nullable' : 'exclude', Rule::in(['male', 'female', 'other'])],
             'sorting_center_id' => [$this->isRider() ? 'required' : 'exclude', 'integer', Rule::exists('sorting_centers', 'id')->where('approval_status', 'approved')],
             'vehicle_type' => [Rule::requiredIf($this->isRider()), 'nullable', Rule::in(['bicycle', 'motorcycle', 'car', 'van'])],
             'vehicle_model' => [Rule::requiredIf($motor), 'nullable', 'string', 'max:100'],

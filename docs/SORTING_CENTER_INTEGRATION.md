@@ -39,6 +39,43 @@ New center/rider registrations create pending accounts and profiles. Existing ad
 
 Proof uploads remain on the private `local` disk. Authenticated file URLs and `ProtectedProofImage.vue` retain the imported protected-image behavior. Do not import proof files into public storage.
 
+## Flutter Rider integration (2026-10-15)
+
+The sibling Rider client uses this ALONA API/database with configurable URLs and
+explicit HTTPS for release. Pickups use collection addresses; deliveries use the
+order destination. Registration reuses canonical partner/address/coverage fields,
+private documents, conditional motor paperwork and the existing optional sex field.
+
+Sanctum logout is confirmed before local credentials clear; invalid tokens clear and
+unconfirmed failures preserve credentials for retry. Current profile checks gate
+operations. Assignment and messaging eligibility match role, approval, availability
+and conditional verification rules, preserving the legacy verification exemption.
+Login retains exact legacy email matches and supports canonical new-registration
+emails. Buyer/Seller/Admin/Logistics interfaces and shared state remain in place.
+
+Assigned deliveries expose has_delivery_proof. Proof uploads use private storage,
+parcel locks and cleanup after record failure. Existing deliveries?view=history adds
+owned bounded history/counts; default active lists are unchanged. Existing chat and
+profile endpoints support Rider messaging and contact/status. The 2026-10-16 update
+adds persistent owned Rider notifications and private photo/canonical-address APIs;
+address changes require Logistics reapproval. Address Details DTOs preserve seller
+collection and order delivery snapshots. See RIDER_FUNCTIONALITY.md for the new
+notification migration, tests, deployment and remaining device checks.
+Phase 7 shipment finance is implemented in this same backend;
+see DELIVERY_FINANCE.md for the three new tables, migration and scoped APIs.
+No separate backend/database was added. The migration is not applied outside tests.
+
+Verification: 60 Rider tests, 119 relevant in-memory Laravel tests (45,938 assertions),
+7 recovery/safety tests, clean Flutter analysis and release JavaScript web compile
+passed. Device/camera, real SMTP/API/CORS and full real-world workflow remain manual.
+PHP currently allows 2M/file and 8M/request; full application limits require operator
+configuration. Optional WASM needs a compatible secure-storage dependency.
+
+Durable phases, Git state, validation logs and next actions are in sibling Rider
+docs/integration/RESUME.md and CHECKPOINT.md. Checkpoints flush/replace/verify files,
+preserve previous bundles and can restore verified documentation without modifying
+source/Git/database. No automatic commit, push or production-data operation occurred.
+
 ## Setup and verification
 
 Install locked dependencies, configure the normal Laravel environment, and run `php artisan migrate` before using the module. Five new migrations dated `2026_10_11_100000` through `100004` create logistics tables, separate messaging tables, and `delivered_at`. They do not replace ecommerce schemas. Rollback retains the Sanctum token table because it may be shared by other API clients.

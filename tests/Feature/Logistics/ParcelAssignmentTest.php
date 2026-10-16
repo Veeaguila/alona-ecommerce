@@ -4,11 +4,13 @@ namespace Tests\Feature\Logistics;
 
 use App\Models\Area;
 use App\Models\Parcel;
+use App\Models\PartnerApplication;
 use App\Models\Rider;
 use App\Models\SortingCenter;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ParcelAssignmentTest extends TestCase
@@ -77,6 +79,56 @@ class ParcelAssignmentTest extends TestCase
         $this->getJson("/api/sorting-center/parcels/{$parcel->id}/eligible-riders")
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public static function readinessCases(): array
+    {
+        return [
+            'legacy unverified allowed' => ['approved', 'rider', 'approved', true, false, false, true],
+            'verified application allowed' => ['approved', 'rider', 'approved', true, true, true, true],
+            'unverified application blocked' => ['approved', 'rider', 'approved', true, true, false, false],
+            'pending account blocked' => ['pending', 'rider', 'approved', true, false, true, false],
+            'suspended account blocked' => ['suspended', 'rider', 'approved', true, false, true, false],
+            'wrong role blocked' => ['approved', 'buyer', 'approved', true, false, true, false],
+            'pending rider blocked' => ['approved', 'rider', 'pending', true, false, true, false],
+            'inactive rider blocked' => ['approved', 'rider', 'approved', false, false, true, false],
+        ];
+    }
+
+    #[DataProvider('readinessCases')]
+    public function test_assignment_and_operational_middleware_agree(
+        string $status, string $role, string $approval, bool $active,
+        bool $application, bool $verified, bool $allowed
+    ): void {
+        $center = $this->approvedSortingCenter();
+        $area = Area::create(['sorting_center_id' => $center->sortingCenter->id, 'name' => 'Area A']);
+        $rider = $this->rider($approval, $active, $center->sortingCenter->id);
+        $rider->areas()->attach($area->id);
+        $user = $rider->user;
+        $user->forceFill(['status' => $status, 'usertype' => $role, 'email_verified_at' => $verified ? now() : null])->save();
+        if ($application) {
+            PartnerApplication::create(['user_id' => $user->id, 'role' => 'rider',
+                'details' => [], 'address' => [], 'documents' => [],
+                'terms_accepted_at' => now(), 'privacy_accepted_at' => now()]);
+        }
+        $parcel = $this->parcel($area, 'AT_SORTING_CENTER');
+        Sanctum::actingAs($center);
+        $this->getJson("/api/sorting-center/parcels/{$parcel->id}/eligible-riders")
+            ->assertOk()->assertJsonCount($allowed ? 1 : 0, 'data');
+        $this->postJson("/api/sorting-center/parcels/{$parcel->id}/assign", ['rider_id' => $rider->id])
+            ->assertStatus($allowed ? 200 : 422);
+        $this->assertSame($allowed ? $rider->id : null, $parcel->fresh()->assigned_rider_id);
+
+        Sanctum::actingAs($user->fresh());
+        $this->getJson('/api/rider/deliveries')->assertStatus($allowed ? 200 : 403);
+        if ($role === 'rider') {
+            $this->getJson('/api/partner/profile')->assertOk()
+                ->assertJsonPath('data.status', $status)
+                ->assertJsonPath('data.approvalStatus', $approval)
+                ->assertJsonPath('data.is_active', $active)
+                ->assertJsonPath('data.verification_required', $application)
+                ->assertJsonPath('data.verified', $verified);
+        }
     }
 
     private function approvedSortingCenter(): User

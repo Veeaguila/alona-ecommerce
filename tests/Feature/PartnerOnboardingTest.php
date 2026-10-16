@@ -40,16 +40,46 @@ class PartnerOnboardingTest extends TestCase
             Area::firstOrCreate(['sorting_center_id' => $center->id, 'city_code' => $city['code']], ['name' => $city['name']]);
         }
 
+        $key = (string) \Illuminate\Support\Str::uuid();
+        if (! $rider) {
+            $this->withSession(['logistics.registration_key' => $key]);
+        }
+
         return ['first_name' => 'Alona', 'middle_name' => 'Test', 'last_name' => 'Partner',
-            'email' => 'partner@example.test', 'contact_no' => '09123456789', 'password' => 'password', 'password_confirmation' => 'password',
+            'email' => 'partner@example.test', 'contact_no' => '09123456789', 'password' => $rider ? 'password' : 'Partner@2026', 'password_confirmation' => $rider ? 'password' : 'Partner@2026',
             'region_code' => $city['region_code'], 'province_code' => '', 'city_code' => $city['code'], 'barangay_code' => $barangay['code'],
             'street' => 'Main Street', 'house_number' => '12', 'postal_code' => '1100', 'terms' => true, 'privacy' => true,
             'id_doc' => UploadedFile::fake()->create('id.pdf', 5, 'application/pdf'),
             ...($rider ? ['birthday' => '2000-01-01', 'vehicle_type' => 'bicycle', 'delivery_city_codes' => [$city['code']], 'sorting_center_id' => $center->id] : [
+                'request_key' => $key, 'province_selection' => $city['province_code'] ?: 'independent',
+                'position' => 'Manager', 'registration_number' => 'CS202012345', 'tin' => '234-567-890-000',
+                'service_region_codes' => [$city['region_code']],
+                'sec_doc' => UploadedFile::fake()->create('sec.pdf', 5, 'application/pdf'),
+                'bir_doc' => UploadedFile::fake()->create('bir.pdf', 5, 'application/pdf'),
+                'permit_doc' => UploadedFile::fake()->create('permit.pdf', 5, 'application/pdf'),
                 'coverage_city_codes' => [$city['code']], 'operating_hours' => 'Monday to Friday, 9 AM–5 PM',
                 'business_name' => 'Alona Delivery', 'business_type' => 'individual', 'authorized_representative' => 'Alona Partner',
                 'business_email' => 'business@example.test', 'business_phone' => '+639123456789', 'services' => 'Parcel delivery', 'vehicle_types' => 'Bicycles', 'fleet_count' => 2,
             ])];
+    }
+
+    public function test_pending_rider_can_update_own_contact_without_gaining_operational_access(): void
+    {
+        $this->postJson('/api/rider/register', $this->payload(true))->assertCreated();
+        $user = User::where('email', 'partner@example.test')->firstOrFail();
+        Sanctum::actingAs($user);
+        $this->patchJson('/api/partner/profile', ['contact_no' => '09987654321'])->assertOk();
+        $this->assertSame('09987654321', $user->fresh()->contact_no);
+        $this->assertSame('09987654321', $user->rider->fresh()->contact);
+        $this->assertSame('09987654321', $user->partnerApplication->fresh()->details['contact_no']);
+        $this->getJson('/api/rider/deliveries')->assertForbidden();
+    }
+
+    public function test_optional_existing_rider_sex_field_is_preserved(): void
+    {
+        $this->postJson('/api/rider/register', array_merge($this->payload(true), ['sex' => 'female']))->assertCreated();
+        $user = User::where('email', 'partner@example.test')->firstOrFail();
+        $this->assertSame('female', $user->rider->sex);
     }
 
     public function test_logistics_registration_saves_real_profile_and_private_documents(): void
@@ -60,7 +90,7 @@ class PartnerOnboardingTest extends TestCase
         $this->assertSame('sorting_center', $user->usertype);
         $this->assertSame('pending', $user->sortingCenter->approval_status);
         $this->assertSame('Alona Delivery', $user->sortingCenter->business_name);
-        $this->assertCount(1, $user->sortingCenter->areas);
+        $this->assertGreaterThan(0, $user->sortingCenter->areas->count());
         $this->getJson('/api/delivery-coverage')->assertJsonCount(0, 'data');
         $this->assertNull($user->partnerApplication->address['province']);
         Storage::disk('local')->assertExists($user->partnerApplication->documents['id_doc']);
@@ -90,7 +120,7 @@ class PartnerOnboardingTest extends TestCase
 
     public function test_business_types_require_only_applicable_documentation(): void
     {
-        $this->postJson('/api/sorting-center/register', array_merge($this->payload(), ['business_type' => 'corporation']))
+        $this->postJson('/api/sorting-center/register', array_merge($this->payload(), ['business_type' => 'corporation', 'permit_doc' => null, 'registration_number' => null]))
             ->assertUnprocessable()->assertJsonValidationErrors(['permit_doc', 'registration_number']);
     }
 
@@ -119,7 +149,7 @@ class PartnerOnboardingTest extends TestCase
         $user->sortingCenter->update(['approval_status' => 'approved']);
         $this->get('/sorting-center/dashboard')->assertRedirect(route('application.status'));
         $user->markEmailAsVerified();
-        $this->getJson('/api/delivery-coverage')->assertJsonCount(1, 'data');
+        $this->getJson('/api/delivery-coverage')->assertJsonCount($user->sortingCenter->areas()->count(), 'data');
         $this->actingAs($user)->get('/sorting-center/dashboard')->assertOk()->assertSee('window.logisticsSession', false);
         Sanctum::actingAs($user);
         $this->getJson('/api/sorting-center/dashboard')->assertOk();
@@ -184,7 +214,7 @@ class PartnerOnboardingTest extends TestCase
         $storage->shouldReceive('store')->once()->ordered()->andReturn('partner-documents/orphan.pdf');
         $storage->shouldReceive('store')->once()->ordered()->andThrow(new \RuntimeException('Storage unavailable'));
         $this->app->instance(RegistrationDocumentStorage::class, $storage);
-        $data = array_merge($this->payload(), ['business_type' => 'sole_proprietor', 'registration_number' => 'DTI-123',
+        $data = array_merge($this->payload(), ['business_type' => 'sole_proprietor', 'registration_number' => 'CS202012345',
             'permit_doc' => UploadedFile::fake()->create('permit.pdf', 5, 'application/pdf')]);
         $this->post('/register/logistics', $data)->assertServerError();
         $this->assertDatabaseCount('users', 0);

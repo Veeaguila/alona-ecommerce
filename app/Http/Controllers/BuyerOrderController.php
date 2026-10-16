@@ -202,14 +202,14 @@ class BuyerOrderController extends Controller
                     'key' => $key,
                     'label' => $method['label'],
                     'description' => $method['description'],
-                    'fee_per_seller' => (float) $method['fee_per_seller'],
+                    'fee_per_seller' => 0.0,
                 ])
                 ->values()
                 ->all(),
 
             'seller_count' => max(1, $sellerCount),
 
-            'free_shipping_threshold' => config('checkout.free_shipping_threshold'),
+            'free_shipping_threshold' => null,
 
             'default_shipping_method' => config('checkout.default_shipping_method'),
 
@@ -232,44 +232,16 @@ class BuyerOrderController extends Controller
     }
 
     /**
-     * Authoritative shipping fee calculation.
-     * Fee is per seller package; free above the configured threshold
-     * (except express delivery).
+     * Buyer shipping is zero for new seller-funded orders, including express.
      */
     private function calculateShippingFee(
         string $method,
         $items,
         float $merchandiseTotal
     ): float {
-        $config = config("checkout.shipping_methods.{$method}");
-
-        if (!$config) {
-            return 0.0;
-        }
-
-        $threshold = config('checkout.free_shipping_threshold');
-
-        if (
-            $method !== 'express' &&
-            $threshold !== null &&
-            $merchandiseTotal >= (float) $threshold
-        ) {
-            return 0.0;
-        }
-
-        $sellerCount = max(
-            1,
-            $items
-                ->map(fn ($item) => $item->product?->seller_id)
-                ->filter()
-                ->unique()
-                ->count()
-        );
-
-        return round(
-            (float) $config['fee_per_seller'] * $sellerCount,
-            2
-        );
+        // This path creates new seller-funded orders only. Historical totals and
+        // selected express/standard method metadata are never recalculated.
+        return 0.0;
     }
 
     /**
@@ -1224,6 +1196,9 @@ class BuyerOrderController extends Controller
                     $data['payment_method'];
                 $order->shipping_method = $shippingMethod;
                 $order->shipping_fee = $shippingFee;
+                $order->delivery_fee_payer = 'seller';
+                $order->shipping_fee_before_discount = 0;
+                $order->shipping_discount = 0;
                 $order->payment_status = 'unpaid';
                 $order->payment_method_id = $savedPaymentMethod?->id;
                 $order->subtotal = $subtotal;
@@ -1404,10 +1379,8 @@ class BuyerOrderController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
-                $this->createOrderStatusHistory(
-                    $order,
-                    'pending'
-                );
+                app(\App\Services\SellerShipmentFinance::class)->createMembership($order);
+                $this->createOrderStatusHistory($order, 'pending');
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1479,6 +1452,15 @@ class BuyerOrderController extends Controller
             (int) $request->user()->id,
             404
         );
+
+        if ($item->seller_shipment_id) {
+            $parcel = $item->parcel;
+            abort_unless($parcel && $parcel->status === 'DELIVERED'
+                && $parcel->deliveryProofs()->where('rider_id', $parcel->assigned_rider_id)->exists(),
+                422, 'Courier delivery with valid proof is required before confirmation.');
+
+            return back()->with('status', 'Delivery confirmed successfully.');
+        }
 
         $currentStatus =
             $item->status ??
@@ -1595,6 +1577,13 @@ class BuyerOrderController extends Controller
         $order->load('items.product', 'items.variant');
 
         DB::transaction(function () use ($order, $data, $cancellableStatuses) {
+            Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $finance = app(\App\Services\SellerShipmentFinance::class);
+            foreach (\App\Models\SellerShipment::where('order_id', $order->id)->orderBy('id')->lockForUpdate()->get() as $shipment) {
+                $finance->assertMutable($shipment);
+            }
+            $order->setRelation('items', $order->items()->with('product', 'variant')->lockForUpdate()->get());
+            abort_unless($order->items->every(fn ($item) => in_array($item->status, $cancellableStatuses, true)), 422, 'This order can no longer be cancelled.');
             $order->update([
                 'status' => 'cancelled',
                 'cancellation_reason' => $data['reason'],

@@ -20,6 +20,23 @@ class PartnerProfileController extends Controller
             'verified' => $user->hasVerifiedEmail(), 'reason' => $user->rejection_reason,
             'destination' => $destinations->route($user) === 'application.status' ? null : route($destinations->route($user)),
             'profile' => $user->partnerApplication?->only(['details', 'address'])];
+        $data['usesOtp'] = ($user->partnerApplication?->details['registration_version'] ?? null) === 2;
+
+        if ($user->usertype === 'rider') {
+            $data['is_active'] = $profile?->is_active ?? false;
+            $data['verification_required'] = $user->partnerApplication()->exists();
+            $photo = is_string($user->avatar) && str_starts_with($user->avatar, 'rider-avatars/'.$user->id.'/');
+            $data['rider_profile'] = [
+                'contact_no' => $user->contact_no ?: $profile?->contact,
+                'birthday' => $profile?->birthday?->format('Y-m-d') ?? $user->birthday?->format('Y-m-d'),
+                'address' => $user->address ?: implode(', ', array_filter([$profile?->house_number, $profile?->street, $profile?->barangay, $profile?->municipality, $profile?->province])),
+                'address_fields' => $user->partnerApplication?->address ?? $user->address_geography,
+                'vehicle_type' => $profile?->vehicle_type, 'plate_number' => $profile?->plate_number,
+                'photo_available' => $photo && Storage::disk('local')->exists($user->avatar),
+                'public_photo_url' => !$photo && is_string($user->avatar) && filter_var($user->avatar, FILTER_VALIDATE_URL)
+                    && parse_url($user->avatar, PHP_URL_SCHEME) === 'https' ? $user->avatar : null,
+            ];
+        }
 
         return $request->expectsJson() ? response()->json(['data' => $data]) : Inertia::render('Auth/ApplicationStatus', $data);
     }

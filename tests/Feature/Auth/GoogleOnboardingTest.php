@@ -60,4 +60,15 @@ class GoogleOnboardingTest extends TestCase
         $this->assertNull($second->fresh()->google_id);
         $this->assertSame('google-123', $first->fresh()->google_id);
     }
+
+    public function test_google_sign_in_preserves_an_uploaded_rider_photo(): void
+    {
+        $user = User::factory()->create(['email' => 'rider-photo@example.test', 'usertype' => 'rider', 'status' => 'pending']);
+        $path = 'rider-avatars/'.$user->id.'/selected.png';
+        $user->update(['avatar' => $path]);
+        $this->google($user->email);
+        $this->get('/auth/google/callback')->assertRedirect(route('application.status'));
+        $this->assertSame($path, $user->fresh()->avatar);
+        $this->assertAuthenticatedAs($user);
+    }
 }

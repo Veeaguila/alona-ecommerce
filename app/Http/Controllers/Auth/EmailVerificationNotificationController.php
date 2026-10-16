@@ -14,6 +14,9 @@ class EmailVerificationNotificationController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (($request->user()->partnerApplication?->details['registration_version'] ?? null) === 2) {
+            return redirect()->route('application.status')->withErrors(['otp' => 'Use Resend code to request a new six-digit code.']);
+        }
         if ($request->user()->hasVerifiedEmail()) {
             if (in_array($request->user()->usertype, ['sorting_center', 'rider'], true)) {
                 return redirect()->route(app(AccountDestination::class)->route($request->user()));

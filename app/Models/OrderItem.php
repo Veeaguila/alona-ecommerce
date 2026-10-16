@@ -8,6 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderItem extends Model
 {
+    protected static function booted(): void
+    {
+        static::updating(function (self $item): void {
+            if ($item->isDirty('seller_shipment_id') && $item->getOriginal('seller_shipment_id')) {
+                throw new \LogicException('Shipment membership is immutable.');
+            }
+            if ($item->isDirty('status') && $item->status === 'cancelled' && $item->seller_shipment_id) {
+                app(\App\Services\SellerShipmentFinance::class)->assertMutable($item->sellerShipment);
+            }
+        });
+    }
+
     public function parcel(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Parcel::class);
@@ -41,6 +53,7 @@ class OrderItem extends Model
     ];
 
     protected $fillable = [
+        'seller_shipment_id',
         'order_id',
         'product_id',
         'product_variant_id',
@@ -78,6 +91,11 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function sellerShipment(): BelongsTo
+    {
+        return $this->belongsTo(SellerShipment::class);
     }
 
     public function product(): BelongsTo
@@ -181,6 +199,22 @@ class OrderItem extends Model
         string $status,
         ?string $note = null
     ): void {
+        if (! $this->seller_shipment_id) {
+            $this->applyStatus($status, $note);
+
+            return;
+        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($status, $note): void {
+            app(\App\Services\SellerShipmentFinance::class)->lockItem($this->id);
+            $current = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
+            $this->setRawAttributes($current->getAttributes(), true);
+            $this->unsetRelations();
+            $this->applyStatus($status, $note);
+        });
+    }
+
+    private function applyStatus(string $status, ?string $note): void
+    {
         abort_unless(
             in_array($status, self::STATUSES, true),
             422,

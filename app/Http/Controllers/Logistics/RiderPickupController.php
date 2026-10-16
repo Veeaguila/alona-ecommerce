@@ -42,6 +42,7 @@ class RiderPickupController extends Controller
                 'pickup_rider_id',
             ]);
 
+        app(\App\Services\RiderParcelDetails::class)->append($pickups, true);
         return response()->json([
             'message' => 'Available pickup jobs retrieved successfully.',
             'data' => $pickups,
@@ -75,6 +76,7 @@ class RiderPickupController extends Controller
                 'pickup_rider_id',
             ]);
 
+        app(\App\Services\RiderParcelDetails::class)->append($pickups, true);
         return response()->json([
             'message' => 'Accepted pickup jobs retrieved successfully.',
             'data' => $pickups,
@@ -135,6 +137,7 @@ class RiderPickupController extends Controller
         $riderId = $request->user()->rider?->id;
 
         $parcel = DB::transaction(function () use ($parcelId, $riderId): Parcel {
+            app(\App\Services\SellerShipmentFinance::class)->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
 
             if (!$parcel) {

@@ -345,6 +345,10 @@ const previousStep = () => {
 }
 
 const startRegistration = () => {
+    if (!isRider.value) {
+        router.visit(route('register.logistics', {}, false))
+        return
+    }
     registrationStarted.value = true
     currentStep.value = 1
     stepError.value = ''
@@ -429,6 +433,10 @@ const submitLogin = () => {
 }
 
 const submitApplication = () => {
+    if (!isRider.value) {
+        router.visit(route('register.logistics', {}, false))
+        return
+    }
     if (!validateCurrentStep()) return
 
     form.post(route(isRider.value ? 'register.rider' : 'register.logistics'), {

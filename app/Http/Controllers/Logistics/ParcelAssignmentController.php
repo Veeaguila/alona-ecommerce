@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Logistics;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\Parcel;
 use App\Models\Rider;
 use Illuminate\Http\JsonResponse;
@@ -51,7 +50,7 @@ class ParcelAssignmentController extends Controller
         $sortingCenterId = $request->user()->sortingCenter->id;
         $parcel = Parcel::where('sorting_center_id', $sortingCenterId)->find($id);
 
-        if (!$parcel) {
+        if (! $parcel) {
             return response()->json([
                 'message' => 'Parcel not found.',
             ], 422);
@@ -67,8 +66,7 @@ class ParcelAssignmentController extends Controller
                 'assignedParcels as deliveries_in_progress_count' => fn ($query) => $query->where('status', 'OUT_FOR_DELIVERY'),
             ])
             ->where('sorting_center_id', $sortingCenterId)
-            ->where('approval_status', 'approved')
-            ->where('is_active', true)
+            ->operationallyEligible()
             ->whereHas('areas', function ($query) use ($parcel): void {
                 $query->where('areas.id', $parcel->sorted_area_id);
             })
@@ -98,13 +96,15 @@ class ParcelAssignmentController extends Controller
         $sortingCenterId = $request->user()->sortingCenter->id;
 
         $parcel = DB::transaction(function () use ($id, $validated, $sortingCenterId): Parcel {
+            $finance = app(\App\Services\SellerShipmentFinance::class);
+            $shipment = $finance->lockParcel($id);
             $parcel = Parcel::query()
                 ->where('sorting_center_id', $sortingCenterId)
                 ->whereKey($id)
                 ->lockForUpdate()
                 ->first();
 
-            if (!$parcel) {
+            if (! $parcel) {
                 abort(response()->json([
                     'message' => 'Parcel not found.',
                 ], 422));
@@ -132,20 +132,20 @@ class ParcelAssignmentController extends Controller
 
             $rider = Rider::whereKey($validated['rider_id'])
                 ->where('sorting_center_id', $sortingCenterId)
-                ->where('approval_status', 'approved')
-                ->where('is_active', true)
+                ->operationallyEligible()
                 ->whereHas('areas', function ($query) use ($parcel): void {
                     $query->where('areas.id', $parcel->sorted_area_id);
                 })
                 ->first();
 
-            if (!$rider) {
+            if (! $rider) {
                 abort(response()->json([
-                    'message' => 'The selected rider does not cover this parcel area, is not approved, or is inactive.',
+                    'message' => 'The selected rider does not cover this parcel area or is not eligible for operational access.',
                     'rider_id' => $validated['rider_id'],
                 ], 422));
             }
 
+            $finance->assign($shipment, $parcel, $rider->id, $sortingCenterId);
             $parcel->update([
                 'assigned_rider_id' => $rider->id,
                 'assigned_at' => null,

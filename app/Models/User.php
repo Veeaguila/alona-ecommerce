@@ -83,6 +83,25 @@ use Laravel\Sanctum\HasApiTokens;
 ])]
 class User extends Authenticatable implements MustVerifyEmail
 {
+    protected static function booted(): void
+    {
+        static::saving(function (self $user) {
+            if (! $user->isDirty('contact_no') || ! is_string($user->contact_no)
+                || ! preg_match('/^(09[0-9]{9}|\\+639[0-9]{9})$/', $user->contact_no)) {
+                return;
+            }
+            $mobile = \App\Services\LogisticsOnboarding::mobile($user->contact_no);
+            $duplicate = self::where('id', '!=', $user->id ?? 0)
+                ->whereIn('contact_no', [$mobile, '0'.substr($mobile, 3)])->exists();
+            // Include reserved logistics identities even if contact details were later edited.
+            $reserved = \Illuminate\Support\Facades\Schema::hasTable('logistics_registrations')
+                && LogisticsRegistration::where('user_id', '!=', $user->id ?? 0)->where('mobile', $mobile)->exists();
+            if ($duplicate || $reserved) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['contact_no' => 'This mobile number is already in use.']);
+            }
+        });
+    }
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 

@@ -21,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach ([\App\Models\Parcel::class, \App\Models\PickupRequest::class, \App\Models\Rider::class,
+            \App\Models\User::class, \App\Models\SortingCenterMessage::class, \App\Models\RiderDeliveryEarning::class] as $model) {
+            $model::observe(\App\Observers\RiderNotificationObserver::class);
+        }
         Vite::prefetch(concurrency: 3);
 
         Password::defaults(function () {
