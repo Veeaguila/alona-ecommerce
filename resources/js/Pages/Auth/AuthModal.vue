@@ -882,40 +882,6 @@ const submitRegister = async () => {
     registrationSuccess.value = ''
     emailInUseAlert.value = ''
 
-    if (isSeller.value) {
-        registerForm.post(route('register.seller'), {
-            forceFormData: true,
-            onStart: () => {
-                stepError.value = ''
-                registrationSuccess.value = ''
-                emailInUseAlert.value = ''
-            },
-            onError: (errors) => {
-                console.error('Registration validation errors:', JSON.stringify(errors, null, 2))
-                if (errors.email) {
-                    registrationStep.value = 1
-                    emailInUseAlert.value = cleanMessage(errors.email)
-                    stepError.value = emailInUseAlert.value
-                } else if (errors.password) {
-                    registrationStep.value = 1
-                    stepError.value = cleanMessage(errors.password)
-                } else if (errors.contact_no) {
-                    registrationStep.value = 2
-                    stepError.value = cleanMessage(errors.contact_no)
-                } else {
-                    const first = Object.values(errors)[0]
-                    stepError.value = cleanMessage(first) || 'Please correct the highlighted fields and try again.'
-                }
-            },
-            onSuccess: () => {
-                emailInUseAlert.value = ''
-                window.location.href = '/verify-otp'
-            },
-        })
-        return
-    }
-
-    // Buyer Registration (In-Modal OTP Flow)
     registerForm.processing = true
     stepError.value = ''
     registrationSuccess.value = ''
@@ -930,7 +896,9 @@ const submitRegister = async () => {
             }
         }
 
-        const response = await fetch(route('register'), {
+        const targetUrl = route(isSeller.value ? 'register.seller' : 'register')
+
+        const response = await fetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -961,6 +929,13 @@ const submitRegister = async () => {
                 } else if (data.errors.contact_no) {
                     registrationStep.value = 2
                     stepError.value = cleanMessage(data.errors.contact_no)
+                } else if (data.errors.address_group || data.errors.region_code || data.errors.province_code || data.errors.city_code || data.errors.barangay_code || data.errors.street_address || data.errors.postal_code) {
+                    registrationStep.value = 3
+                    stepError.value = cleanMessage(data.errors.street_address || data.errors.address_group || data.errors.city_code || data.errors.postal_code) || 'Please correct your address details.'
+                } else if (isSeller.value && (data.errors.store_name || data.errors.seller_type || data.errors.tin || data.errors.line_of_business || data.errors.id || data.errors.business_permit || data.errors.dti_certificate || data.errors.sec_certificate || data.errors.bir_2303)) {
+                    registrationStep.value = 4
+                    const firstStep4 = cleanMessage(data.errors.store_name || data.errors.tin || data.errors.line_of_business || data.errors.id || data.errors.business_permit || data.errors.dti_certificate || data.errors.sec_certificate || data.errors.bir_2303)
+                    stepError.value = firstStep4 || 'Please correct your store and document details.'
                 } else {
                     emailInUseAlert.value = ''
                     const firstError = Object.values(data.errors)[0]
@@ -978,7 +953,7 @@ const submitRegister = async () => {
         otpCode.value = ''
         otpError.value = ''
         emailInUseAlert.value = ''
-        accountCreatedSuccess.value = data.message || 'Account created successfully! A 6-digit verification code has been sent to your email address.'
+        accountCreatedSuccess.value = data.message || (isSeller.value ? 'Seller application submitted! A 6-digit verification code has been sent to your email address.' : 'Account created successfully! A 6-digit verification code has been sent to your email address.')
         otpSuccess.value = accountCreatedSuccess.value
         startResendCooldown(60)
     } catch (err) {
@@ -1032,7 +1007,7 @@ const submitModalVerifyOtp = async () => {
         otpSuccess.value = accountVerifiedSuccess.value
         setTimeout(() => {
             close()
-            window.location.assign(data.redirect || route('buyer.dashboard'))
+            window.location.assign(data.redirect || (isSeller.value ? route('application.status') : route('buyer.dashboard')))
         }, 1200)
     } catch (err) {
         console.error('OTP verification error:', err)

@@ -213,7 +213,7 @@ watch(() => page.url, url => {
         openPartnerModal('logistics', 'login')
         return
     }
-    if (['login', 'register', 'register-buyer', 'register-seller'].includes(mode) && !isLoggedIn.value) openAuthModal(mode)
+    if (['login', 'register', 'register-buyer', 'register-seller', 'verify-otp'].includes(mode) && !isLoggedIn.value) openAuthModal(mode)
 }, { immediate: true })
 onMounted(() => {
     document.addEventListener('click', handleOutsideClick)
