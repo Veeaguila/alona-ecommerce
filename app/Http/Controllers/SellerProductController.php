@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
@@ -300,6 +302,17 @@ class SellerProductController extends Controller
 
         if (count($variants) > 0) {
             $validated['stock'] = collect($variants)->sum('stock');
+            $minVariantPrice = collect($variants)
+                ->pluck('price')
+                ->filter(fn ($p) => $p !== null && (float) $p > 0)
+                ->min();
+            if ($minVariantPrice !== null) {
+                $validated['price'] = $minVariantPrice;
+            }
+        }
+
+        if ($request->has('variation_types')) {
+            $validated['variation_types'] = $request->input('variation_types');
         }
 
         $validated['seller_id'] = $request->user()->id;
@@ -333,7 +346,7 @@ class SellerProductController extends Controller
             $validated['images']
         );
 
-        $idempotencyKey = 'prod_publish_' . $request->user()->id . '_' . md5((string) $request->input('name') . '_' . (string) $request->input('price'));
+        $idempotencyKey = 'prod_publish_' . $request->user()->id . '_' . md5((string) $request->input('name') . '_' . (string) ($validated['price'] ?? ''));
         if (\Illuminate\Support\Facades\Cache::has($idempotencyKey)) {
             return redirect()->route('seller.products')->with('status', 'Product created successfully.');
         }
@@ -366,7 +379,10 @@ class SellerProductController extends Controller
                     $product->variants()->create([
                         'color' => $variantData['color'] ?? null,
                         'size' => $variantData['size'] ?? null,
+                        'price' => $variantData['price'] ?? ($validated['price'] ?? 0),
                         'stock' => $variantData['stock'],
+                        'sku' => $variantData['sku'] ?? null,
+                        'image_path' => $variantData['image_path'] ?? null,
                     ]);
                 }
             });
@@ -458,6 +474,27 @@ class SellerProductController extends Controller
         );
 
         $validated = $this->validated($request, $product);
+
+        $variants = $this->validateVariants($request, $product);
+
+        if ($request->has('variants') || $request->has('variation_types')) {
+            $this->syncProductVariants($product, $variants, (float) ($validated['price'] ?? $product->price ?? 0));
+
+            if (count($variants) > 0) {
+                $validated['stock'] = collect($variants)->sum('stock');
+                $minVariantPrice = collect($variants)
+                    ->pluck('price')
+                    ->filter(fn ($p) => $p !== null && (float) $p > 0)
+                    ->min();
+                if ($minVariantPrice !== null) {
+                    $validated['price'] = $minVariantPrice;
+                }
+            }
+        }
+
+        if ($request->has('variation_types')) {
+            $validated['variation_types'] = $request->input('variation_types');
+        }
 
         if ($request->has('store_category_ids') && is_array($request->store_category_ids)) {
             $product->storeCategories()->sync($request->store_category_ids);
@@ -1509,6 +1546,9 @@ class SellerProductController extends Controller
             ]);
         }
 
+        $hasVariants = (is_array($request->input('variants')) && count($request->input('variants')) > 0)
+            || (is_array($request->input('variation_types')) && count($request->input('variation_types')) > 0);
+
         $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
@@ -1530,7 +1570,7 @@ class SellerProductController extends Controller
                 ),
             ],
             'price' => [
-                'required',
+                $hasVariants ? 'nullable' : 'required',
                 'numeric',
                 'min:1.00',
                 'max:1000000.00',
@@ -1543,7 +1583,7 @@ class SellerProductController extends Controller
                 'gt:price',
             ],
             'stock' => [
-                'required',
+                $hasVariants ? 'nullable' : 'required',
                 'integer',
                 'min:0',
                 'max:99999',
@@ -1748,90 +1788,355 @@ class SellerProductController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | VALIDATE PRODUCT VARIANTS
+    | VALIDATE PRODUCT VARIANTS (MODULE S4: SEL-VAR-001 to SEL-VAR-012)
     |--------------------------------------------------------------------------
     */
 
     private function validateVariants(
-        Request $request
+        Request $request,
+        ?Product $product = null
     ): array {
-        $variants = $request->validate([
-            'variants' => [
-                'nullable',
-                'array',
-            ],
+        $errors = [];
+        $status = $request->input('status', 'pending');
+        $isDraft = $status === 'draft';
 
-            'variants.*.color' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-
-            'variants.*.size' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-
-            'variants.*.stock' => [
-                'required',
-                'integer',
-                'min:0',
-            ],
-        ])['variants'] ?? [];
-
-        $normalized = [];
-
-        foreach ($variants as $index => $variant) {
-            $color = filled($variant['color'] ?? null)
-                ? trim($variant['color'])
-                : null;
-
-            $size = filled($variant['size'] ?? null)
-                ? trim($variant['size'])
-                : null;
-
-            if (!$color && !$size) {
-                abort(
-                    422,
-                    'Variant ' .
-                    ($index + 1) .
-                    ' must have a color or size.'
-                );
+        // 1. Validate variation_types if provided (SEL-VAR-001, 002, 003, 004)
+        $variationTypes = $request->input('variation_types');
+        if ($variationTypes !== null) {
+            if (! is_array($variationTypes)) {
+                throw ValidationException::withMessages([
+                    'variation_types' => 'Invalid variation types format.',
+                ]);
             }
 
-            $combinationKey = ($color ?? '__none__') . '|' . ($size ?? '__none__');
+            if (count($variationTypes) > 2) {
+                throw ValidationException::withMessages([
+                    'variation_types' => 'A product can have a maximum of 2 variation types.',
+                ]);
+            }
 
-            if (
-                collect($normalized)->contains(
-                    fn ($existing) =>
-                        $existing['_key'] === $combinationKey
-                )
-            ) {
-                abort(
-                    422,
-                    'Duplicate product variant combination at variant ' .
-                    ($index + 1) .
-                    '.'
-                );
+            foreach ($variationTypes as $tIndex => $type) {
+                $options = $type['options'] ?? [];
+                if (! is_array($options) || count($options) === 0) {
+                    $errors["variation_types.{$tIndex}.options"] = 'Each variation type must have at least 1 option.';
+                    $errors['variation_types'] = 'Each variation type must have at least 1 option.';
+                    continue;
+                }
+
+                if (count($options) > 20) {
+                    $errors["variation_types.{$tIndex}.options"] = 'A variation type can have a maximum of 20 options.';
+                    $errors['variation_types'] = 'A variation type can have a maximum of 20 options.';
+                }
+
+                $seenOptions = [];
+                foreach ($options as $oIndex => $opt) {
+                    $trimmed = is_string($opt) || is_numeric($opt) ? trim((string) $opt) : '';
+                    if ($trimmed === '') {
+                        $errors["variation_types.{$tIndex}.options.{$oIndex}"] = 'Variation option name cannot be empty.';
+                        $errors['variation_options'] = 'Variation option name cannot be empty.';
+                        $errors['variation_types'] = 'Variation option name cannot be empty.';
+                    } else {
+                        $lower = mb_strtolower($trimmed);
+                        if (in_array($lower, $seenOptions, true)) {
+                            $errors["variation_types.{$tIndex}.options.{$oIndex}"] = "Duplicate option '{$trimmed}' is not allowed (not case-sensitive).";
+                            $errors['variation_options'] = "Duplicate option '{$trimmed}' is not allowed (not case-sensitive).";
+                            $errors['variation_types'] = "Duplicate option '{$trimmed}' is not allowed (not case-sensitive).";
+                        }
+                        $seenOptions[] = $lower;
+                    }
+                }
+            }
+        }
+
+        $rawVariants = $request->input('variants', []);
+        if (! is_array($rawVariants)) {
+            $rawVariants = [];
+        }
+
+        // If variation_types was provided without explicit variants rows and no errors so far, generate Cartesian product rows
+        if (empty($rawVariants) && is_array($variationTypes) && count($variationTypes) > 0 && empty($errors)) {
+            $type1Options = array_values(array_map('trim', $variationTypes[0]['options'] ?? []));
+            $type2Options = isset($variationTypes[1]['options']) && is_array($variationTypes[1]['options'])
+                ? array_values(array_map('trim', $variationTypes[1]['options']))
+                : [null];
+
+            foreach ($type1Options as $opt1) {
+                foreach ($type2Options as $opt2) {
+                    $rawVariants[] = [
+                        'color' => $opt1,
+                        'size' => $opt2,
+                        'price' => $request->input('price'),
+                        'stock' => $request->input('stock', 0),
+                        'sku' => null,
+                    ];
+                }
+            }
+        }
+
+        if (empty($rawVariants)) {
+            if (! empty($errors)) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            return [];
+        }
+
+        // Check for a 3rd variation type in variant rows (SEL-VAR-002)
+        foreach ($rawVariants as $v) {
+            if (is_array($v) && (! empty($v['material']) || ! empty($v['option3']) || ! empty($v['type3']) || ! empty($v['variation_3']))) {
+                $errors['variation_types'] = 'A product can have a maximum of 2 variation types.';
+                break;
+            }
+        }
+
+        // Check max 20 options per variation type across rows (SEL-VAR-003)
+        $distinctColors = [];
+        $distinctSizes = [];
+        foreach ($rawVariants as $v) {
+            if (! is_array($v)) {
+                continue;
+            }
+            if (filled($v['color'] ?? null)) {
+                $distinctColors[mb_strtolower(trim((string) $v['color']))] = true;
+            }
+            if (filled($v['size'] ?? null)) {
+                $distinctSizes[mb_strtolower(trim((string) $v['size']))] = true;
+            }
+        }
+
+        if (count($distinctColors) > 20 || count($distinctSizes) > 20) {
+            $errors['variation_types'] = 'A variation type can have a maximum of 20 options.';
+            $errors['variants'] = 'A variation type can have a maximum of 20 options.';
+        }
+
+        $usesColor = count($distinctColors) > 0;
+        $usesSize = count($distinctSizes) > 0;
+        $anyVariantHasPrice = collect($rawVariants)->contains(fn ($v) => is_array($v) && array_key_exists('price', $v));
+
+        $normalized = [];
+        $seenCombinations = [];
+        $seenSkus = [];
+        $colorImageCache = [];
+
+        foreach ($rawVariants as $index => $variant) {
+            if (! is_array($variant)) {
+                continue;
+            }
+
+            $rawColor = $variant['color'] ?? null;
+            $rawSize = $variant['size'] ?? null;
+
+            $color = filled($rawColor) ? trim((string) $rawColor) : null;
+            $size = filled($rawSize) ? trim((string) $rawSize) : null;
+
+            // Check empty option names (SEL-VAR-004)
+            $colorEmptyWhenUsed = $usesColor && $color === null;
+            $sizeEmptyWhenUsed = $usesSize && $size === null;
+            if ((! $color && ! $size) || $colorEmptyWhenUsed || $sizeEmptyWhenUsed) {
+                $errors["variants.{$index}.color"] = 'Variation option name cannot be empty.';
+                $errors['variation_options'] = 'Variation option name cannot be empty.';
+                $errors['variants'] = 'Variation option name cannot be empty.';
+            }
+
+            // Check duplicate combination case-insensitively (SEL-VAR-004)
+            $combinationKey = mb_strtolower($color ?? '__none__') . '|' . mb_strtolower($size ?? '__none__');
+            if ($color !== null || $size !== null) {
+                if (in_array($combinationKey, $seenCombinations, true)) {
+                    $errors["variants.{$index}"] = 'Duplicate variation combination (options are not case-sensitive).';
+                    $errors['variation_options'] = 'Duplicate variation option (not case-sensitive).';
+                    $errors['variants'] = 'Duplicate variation combination (not case-sensitive).';
+                }
+                $seenCombinations[] = $combinationKey;
+            }
+
+            // Validate variant stock (SEL-VAR-005 / A17: whole numbers 0 to 99,999)
+            $rawStock = $variant['stock'] ?? null;
+            if ($rawStock === null || $rawStock === '' || filter_var($rawStock, FILTER_VALIDATE_INT) === false || (int) $rawStock < 0 || (int) $rawStock > 99999) {
+                $errors["variants.{$index}.stock"] = 'Variant stock must be a whole number between 0 and 99,999.';
+                $errors['variants'] = 'Variant stock must be a whole number between 0 and 99,999.';
+            }
+
+            // Validate variant price (SEL-VAR-005 / A17: ₱1.00 to ₱1,000,000.00, up to 2 decimals)
+            $variantPrice = null;
+            if (array_key_exists('price', $variant) || $anyVariantHasPrice || ! $request->filled('price')) {
+                $rawPrice = $variant['price'] ?? null;
+                if (! $isDraft) {
+                    if ($rawPrice === null || $rawPrice === '') {
+                        $errors["variants.{$index}.price"] = 'Variant price is required.';
+                        $errors['variants'] = 'Variant price is required.';
+                    } elseif (! is_numeric($rawPrice) || (float) $rawPrice < 1.00 || (float) $rawPrice > 1000000.00) {
+                        $errors["variants.{$index}.price"] = 'Variant price must be between ₱1.00 and ₱1,000,000.00.';
+                        $errors['variants'] = 'Variant price must be between ₱1.00 and ₱1,000,000.00.';
+                    } elseif (strpos((string) $rawPrice, '.') !== false && strlen(substr(strrchr((string) $rawPrice, '.'), 1)) > 2) {
+                        $errors["variants.{$index}.price"] = 'Variant price cannot have more than 2 decimal places.';
+                        $errors['variants'] = 'Variant price cannot have more than 2 decimal places.';
+                    } else {
+                        $variantPrice = (float) $rawPrice;
+                    }
+                } elseif ($rawPrice !== null && $rawPrice !== '' && is_numeric($rawPrice)) {
+                    $variantPrice = (float) $rawPrice;
+                }
+            } elseif ($request->filled('price') && is_numeric($request->input('price'))) {
+                $variantPrice = (float) $request->input('price');
+            }
+
+            // Validate SKU uniqueness (SEL-VAR-006)
+            $sku = isset($variant['sku']) && trim((string) $variant['sku']) !== ''
+                ? trim((string) $variant['sku'])
+                : null;
+
+            if ($sku !== null) {
+                $skuLower = mb_strtolower($sku);
+                if (in_array($skuLower, $seenSkus, true)) {
+                    $errors["variants.{$index}.sku"] = "Duplicate SKU '{$sku}' found within this product.";
+                    $errors['sku'] = "Duplicate SKU '{$sku}' found within this product.";
+                    $errors['variants'] = "Duplicate SKU '{$sku}' found within this product.";
+                }
+                $seenSkus[] = $skuLower;
+
+                $skuExistsInOtherProduct = ProductVariant::query()
+                    ->whereRaw('LOWER(sku) = ?', [$skuLower])
+                    ->when($product, fn ($q) => $q->where('product_id', '!=', $product->id))
+                    ->exists();
+
+                if ($skuExistsInOtherProduct) {
+                    $errors["variants.{$index}.sku"] = "The SKU '{$sku}' is already in use by another product.";
+                    $errors['sku'] = "The SKU '{$sku}' is already in use by another product.";
+                    $errors['variants'] = "The SKU '{$sku}' is already in use by another product.";
+                }
+            }
+
+            // Handle variant image (SEL-VAR-008)
+            $variantImagePath = $variant['image_path'] ?? null;
+            if ($request->hasFile("variants.{$index}.image")) {
+                $file = $request->file("variants.{$index}.image");
+                if ($file && $file->isValid()) {
+                    $variantImagePath = $file->store('products/variants', 'public');
+                }
+            } elseif ($color && $request->hasFile("variant_images.{$color}")) {
+                if (! isset($colorImageCache[$color])) {
+                    $file = $request->file("variant_images.{$color}");
+                    if ($file && $file->isValid()) {
+                        $colorImageCache[$color] = $file->store('products/variants', 'public');
+                    }
+                }
+                $variantImagePath = $colorImageCache[$color] ?? $variantImagePath;
+            } elseif ($color && is_string($request->input("variant_images.{$color}")) && filled($request->input("variant_images.{$color}"))) {
+                $variantImagePath = $request->input("variant_images.{$color}");
             }
 
             $normalized[] = [
+                'id' => isset($variant['id']) && is_numeric($variant['id']) ? (int) $variant['id'] : null,
                 'color' => $color,
                 'size' => $size,
-                'stock' => (int) $variant['stock'],
-                '_key' => $combinationKey,
+                'price' => $variantPrice,
+                'stock' => is_numeric($rawStock) ? (int) $rawStock : 0,
+                'sku' => $sku,
+                'image_path' => $variantImagePath,
             ];
         }
 
-        return collect($normalized)
-            ->map(function ($variant) {
-                unset($variant['_key']);
+        if (! empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
 
-                return $variant;
-            })
-            ->values()
-            ->all();
+        return $normalized;
+    }
+
+    /**
+     * Sync product variants on update, enforcing SEL-VAR-010, SEL-VAR-011, and SEL-VAR-012.
+     */
+    private function syncProductVariants(
+        Product $product,
+        array $variants,
+        float $defaultPrice = 0
+    ): void {
+        $existingVariants = $product->variants()->get();
+
+        // Map incoming variants to existing variants by case-insensitive (color, size)
+        $matchedExistingIds = [];
+        $incomingMatchedMap = [];
+
+        foreach ($variants as $index => $variantData) {
+            $match = $existingVariants->first(function (ProductVariant $ev) use ($variantData, $matchedExistingIds) {
+                if (in_array($ev->id, $matchedExistingIds, true)) {
+                    return false;
+                }
+
+                return mb_strtolower((string) ($ev->color ?? '')) === mb_strtolower((string) ($variantData['color'] ?? ''))
+                    && mb_strtolower((string) ($ev->size ?? '')) === mb_strtolower((string) ($variantData['size'] ?? ''));
+            });
+
+            if ($match) {
+                $matchedExistingIds[] = $match->id;
+                $incomingMatchedMap[$index] = $match;
+            }
+        }
+
+        $variantsToDelete = $existingVariants->reject(
+            fn (ProductVariant $ev) => in_array($ev->id, $matchedExistingIds, true)
+        );
+
+        // SEL-VAR-012: Block removal of any variant that has unfinished orders
+        foreach ($variantsToDelete as $toDelete) {
+            $hasUnfinishedOrders = OrderItem::where('product_variant_id', $toDelete->id)
+                ->whereHas('order', function ($q) {
+                    $q->whereNotIn('status', ['completed', 'cancelled', 'returned']);
+                })
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->exists();
+
+            if ($hasUnfinishedOrders) {
+                $label = $toDelete->label();
+                throw ValidationException::withMessages([
+                    'variants' => "Cannot remove variation {$label} because it has unfinished orders.",
+                    'error' => "Cannot remove variation {$label} because it has unfinished orders.",
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($product, $variants, $variantsToDelete, $incomingMatchedMap, $defaultPrice) {
+            // SEL-VAR-010 & SEL-VAR-011: Snapshot variant_label and decouple FK before deleting removed variants
+            foreach ($variantsToDelete as $toDelete) {
+                $label = $toDelete->label();
+
+                OrderItem::where('product_variant_id', $toDelete->id)
+                    ->where(fn ($q) => $q->whereNull('variant_label')->orWhere('variant_label', ''))
+                    ->update(['variant_label' => $label]);
+                OrderItem::where('product_variant_id', $toDelete->id)
+                    ->update(['product_variant_id' => null]);
+
+                CartItem::where('product_variant_id', $toDelete->id)
+                    ->where(fn ($q) => $q->whereNull('variant_label')->orWhere('variant_label', ''))
+                    ->update(['variant_label' => $label]);
+                CartItem::where('product_variant_id', $toDelete->id)
+                    ->update(['product_variant_id' => null]);
+
+                $toDelete->delete();
+            }
+
+            foreach ($variants as $index => $variantData) {
+                $payload = [
+                    'color' => $variantData['color'] ?? null,
+                    'size' => $variantData['size'] ?? null,
+                    'price' => $variantData['price'] ?? ($defaultPrice > 0 ? $defaultPrice : $product->price),
+                    'stock' => (int) $variantData['stock'],
+                    'sku' => $variantData['sku'] ?? null,
+                ];
+
+                if (! empty($variantData['image_path'])) {
+                    $payload['image_path'] = $variantData['image_path'];
+                }
+
+                if (isset($incomingMatchedMap[$index])) {
+                    /** @var ProductVariant $existing */
+                    $existing = $incomingMatchedMap[$index];
+                    $existing->update($payload);
+                } else {
+                    $product->variants()->create($payload);
+                }
+            }
+        });
     }
 
 

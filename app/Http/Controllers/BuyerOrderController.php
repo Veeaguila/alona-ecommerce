@@ -143,29 +143,32 @@ class BuyerOrderController extends Controller
             ->cartItems()
             ->with([
                 'product.category',
+                'product.variants',
                 'variant',
             ])
             ->whereIn('id', $selectedIds)
-            ->get();
+            ->get()
+            ->filter(function (CartItem $item) {
+                if (!$item->product) {
+                    return false;
+                }
 
-        foreach ($items as $item) {
-            if (!$item->product) {
-                continue;
-            }
+                if (
+                    Schema::hasColumn('products', 'status') &&
+                    $item->product->status !== 'approved'
+                ) {
+                    return false;
+                }
 
-            if (
-                Schema::hasColumn('products', 'status') &&
-                $item->product->status !== 'approved'
-            ) {
-                continue;
-            }
+                if ($item->is_unavailable) {
+                    return false;
+                }
 
-            $stock = $this->stockForCartItem($item);
+                $stock = $this->stockForCartItem($item);
 
-            if ($stock < (int) $item->quantity) {
-                continue;
-            }
-        }
+                return $stock >= (int) $item->quantity;
+            })
+            ->values();
 
         return Inertia::render('Buyer/Checkout', [
             'items' => $items,
@@ -734,6 +737,7 @@ class BuyerOrderController extends Controller
                     ->cartItems()
                     ->with([
                         'product.category',
+                        'product.variants',
                         'variant',
                     ])
                     ->whereIn('id', $selectedIds)
@@ -775,6 +779,13 @@ class BuyerOrderController extends Controller
                         throw ValidationException::withMessages([
                             'selected_items' =>
                                 "The product {$item->product->name} is no longer available.",
+                        ]);
+                    }
+
+                    if ($item->unavailable_reason === 'Variation unavailable') {
+                        throw ValidationException::withMessages([
+                            'selected_items' =>
+                                'Variation unavailable',
                         ]);
                     }
 
@@ -2045,6 +2056,7 @@ class BuyerOrderController extends Controller
         CartItem $item
     ): float {
         return (float) (
+            $item->variant?->price ??
             $item->product?->price ??
             $item->price ??
             0

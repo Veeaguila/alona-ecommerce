@@ -33,6 +33,13 @@ class Product extends Model
         'height',
         'brand',
         'condition',
+        'variation_types',
+    ];
+
+    protected $appends = [
+        'min_price',
+        'max_price',
+        'price_range',
     ];
 
     protected function casts(): array
@@ -47,7 +54,56 @@ class Product extends Model
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
             'low_stock_threshold' => 'integer',
+            'variation_types' => 'array',
         ];
+    }
+
+    public function getMinPriceAttribute(): string
+    {
+        if ($this->relationLoaded('variants')) {
+            $prices = $this->variants
+                ->pluck('price')
+                ->filter(fn ($p) => $p !== null && (float) $p > 0)
+                ->map(fn ($p) => (float) $p);
+
+            if ($prices->isNotEmpty()) {
+                return number_format($prices->min(), 2, '.', '');
+            }
+        }
+
+        return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+    }
+
+    public function getMaxPriceAttribute(): string
+    {
+        if ($this->relationLoaded('variants')) {
+            $prices = $this->variants
+                ->pluck('price')
+                ->filter(fn ($p) => $p !== null && (float) $p > 0)
+                ->map(fn ($p) => (float) $p);
+
+            if ($prices->isNotEmpty()) {
+                return number_format($prices->max(), 2, '.', '');
+            }
+        }
+
+        return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+    }
+
+    public function getPriceRangeAttribute(): string
+    {
+        $min = (float) $this->min_price;
+        $max = (float) $this->max_price;
+
+        $formatVal = fn (float $val) => floor($val) == $val
+            ? '₱' . number_format($val, 0)
+            : '₱' . number_format($val, 2);
+
+        if (abs($min - $max) > 0.001) {
+            return $formatVal($min) . ' – ' . $formatVal($max);
+        }
+
+        return '₱' . number_format($min, 2);
     }
 
     public function isLowStock(): bool

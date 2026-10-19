@@ -104,19 +104,30 @@ const validationError = computed(() => {
 */
 
 const variantLabel = item => {
-    if (!item?.variant) {
-        return ''
+    if (item?.variant) {
+        return [
+            item.variant.color,
+            item.variant.size,
+        ]
+            .filter(Boolean)
+            .join(' / ')
     }
 
-    return [
-        item.variant.color,
-        item.variant.size,
-    ]
-        .filter(Boolean)
-        .join(' / ')
+    return item?.variant_label || ''
+}
+
+const itemIsUnavailable = item => {
+    return Boolean(
+        item?.is_unavailable ||
+        item?.unavailable_reason === 'Variation unavailable'
+    )
 }
 
 const stockFor = item => {
+    if (itemIsUnavailable(item)) {
+        return 0
+    }
+
     if (item?.variant) {
         return Number(
             item.variant.stock ?? 0
@@ -130,7 +141,9 @@ const stockFor = item => {
 
 const itemPrice = item => {
     return Number(
-        item?.product?.price ?? 0
+        item?.variant?.price ??
+        item?.product?.price ??
+        0
     )
 }
 
@@ -143,6 +156,7 @@ const itemTotal = item => {
 
 const itemImage = item => {
     return imageUrl(
+        item?.variant?.image_path ||
         item?.product?.image_path ||
         item?.product?.images?.[0]?.image_path ||
         null
@@ -163,13 +177,14 @@ const itemExceedsStock = item =>
 */
 
 const normalizedItemIds = computed(() =>
-    props.items.map(item =>
-        Number(item.id)
-    )
+    props.items
+        .filter(item => !itemIsUnavailable(item))
+        .map(item => Number(item.id))
 )
 
 const selectedCartItems = computed(() =>
     props.items.filter(item =>
+        !itemIsUnavailable(item) &&
         selectedItems.value.includes(
             Number(item.id)
         )
@@ -199,9 +214,9 @@ const subtotal = computed(() =>
 
 const allSelected = computed(() => {
     return (
-        props.items.length > 0 &&
+        normalizedItemIds.value.length > 0 &&
         selectedItems.value.length ===
-            props.items.length
+            normalizedItemIds.value.length
     )
 })
 
@@ -210,6 +225,10 @@ const hasSelection = computed(() =>
 )
 
 const toggleItem = item => {
+    if (itemIsUnavailable(item)) {
+        return
+    }
+
     const id = Number(item.id)
 
     if (
@@ -853,7 +872,9 @@ const checkoutButtonLabel = computed(() => {
                                     >
                                         <input
                                             type="checkbox"
+                                            :disabled="itemIsUnavailable(item)"
                                             :checked="
+                                                !itemIsUnavailable(item) &&
                                                 selectedItems.includes(
                                                     Number(
                                                         item.id
@@ -865,7 +886,7 @@ const checkoutButtonLabel = computed(() => {
                                                     item
                                                 )
                                             "
-                                            class="h-4 w-4 rounded border-gray-300 text-[#087F8C] focus:ring-[#16A6A0] sm:h-5 sm:w-5"
+                                            class="h-4 w-4 rounded border-gray-300 text-[#087F8C] focus:ring-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-40 sm:h-5 sm:w-5"
                                         />
                                     </div>
 
@@ -938,7 +959,7 @@ const checkoutButtonLabel = computed(() => {
                                                 <!-- VARIANT WITH CHANGE BUTTON (BUYER-12) -->
 
                                                 <div
-                                                    v-if="item.product?.variants?.length || variantLabel(item)"
+                                                    v-if="item.product?.variants?.length || variantLabel(item) || itemIsUnavailable(item)"
                                                     class="mt-1.5 flex flex-wrap items-center gap-1.5"
                                                 >
                                                     <span
@@ -948,8 +969,15 @@ const checkoutButtonLabel = computed(() => {
                                                         {{ variantLabel(item) }}
                                                     </span>
 
+                                                    <span
+                                                        v-if="itemIsUnavailable(item)"
+                                                        class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600"
+                                                    >
+                                                        {{ item.unavailable_reason || 'Variation unavailable' }}
+                                                    </span>
+
                                                     <button
-                                                        v-if="item.product?.variants?.length > 1 || (item.product?.variants?.length === 1 && !item.variant)"
+                                                        v-if="item.product?.variants?.length > 1 || (item.product?.variants?.length >= 1 && !item.variant)"
                                                         type="button"
                                                         class="inline-flex items-center gap-1 rounded-md border border-[#087F8C]/20 bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-bold text-[#087F8C] transition hover:bg-[#d4f2f0]"
                                                         @click="openVariantModal(item)"

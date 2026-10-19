@@ -195,7 +195,9 @@ const addVariant = () => {
     form.variants.push({
         color: '',
         size: '',
+        price: form.price || '',
         stock: 0,
+        sku: '',
     })
 }
 
@@ -846,7 +848,7 @@ onBeforeUnmount(() => {
                                         </button>
                                     </div>
 
-                                    <div class="grid gap-3 sm:grid-cols-3">
+                                    <div class="grid gap-3 sm:grid-cols-5">
                                         <!-- COLOR -->
                                         <div>
                                             <label
@@ -856,23 +858,14 @@ onBeforeUnmount(() => {
                                                 Color
                                             </label>
 
-                                            <select
+                                            <input
                                                 :id="`variant-color-${index}`"
                                                 v-model="variant.color"
+                                                type="text"
+                                                list="color-options"
+                                                placeholder="e.g. Red"
                                                 class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
-                                            >
-                                                <option value="">
-                                                    Select Color
-                                                </option>
-
-                                                <option
-                                                    v-for="color in colors"
-                                                    :key="color"
-                                                    :value="color"
-                                                >
-                                                    {{ color }}
-                                                </option>
-                                            </select>
+                                            />
 
                                             <p
                                                 v-if="form.errors[`variants.${index}.color`]"
@@ -891,29 +884,47 @@ onBeforeUnmount(() => {
                                                 Size
                                             </label>
 
-                                            <select
+                                            <input
                                                 :id="`variant-size-${index}`"
                                                 v-model="variant.size"
+                                                type="text"
+                                                list="size-options"
+                                                placeholder="e.g. M"
                                                 class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
-                                            >
-                                                <option value="">
-                                                    Select Size
-                                                </option>
-
-                                                <option
-                                                    v-for="size in sizes"
-                                                    :key="size"
-                                                    :value="size"
-                                                >
-                                                    {{ size }}
-                                                </option>
-                                            </select>
+                                            />
 
                                             <p
                                                 v-if="form.errors[`variants.${index}.size`]"
                                                 class="mt-1 text-[10px] text-[#E85D5D]"
                                             >
                                                 {{ form.errors[`variants.${index}.size`] }}
+                                            </p>
+                                        </div>
+
+                                        <!-- PRICE -->
+                                        <div>
+                                            <label
+                                                :for="`variant-price-${index}`"
+                                                class="block text-[11px] font-semibold text-[#1F2937]"
+                                            >
+                                                Price (₱)
+                                            </label>
+
+                                            <input
+                                                :id="`variant-price-${index}`"
+                                                v-model="variant.price"
+                                                type="number"
+                                                min="1"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+
+                                            <p
+                                                v-if="form.errors[`variants.${index}.price`]"
+                                                class="mt-1 text-[10px] text-[#E85D5D]"
+                                            >
+                                                {{ form.errors[`variants.${index}.price`] }}
                                             </p>
                                         </div>
 
@@ -940,6 +951,31 @@ onBeforeUnmount(() => {
                                                 class="mt-1 text-[10px] text-[#E85D5D]"
                                             >
                                                 {{ form.errors[`variants.${index}.stock`] }}
+                                            </p>
+                                        </div>
+
+                                        <!-- SKU -->
+                                        <div>
+                                            <label
+                                                :for="`variant-sku-${index}`"
+                                                class="block text-[11px] font-semibold text-[#1F2937]"
+                                            >
+                                                SKU
+                                            </label>
+
+                                            <input
+                                                :id="`variant-sku-${index}`"
+                                                v-model="variant.sku"
+                                                type="text"
+                                                placeholder="e.g. BCP-RED-S"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+
+                                            <p
+                                                v-if="form.errors[`variants.${index}.sku`]"
+                                                class="mt-1 text-[10px] text-[#E85D5D]"
+                                            >
+                                                {{ form.errors[`variants.${index}.sku`] }}
                                             </p>
                                         </div>
                                     </div>

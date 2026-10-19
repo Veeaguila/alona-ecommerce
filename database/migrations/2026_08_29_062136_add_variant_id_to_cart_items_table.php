@@ -14,7 +14,7 @@ return new class extends Migration
                     ->nullable()
                     ->after('product_id')
                     ->constrained()
-                    ->cascadeOnDelete();
+                    ->nullOnDelete();
             }
 
             $table->index(['user_id', 'product_id', 'product_variant_id'], 'cart_items_user_product_variant_index');

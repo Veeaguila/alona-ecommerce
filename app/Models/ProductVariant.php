@@ -8,11 +8,29 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariant extends Model
 {
-    protected $fillable = ['product_id', 'color', 'size', 'stock'];
+    protected $fillable = [
+        'product_id',
+        'color',
+        'size',
+        'price',
+        'stock',
+        'sku',
+        'image_path',
+    ];
 
     protected function casts(): array
     {
-        return ['stock' => 'integer'];
+        return [
+            'price' => 'decimal:2',
+            'stock' => 'integer',
+        ];
+    }
+
+    public function label(): string
+    {
+        return collect([$this->color, $this->size])
+            ->filter(fn ($val) => $val !== null && $val !== '')
+            ->implode('-');
     }
 
     public function product(): BelongsTo

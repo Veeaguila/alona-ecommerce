@@ -10,6 +10,15 @@ class OrderItem extends Model
 {
     protected static function booted(): void
     {
+        static::creating(function (self $item): void {
+            if ($item->product_variant_id && empty($item->variant_label)) {
+                $variant = ProductVariant::find($item->product_variant_id);
+                if ($variant) {
+                    $item->variant_label = $variant->label();
+                }
+            }
+        });
+
         static::updating(function (self $item): void {
             if ($item->isDirty('seller_shipment_id') && $item->getOriginal('seller_shipment_id')) {
                 throw new \LogicException('Shipment membership is immutable.');

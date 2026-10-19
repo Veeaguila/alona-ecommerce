@@ -294,59 +294,71 @@ const colors = computed(() =>
     ]
 )
 
+const allSizes = computed(() =>
+    [
+        ...new Set(
+            variants.value
+                .map(variant => variant.size)
+                .filter(Boolean)
+        ),
+    ]
+)
+
+const hasColorOptions = computed(() => colors.value.length > 0)
+const hasSizeOptions = computed(() => allSizes.value.length > 0)
+
 const sizesForColor = color =>
     [
         ...new Set(
             variants.value
                 .filter(
                     variant =>
-                        variant.color === color
+                        !color || variant.color === color
                 )
                 .map(variant => variant.size)
                 .filter(Boolean)
         ),
     ]
 
-const selectedColor = ref(
-    colors.value[0] ?? null
-)
+const variantFor = (color, size) =>
+    variants.value.find(
+        variant =>
+            (!hasColorOptions.value || variant.color === color) &&
+            (!hasSizeOptions.value || variant.size === size)
+    ) || null
 
-const selectedSize = ref(
-    sizesForColor(
-        selectedColor.value
-    )[0] ?? null
-)
-
-watch(
-    colors,
-    nextColors => {
-        if (
-            !nextColors.includes(
-                selectedColor.value
-            )
-        ) {
-            selectedColor.value =
-                nextColors[0] ?? null
-        }
-    },
-    {
-        immediate: true,
+const isSizeOutOfStock = size => {
+    if (hasColorOptions.value && !selectedColor.value) {
+        return variants.value
+            .filter(v => v.size === size)
+            .every(v => Number(v.stock ?? 0) <= 0)
     }
-)
+    const v = variantFor(selectedColor.value, size)
+    return !v || Number(v.stock ?? 0) <= 0
+}
+
+const selectedColor = ref(null)
+const selectedSize = ref(null)
 
 watch(
     selectedColor,
     color => {
-        const available =
-            sizesForColor(color)
+        if (!color) return
 
+        // Switch main image when color variant has an image_path (SEL-VAR-008)
+        const variantWithImg = variants.value.find(
+            v => v.color === color && v.image_path
+        )
+        if (variantWithImg?.image_path) {
+            activeImage.value = imageUrl(variantWithImg.image_path)
+        }
+
+        const available = sizesForColor(color)
         if (
-            !available.includes(
-                selectedSize.value
-            )
+            selectedSize.value &&
+            (!available.includes(selectedSize.value) || isSizeOutOfStock(selectedSize.value))
         ) {
-            selectedSize.value =
-                available[0] ?? null
+            selectedSize.value = null
         }
     }
 )
@@ -362,16 +374,25 @@ const selectedVariant = computed(() => {
         return null
     }
 
-    return (
-        variants.value.find(
-            variant =>
-                variant.color ===
-                    selectedColor.value &&
-                variant.size ===
-                    selectedSize.value
-        ) || null
-    )
+    if (hasColorOptions.value && !selectedColor.value) {
+        return null
+    }
+
+    if (hasSizeOptions.value && !selectedSize.value) {
+        return null
+    }
+
+    return variantFor(selectedColor.value, selectedSize.value)
 })
+
+watch(
+    selectedVariant,
+    variant => {
+        if (variant?.image_path) {
+            activeImage.value = imageUrl(variant.image_path)
+        }
+    }
+)
 
 /*
 |--------------------------------------------------------------------------
@@ -381,9 +402,10 @@ const selectedVariant = computed(() => {
 
 const availableStock = computed(() => {
     if (hasVariants.value) {
-        return Number(
-            selectedVariant.value?.stock ?? 0
-        )
+        if (selectedVariant.value) {
+            return Number(selectedVariant.value.stock ?? 0)
+        }
+        return Number(product.value.stock ?? 0)
     }
 
     return Number(
@@ -447,18 +469,26 @@ function decreaseQuantity() {
 */
 
 const unitPrice = computed(() =>
-    Number(product.value.price || 0)
+    Number(
+        selectedVariant.value?.price ??
+        product.value.price ??
+        0
+    )
 )
 
-const formattedUnitPrice = computed(() =>
-    `₱${unitPrice.value.toLocaleString(
+const formattedUnitPrice = computed(() => {
+    if (hasVariants.value && !selectedVariant.value && product.value.price_range) {
+        return product.value.price_range
+    }
+
+    return `₱${unitPrice.value.toLocaleString(
         'en-PH',
         {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         }
     )}`
-)
+})
 
 const formattedOldPrice = computed(() =>
     Number(
@@ -499,7 +529,7 @@ const canPurchase = computed(() =>
     !isSellerOnVacation.value &&
     (
         !hasVariants.value ||
-        Boolean(selectedVariant.value)
+        (Boolean(selectedVariant.value) && Number(selectedVariant.value.stock ?? 0) > 0)
     )
 )
 
@@ -1337,17 +1367,19 @@ const breadcrumbs = computed(() => {
                                         "
                                         :key="size"
                                         type="button"
+                                        :disabled="isSizeOutOfStock(size)"
                                         @click="
-                                            selectedSize =
-                                                size
+                                            !isSizeOutOfStock(size) &&
+                                                (selectedSize = size)
                                         "
                                         class="rounded-lg border px-3 py-1.5 text-xs transition"
-                                        :class="
-                                            selectedSize ===
-                                            size
-                                                ? 'border-[#087F8C] bg-[#E8F7F6] font-semibold text-[#087F8C]'
-                                                : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300'
-                                        "
+                                        :class="[
+                                            isSizeOutOfStock(size)
+                                                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through opacity-60'
+                                                : selectedSize === size
+                                                    ? 'border-[#087F8C] bg-[#E8F7F6] font-semibold text-[#087F8C]'
+                                                    : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300',
+                                        ]"
                                     >
                                         {{ size }}
                                     </button>

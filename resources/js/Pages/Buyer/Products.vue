@@ -277,7 +277,7 @@ const changeCategory = category => {
                                     <span
                                         class="block truncate text-[12px] font-bold text-[#1F2937] sm:text-sm"
                                     >
-                                        ₱{{ formatPrice(product.price) }}
+                                        {{ product.price_range || `₱${formatPrice(product.price)}` }}
                                     </span>
 
 

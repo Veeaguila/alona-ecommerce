@@ -22,7 +22,10 @@ class BuyerProductController extends Controller
         $sort = $request->input('sort', 'featured');
 
         $products = Product::query()
-            ->with('category:id,name,slug')
+            ->with([
+                'category:id,name,slug',
+                'variants:id,product_id,color,size,price,stock,sku,image_path',
+            ])
             ->where('status', 'approved')
 
             /*
@@ -186,7 +189,7 @@ class BuyerProductController extends Controller
 
             'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
 
-            'variants:id,product_id,color,size,stock',
+            'variants:id,product_id,color,size,price,stock,sku,image_path',
 
             'images:id,product_id,image_path',
 

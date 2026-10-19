@@ -11,14 +11,57 @@ class CartItem extends Model
         'user_id',
         'product_id',
         'product_variant_id',
+        'variant_label',
         'quantity',
     ];
+
+    protected $appends = [
+        'is_unavailable',
+        'unavailable_reason',
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $item): void {
+            if ($item->product_variant_id && empty($item->variant_label)) {
+                $variant = ProductVariant::find($item->product_variant_id);
+                if ($variant) {
+                    $item->variant_label = $variant->label();
+                }
+            }
+        });
+    }
 
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
         ];
+    }
+
+    public function getUnavailableReasonAttribute(): ?string
+    {
+        if ($this->relationLoaded('product') && $this->product && $this->product->status !== 'approved') {
+            return 'Product unavailable';
+        }
+
+        if ($this->product_variant_id === null) {
+            if (! empty($this->variant_label)) {
+                return 'Variation unavailable';
+            }
+            if ($this->relationLoaded('product') && $this->product && $this->product->relationLoaded('variants') && $this->product->variants->isNotEmpty()) {
+                return 'Variation unavailable';
+            }
+        } elseif ($this->relationLoaded('variant') && $this->variant === null) {
+            return 'Variation unavailable';
+        }
+
+        return null;
+    }
+
+    public function getIsUnavailableAttribute(): bool
+    {
+        return $this->unavailable_reason !== null;
     }
 
     /**

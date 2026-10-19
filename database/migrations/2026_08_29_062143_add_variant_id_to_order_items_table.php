@@ -14,7 +14,7 @@ return new class extends Migration
                     ->nullable()
                     ->after('product_id')
                     ->constrained()
-                    ->cascadeOnDelete();
+                    ->nullOnDelete();
             }
 
             if (! Schema::hasColumn('order_items', 'variant_label')) {

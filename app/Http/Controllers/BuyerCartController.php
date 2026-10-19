@@ -26,10 +26,10 @@ class BuyerCartController extends Controller
                         ->with([
                             'category:id,name,slug',
                             'images:id,product_id,image_path,sort_order',
-                            'variants:id,product_id,color,size,stock',
+                            'variants:id,product_id,color,size,price,stock,sku,image_path',
                         ]);
                 },
-                'variant:id,product_id,color,size,stock',
+                'variant:id,product_id,color,size,price,stock,sku,image_path',
             ])
             ->orderByDesc('created_at')
             ->get();
@@ -252,6 +252,10 @@ class BuyerCartController extends Controller
                 422,
                 'The selected variation does not belong to this product.'
             );
+        } elseif (!empty($cartItem->variant_label) || $cartItem->product->variants->isNotEmpty()) {
+            return back()->withErrors([
+                'cart_item' => 'Variation unavailable',
+            ]);
         }
 
         $availableStock = $targetVariant
