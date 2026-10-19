@@ -99,12 +99,18 @@ class SellerAccountController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
-            'contact_no' => ['required', 'string', 'max:30'],
+            'contact_no' => [
+                'required',
+                'string',
+                'regex:/^(09|\+639)\d{9}$/',
+            ],
             'province' => ['nullable', 'string', 'max:255'],
             'municipality' => ['nullable', 'string', 'max:255'],
             'barangay' => ['nullable', 'string', 'max:255'],
             'street_address' => ['nullable', 'string', 'max:1000'],
             'profile_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ], [
+            'contact_no.regex' => 'The contact number must be a valid Philippine mobile number (e.g. 09XXXXXXXXX or +639XXXXXXXXX).',
         ]);
 
         $middle = isset($validated['middle_initial']) && trim($validated['middle_initial']) !== ''

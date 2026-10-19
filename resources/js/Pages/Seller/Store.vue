@@ -27,6 +27,11 @@ const form = useForm({
     store_name: props.store.store_name || '',
     store_tagline: props.store.store_tagline || '',
     store_description: props.store.store_description || '',
+    contact_no: props.store.contact_no || '',
+    province: props.store.province || '',
+    municipality: props.store.municipality || '',
+    barangay: props.store.barangay || '',
+    street_address: props.store.street_address || '',
     store_logo: null,
     store_banner: null,
     remove_logo: false,
@@ -389,7 +394,7 @@ onBeforeUnmount(() => {
                             <div class="border-b border-[#E5E7EB] px-5 py-4">
                                 <h3 class="text-sm font-bold text-[#1F2937]">Store Cover Banner</h3>
                                 <p class="text-xs text-[#64748B] mt-0.5">
-                                    Display a customized branded cover image at the top of your buyer storefront (Recommended: 1200 x 300 px, max 4MB).
+                                    Display a customized branded cover image at the top of your buyer storefront (Recommended: 1200 x 300 px, max 5MB).
                                 </p>
                             </div>
 
@@ -513,7 +518,7 @@ onBeforeUnmount(() => {
                                                     Remove
                                                 </button>
                                             </div>
-                                            <p class="text-[11px] text-[#64748B]">Square aspect ratio recommended (PNG, JPG, max 2MB).</p>
+                                            <p class="text-[11px] text-[#64748B]">Square aspect ratio recommended (PNG, JPG, max 5MB).</p>
                                         </div>
                                     </div>
                                     <p v-if="form.errors.store_logo" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.store_logo }}</p>
@@ -527,7 +532,8 @@ onBeforeUnmount(() => {
                                         v-model="form.store_name"
                                         type="text"
                                         required
-                                        maxlength="150"
+                                        minlength="3"
+                                        maxlength="30"
                                         placeholder="e.g. Apex Tech Official Store"
                                         class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     />
@@ -555,15 +561,89 @@ onBeforeUnmount(() => {
                                         id="store_description"
                                         v-model="form.store_description"
                                         rows="4"
-                                        maxlength="2000"
+                                        maxlength="500"
                                         placeholder="Provide buyers with a detailed overview of your store, specialty products, and authorized dealership credentials..."
                                         class="mt-1.5 block w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     ></textarea>
                                     <div class="mt-1 flex items-center justify-between text-[11px] text-[#94A3B8]">
                                         <span>Visible on your public storefront and merchant profile.</span>
-                                        <span>{{ form.store_description.length }}/2000</span>
+                                        <span>{{ form.store_description.length }}/500</span>
                                     </div>
                                     <p v-if="form.errors.store_description" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.store_description }}</p>
+                                </div>
+
+                                <!-- Store Contact & Pickup Address (SEL-PROF-001, SEL-PROF-002, SEL-PROF-007) -->
+                                <div class="border-t border-[#E5E7EB] pt-5 space-y-4">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Store Contact & Pickup Address</h4>
+
+                                    <!-- Contact Number -->
+                                    <div>
+                                        <label for="contact_no" class="block text-xs font-semibold text-[#1F2937]">Contact Number *</label>
+                                        <input
+                                            id="contact_no"
+                                            v-model="form.contact_no"
+                                            type="text"
+                                            maxlength="30"
+                                            placeholder="e.g. 09189876543 or +639189876543"
+                                            class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                        />
+                                        <p v-if="form.errors.contact_no" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.contact_no }}</p>
+                                    </div>
+
+                                    <!-- Pickup Address Fields -->
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label for="province" class="block text-xs font-semibold text-[#1F2937]">Region / Province *</label>
+                                            <input
+                                                id="province"
+                                                v-model="form.province"
+                                                type="text"
+                                                maxlength="255"
+                                                placeholder="e.g. Bulacan"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+                                            <p v-if="form.errors.province" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.province }}</p>
+                                        </div>
+
+                                        <div>
+                                            <label for="municipality" class="block text-xs font-semibold text-[#1F2937]">City / Municipality *</label>
+                                            <input
+                                                id="municipality"
+                                                v-model="form.municipality"
+                                                type="text"
+                                                maxlength="255"
+                                                placeholder="e.g. Malolos"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+                                            <p v-if="form.errors.municipality" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.municipality }}</p>
+                                        </div>
+
+                                        <div>
+                                            <label for="barangay" class="block text-xs font-semibold text-[#1F2937]">Barangay *</label>
+                                            <input
+                                                id="barangay"
+                                                v-model="form.barangay"
+                                                type="text"
+                                                maxlength="255"
+                                                placeholder="e.g. Santo Rosario"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+                                            <p v-if="form.errors.barangay" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.barangay }}</p>
+                                        </div>
+
+                                        <div>
+                                            <label for="street_address" class="block text-xs font-semibold text-[#1F2937]">Street Address *</label>
+                                            <input
+                                                id="street_address"
+                                                v-model="form.street_address"
+                                                type="text"
+                                                maxlength="1000"
+                                                placeholder="e.g. 123 Artisan Way"
+                                                class="mt-1.5 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                            />
+                                            <p v-if="form.errors.street_address" class="mt-1 text-xs text-rose-600 font-semibold">{{ form.errors.street_address }}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -886,8 +966,20 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Error Alert -->
-                    <div v-if="form.errors && Object.keys(form.errors).length" class="rounded-xl border border-rose-200 bg-rose-50 p-4">
-                        <p class="text-xs font-bold text-rose-800">Please review highlighted form errors before saving.</p>
+                    <div v-if="form.errors && Object.keys(form.errors).length" class="rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-rose-800">
+                            <svg class="h-4 w-4 shrink-0 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span>Unable to save store settings. Please fix the following:</span>
+                        </div>
+                        <ul class="list-disc pl-6 text-xs text-rose-700 space-y-1">
+                            <li v-for="(errorMsg, errorKey) in form.errors" :key="errorKey">
+                                <span class="font-semibold capitalize">{{ errorKey.replace(/_/g, ' ') }}:</span> {{ errorMsg }}
+                            </li>
+                        </ul>
                     </div>
                 </form>
 

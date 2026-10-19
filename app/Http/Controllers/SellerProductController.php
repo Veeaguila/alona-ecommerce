@@ -306,6 +306,12 @@ class SellerProductController extends Controller
             $validated['name']
         );
 
+        if ($request->user()->status !== 'approved' && $request->input('status') !== 'draft') {
+            return back()->withErrors([
+                'status' => 'Your store account must be approved before you can publish products.',
+            ]);
+        }
+
         $validated['status'] = $request->input(
             'status',
             'pending'

@@ -374,12 +374,12 @@ Route::middleware([
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/seller/store', [
+    Route::get('/seller/store/{seller?}', [
         SellerStoreController::class,
         'edit',
     ])->name('seller.store');
 
-    Route::patch('/seller/store', [
+    Route::patch('/seller/store/{seller?}', [
         SellerStoreController::class,
         'update',
     ])->name('seller.store.update');

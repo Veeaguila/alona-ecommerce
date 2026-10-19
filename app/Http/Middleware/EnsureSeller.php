@@ -22,6 +22,11 @@ class EnsureSeller
                 return $next($request);
             }
 
+            // SEL-PROF-011: Pending sellers can save products as draft
+            if ($request->routeIs('seller.products.store') && $request->input('status') === 'draft') {
+                return $next($request);
+            }
+
             return redirect()->route('application.status');
         }
 
