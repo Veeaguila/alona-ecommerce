@@ -12,6 +12,7 @@ use App\Http\Controllers\SellerReportController;
 use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\SellerReviewController;
 use App\Http\Controllers\SellerSettingController;
+use App\Http\Controllers\SellerStoreCategoryController;
 use App\Http\Controllers\SellerStoreController;
 use App\Http\Controllers\SellerVoucherController;
 use Illuminate\Support\Facades\Route;
@@ -383,6 +384,52 @@ Route::middleware([
         SellerStoreController::class,
         'update',
     ])->name('seller.store.update');
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELLER STORE CATEGORIES (Module S2: SEL-SCAT-001 - SEL-SCAT-013)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/seller/categories', [
+        SellerStoreCategoryController::class,
+        'index',
+    ])->name('seller.categories');
+
+    Route::post('/seller/categories', [
+        SellerStoreCategoryController::class,
+        'store',
+    ])->name('seller.categories.store');
+
+    Route::patch('/seller/categories/reorder', [
+        SellerStoreCategoryController::class,
+        'reorder',
+    ])->name('seller.categories.reorder');
+
+    Route::patch('/seller/categories/{storeCategory}', [
+        SellerStoreCategoryController::class,
+        'update',
+    ])->name('seller.categories.update');
+
+    Route::delete('/seller/categories/{storeCategory}', [
+        SellerStoreCategoryController::class,
+        'destroy',
+    ])->name('seller.categories.destroy');
+
+    Route::post('/seller/products/{product}/store-categories', [
+        SellerStoreCategoryController::class,
+        'assignProductCategories',
+    ])->name('seller.products.store-categories.assign');
+
+    Route::post('/seller/categories/{storeCategory}/products', [
+        SellerStoreCategoryController::class,
+        'addProducts',
+    ])->name('seller.categories.products.add');
+
+    Route::delete('/seller/categories/{storeCategory}/products/{product}', [
+        SellerStoreCategoryController::class,
+        'removeProduct',
+    ])->name('seller.categories.products.remove');
 
 
     /*

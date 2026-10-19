@@ -101,4 +101,14 @@ class Product extends Model
     {
         return $this->hasMany(StockAdjustment::class)->latest();
     }
+
+    public function storeCategories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            StoreCategory::class,
+            'product_store_category',
+            'product_id',
+            'store_category_id'
+        )->withTimestamps();
+    }
 }

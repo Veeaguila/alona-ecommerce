@@ -23,7 +23,7 @@ class BuyerStoreController extends Controller
 
         $sort = $request->input('sort', 'latest');
         $search = trim((string) $request->input('search', ''));
-        $categorySlug = $request->input('category');
+        $categorySlug = $request->input('category') ?: $request->input('store_category');
 
         $productsQuery = Product::query()
             ->where('seller_id', $seller->id)
@@ -34,11 +34,34 @@ class BuyerStoreController extends Controller
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('description', 'like', "%{$search}%");
                 })
-            )
-            ->when(
-                $categorySlug,
-                fn ($query) => $query->whereHas('category', fn ($q) => $q->where('slug', $categorySlug))
             );
+
+        if ($categorySlug && $categorySlug !== 'all') {
+            $matchedStoreCategory = \App\Models\StoreCategory::query()
+                ->where('seller_id', $seller->id)
+                ->where(function ($q) use ($categorySlug) {
+                    $q->where('slug', $categorySlug)
+                      ->orWhere('name', $categorySlug)
+                      ->orWhere('id', $categorySlug);
+                })
+                ->first();
+
+            if ($matchedStoreCategory) {
+                // SEL-SCAT-007: Hidden store category does not expose products on direct URL / 404s
+                if (! $matchedStoreCategory->is_visible) {
+                    abort(404, 'Category not found or unavailable');
+                }
+
+                $catIds = array_merge(
+                    [$matchedStoreCategory->id],
+                    $matchedStoreCategory->children()->where('is_visible', true)->pluck('id')->toArray()
+                );
+
+                $productsQuery->whereHas('storeCategories', fn ($q) => $q->whereIn('store_categories.id', $catIds));
+            } else {
+                $productsQuery->whereHas('category', fn ($q) => $q->where('slug', $categorySlug));
+            }
+        }
 
         switch ($sort) {
             case 'price-low':
@@ -108,16 +131,28 @@ class BuyerStoreController extends Controller
             $avgRating = round((float) $productReviewStats->avg_rating, 1);
         }
 
-        // Store categories based on active seller products
-        $categories = Product::query()
+        // Store categories: custom seller store categories (SEL-SCAT-001, SEL-SCAT-007, SEL-SCAT-008)
+        $sellerStoreCategories = \App\Models\StoreCategory::query()
             ->where('seller_id', $seller->id)
-            ->where('status', 'approved')
-            ->with('category:id,name,slug')
-            ->get()
-            ->pluck('category')
-            ->filter()
-            ->unique('id')
-            ->values();
+            ->where('is_visible', true)
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'slug']);
+
+        if ($sellerStoreCategories->isNotEmpty()) {
+            $categories = $sellerStoreCategories;
+        } else {
+            // Fallback to platform categories of active seller products
+            $categories = Product::query()
+                ->where('seller_id', $seller->id)
+                ->where('status', 'approved')
+                ->with('category:id,name,slug')
+                ->get()
+                ->pluck('category')
+                ->filter()
+                ->unique('id')
+                ->values();
+        }
 
         // Authentic store vouchers
         $vouchers = Voucher::query()
