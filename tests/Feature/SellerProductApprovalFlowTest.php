@@ -36,13 +36,17 @@ class SellerProductApprovalFlowTest extends TestCase
             'status' => 'approved',
         ]);
 
+        \Illuminate\Support\Facades\Storage::fake('public');
+
         $this->actingAs($seller)
             ->post('/seller/products', [
                 'name' => 'Approved Lamp',
                 'category_id' => $category->id,
                 'price' => 299.99,
                 'stock' => 25,
+                'weight' => 1.5,
                 'description' => 'A lamp that must be reviewed first.',
+                'image' => \Illuminate\Http\UploadedFile::fake()->image('lamp.jpg'),
                 'status' => 'approved',
             ])
             ->assertRedirect('/seller/products');

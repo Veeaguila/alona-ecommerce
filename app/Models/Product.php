@@ -27,6 +27,12 @@ class Product extends Model
         'is_featured',
         'rating',
         'reviews_count',
+        'weight',
+        'length',
+        'width',
+        'height',
+        'brand',
+        'condition',
     ];
 
     protected function casts(): array
@@ -34,6 +40,10 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'old_price' => 'decimal:2',
+            'weight' => 'decimal:2',
+            'length' => 'decimal:2',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
             'low_stock_threshold' => 'integer',

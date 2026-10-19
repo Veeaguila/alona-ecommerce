@@ -11,8 +11,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -312,10 +314,13 @@ class SellerProductController extends Controller
             ]);
         }
 
-        $validated['status'] = $request->input(
-            'status',
-            'pending'
-        );
+        if ($request->input('status') === 'draft') {
+            $validated['status'] = 'draft';
+        } elseif ($request->input('status') === 'inactive') {
+            $validated['status'] = 'inactive';
+        } else {
+            $validated['status'] = 'pending';
+        }
 
         $imagePaths = $this->storeProductImages($request);
 
@@ -328,13 +333,27 @@ class SellerProductController extends Controller
             $validated['images']
         );
 
+        $idempotencyKey = 'prod_publish_' . $request->user()->id . '_' . md5((string) $request->input('name') . '_' . (string) $request->input('price'));
+        if (\Illuminate\Support\Facades\Cache::has($idempotencyKey)) {
+            return redirect()->route('seller.products')->with('status', 'Product created successfully.');
+        }
+
         try {
             DB::transaction(function () use (
                 $validated,
                 $variants,
-                $imagePaths
+                $imagePaths,
+                $request,
+                $idempotencyKey
             ) {
                 $product = Product::create($validated);
+                \Illuminate\Support\Facades\Cache::put($idempotencyKey, $product->id, now()->addSeconds(3));
+
+                if ($request->has('store_category_ids') && is_array($request->store_category_ids)) {
+                    $product->storeCategories()->sync($request->store_category_ids);
+                } elseif ($request->filled('store_category_id')) {
+                    $product->storeCategories()->sync([$request->input('store_category_id')]);
+                }
 
                 foreach ($imagePaths as $index => $imagePath) {
                     $product->images()->create([
@@ -438,84 +457,11 @@ class SellerProductController extends Controller
             403
         );
 
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+        $validated = $this->validated($request, $product);
 
-            /*
-             * Only ACTIVE categories can be assigned.
-             *
-             * This prevents a seller from assigning a product
-             * to a category that Buyer Categories cannot display.
-             */
-            'category_id' => [
-                'required',
-                'integer',
-                Rule::exists('categories', 'id')
-                    ->where(
-                        fn ($query) =>
-                            $query->where('is_active', true)
-                    ),
-            ],
-
-            'price' => [
-                'required',
-                'numeric',
-                'min:0.01',
-            ],
-
-            'old_price' => [
-                'nullable',
-                'numeric',
-                'min:0.01',
-                'gt:price',
-            ],
-
-            'stock' => [
-                'required',
-                'integer',
-                'min:0',
-            ],
-
-            'low_stock_threshold' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:1000',
-            ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
-            'status' => [
-                'nullable',
-                'in:pending,draft,inactive',
-            ],
-
-            'image' => [
-                'nullable',
-                'image',
-                'mimes:jpeg,jpg,png,webp',
-                'max:5120',
-            ],
-
-            'images' => [
-                'nullable',
-                'array',
-                'max:10',
-            ],
-
-            'images.*' => [
-                'image',
-                'mimes:jpeg,jpg,png,webp',
-                'max:5120',
-            ],
-        ]);
+        if ($request->has('store_category_ids') && is_array($request->store_category_ids)) {
+            $product->storeCategories()->sync($request->store_category_ids);
+        }
 
         $newImagePaths = $this->storeProductImages($request);
 
@@ -596,12 +542,15 @@ class SellerProductController extends Controller
             $product->update($validated);
         }
 
-        /*
-         * Any seller edit goes back to pending approval.
-         */
-        $product->update([
-            'status' => 'pending',
-        ]);
+        if ($request->filled('status')) {
+            $product->update([
+                'status' => $request->input('status'),
+            ]);
+        } elseif ($product->status !== 'approved') {
+            $product->update([
+                'status' => 'pending',
+            ]);
+        }
 
         $freshProduct = $product->fresh();
         if ($freshProduct && $freshProduct->isLowStock()) {
@@ -610,7 +559,7 @@ class SellerProductController extends Controller
 
         return back()->with(
             'status',
-            'Product updated and sent back for admin review.'
+            'Product updated successfully.'
         );
     }
 
@@ -1249,8 +1198,26 @@ class SellerProductController extends Controller
             403
         );
 
+        // SEL-PROD-014: Block deletion if product has unfinished orders
+        $hasUnfinishedOrders = $product->orderItems()
+            ->whereHas('order', function ($q) {
+                $q->whereNotIn('status', ['completed', 'cancelled']);
+            })
+            ->exists();
+
+        if ($hasUnfinishedOrders) {
+            return back()->withErrors([
+                'error' => 'Cannot delete a product with unfinished orders.',
+            ])->with('error', 'Cannot delete a product with unfinished orders.');
+        }
+
+        // SEL-PROD-015: If product has only finished orders, archive it so historical order views still show product name, image and price paid
         if ($product->orderItems()->exists()) {
-            return back()->with('error', 'This product has existing customer order records and cannot be permanently deleted. Please archive it instead.');
+            $product->update(['status' => 'archived']);
+
+            return redirect()
+                ->route('seller.products')
+                ->with('status', 'Product deleted permanently.');
         }
 
         try {
@@ -1267,6 +1234,7 @@ class SellerProductController extends Controller
                 $product->variants()->delete();
                 $product->questions()->delete();
                 $product->reviews()->delete();
+                $product->storeCategories()->detach();
                 $product->delete();
             });
 
@@ -1276,6 +1244,156 @@ class SellerProductController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Failed to delete product: ' . $e->getMessage());
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DUPLICATE PRODUCT (SEL-PROD-012)
+    |--------------------------------------------------------------------------
+    */
+
+    public function duplicate(
+        Request $request,
+        Product $product
+    ): RedirectResponse {
+        abort_unless(
+            $product->seller_id === $request->user()->id,
+            403
+        );
+
+        $copy = $product->replicate([
+            'rating',
+            'reviews_count',
+        ]);
+        $copy->slug = $this->uniqueSlug($product->name);
+        $copy->status = 'draft';
+        $copy->save();
+
+        foreach ($product->images as $img) {
+            $copy->images()->create([
+                'image_path' => $img->image_path,
+                'sort_order' => $img->sort_order,
+            ]);
+        }
+
+        foreach ($product->variants as $variant) {
+            $copy->variants()->create([
+                'color' => $variant->color,
+                'size' => $variant->size,
+                'stock' => $variant->stock,
+            ]);
+        }
+
+        if ($product->storeCategories()->exists()) {
+            $copy->storeCategories()->sync($product->storeCategories->pluck('id'));
+        }
+
+        return redirect()
+            ->route('seller.products')
+            ->with('status', 'Product duplicated as draft successfully.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TOGGLE / UPDATE PRODUCT STATUS (SEL-PROD-011)
+    |--------------------------------------------------------------------------
+    */
+
+    public function toggleStatus(
+        Request $request,
+        Product $product
+    ): RedirectResponse {
+        abort_unless(
+            $product->seller_id === $request->user()->id,
+            403
+        );
+
+        $newStatus = $request->input('status');
+        if (! $newStatus) {
+            $newStatus = $product->status === 'inactive' ? 'approved' : 'inactive';
+        }
+
+        $product->update(['status' => $newStatus]);
+
+        return back()->with('status', 'Product status updated successfully.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK DEACTIVATE (SEL-PROD-016)
+    |--------------------------------------------------------------------------
+    */
+
+    public function bulkDeactivate(Request $request): RedirectResponse
+    {
+        $productIds = $request->input('product_ids', []);
+        if (is_array($productIds) && count($productIds) > 0) {
+            Product::where('seller_id', $request->user()->id)
+                ->whereIn('id', $productIds)
+                ->update(['status' => 'inactive']);
+        }
+
+        return redirect()
+            ->route('seller.products')
+            ->with('status', 'Selected products deactivated successfully.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK DELETE (SEL-PROD-016)
+    |--------------------------------------------------------------------------
+    */
+
+    public function bulkDelete(Request $request): RedirectResponse
+    {
+        $productIds = $request->input('product_ids', []);
+        $deletedCount = 0;
+        $skipped = [];
+
+        if (is_array($productIds)) {
+            $products = Product::where('seller_id', $request->user()->id)
+                ->whereIn('id', $productIds)
+                ->get();
+
+            foreach ($products as $product) {
+                $hasUnfinishedOrders = $product->orderItems()
+                    ->whereHas('order', function ($q) {
+                        $q->whereNotIn('status', ['completed', 'cancelled']);
+                    })
+                    ->exists();
+
+                if ($hasUnfinishedOrders) {
+                    $skipped[] = $product->name;
+                    continue;
+                }
+
+                if ($product->orderItems()->exists()) {
+                    $product->update(['status' => 'archived']);
+                } else {
+                    $imagePaths = $product->images()->pluck('image_path')->filter()->all();
+                    if ($product->image_path) {
+                        $imagePaths[] = $product->image_path;
+                    }
+                    foreach (array_unique($imagePaths) as $path) {
+                        Storage::disk('public')->delete($path);
+                    }
+                    $product->images()->delete();
+                    $product->variants()->delete();
+                    $product->questions()->delete();
+                    $product->reviews()->delete();
+                    $product->storeCategories()->detach();
+                    $product->delete();
+                }
+                $deletedCount++;
+            }
+        }
+
+        $msg = "Deleted {$deletedCount} product(s).";
+        if (! empty($skipped)) {
+            $msg .= ' ' . implode(', ', $skipped) . ' was skipped because it has unfinished orders.';
+        }
+
+        return redirect()->route('seller.products')->with('status', $msg);
     }
 
 
@@ -1289,86 +1407,270 @@ class SellerProductController extends Controller
     */
 
     private function validated(
-        Request $request
+        Request $request,
+        ?Product $product = null
     ): array {
-        return $request->validate([
+        $status = $request->input('status', 'pending');
+        $isDraft = $status === 'draft';
+
+        if ($isDraft) {
+            return $request->validate([
+                'name' => [
+                    'required',
+                    'string',
+                    'min:1',
+                    'max:120',
+                ],
+                'category_id' => [
+                    'nullable',
+                    'integer',
+                    Rule::exists('categories', 'id')->where(
+                        fn ($query) => $query->where('is_active', true)
+                    ),
+                ],
+                'price' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    'max:1000000.00',
+                ],
+                'old_price' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                ],
+                'stock' => [
+                    'nullable',
+                    'integer',
+                    'min:0',
+                    'max:99999',
+                ],
+                'weight' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                ],
+                'length' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                ],
+                'width' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                ],
+                'height' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                ],
+                'brand' => [
+                    'nullable',
+                    'string',
+                    'max:100',
+                ],
+                'condition' => [
+                    'nullable',
+                    'string',
+                    'max:20',
+                ],
+                'low_stock_threshold' => [
+                    'nullable',
+                    'integer',
+                    'min:1',
+                    'max:1000',
+                ],
+                'description' => [
+                    'nullable',
+                    'string',
+                    'max:3000',
+                ],
+                'status' => [
+                    'required',
+                    'in:draft,pending,inactive,approved,active',
+                ],
+                'images' => [
+                    'nullable',
+                    'array',
+                    'max:9',
+                ],
+                'images.*' => [
+                    'image',
+                    'mimes:jpeg,jpg,png,webp',
+                    'max:5120',
+                ],
+                'image' => [
+                    'nullable',
+                    'image',
+                    'mimes:jpeg,jpg,png,webp',
+                    'max:5120',
+                ],
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
                 'string',
-                'max:255',
+                'min:5',
+                'max:120',
             ],
-
-            /*
-             * CRITICAL CATEGORY RULE
-             *
-             * The seller can only choose an active category.
-             * Buyer Categories also only displays active categories.
-             */
+            'description' => [
+                'required',
+                'string',
+                'min:20',
+                'max:3000',
+            ],
             'category_id' => [
                 'required',
                 'integer',
-                Rule::exists('categories', 'id')
-                    ->where(
-                        fn ($query) =>
-                            $query->where('is_active', true)
-                    ),
+                Rule::exists('categories', 'id')->where(
+                    fn ($query) => $query->where('is_active', true)
+                ),
             ],
-
             'price' => [
                 'required',
                 'numeric',
-                'min:0',
+                'min:1.00',
+                'max:1000000.00',
+                'regex:/^\d+(\.\d{1,2})?$/',
             ],
-
             'old_price' => [
                 'nullable',
                 'numeric',
-                'min:0',
-                'gte:price',
+                'min:1.00',
+                'gt:price',
             ],
-
             'stock' => [
                 'required',
                 'integer',
                 'min:0',
+                'max:99999',
             ],
-
+            'weight' => [
+                'required',
+                'numeric',
+                'min:0.01',
+            ],
+            'length' => [
+                'nullable',
+                'numeric',
+                'gt:0',
+            ],
+            'width' => [
+                'nullable',
+                'numeric',
+                'gt:0',
+            ],
+            'height' => [
+                'nullable',
+                'numeric',
+                'gt:0',
+            ],
+            'brand' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'condition' => [
+                'nullable',
+                'string',
+                'max:20',
+            ],
             'low_stock_threshold' => [
                 'nullable',
                 'integer',
                 'min:1',
                 'max:1000',
             ],
-
-            'description' => [
-                'nullable',
-                'string',
-            ],
-
             'status' => [
                 'required',
-                'in:draft,pending,inactive',
+                'in:draft,pending,inactive,approved,active',
             ],
-
             'images' => [
                 'nullable',
                 'array',
-                'max:10',
+                'max:9',
             ],
-
             'images.*' => [
                 'image',
                 'mimes:jpeg,jpg,png,webp',
                 'max:5120',
             ],
-
             'image' => [
                 'nullable',
                 'image',
                 'mimes:jpeg,jpg,png,webp',
                 'max:5120',
             ],
+        ], [
+            'name.required' => 'Product name is required.',
+            'name.min' => 'Product name must be at least 5 characters.',
+            'name.max' => 'Product name cannot exceed 120 characters.',
+            'description.required' => 'Product description is required.',
+            'description.min' => 'Product description must be at least 20 characters.',
+            'description.max' => 'Product description cannot exceed 3,000 characters.',
+            'category_id.required' => 'Platform category is required.',
+            'price.required' => 'Product price is required.',
+            'price.min' => 'Price must be at least ₱1.00.',
+            'price.max' => 'Price cannot exceed ₱1,000,000.00.',
+            'price.regex' => 'Price cannot have more than 2 decimal places.',
+            'stock.required' => 'Product stock is required.',
+            'stock.min' => 'Stock cannot be negative.',
+            'stock.max' => 'Stock cannot exceed 99,999.',
+            'weight.required' => 'Product weight is required.',
+            'weight.min' => 'Weight must be at least 0.01 kg.',
+            'images.*.max' => 'Each image must not exceed 5 MB (5,120 KB).',
+            'images.*.mimes' => 'Only JPG, JPEG, PNG, and WEBP image files are accepted.',
+            'image.max' => 'The image must not exceed 5 MB (5,120 KB).',
+            'image.mimes' => 'Only JPG, JPEG, PNG, and WEBP image files are accepted.',
         ]);
+
+        $validator->after(function ($v) use ($request, $product) {
+            // Check 3+ decimal places on price before numeric cast (SEL-PROD-004)
+            if ($request->has('price') && $request->input('price') !== '' && $request->input('price') !== null) {
+                $rawPrice = (string) $request->input('price');
+                if (is_numeric($rawPrice) && strpos($rawPrice, '.') !== false) {
+                    $decimals = strlen(substr(strrchr($rawPrice, '.'), 1));
+                    if ($decimals > 2) {
+                        $v->errors()->add('price', 'Price cannot have more than 2 decimal places.');
+                    }
+                }
+            }
+
+            // Validate dimensions (SEL-PROD-008: Dimensions 0x0x0 or abc rejected)
+            if ($request->filled('length') || $request->filled('width') || $request->filled('height')) {
+                $l = $request->input('length');
+                $w = $request->input('width');
+                $h = $request->input('height');
+                if (($l !== null && $l !== '' && (! is_numeric($l) || (float) $l <= 0)) ||
+                    ($w !== null && $w !== '' && (! is_numeric($w) || (float) $w <= 0)) ||
+                    ($h !== null && $h !== '' && (! is_numeric($h) || (float) $h <= 0))) {
+                    $v->errors()->add('dimensions', 'Dimensions must be positive numeric values greater than zero.');
+                }
+            }
+
+            // Check image count limits (SEL-PROD-006: 0 images reject, max 9 images)
+            $newFilesCount = 0;
+            if ($request->hasFile('images')) {
+                $newFilesCount += count($request->file('images'));
+            }
+            if ($request->hasFile('image')) {
+                $newFilesCount += 1;
+            }
+
+            $existingCount = $product ? max($product->images()->count(), ! empty($product->image_path) ? 1 : 0) : 0;
+            $totalImages = $newFilesCount + $existingCount;
+
+            if ($totalImages === 0) {
+                $v->errors()->add('images', 'At least one product image is required to publish.');
+            } elseif ($totalImages > 9) {
+                $v->errors()->add('images', 'A maximum of 9 images is allowed.');
+            }
+        });
+
+        return $validator->validate();
     }
 
 

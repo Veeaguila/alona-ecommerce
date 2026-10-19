@@ -80,6 +80,26 @@ Route::middleware([
         'destroy',
     ])->name('seller.products.destroy');
 
+    Route::post('/seller/products/bulk-deactivate', [
+        SellerProductController::class,
+        'bulkDeactivate',
+    ])->name('seller.products.bulk-deactivate');
+
+    Route::post('/seller/products/bulk-delete', [
+        SellerProductController::class,
+        'bulkDelete',
+    ])->name('seller.products.bulk-delete');
+
+    Route::post('/seller/products/{product}/duplicate', [
+        SellerProductController::class,
+        'duplicate',
+    ])->name('seller.products.duplicate');
+
+    Route::patch('/seller/products/{product}/status', [
+        SellerProductController::class,
+        'toggleStatus',
+    ])->name('seller.products.status');
+
     Route::patch('/seller/products/{product}/archive', [
         SellerProductController::class,
         'archive',
