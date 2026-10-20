@@ -18,7 +18,8 @@ use Inertia\Response;
 
 class SellerDashboardController extends Controller
 {
-    private const COMPLETED = ['delivered', 'completed'];
+    // Orders must be completed (SEL-EARN-002, A15). Delivered remains in pending until buyer confirms receipt.
+    private const COMPLETED = ['completed'];
 
     public function index(Request $request): Response
     {

@@ -419,7 +419,7 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
-    | SELLER REPORTS
+    | SELLER REPORTS & EARNINGS (SEL-EARN-001 - SEL-EARN-007)
     |--------------------------------------------------------------------------
     */
 
@@ -427,6 +427,26 @@ Route::middleware([
         SellerReportController::class,
         'reports',
     ])->name('seller.reports');
+
+    Route::get('/seller/earnings', [
+        SellerReportController::class,
+        'reports',
+    ])->name('seller.earnings');
+
+    Route::get('/seller/reports/orders/{order}/breakdown', [
+        SellerReportController::class,
+        'orderEarningsBreakdown',
+    ])->name('seller.reports.order-breakdown');
+
+    Route::post('/seller/payout-requests', [
+        SellerReportController::class,
+        'storePayoutRequest',
+    ])->name('seller.payout-requests.store');
+
+    Route::post('/seller/payout-requests/{payoutRequest}/cancel', [
+        SellerReportController::class,
+        'cancelPayoutRequest',
+    ])->name('seller.payout-requests.cancel');
 
 
     /*
@@ -611,10 +631,7 @@ Route::middleware([
         'readAll',
     ])->name('seller.notifications.read-all');
 
-    Route::post('/seller/payout-requests', [
-        SellerNotificationController::class,
-        'storePayoutRequest',
-    ])->name('seller.payout-requests.store');
+
 
 
     /*

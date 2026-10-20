@@ -1497,6 +1497,8 @@ class BuyerOrderController extends Controller
             $item->status ??
             $item->order->status;
 
+        $isAlreadyDelivered = strtolower((string) $currentStatus) === 'delivered';
+
         if (
             !in_array(
                 strtolower(
@@ -1505,15 +1507,18 @@ class BuyerOrderController extends Controller
                 [
                     'shipped',
                     'out_for_delivery',
+                    'delivered',
                 ],
                 true
             )
         ) {
             throw ValidationException::withMessages([
                 'status' =>
-                    'This item cannot be confirmed as delivered yet.',
+                    'This item cannot be confirmed as delivered or received yet.',
             ]);
         }
+
+        $newStatus = $isAlreadyDelivered ? 'completed' : 'delivered';
 
         if (
             Schema::hasColumn(
@@ -1522,13 +1527,13 @@ class BuyerOrderController extends Controller
             )
         ) {
             $item->update([
-                'status' => 'delivered',
+                'status' => $newStatus,
             ]);
         }
 
         /*
         |--------------------------------------------------------------------------
-        | If all order items are delivered, mark order delivered
+        | If all order items have reached target status, mark order
         |--------------------------------------------------------------------------
         */
 
@@ -1536,7 +1541,7 @@ class BuyerOrderController extends Controller
 
         $order->load('items');
 
-        $allDelivered = true;
+        $allMatch = true;
 
         foreach ($order->items as $orderItemModel) {
             $status =
@@ -1547,27 +1552,62 @@ class BuyerOrderController extends Controller
                     )
                 );
 
-            if ($status !== 'delivered') {
-                $allDelivered = false;
+            if ($status !== $newStatus && $status !== 'completed') {
+                $allMatch = false;
                 break;
             }
         }
 
-        if ($allDelivered) {
+        if ($allMatch) {
             $order->update([
-                'status' => 'delivered',
+                'status' => $newStatus,
             ]);
 
             $this->createOrderStatusHistory(
                 $order,
-                'delivered'
+                $newStatus
             );
         }
 
         return back()->with(
             'status',
-            'Delivery confirmed successfully.'
+            $isAlreadyDelivered ? 'Order item received and completed successfully.' : 'Delivery confirmed successfully.'
         );
+    }
+
+    /**
+     * Buyer marks delivered order as received/completed (SEL-EARN-002, A15).
+     */
+    public function orderReceived(Request $request, Order $order)
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
+
+        $status = strtolower((string) $order->status);
+        if (! in_array($status, ['shipped', 'out_for_delivery', 'delivered'], true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Only shipped or delivered orders can be marked as received.',
+            ]);
+        }
+
+        $order->update([
+            'status' => 'completed',
+        ]);
+
+        $order->items()->whereNotIn('status', ['cancelled', 'refunded'])->update([
+            'status' => 'completed',
+            'delivered_at' => now(),
+        ]);
+
+        $this->createOrderStatusHistory($order, 'completed');
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Order marked as received and completed.',
+                'order' => $order->fresh(),
+            ]);
+        }
+
+        return back()->with('status', 'Order marked as received and completed.');
     }
 
     /*

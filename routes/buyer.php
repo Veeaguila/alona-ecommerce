@@ -165,6 +165,11 @@ Route::middleware([
         'confirmDelivery',
     ])->name('buyer.order-items.confirm-delivery');
 
+    Route::match(['post', 'patch'], '/buyer/orders/{order}/receive', [
+        BuyerOrderController::class,
+        'orderReceived',
+    ])->name('buyer.orders.receive');
+
     Route::post('/buyer/order-items/{orderItem}/return', [
         BuyerOrderController::class,
         'storeReturnRequest',
