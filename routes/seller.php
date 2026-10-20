@@ -4,10 +4,12 @@ use App\Http\Controllers\SellerAccountController;
 use App\Http\Controllers\SellerConversationController;
 use App\Http\Controllers\SellerCustomerController;
 use App\Http\Controllers\SellerDashboardController;
+use App\Http\Controllers\SellerFlashSaleController;
 use App\Http\Controllers\SellerNotificationController;
 use App\Http\Controllers\SellerOrderController;
 use App\Http\Controllers\SellerProductController;
 use App\Http\Controllers\SellerProductQuestionController;
+use App\Http\Controllers\SellerPromotionController;
 use App\Http\Controllers\SellerReportController;
 use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\SellerReviewController;
@@ -241,6 +243,63 @@ Route::middleware([
         SellerSaleController::class,
         'destroy',
     ])->name('seller.sales.destroy');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELLER FLASH SALES, BUNDLES & PROMOTIONS (MODULE S8)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/seller/flash-sales', [
+        SellerVoucherController::class,
+        'index',
+    ])->name('seller.flash-sales');
+
+    Route::post('/seller/flash-sales', [
+        SellerFlashSaleController::class,
+        'store',
+    ])->name('seller.flash-sales.store');
+
+    Route::patch('/seller/flash-sales/{flashSale}', [
+        SellerFlashSaleController::class,
+        'update',
+    ])->name('seller.flash-sales.update');
+
+    Route::match(['post', 'patch'], '/seller/flash-sales/{flashSale}/end', [
+        SellerFlashSaleController::class,
+        'endNow',
+    ])->name('seller.flash-sales.end');
+
+    Route::delete('/seller/flash-sales/{flashSale}', [
+        SellerFlashSaleController::class,
+        'destroy',
+    ])->name('seller.flash-sales.destroy');
+
+    Route::get('/seller/promotions', [
+        SellerVoucherController::class,
+        'index',
+    ])->name('seller.promotions');
+
+    Route::post('/seller/promotions', [
+        SellerPromotionController::class,
+        'store',
+    ])->name('seller.promotions.store');
+
+    Route::post('/seller/bundles', [
+        SellerPromotionController::class,
+        'store',
+    ])->name('seller.bundles.store');
+
+    Route::match(['post', 'patch'], '/seller/promotions/{promotion}/end', [
+        SellerPromotionController::class,
+        'endNow',
+    ])->name('seller.promotions.end');
+
+    Route::delete('/seller/promotions/{promotion}', [
+        SellerPromotionController::class,
+        'destroy',
+    ])->name('seller.promotions.destroy');
 
 
     /*

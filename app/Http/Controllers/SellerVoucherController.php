@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FlashSale;
 use App\Models\Product;
 use App\Models\ProductSale;
+use App\Models\SellerPromotion;
 use App\Models\UserVoucher;
 use App\Models\Voucher;
 use Illuminate\Http\RedirectResponse;
@@ -52,9 +54,29 @@ class SellerVoucherController extends Controller
                 ->get()
             : collect();
 
+        $flashSales = Schema::hasTable('flash_sales')
+            ? FlashSale::with('product:id,name,price,stock,image_path')
+                ->where('seller_id', $seller->id)
+                ->latest('id')
+                ->get()
+            : collect();
+
+        $promotions = Schema::hasTable('seller_promotions')
+            ? SellerPromotion::with([
+                'product:id,name,price',
+                'buyProduct:id,name,price',
+                'getProduct:id,name,price',
+            ])
+                ->where('seller_id', $seller->id)
+                ->latest('id')
+                ->get()
+            : collect();
+
         return Inertia::render('Seller/Vouchers', [
             'vouchers' => $vouchers,
             'sales' => $sales,
+            'flash_sales' => $flashSales,
+            'promotions' => $promotions,
             'analytics' => $analytics,
             'products' => $products,
         ]);

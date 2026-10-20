@@ -119,8 +119,10 @@ const variantLabel = item => {
 
 const itemPrice = item =>
     Number(
-        item.product?.price ??
+        item.effective_price ??
+        item.unit_price ??
         item.price ??
+        item.product?.price ??
         0
     )
 

@@ -27,15 +27,25 @@ class BuyerCartController extends Controller
                             'category:id,name,slug',
                             'images:id,product_id,image_path,sort_order',
                             'variants:id,product_id,color,size,price,stock,sku,image_path',
+                            'sales',
+                            'flashSales',
                         ]);
                 },
                 'variant:id,product_id,color,size,price,stock,sku,image_path',
             ])
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
+        $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
+
         return Inertia::render('Buyer/Cart', [
-            'items' => $items,
+            'items' => $evaluation['items'],
+            'raw_subtotal' => number_format($evaluation['raw_subtotal'], 2, '.', ''),
+            'bundle_discount' => number_format($evaluation['bundle_discount'], 2, '.', ''),
+            'buy_x_get_y_discount' => number_format($evaluation['buy_x_get_y_discount'], 2, '.', ''),
+            'promotion_discount' => number_format($evaluation['promotion_discount'], 2, '.', ''),
+            'subtotal_after_promotions' => number_format($evaluation['subtotal_after_promotions'], 2, '.', ''),
         ]);
     }
 

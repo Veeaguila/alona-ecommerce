@@ -14,6 +14,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    flash_sales: {
+        type: Array,
+        default: () => [],
+    },
+    promotions: {
+        type: Array,
+        default: () => [],
+    },
     analytics: {
         type: Object,
         default: () => ({
@@ -136,6 +144,88 @@ const deleteSale = sale => {
     useForm({}).delete(route('seller.sales.destroy', sale.id), {
         preserveScroll: true,
     })
+}
+
+const showFlashModal = ref(false)
+const flashForm = useForm({
+    product_id: '',
+    flash_price: '',
+    flash_quantity: 1,
+    starts_at: '',
+    ends_at: '',
+})
+
+const openCreateFlashModal = () => {
+    flashForm.reset()
+    flashForm.clearErrors()
+    flashForm.product_id = props.products[0]?.id ?? ''
+    flashForm.flash_price = ''
+    flashForm.flash_quantity = 1
+    flashForm.starts_at = ''
+    flashForm.ends_at = ''
+    showFlashModal.value = true
+}
+
+const closeFlashModal = () => {
+    if (flashForm.processing) return
+    showFlashModal.value = false
+    flashForm.clearErrors()
+}
+
+const submitFlashSale = () => {
+    flashForm.post(route('seller.flash-sales.store'), {
+        preserveScroll: true,
+        onSuccess: () => closeFlashModal(),
+    })
+}
+
+const endFlashSaleNow = fs => {
+    useForm({}).post(route('seller.flash-sales.end', fs.id), { preserveScroll: true })
+}
+
+const deleteFlashSale = fs => {
+    useForm({}).delete(route('seller.flash-sales.destroy', fs.id), { preserveScroll: true })
+}
+
+const showPromoModal = ref(false)
+const promoForm = useForm({
+    type: 'bundle',
+    name: '',
+    product_id: '',
+    min_quantity: 3,
+    discount_type: 'percentage',
+    discount_value: 15,
+    buy_product_id: '',
+    buy_quantity: 2,
+    get_product_id: '',
+    get_quantity: 1,
+})
+
+const openCreatePromoModal = () => {
+    promoForm.reset()
+    promoForm.clearErrors()
+    promoForm.type = 'bundle'
+    promoForm.product_id = props.products[0]?.id ?? ''
+    promoForm.buy_product_id = props.products[0]?.id ?? ''
+    promoForm.get_product_id = props.products[1]?.id ?? props.products[0]?.id ?? ''
+    showPromoModal.value = true
+}
+
+const closePromoModal = () => {
+    if (promoForm.processing) return
+    showPromoModal.value = false
+    promoForm.clearErrors()
+}
+
+const submitPromo = () => {
+    promoForm.post(route('seller.promotions.store'), {
+        preserveScroll: true,
+        onSuccess: () => closePromoModal(),
+    })
+}
+
+const deletePromo = promo => {
+    useForm({}).delete(route('seller.promotions.destroy', promo.id), { preserveScroll: true })
 }
 
 const showModal = ref(false)
@@ -645,6 +735,100 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                         </div>
                     </div>
                 </section>
+
+                <!-- MODULE S8: FLASH SALES & BUNDLE / BUY-X-GET-Y PROMOTIONS -->
+                <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <!-- FLASH SALES -->
+                    <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                        <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base font-bold text-[#1F2937]">⚡ Flash Sales</h2>
+                                <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                                    {{ flash_sales.length }}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                @click="openCreateFlashModal"
+                                class="rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600"
+                            >
+                                + Create Flash Sale
+                            </button>
+                        </div>
+                        <div v-if="flash_sales.length" class="divide-y divide-[#F1F5F9]">
+                            <div v-for="fs in flash_sales" :key="fs.id" class="flex items-center justify-between gap-3 px-5 py-3.5 text-xs">
+                                <div>
+                                    <p class="font-bold text-[#1F2937]">{{ fs.product?.name || 'Product' }}</p>
+                                    <p class="text-[#16845A] font-bold">
+                                        {{ money(fs.flash_price) }}
+                                        <span class="ml-1 font-normal text-[#64748B]">({{ fs.remaining_label }} / {{ fs.flash_quantity }} total)</span>
+                                    </p>
+                                    <p class="text-[11px] text-[#94A3B8]">{{ formatDateTimeDisplay(fs.starts_at) }} → {{ formatDateTimeDisplay(fs.ends_at) }}</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full border px-2.5 py-0.5 text-[10px] font-bold"
+                                        :class="fs.status_label === 'Ongoing' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : (fs.status_label === 'Upcoming' ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600')">
+                                        {{ fs.status_label }}
+                                    </span>
+                                    <button v-if="fs.status_label === 'Ongoing'" type="button" @click="endFlashSaleNow(fs)" class="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
+                                        End Now
+                                    </button>
+                                    <button type="button" @click="deleteFlashSale(fs)" class="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="px-5 py-6 text-center text-xs text-[#94A3B8]">
+                            No flash sales created yet.
+                        </div>
+                    </section>
+
+                    <!-- BUNDLES & BUY X GET Y -->
+                    <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                        <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base font-bold text-[#1F2937]">🎁 Bundles & Buy X Get Y</h2>
+                                <span class="rounded-full bg-[#E8F7F6] px-2.5 py-0.5 text-xs font-bold text-[#087F8C]">
+                                    {{ promotions.length }}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                @click="openCreatePromoModal"
+                                class="rounded-xl bg-[#087F8C] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#066B76]"
+                            >
+                                + Create Bundle / Promo
+                            </button>
+                        </div>
+                        <div v-if="promotions.length" class="divide-y divide-[#F1F5F9]">
+                            <div v-for="pr in promotions" :key="pr.id" class="flex items-center justify-between gap-3 px-5 py-3.5 text-xs">
+                                <div>
+                                    <p class="font-bold text-[#1F2937]">{{ pr.name }}</p>
+                                    <p class="text-[11px] text-[#64748B]">
+                                        <template v-if="pr.type === 'bundle'">
+                                            Bundle: Any {{ pr.min_quantity }} items from {{ pr.product?.name || 'selected product' }} for {{ Number(pr.discount_value) }}% off
+                                        </template>
+                                        <template v-else>
+                                            Buy {{ pr.buy_quantity }} × {{ pr.buy_product?.name || 'Item' }}, Get {{ pr.get_quantity }} × {{ pr.get_product?.name || 'Item' }} Free
+                                        </template>
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                                        {{ pr.status_label }}
+                                    </span>
+                                    <button type="button" @click="deletePromo(pr)" class="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="px-5 py-6 text-center text-xs text-[#94A3B8]">
+                            No bundle deals or Buy X Get Y promotions yet.
+                        </div>
+                    </section>
+                </div>
 
                 <!-- DESKTOP VOUCHERS TABLE -->
                 <section class="mt-6 hidden overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm lg:block">
@@ -1313,6 +1497,127 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                         <button type="submit" :disabled="saleForm.processing" class="h-9 rounded-xl bg-[#087F8C] px-4 text-xs font-bold text-white">
                             {{ saleForm.processing ? 'Saving...' : editingSale ? 'Update Sale' : 'Save Sale' }}
                         </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CREATE FLASH SALE MODAL (MODULE S8) -->
+        <div
+            v-if="showFlashModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#1F2937]/60 p-4 backdrop-blur-[2px]"
+            @click.self="closeFlashModal"
+        >
+            <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                    <h2 class="text-base font-bold text-[#1F2937]">Create Flash Sale</h2>
+                    <button type="button" @click="closeFlashModal" class="rounded-lg p-1.5 text-[#94A3B8]">✕</button>
+                </div>
+                <form @submit.prevent="submitFlashSale" class="space-y-4 p-5">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold text-[#1F2937]">Product</label>
+                        <select v-model="flashForm.product_id" class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm">
+                            <option v-for="prod in products" :key="prod.id" :value="prod.id">
+                                {{ prod.name }} (Regular: ₱{{ Number(prod.regular_price ?? prod.price).toFixed(2) }})
+                            </option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Flash Price (₱)</label>
+                            <input v-model="flashForm.flash_price" type="number" step="0.01" min="1" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            <p v-if="flashForm.errors.flash_price" class="mt-1 text-xs text-red-600">{{ flashForm.errors.flash_price }}</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Flash Quantity</label>
+                            <input v-model="flashForm.flash_quantity" type="number" step="1" min="1" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            <p v-if="flashForm.errors.flash_quantity" class="mt-1 text-xs text-red-600">{{ flashForm.errors.flash_quantity }}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Start Date & Time</label>
+                            <input v-model="flashForm.starts_at" type="datetime-local" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-xs" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">End Date & Time</label>
+                            <input v-model="flashForm.ends_at" type="datetime-local" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-xs" />
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 border-t border-[#E5E7EB] pt-3">
+                        <button type="button" @click="closeFlashModal" class="h-9 rounded-xl border border-[#E5E7EB] px-4 text-xs font-bold text-[#64748B]">Cancel</button>
+                        <button type="submit" :disabled="flashForm.processing" class="h-9 rounded-xl bg-amber-500 px-4 text-xs font-bold text-white">Save Flash Sale</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CREATE BUNDLE / BUY X GET Y MODAL (MODULE S8) -->
+        <div
+            v-if="showPromoModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#1F2937]/60 p-4 backdrop-blur-[2px]"
+            @click.self="closePromoModal"
+        >
+            <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                    <h2 class="text-base font-bold text-[#1F2937]">Create Bundle / Buy X Get Y</h2>
+                    <button type="button" @click="closePromoModal" class="rounded-lg p-1.5 text-[#94A3B8]">✕</button>
+                </div>
+                <form @submit.prevent="submitPromo" class="space-y-4 p-5">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold text-[#1F2937]">Promotion Type</label>
+                        <select v-model="promoForm.type" class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm">
+                            <option value="bundle">Bundle Deal (Any N items for X% off)</option>
+                            <option value="buy_x_get_y">Buy X Get Y Free</option>
+                        </select>
+                    </div>
+                    <template v-if="promoForm.type === 'bundle'">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Product</label>
+                            <select v-model="promoForm.product_id" class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm">
+                                <option v-for="prod in products" :key="prod.id" :value="prod.id">{{ prod.name }}</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Minimum Quantity</label>
+                                <input v-model="promoForm.min_quantity" type="number" min="2" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Discount (%)</label>
+                                <input v-model="promoForm.discount_value" type="number" min="1" max="99" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Buy Product (X)</label>
+                                <select v-model="promoForm.buy_product_id" class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm">
+                                    <option v-for="prod in products" :key="prod.id" :value="prod.id">{{ prod.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Buy Quantity</label>
+                                <input v-model="promoForm.buy_quantity" type="number" min="1" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Get Free Product (Y)</label>
+                                <select v-model="promoForm.get_product_id" class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm">
+                                    <option v-for="prod in products" :key="prod.id" :value="prod.id">{{ prod.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Free Quantity</label>
+                                <input v-model="promoForm.get_quantity" type="number" min="1" class="h-10 w-full rounded-xl border border-[#E5E7EB] px-3 text-sm" />
+                            </div>
+                        </div>
+                    </template>
+                    <div class="flex justify-end gap-2 border-t border-[#E5E7EB] pt-3">
+                        <button type="button" @click="closePromoModal" class="h-9 rounded-xl border border-[#E5E7EB] px-4 text-xs font-bold text-[#64748B]">Cancel</button>
+                        <button type="submit" :disabled="promoForm.processing" class="h-9 rounded-xl bg-[#087F8C] px-4 text-xs font-bold text-white">Save Promotion</button>
                     </div>
                 </form>
             </div>

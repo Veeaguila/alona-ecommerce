@@ -15,6 +15,22 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    bundle_discount: {
+        type: [String, Number],
+        default: '0.00',
+    },
+    buy_x_get_y_discount: {
+        type: [String, Number],
+        default: '0.00',
+    },
+    promotion_discount: {
+        type: [String, Number],
+        default: '0.00',
+    },
+    subtotal_after_promotions: {
+        type: [String, Number],
+        default: '0.00',
+    },
 })
 
 const page = usePage()
@@ -140,6 +156,9 @@ const stockFor = item => {
 }
 
 const itemPrice = item => {
+    if (item?.effective_price !== undefined && item?.effective_price !== null) {
+        return Number(item.effective_price)
+    }
     return Number(
         item?.variant?.price ??
         item?.product?.price ??

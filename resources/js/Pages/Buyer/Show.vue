@@ -1241,6 +1241,37 @@ const breadcrumbs = computed(() => {
                                 </span>
                             </div>
 
+                                                        <!-- FLASH SALE BANNER (SEL-FLASH-001) -->
+                            <div
+                                v-if="product.has_active_flash_sale"
+                                class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs"
+                            >
+                                <div class="flex items-center gap-2 font-bold text-amber-900">
+                                    <span class="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">
+                                        ⚡ Flash Sale
+                                    </span>
+                                    <span v-if="product.flash_remaining_label" class="text-red-600 font-extrabold">
+                                        {{ product.flash_remaining_label }}
+                                    </span>
+                                </div>
+                                <div v-if="product.flash_ends_at" class="text-[11px] font-semibold text-amber-800">
+                                    Ends at {{ new Date(product.flash_ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                                </div>
+                            </div>
+
+                            <!-- UPCOMING FLASH SALE NOTICE (SEL-FLASH-001) -->
+                            <div
+                                v-else-if="product.upcoming_flash_sale"
+                                class="mt-3 flex items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs text-indigo-900"
+                            >
+                                <span class="font-bold">
+                                    {{ product.upcoming_flash_sale.notice }}
+                                </span>
+                                <span class="rounded bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                                    {{ product.upcoming_flash_sale.flash_quantity }} units
+                                </span>
+                            </div>
+
                             <!-- CLAIMABLE STORE VOUCHERS (SEL-VOU-001) -->
                             <div
                                 v-if="vouchers && vouchers.length > 0"

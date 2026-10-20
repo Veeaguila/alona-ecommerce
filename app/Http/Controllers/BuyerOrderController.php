@@ -149,7 +149,9 @@ class BuyerOrderController extends Controller
                 'product.category',
                 'product.variants',
                 'product.sales',
+                'product.flashSales',
                 'variant.product.sales',
+                'variant.product.flashSales',
             ])
             ->whereIn('id', $selectedIds)
             ->get()
@@ -175,8 +177,16 @@ class BuyerOrderController extends Controller
             })
             ->values();
 
+        $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
+
         return Inertia::render('Buyer/Checkout', [
-            'items' => $items,
+            'items' => $evaluation['checkout_lines'],
+            'checkout_lines' => $evaluation['checkout_lines'],
+            'raw_subtotal' => number_format($evaluation['raw_subtotal'], 2, '.', ''),
+            'bundle_discount' => number_format($evaluation['bundle_discount'], 2, '.', ''),
+            'buy_x_get_y_discount' => number_format($evaluation['buy_x_get_y_discount'], 2, '.', ''),
+            'promotion_discount' => number_format($evaluation['promotion_discount'], 2, '.', ''),
+            'subtotal' => number_format($evaluation['subtotal_after_promotions'], 2, '.', ''),
 
             'selected_items' => $items
                 ->pluck('id')
@@ -846,16 +856,12 @@ class BuyerOrderController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Calculate subtotal
+                | Calculate subtotal (with S8 Flash Sale splits, Bundle & Buy X Get Y)
                 |--------------------------------------------------------------------------
                 */
 
-                $subtotal = $items->sum(
-                    function ($item) {
-                        return $this->itemPrice($item) *
-                            (int) $item->quantity;
-                    }
-                );
+                $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
+                $subtotal = (float) $evaluation['subtotal_after_promotions'];
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1286,7 +1292,7 @@ class BuyerOrderController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Create order items
+                | Create order items (including S8 Flash Sale split lines)
                 |--------------------------------------------------------------------------
                 */
 
@@ -1294,91 +1300,58 @@ class BuyerOrderController extends Controller
                     $product =
                         $cartItem->product;
 
-                    $unitPrice =
-                        $this->itemPrice(
-                            $cartItem
-                        );
+                    $itemMeta = $evaluation['item_pricing_map'][$cartItem->id] ?? null;
+                    $linesToCreate = !empty($itemMeta['lines'])
+                        ? $itemMeta['lines']
+                        : [
+                            [
+                                'quantity' => (int) $cartItem->quantity,
+                                'unit_price' => $this->itemPrice($cartItem),
+                                'is_flash_sale' => false,
+                                'flash_sale_id' => null,
+                            ],
+                        ];
 
-                    $quantity =
-                        (int) $cartItem->quantity;
+                    foreach ($linesToCreate as $lineRow) {
+                        $lineQty = (int) ($lineRow['quantity'] ?? $cartItem->quantity);
+                        $lineUnitPrice = isset($itemMeta['is_free_gift']) && $itemMeta['is_free_gift']
+                            ? (float) ($itemMeta['effective_unit_price'] ?? 0.0)
+                            : (float) ($lineRow['unit_price'] ?? $this->itemPrice($cartItem));
 
-                    $orderItemData = [
-                        'order_id' =>
-                            $order->id,
+                        $orderItemData = [
+                            'order_id' => $order->id,
+                            'product_id' => $product->id,
+                            'product_name' => $product->name,
+                            'quantity' => $lineQty,
+                            'price' => $lineUnitPrice,
+                        ];
 
-                        'product_id' =>
-                            $product->id,
+                        if (
+                            Schema::hasColumn('order_items', 'product_variant_id') &&
+                            $cartItem->variant
+                        ) {
+                            $orderItemData['product_variant_id'] = $cartItem->variant->id;
+                        }
 
-                        'product_name' =>
-                            $product->name,
+                        if (Schema::hasColumn('order_items', 'variant_label')) {
+                            $orderItemData['variant_label'] = $this->variantLabel($cartItem->variant);
+                        }
 
-                        'quantity' =>
-                            $quantity,
+                        if (Schema::hasColumn('order_items', 'subtotal')) {
+                            $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
+                        }
 
-                        'price' =>
-                            $unitPrice,
-                    ];
+                        OrderItem::create($orderItemData);
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Variant ID
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'order_items',
-                            'product_variant_id'
-                        ) &&
-                        $cartItem->variant
-                    ) {
-                        $orderItemData[
-                            'product_variant_id'
-                        ] = $cartItem->variant->id;
+                        if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
+                            $lockedFlash = \App\Models\FlashSale::whereKey($lineRow['flash_sale_id'])
+                                ->lockForUpdate()
+                                ->first();
+                            if ($lockedFlash) {
+                                $lockedFlash->increment('sold_quantity', $lineQty);
+                            }
+                        }
                     }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Variant label
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'order_items',
-                            'variant_label'
-                        )
-                    ) {
-                        $orderItemData[
-                            'variant_label'
-                        ] =
-                            $this->variantLabel(
-                                $cartItem->variant
-                            );
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Optional subtotal
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'order_items',
-                            'subtotal'
-                        )
-                    ) {
-                        $orderItemData[
-                            'subtotal'
-                        ] =
-                            $unitPrice *
-                            $quantity;
-                    }
-
-                    OrderItem::create(
-                        $orderItemData
-                    );
 
                     /*
                     |--------------------------------------------------------------------------
