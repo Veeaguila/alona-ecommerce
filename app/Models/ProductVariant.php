@@ -14,15 +14,26 @@ class ProductVariant extends Model
         'size',
         'price',
         'stock',
+        'low_stock_alerted',
         'sku',
         'image_path',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $variant): void {
+            if ((int) ($variant->stock ?? 0) > 5) {
+                $variant->low_stock_alerted = false;
+            }
+        });
+    }
 
     protected function casts(): array
     {
         return [
             'price' => 'decimal:2',
             'stock' => 'integer',
+            'low_stock_alerted' => 'boolean',
         ];
     }
 

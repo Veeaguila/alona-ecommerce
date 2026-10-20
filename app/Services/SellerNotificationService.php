@@ -4,41 +4,94 @@ namespace App\Services;
 
 use App\Models\OrderReturnRequest;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Review;
 use App\Models\SellerNotification;
 use App\Models\SellerPayoutRequest;
 use App\Models\SellerReview;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class SellerNotificationService
 {
     /**
-     * SELLER-58: Send automated low-stock threshold alert to seller.
+     * SELLER-58 / SEL-INV-008: Send automated low-stock threshold alert to seller
+     * once per crossing (does not repeat until stock goes above threshold and drops again).
      */
-    public static function sendLowStockAlert(Product $product): ?SellerNotification
+    public static function sendLowStockAlert(Product $product, ?ProductVariant $variant = null): ?SellerNotification
     {
         if (!$product->seller_id || !Schema::hasTable('seller_notifications')) {
             return null;
         }
 
-        $threshold = $product->low_stock_threshold ?? 5;
-        $currentStock = (int) $product->stock;
+        $threshold = (int) ($product->low_stock_threshold ?? 5);
 
-        // Check if stock is at or below threshold
+        if ($variant !== null) {
+            $currentStock = (int) $variant->stock;
+            $hasAlertCol = Schema::hasColumn('product_variants', 'low_stock_alerted');
+
+            if ($currentStock > $threshold) {
+                if ($hasAlertCol && $variant->low_stock_alerted) {
+                    DB::table('product_variants')->where('id', $variant->id)->update(['low_stock_alerted' => false]);
+                    $variant->low_stock_alerted = false;
+                }
+                return null;
+            }
+
+            if ($hasAlertCol && $variant->low_stock_alerted) {
+                return null;
+            }
+
+            if ($hasAlertCol) {
+                DB::table('product_variants')->where('id', $variant->id)->update(['low_stock_alerted' => true]);
+                $variant->low_stock_alerted = true;
+            }
+
+            $urgency = $currentStock === 0 ? 'OUT OF STOCK' : 'LOW STOCK';
+            $label = $variant->label();
+            $targetName = $label !== '' ? "{$product->name} ({$label})" : $product->name;
+
+            return SellerNotification::create([
+                'user_id' => $product->seller_id,
+                'type' => 'low_stock',
+                'title' => "[{$urgency}] {$targetName}",
+                'message' => $currentStock === 0
+                    ? "{$targetName} is completely out of stock (0 items remaining). Threshold is {$threshold} units. Please restock immediately to avoid missed sales."
+                    : "{$targetName} is running low on stock with only {$currentStock} item(s) remaining (Threshold: {$threshold} units). Please replenish your inventory.",
+                'url' => route('seller.stock-monitoring'),
+            ]);
+        }
+
+        $currentStock = (int) $product->stock;
+        $hasAlertCol = Schema::hasColumn('products', 'low_stock_alerted');
+
+        // Check if stock is above threshold: reset crossing flag and do not alert
         if ($currentStock > $threshold) {
+            if ($hasAlertCol && $product->low_stock_alerted) {
+                DB::table('products')->where('id', $product->id)->update(['low_stock_alerted' => false]);
+                $product->low_stock_alerted = false;
+            }
             return null;
         }
 
-        // Prevent duplicate alerts sent within the last 12 hours for this product
-        $recentAlert = SellerNotification::where('user_id', $product->seller_id)
-            ->where('type', 'low_stock')
-            ->where('message', 'like', "%{$product->name}%")
-            ->where('created_at', '>=', Carbon::now()->subHours(12))
-            ->first();
+        // Prevent duplicate alerts on the same crossing (SEL-INV-008 / A29)
+        if ($hasAlertCol) {
+            if ($product->low_stock_alerted) {
+                return null;
+            }
+            DB::table('products')->where('id', $product->id)->update(['low_stock_alerted' => true]);
+            $product->low_stock_alerted = true;
+        } else {
+            $recentAlert = SellerNotification::where('user_id', $product->seller_id)
+                ->where('type', 'low_stock')
+                ->where('message', 'like', "%{$product->name}%")
+                ->where('created_at', '>=', Carbon::now()->subHours(12))
+                ->first();
 
-        if ($recentAlert) {
-            return null;
+            if ($recentAlert) {
+                return null;
+            }
         }
 
         $urgency = $currentStock === 0 ? 'OUT OF STOCK' : 'LOW STOCK';

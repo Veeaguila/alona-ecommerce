@@ -598,7 +598,7 @@ const formatDate = (dateString) => {
                                                 id="stock"
                                                 v-model.number="form.stock"
                                                 type="number"
-                                                min="0"
+                                                min="0" max="99999" step="1"
                                                 class="block w-full rounded-xl border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] shadow-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
                                             />
 
@@ -613,7 +613,7 @@ const formatDate = (dateString) => {
                                             v-if="form.errors.stock"
                                             class="mt-2 text-xs font-medium text-[#DC2626]"
                                         >
-                                            {{ form.errors.stock }}
+                                            {{ form.errors.stock }}</p><div class="mt-4"><label for="notes" class="mb-2 block text-xs font-bold uppercase tracking-wide text-[#475569]">Reason / Notes (Optional)</label><input id="notes" v-model="form.notes" type="text" placeholder="e.g. Restock from supplier, manual recount" class="block w-full rounded-xl border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#1F2937] shadow-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10" /></div><p v-if="false">
                                         </p>
                                     </div>
                                 </div>
@@ -738,7 +738,7 @@ const formatDate = (dateString) => {
                                                                     variant.stock
                                                                 "
                                                                 type="number"
-                                                                min="0"
+                                                                min="0" max="99999" step="1"
                                                                 class="block w-full rounded-xl border-[#E5E7EB] bg-white px-3 py-2 text-sm font-semibold text-[#1F2937] shadow-sm outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
                                                             />
 
@@ -828,7 +828,7 @@ const formatDate = (dateString) => {
                                                         variant.stock
                                                     "
                                                     type="number"
-                                                    min="0"
+                                                    min="0" max="99999" step="1"
                                                     class="block w-full rounded-xl border-[#E5E7EB] bg-white px-3 py-2.5 text-sm font-semibold text-[#1F2937] shadow-sm outline-none focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
                                                 />
                                             </div>
@@ -1292,7 +1292,7 @@ const formatDate = (dateString) => {
                             <input
                                 v-model.number="adjustmentForm.quantity"
                                 type="number"
-                                :min="adjustmentForm.mode === 'set' ? 0 : 1"
+                                :min="adjustmentForm.mode === 'set' ? 0 : 1" max="99999" step="1"
                                 class="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm font-semibold text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#087F8C]/10"
                                 required
                             />

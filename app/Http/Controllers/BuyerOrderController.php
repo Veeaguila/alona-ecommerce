@@ -35,6 +35,8 @@ class BuyerOrderController extends Controller
      */
     public function index(Request $request): Response
     {
+        Order::autoCancelExpiredUnpaidOrders();
+
         $user = $request->user();
         $statusTab = strtolower((string) $request->input('status', 'all'));
         $search = trim((string) $request->input('search', ''));
@@ -123,6 +125,8 @@ class BuyerOrderController extends Controller
      */
     public function checkout(Request $request): Response
     {
+        Order::autoCancelExpiredUnpaidOrders();
+
         $selectedIds = $this->normalizeSelectedIds(
             $request->input('selected_items', [])
         );
@@ -255,6 +259,9 @@ class BuyerOrderController extends Controller
         Request $request,
         Order $order
     ): Response {
+        Order::autoCancelExpiredUnpaidOrders();
+        $order->refresh();
+
         abort_unless(
             (int) $order->user_id ===
             (int) $request->user()->id,
@@ -761,6 +768,22 @@ class BuyerOrderController extends Controller
                 */
 
                 foreach ($items as $item) {
+                    $lockedProduct = $item->product_id
+                        ? Product::with(['category', 'variants', 'seller'])
+                            ->whereKey($item->product_id)
+                            ->lockForUpdate()
+                            ->first()
+                        : null;
+                    $item->setRelation('product', $lockedProduct);
+
+                    if ($item->product_variant_id) {
+                        $lockedVariant = \App\Models\ProductVariant::query()
+                            ->whereKey($item->product_variant_id)
+                            ->lockForUpdate()
+                            ->first();
+                        $item->setRelation('variant', $lockedVariant);
+                    }
+
                     if (!$item->product) {
                         throw ValidationException::withMessages([
                             'selected_items' =>
@@ -802,13 +825,20 @@ class BuyerOrderController extends Controller
                         $item
                     );
 
+                    if ($stock <= 0) {
+                        throw ValidationException::withMessages([
+                            'selected_items' =>
+                                "Out of stock: {$item->product->name} is currently Sold out.",
+                        ]);
+                    }
+
                     if (
                         $stock <
                         (int) $item->quantity
                     ) {
                         throw ValidationException::withMessages([
                             'selected_items' =>
-                                "Insufficient stock for {$item->product->name}.",
+                                "Only {$stock} left for {$item->product->name}. Please adjust quantity to {$stock} or fewer.",
                         ]);
                     }
                 }
@@ -1569,6 +1599,10 @@ class BuyerOrderController extends Controller
             404
         );
 
+        if (!$request->filled('reason') && $request->filled('cancellation_reason')) {
+            $request->merge(['reason' => $request->input('cancellation_reason')]);
+        }
+
         $data = $request->validate([
             'reason' => [
                 'required',
@@ -2262,10 +2296,17 @@ class BuyerOrderController extends Controller
                     'stock'
                 )
             ) {
-                $variant->decrement(
-                    'stock',
-                    $quantity
-                );
+                $affected = $variant->newQuery()
+                    ->whereKey($variant->id)
+                    ->where('stock', '>=', $quantity)
+                    ->decrement('stock', $quantity);
+
+                if ($affected === 0) {
+                    throw ValidationException::withMessages([
+                        'selected_items' => "Out of stock: {$cartItem->product?->name} is currently Sold out.",
+                    ]);
+                }
+                $variant->refresh();
             } elseif (
                 Schema::hasColumn(
                     $variant->getTable(),
@@ -2355,10 +2396,17 @@ class BuyerOrderController extends Controller
                 'stock'
             )
         ) {
-            $product->decrement(
-                'stock',
-                $quantity
-            );
+            $affected = $product->newQuery()
+                ->whereKey($product->id)
+                ->where('stock', '>=', $quantity)
+                ->decrement('stock', $quantity);
+
+            if ($affected === 0) {
+                throw ValidationException::withMessages([
+                    'selected_items' => "Out of stock: {$product->name} is currently Sold out.",
+                ]);
+            }
+            $product->refresh();
         } elseif (
             Schema::hasColumn(
                 $product->getTable(),
@@ -2590,6 +2638,12 @@ class BuyerOrderController extends Controller
         }
 
         $product = $cartItem->product->fresh() ?? $cartItem->product;
+        if ($cartItem->variant) {
+            $variant = $cartItem->variant->fresh() ?? $cartItem->variant;
+            \App\Services\SellerNotificationService::sendLowStockAlert($product, $variant);
+            return;
+        }
+
         \App\Services\SellerNotificationService::sendLowStockAlert($product);
     }
 
@@ -2643,6 +2697,10 @@ class BuyerOrderController extends Controller
 
             if (Schema::hasColumn($variant->getTable(), 'stock')) {
                 $variant->increment('stock', $quantity);
+                $freshVariant = $variant->fresh();
+                if ($freshVariant && $freshVariant->stock > 5 && Schema::hasColumn('product_variants', 'low_stock_alerted')) {
+                    $freshVariant->update(['low_stock_alerted' => false]);
+                }
             } elseif (Schema::hasColumn($variant->getTable(), 'quantity')) {
                 $variant->increment('quantity', $quantity);
             }
@@ -2661,9 +2719,12 @@ class BuyerOrderController extends Controller
                         ->sum('quantity');
                 }
 
-                $product->update([
-                    'stock' => max(0, (int) $variantStock),
-                ]);
+                $updateData = ['stock' => max(0, (int) $variantStock)];
+                $threshold = (int) ($product->low_stock_threshold ?? 5);
+                if ((int) $variantStock > $threshold && Schema::hasColumn('products', 'low_stock_alerted')) {
+                    $updateData['low_stock_alerted'] = false;
+                }
+                $product->update($updateData);
             }
 
             return;
@@ -2674,6 +2735,11 @@ class BuyerOrderController extends Controller
 
             if (Schema::hasColumn($product->getTable(), 'stock')) {
                 $product->increment('stock', $quantity);
+                $freshProduct = $product->fresh();
+                $threshold = (int) ($freshProduct?->low_stock_threshold ?? 5);
+                if ($freshProduct && $freshProduct->stock > $threshold && Schema::hasColumn('products', 'low_stock_alerted')) {
+                    $freshProduct->update(['low_stock_alerted' => false]);
+                }
             } elseif (Schema::hasColumn($product->getTable(), 'quantity')) {
                 $product->increment('quantity', $quantity);
             }

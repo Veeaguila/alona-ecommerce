@@ -21,6 +21,8 @@ class SellerOrderController extends Controller
      */
     public function index(Request $request): Response
     {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+
         $sellerId = $request->user()->id;
 
         $items = OrderItem::query()
@@ -574,11 +576,29 @@ class SellerOrderController extends Controller
                 'stock',
                 $orderItem->quantity
             );
+            $freshVariant = $orderItem->variant->fresh();
+            if ($freshVariant && $freshVariant->stock > 5 && \Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'low_stock_alerted')) {
+                $freshVariant->update(['low_stock_alerted' => false]);
+            }
+            if ($orderItem->product) {
+                $totalStock = (int) $orderItem->product->variants()->sum('stock');
+                $updateData = ['stock' => max(0, $totalStock)];
+                $threshold = (int) ($orderItem->product->low_stock_threshold ?? 5);
+                if ($totalStock > $threshold && \Illuminate\Support\Facades\Schema::hasColumn('products', 'low_stock_alerted')) {
+                    $updateData['low_stock_alerted'] = false;
+                }
+                $orderItem->product->update($updateData);
+            }
         } elseif ($orderItem->product) {
             $orderItem->product->increment(
                 'stock',
                 $orderItem->quantity
             );
+            $freshProduct = $orderItem->product->fresh();
+            $threshold = (int) ($freshProduct?->low_stock_threshold ?? 5);
+            if ($freshProduct && $freshProduct->stock > $threshold && \Illuminate\Support\Facades\Schema::hasColumn('products', 'low_stock_alerted')) {
+                $freshProduct->update(['low_stock_alerted' => false]);
+            }
         }
 
         $reason = $data['reason']

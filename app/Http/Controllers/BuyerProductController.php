@@ -16,6 +16,8 @@ class BuyerProductController extends Controller
      */
     public function index(Request $request): Response
     {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+
         $search = trim((string) $request->input('search', ''));
         $category = $request->input('category', 'all');
         $maxPrice = $request->input('max_price', 5000);
@@ -135,6 +137,9 @@ class BuyerProductController extends Controller
      */
     public function show(Product $product): Response
     {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+        $product->refresh();
+
         /*
         |--------------------------------------------------------------------------
         | Only approved products can be viewed.

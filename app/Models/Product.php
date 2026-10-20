@@ -22,6 +22,7 @@ class Product extends Model
         'old_price',
         'stock',
         'low_stock_threshold',
+        'low_stock_alerted',
         'image_path',
         'status',
         'is_featured',
@@ -40,7 +41,19 @@ class Product extends Model
         'min_price',
         'max_price',
         'price_range',
+        'is_sold_out',
+        'stock_status_label',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $product): void {
+            $threshold = (int) ($product->low_stock_threshold ?? 5);
+            if ((int) ($product->stock ?? 0) > $threshold) {
+                $product->low_stock_alerted = false;
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -54,8 +67,27 @@ class Product extends Model
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
             'low_stock_threshold' => 'integer',
+            'low_stock_alerted' => 'boolean',
             'variation_types' => 'array',
         ];
+    }
+
+    public function getIsSoldOutAttribute(): bool
+    {
+        return (int) ($this->attributes['stock'] ?? 0) <= 0;
+    }
+
+    public function getStockStatusLabelAttribute(): string
+    {
+        $stock = (int) ($this->attributes['stock'] ?? 0);
+        if ($stock <= 0) {
+            return 'Sold out';
+        }
+        $threshold = (int) ($this->attributes['low_stock_threshold'] ?? 5);
+        if ($stock <= $threshold) {
+            return 'Low Stock';
+        }
+        return 'In Stock';
     }
 
     public function getMinPriceAttribute(): string

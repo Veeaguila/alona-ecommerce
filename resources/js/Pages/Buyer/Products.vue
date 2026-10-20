@@ -298,7 +298,7 @@ const changeCategory = category => {
                                 <span
                                     class="flex shrink-0 items-center justify-center rounded-lg bg-[#087F8C] px-2 py-1.5 text-[9px] font-semibold text-white transition group-hover:bg-[#16A6A0] sm:px-2.5 sm:text-[10px]"
                                 >
-                                    View
+                                    {{ Number(product.stock ?? 0) <= 0 ? 'Sold out' : 'View' }}
                                 </span>
 
                             </div>

@@ -145,7 +145,7 @@ Route::middleware([
         'show',
     ])->name('buyer.orders.show');
 
-    Route::post('/buyer/orders/{order}/cancel', [
+    Route::match(['post', 'patch'], '/buyer/orders/{order}/cancel', [
         BuyerOrderController::class,
         'cancel',
     ])->name('buyer.orders.cancel');

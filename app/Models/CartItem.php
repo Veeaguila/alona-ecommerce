@@ -18,6 +18,7 @@ class CartItem extends Model
     protected $appends = [
         'is_unavailable',
         'unavailable_reason',
+        'stock_warning',
     ];
 
     protected static function booted(): void
@@ -62,6 +63,40 @@ class CartItem extends Model
     public function getIsUnavailableAttribute(): bool
     {
         return $this->unavailable_reason !== null;
+    }
+
+    public function getStockWarningAttribute(): ?string
+    {
+        if ($this->is_unavailable) {
+            return null;
+        }
+
+        $stock = null;
+        if ($this->product_variant_id) {
+            $variant = $this->relationLoaded('variant') ? $this->variant : $this->variant()->first();
+            if ($variant) {
+                $stock = (int) $variant->stock;
+            }
+        } elseif ($this->product_id) {
+            $product = $this->relationLoaded('product') ? $this->product : $this->product()->first();
+            if ($product) {
+                $stock = (int) $product->stock;
+            }
+        }
+
+        if ($stock === null) {
+            return null;
+        }
+
+        if ($stock <= 0) {
+            return 'Sold out';
+        }
+
+        if ((int) $this->quantity > $stock) {
+            return "Only {$stock} left";
+        }
+
+        return null;
     }
 
     /**

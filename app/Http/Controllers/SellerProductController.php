@@ -30,6 +30,8 @@ class SellerProductController extends Controller
 
     public function index(Request $request): Response
     {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+
         $seller = $request->user();
 
         $products = Product::with('category:id,name')
@@ -146,6 +148,8 @@ class SellerProductController extends Controller
 
     public function stockMonitoring(Request $request): Response
     {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+
         $seller = $request->user();
 
         $search = trim((string) $request->input('search', ''));
@@ -611,6 +615,8 @@ class SellerProductController extends Controller
         Request $request,
         Product $product
     ): Response {
+        \App\Models\Order::autoCancelExpiredUnpaidOrders();
+
         abort_unless(
             $product->seller_id === $request->user()->id,
             403
@@ -669,6 +675,7 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+                'max:99999',
             ],
 
             'type' => [
@@ -678,6 +685,12 @@ class SellerProductController extends Controller
             ],
 
             'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'reason' => [
                 'nullable',
                 'string',
                 'max:1000',
@@ -704,6 +717,7 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+                'max:99999',
             ],
 
             'variants.*.notes' => [
@@ -719,7 +733,7 @@ class SellerProductController extends Controller
             $seller
         ) {
             $defaultType = $validated['type'] ?? null;
-            $defaultNotes = $validated['notes'] ?? null;
+            $defaultNotes = $validated['notes'] ?? $validated['reason'] ?? null;
             $refNumber = $validated['reference_number'] ?? null;
 
             foreach (
@@ -759,6 +773,11 @@ class SellerProductController extends Controller
                         'notes' => $itemNotes,
                         'reference_number' => $refNumber,
                     ]);
+
+                    $freshVariant = $variant->fresh();
+                    if ($freshVariant && $freshVariant->stock > 0 && $freshVariant->stock <= 5) {
+                        \App\Services\SellerNotificationService::sendLowStockAlert($product, $freshVariant);
+                    }
                 }
             }
 
@@ -828,6 +847,16 @@ class SellerProductController extends Controller
             403
         );
 
+        if (!$request->has('quantity') && $request->has('stock')) {
+            $request->merge([
+                'quantity' => $request->input('stock'),
+                'mode' => $request->input('mode', 'set'),
+                'type' => $request->input('type', 'manual'),
+            ]);
+        }
+
+        $isSetMode = $request->input('mode') === 'set';
+
         $validated = $request->validate([
             'type' => [
                 'required',
@@ -837,7 +866,8 @@ class SellerProductController extends Controller
             'quantity' => [
                 'required',
                 'integer',
-                'min:1',
+                $isSetMode ? 'min:0' : 'min:1',
+                'max:99999',
             ],
             'mode' => [
                 'nullable',
@@ -850,6 +880,11 @@ class SellerProductController extends Controller
                 'exists:product_variants,id',
             ],
             'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+            'reason' => [
                 'nullable',
                 'string',
                 'max:1000',
@@ -909,13 +944,29 @@ class SellerProductController extends Controller
                 }
             }
 
+            if ($newStock < 0 || $newStock > 99999) {
+                return back()->withErrors([
+                    'quantity' => 'Total stock must be between 0 and 99,999.',
+                ]);
+            }
+
             if ($variant) {
                 $variant->update(['stock' => $newStock]);
                 $product->update([
                     'stock' => $product->variants()->sum('stock'),
                 ]);
+
+                $freshVariant = $variant->fresh();
+                if ($freshVariant && $freshVariant->stock > 0 && $freshVariant->stock <= 5) {
+                    \App\Services\SellerNotificationService::sendLowStockAlert($product, $freshVariant);
+                }
             } else {
                 $product->update(['stock' => $newStock]);
+            }
+
+            $freshProduct = $product->fresh();
+            if ($freshProduct && $freshProduct->isLowStock()) {
+                \App\Services\SellerNotificationService::sendLowStockAlert($freshProduct);
             }
 
             StockAdjustment::create([
@@ -927,7 +978,7 @@ class SellerProductController extends Controller
                 'quantity' => $delta,
                 'before_stock' => $currentStock,
                 'after_stock' => $newStock,
-                'notes' => $validated['notes'] ?? null,
+                'notes' => $validated['notes'] ?? $validated['reason'] ?? null,
                 'reference_number' => $validated['reference_number'] ?? null,
             ]);
 
@@ -971,6 +1022,7 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+                'max:99999',
             ],
         ]);
 
@@ -1062,6 +1114,7 @@ class SellerProductController extends Controller
                 'required',
                 'integer',
                 'min:0',
+                'max:99999',
             ],
         ]);
 

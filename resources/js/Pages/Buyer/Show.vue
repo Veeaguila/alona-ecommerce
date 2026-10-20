@@ -1257,7 +1257,7 @@ const breadcrumbs = computed(() => {
                                         {{
                                             availableStock
                                         }}
-                                        items available
+                                        {{ availableStock <= 0 ? '— Sold out' : 'items available' }}
 
                                         <span
                                             v-if="
@@ -1441,7 +1441,7 @@ const breadcrumbs = computed(() => {
                                         {{
                                             availableStock
                                         }}
-                                        items available
+                                        {{ availableStock <= 0 ? '— Sold out' : 'items available' }}
                                     </p>
                                 </div>
 

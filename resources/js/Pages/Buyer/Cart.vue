@@ -1170,7 +1170,7 @@ const checkoutButtonLabel = computed(() => {
                                             "
                                             class="mt-2.5 rounded-lg bg-[#FFF1F1] px-2.5 py-2 text-[10px] font-bold text-[#C24141]"
                                         >
-                                            This item is currently out of stock.
+                                            Sold out — This item is currently out of stock.
                                         </p>
 
                                         <!-- EXCEEDS STOCK -->
@@ -1189,7 +1189,7 @@ const checkoutButtonLabel = computed(() => {
                                                     item
                                                 )
                                             }}
-                                            item(s) are currently available.
+                                            left — please reduce quantity before checkout.
                                         </p>
                                     </div>
                                 </div>
