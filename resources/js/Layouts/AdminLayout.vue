@@ -12,7 +12,7 @@
 
         <!-- Sidebar (matches SellerLayout) -->
         <aside
-            class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0 print:hidden"
+            class="fixed inset-y-0 left-0 z-40 w-[252px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0 print:hidden"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex h-full min-h-0 flex-col">
@@ -59,7 +59,7 @@
 
                 <!-- Scrollable Navigation -->
                 <div
-                    class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
+                    class="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
                 >
                     <!-- Workspace -->
                     <div class="pt-5">
@@ -74,7 +74,7 @@
                                 v-for="item in navigation"
                                 :key="item.key"
                                 :href="item.href"
-                                class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+                                class="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition"
                                 :class="
                                     isActive(item)
                                         ? 'bg-[#F5A711] text-[#043E44] font-bold shadow-md'
@@ -378,7 +378,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="lg:pl-[240px] print:pl-0">
+        <div class="lg:pl-[252px] print:pl-0">
 
             <!-- Sticky Header (height 68px, matching SellerLayout) -->
             <header
@@ -968,3 +968,34 @@ const logout = () => {
     form.post(route('logout'))
 }
 </script>
+
+
+<style scoped>
+.sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+</style>

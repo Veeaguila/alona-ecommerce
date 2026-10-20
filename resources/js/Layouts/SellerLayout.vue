@@ -58,7 +58,7 @@
                 </div>
                 <!-- Scrollable Navigation -->
                 <div
-                    class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
+                    class="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
                 >
 
                     <!-- Workspace -->
