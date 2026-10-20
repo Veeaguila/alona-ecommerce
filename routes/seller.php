@@ -386,10 +386,25 @@ Route::middleware([
         'index',
     ])->name('seller.returns');
 
-    Route::post('/seller/returns/{returnRequest}/decision', [
+    Route::get('/seller/returns/{returnRequest}', [
+        SellerReturnController::class,
+        'show',
+    ])->name('seller.returns.show');
+
+    Route::match(['post', 'patch'], '/seller/returns/{returnRequest}/decision', [
         SellerReturnController::class,
         'decision',
     ])->name('seller.returns.decision');
+
+    Route::post('/seller/returns/{returnRequest}/approve', [
+        SellerReturnController::class,
+        'decision',
+    ])->name('seller.returns.approve');
+
+    Route::post('/seller/returns/{returnRequest}/reject', [
+        SellerReturnController::class,
+        'decision',
+    ])->name('seller.returns.reject');
 
     Route::post('/seller/returns/{returnRequest}/tracking', [
         SellerReturnController::class,

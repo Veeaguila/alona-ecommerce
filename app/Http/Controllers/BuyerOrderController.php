@@ -36,6 +36,7 @@ class BuyerOrderController extends Controller
     public function index(Request $request): Response
     {
         Order::autoCancelExpiredUnpaidOrders();
+        OrderReturnRequest::autoApproveExpiredPendingRequests();
 
         $user = $request->user();
         $statusTab = strtolower((string) $request->input('status', 'all'));
@@ -271,6 +272,7 @@ class BuyerOrderController extends Controller
         Order $order
     ): Response {
         Order::autoCancelExpiredUnpaidOrders();
+        OrderReturnRequest::autoApproveExpiredPendingRequests();
         $order->refresh();
 
         abort_unless(
@@ -1895,6 +1897,10 @@ class BuyerOrderController extends Controller
             ]);
         }
 
+        if (! $request->filled('reason_details') && $request->filled('description')) {
+            $request->merge(['reason_details' => $request->input('description')]);
+        }
+
         $data = $request->validate([
             'type' => [
                 'required',
@@ -1942,6 +1948,7 @@ class BuyerOrderController extends Controller
             'reason_details' => $data['reason_details'] ?? null,
             'requested_amount' => (float) ($orderItem->price * $orderItem->quantity),
             'evidence_images' => $evidencePaths,
+            'response_deadline' => now()->addDays(3),
             'status' => 'pending',
         ]);
 
@@ -2037,6 +2044,66 @@ class BuyerOrderController extends Controller
         }
 
         return back()->with('status', 'Return shipping details submitted successfully. Seller has been notified.');
+    }
+
+    /**
+     * Buyer escalates a rejected return request to a dispute (SEL-RET-004, SEL-RET-005 / A31).
+     */
+    public function escalateReturnRequest(
+        Request $request,
+        OrderReturnRequest $returnRequest
+    ): RedirectResponse {
+        abort_unless((int) $returnRequest->buyer_id === (int) $request->user()->id, 403);
+
+        // SEL-RET-005: A second escalation is not possible
+        if ($returnRequest->status === 'in_dispute' || $returnRequest->escalated_at !== null) {
+            throw ValidationException::withMessages([
+                'status' => 'This return request has already been escalated to a dispute.',
+            ]);
+        }
+
+        if ($returnRequest->status !== 'rejected') {
+            throw ValidationException::withMessages([
+                'status' => 'Only rejected return requests can be escalated to a dispute.',
+            ]);
+        }
+
+        $rejectedAt = $returnRequest->seller_responded_at ?? $returnRequest->resolved_at ?? $returnRequest->updated_at;
+        if ($rejectedAt && Carbon::parse($rejectedAt)->addDays(3)->isPast()) {
+            throw ValidationException::withMessages([
+                'status' => 'The 3-day window to escalate this return request has expired.',
+            ]);
+        }
+
+        $disputeReason = trim((string) ($request->input('dispute_reason') ?? $request->input('reason') ?? 'Buyer requested dispute escalation for rejected return claim.'));
+
+        $returnRequest->update([
+            'status' => 'in_dispute',
+            'escalated_at' => now(),
+            'dispute_reason' => $disputeReason,
+        ]);
+
+        $orderNumber = $returnRequest->order?->order_number ?? (string) $returnRequest->order_id;
+
+        // Notify seller
+        if (Schema::hasTable('seller_notifications')) {
+            SellerNotification::create([
+                'user_id' => $returnRequest->seller_id,
+                'title' => 'Return Request Escalated to Dispute',
+                'message' => "Buyer has escalated the rejected return request for Order #{$orderNumber} to dispute resolution.",
+            ]);
+        }
+
+        // Notify buyer
+        if (Schema::hasTable('buyer_notifications')) {
+            BuyerNotification::create([
+                'user_id' => $returnRequest->buyer_id,
+                'title' => 'Dispute Escalated',
+                'message' => "Your dispute for Order #{$orderNumber} has been escalated for administrative review.",
+            ]);
+        }
+
+        return back()->with('status', 'Return request has been escalated to a dispute.');
     }
 
     /*

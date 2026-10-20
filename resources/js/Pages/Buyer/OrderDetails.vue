@@ -123,8 +123,9 @@ const getReturnStatusBadge = status => {
     const s = normalizeStatus(status)
     const map = {
         pending: { label: 'Pending Seller Review', color: 'bg-[#FFF7E6] text-[#A66A00] ring-1 ring-[#F4B942]/30' },
-        approved: { label: 'Return Authorized', color: 'bg-[#EBF5FF] text-[#1E40AF] ring-1 ring-[#3B82F6]/20' },
-        rejected: { label: 'Return Rejected', color: 'bg-[#FDECEC] text-[#B94242] ring-1 ring-[#E85D5D]/20' },
+        approved: { label: 'Return Approved', color: 'bg-[#EBF5FF] text-[#1E40AF] ring-1 ring-[#3B82F6]/20' },
+        rejected: { label: 'Rejected', color: 'bg-[#FDECEC] text-[#B94242] ring-1 ring-[#E85D5D]/20' },
+        in_dispute: { label: 'In Dispute', color: 'bg-[#F3E8FF] text-[#6B21A8] ring-1 ring-[#9333EA]/20' },
         item_returned: { label: 'Item Returned / In Inspection', color: 'bg-[#F3E8FF] text-[#6B21A8] ring-1 ring-[#9333EA]/20' },
         refunded: { label: 'Refund Issued', color: 'bg-[#EAF8F1] text-[#17784F] ring-1 ring-[#22A06B]/20' },
         completed: { label: 'Refund Completed', color: 'bg-[#EAF8F1] text-[#17784F] ring-1 ring-[#22A06B]/20' },
@@ -402,6 +403,18 @@ const cancelReturnRequest = returnRequestId => {
     })
 }
 
+const escalatingReturnId = ref(null)
+const escalateReturn = returnRequestId => {
+    if (!confirm('Are you sure you want to escalate this rejected return request to a dispute for administrative review?')) return
+    escalatingReturnId.value = returnRequestId
+    router.post(route('buyer.return-requests.escalate', returnRequestId), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            escalatingReturnId.value = null
+        },
+    })
+}
+
 const imageUrl = path => {
     if (!path) return null
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/storage/')) return path
@@ -661,12 +674,34 @@ const imageUrl = path => {
 
                                                 <!-- SELLER / ADMIN RESPONSE (BUYER-23) -->
                                                 <div
-                                                    v-if="item.latest_return_request.seller_response || item.latest_return_request.admin_response"
+                                                    v-if="(item.latest_return_request.seller_response || item.latest_return_request.admin_response) && item.latest_return_request.status !== 'rejected'"
                                                     class="mt-2.5 rounded-lg bg-white/80 p-2.5 text-xs text-[#431407]"
                                                 >
                                                     <p class="font-extrabold text-[#9A3412]">Seller Decision / Response:</p>
                                                     <p class="mt-0.5 leading-relaxed">
                                                         {{ item.latest_return_request.seller_response || item.latest_return_request.admin_response }}
+                                                    </p>
+                                                </div>
+
+                                                <!-- REJECTION REASON (SEL-RET-004) -->
+                                                <div
+                                                    v-if="item.latest_return_request.status === 'rejected'"
+                                                    class="mt-2.5 rounded-lg border border-red-200 bg-red-50/80 p-2.5 text-xs text-[#991B1B]"
+                                                >
+                                                    <p class="font-extrabold text-red-900">Rejection Reason:</p>
+                                                    <p class="mt-0.5 leading-relaxed font-medium">
+                                                        {{ item.latest_return_request.rejection_reason || item.latest_return_request.seller_response }}
+                                                    </p>
+                                                </div>
+
+                                                <!-- IN DISPUTE STATUS (SEL-RET-005) -->
+                                                <div
+                                                    v-if="item.latest_return_request.status === 'in_dispute'"
+                                                    class="mt-2.5 rounded-lg border border-purple-200 bg-purple-50/80 p-2.5 text-xs text-purple-950"
+                                                >
+                                                    <p class="font-extrabold text-purple-900">Dispute Under Administrative Review:</p>
+                                                    <p class="mt-0.5 leading-relaxed">
+                                                        This return claim has been escalated to dispute mediation. Both parties will be contacted by platform support.
                                                     </p>
                                                 </div>
 
@@ -710,6 +745,22 @@ const imageUrl = path => {
                                                         @click="cancelReturnRequest(item.latest_return_request.id)"
                                                     >
                                                         {{ cancelingReturnId === item.latest_return_request.id ? 'Cancelling...' : 'Cancel Request' }}
+                                                    </button>
+                                                </div>
+
+                                                <!-- ESCALATE RETURN REQUEST (SEL-RET-004, SEL-RET-005) -->
+                                                <div
+                                                    v-if="item.latest_return_request.status === 'rejected' && item.latest_return_request.can_escalate"
+                                                    class="mt-2.5 flex justify-end"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        :disabled="escalatingReturnId === item.latest_return_request.id"
+                                                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-purple-700 disabled:opacity-50 transition"
+                                                        @click="escalateReturn(item.latest_return_request.id)"
+                                                    >
+                                                        <span>⚠️</span>
+                                                        <span>{{ escalatingReturnId === item.latest_return_request.id ? 'Escalating...' : 'Escalate to Dispute' }}</span>
                                                     </button>
                                                 </div>
                                             </div>

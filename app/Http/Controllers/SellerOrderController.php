@@ -22,6 +22,7 @@ class SellerOrderController extends Controller
     public function index(Request $request): Response
     {
         \App\Models\Order::autoCancelExpiredUnpaidOrders();
+        \App\Models\OrderReturnRequest::autoApproveExpiredPendingRequests();
 
         $sellerId = $request->user()->id;
 

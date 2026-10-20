@@ -180,6 +180,11 @@ Route::middleware([
         'shipReturnRequest',
     ])->name('buyer.return-requests.ship');
 
+    Route::post('/buyer/return-requests/{returnRequest}/escalate', [
+        BuyerOrderController::class,
+        'escalateReturnRequest',
+    ])->name('buyer.return-requests.escalate');
+
 });
 
 

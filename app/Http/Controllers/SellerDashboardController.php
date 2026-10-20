@@ -22,6 +22,8 @@ class SellerDashboardController extends Controller
 
     public function index(Request $request): Response
     {
+        OrderReturnRequest::autoApproveExpiredPendingRequests();
+
         $sellerId = $request->user()->id;
 
         $itemsBase = fn () => OrderItem::query()->whereHas('product', fn ($q) => $q->where('seller_id', $sellerId));
@@ -32,15 +34,18 @@ class SellerDashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        // Total completed gross sales
+        // Total completed gross sales (excluding cancelled, refunded, and return-approved items - SEL-RET-007, A15)
         $totalSales = (float) ((clone $itemsBase())
             ->whereIn('status', self::COMPLETED)
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->whereDoesntHave('returnRequests', fn ($q) => $q->whereIn('status', ['approved', 'in_dispute', 'item_returned', 'refunded', 'completed']))
             ->selectRaw('COALESCE(SUM(price * quantity), 0) as total')
             ->value('total') ?? 0);
 
-        // Pending sales (orders currently in progress / not completed or cancelled)
+        // Pending sales (orders currently in progress / not completed, cancelled, refunded or return-approved - SEL-RET-002, A15)
         $pendingSales = (float) ((clone $itemsBase())
-            ->whereNotIn('status', array_merge(self::COMPLETED, ['cancelled']))
+            ->whereNotIn('status', array_merge(self::COMPLETED, ['cancelled', 'refunded']))
+            ->whereDoesntHave('returnRequests', fn ($q) => $q->whereIn('status', ['approved', 'in_dispute', 'item_returned', 'refunded', 'completed']))
             ->selectRaw('COALESCE(SUM(price * quantity), 0) as total')
             ->value('total') ?? 0);
 

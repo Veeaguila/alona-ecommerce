@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderItem;
+use App\Models\OrderReturnRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +34,8 @@ class SellerReportController extends Controller
      */
     public function reports(Request $request): Response
     {
+        OrderReturnRequest::autoApproveExpiredPendingRequests();
+
         [$from, $to] = $this->resolveRange($request);
 
         $sellerId = $request->user()->id;
@@ -56,24 +60,31 @@ class SellerReportController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Completed sales
+        | Completed sales (excluding cancelled, refunded, or return-approved items - SEL-RET-007, A15)
         |--------------------------------------------------------------------------
         */
 
         $completed = (clone $items)
-            ->whereIn('status', self::COMPLETED);
+            ->whereIn('status', self::COMPLETED)
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->whereDoesntHave('returnRequests', function ($q) {
+                $q->whereIn('status', ['approved', 'item_returned', 'refunded', 'completed']);
+            });
 
         /*
         |--------------------------------------------------------------------------
-        | Pending sales
+        | Pending sales (excluding cancelled, refunded, or return-approved items - SEL-RET-002, A15)
         |--------------------------------------------------------------------------
         */
 
         $pending = (clone $items)
             ->whereNotIn(
                 'status',
-                array_merge(self::COMPLETED, ['cancelled'])
-            );
+                array_merge(self::COMPLETED, ['cancelled', 'refunded'])
+            )
+            ->whereDoesntHave('returnRequests', function ($q) {
+                $q->whereIn('status', ['approved', 'item_returned', 'refunded', 'completed']);
+            });
 
         /*
         |--------------------------------------------------------------------------
@@ -215,6 +226,16 @@ class SellerReportController extends Controller
      */
     private function resolveRange(Request $request): array
     {
+        if ($request->filled('from') && $request->filled('to')) {
+            $fromParsed = Carbon::parse($request->input('from'));
+            $toParsed = Carbon::parse($request->input('to'));
+            if ($toParsed->lt($fromParsed)) {
+                throw ValidationException::withMessages([
+                    'to' => 'The end date cannot be earlier than the start date.',
+                ]);
+            }
+        }
+
         $from = $request->filled('from')
             ? Carbon::parse($request->input('from'))
             : now()->subDays(29);
@@ -222,16 +243,6 @@ class SellerReportController extends Controller
         $to = $request->filled('to')
             ? Carbon::parse($request->input('to'))
             : now();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Automatically correct reversed date ranges
-        |--------------------------------------------------------------------------
-        */
-
-        if ($from->greaterThan($to)) {
-            [$from, $to] = [$to, $from];
-        }
 
         return [$from, $to];
     }

@@ -144,7 +144,7 @@ const openDecisionModal = (req, type) => {
     decisionForm.decision = type
     decisionForm.return_warehouse_address = props.storeAddress || ''
     decisionForm.return_instructions = 'Please pack the item securely in its original packaging and include all accessories.'
-    decisionForm.rejection_reason = type === 'rejected' ? 'item_used' : ''
+    decisionForm.rejection_reason = ''
     decisionForm.seller_response = ''
     decisionForm.refund_now = false
     decisionForm.clearErrors()
@@ -159,6 +159,9 @@ const closeDecisionModal = () => {
 
 const submitDecision = () => {
     if (!selectedRequestForDecision.value) return
+    if (decisionType.value === 'rejected') {
+        decisionForm.seller_response = decisionForm.rejection_reason
+    }
     decisionForm.post(route('seller.returns.decision', selectedRequestForDecision.value.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -283,9 +286,14 @@ const getStatusBadge = (status) => {
             dot: 'bg-amber-500',
         },
         approved: {
-            label: 'Return Authorized',
+            label: 'Return Approved',
             class: 'bg-blue-50 text-blue-800 border-blue-200',
             dot: 'bg-blue-500',
+        },
+        in_dispute: {
+            label: 'In Dispute',
+            class: 'bg-purple-50 text-purple-800 border-purple-200',
+            dot: 'bg-purple-500',
         },
         item_returned: {
             label: 'Item Returned / In Inspection',
@@ -516,9 +524,22 @@ const hasActiveFilters = computed(() => {
                         :class="selectedStatus === 'approved' ? 'border-blue-400 bg-blue-50 text-blue-900' : 'border-transparent text-slate-600 hover:bg-slate-100'"
                     >
                         <span class="h-2 w-2 rounded-full bg-blue-500"></span>
-                        <span>Authorized / In Transit</span>
+                        <span>Return Approved</span>
                         <span class="rounded-full bg-blue-200/70 px-2 py-0.5 text-[10px] text-blue-900">
                             {{ props.statusCounts.approved }}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="filterStatus('in_dispute')"
+                        class="flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition border"
+                        :class="selectedStatus === 'in_dispute' ? 'border-purple-400 bg-purple-50 text-purple-900' : 'border-transparent text-slate-600 hover:bg-slate-100'"
+                    >
+                        <span class="h-2 w-2 rounded-full bg-purple-500"></span>
+                        <span>In Dispute</span>
+                        <span class="rounded-full bg-purple-200/70 px-2 py-0.5 text-[10px] text-purple-900">
+                            {{ props.statusCounts.in_dispute || 0 }}
                         </span>
                     </button>
 
@@ -640,6 +661,16 @@ const hasActiveFilters = computed(() => {
                             </div>
 
                             <div class="flex items-center gap-2">
+                                <span
+                                    v-if="req.status === 'pending'"
+                                    class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800"
+                                >
+                                    <svg class="h-3 w-3 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>Response Deadline: {{ req.response_deadline_label || '3 days' }}</span>
+                                </span>
+
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold"
                                     :class="getStatusBadge(req.status).class"
@@ -846,6 +877,17 @@ const hasActiveFilters = computed(() => {
                                     <div v-else-if="req.status === 'rejected'" class="rounded-xl bg-rose-50 p-2 text-xs text-rose-800 border border-rose-200">
                                         <span class="font-bold block">Claim Rejected</span>
                                         <span class="text-[11px] text-rose-600">{{ req.rejection_reason }}</span>
+                                    </div>
+
+                                    <!-- STAGE 6: IN DISPUTE (SEL-RET-005) -->
+                                    <div v-else-if="req.status === 'in_dispute'" class="rounded-xl bg-purple-50 p-2.5 text-xs text-purple-900 border border-purple-200">
+                                        <span class="font-bold block flex items-center gap-1 text-purple-800">
+                                            <span>⚠️</span>
+                                            <span>In Dispute</span>
+                                        </span>
+                                        <span class="text-[11px] text-purple-700 block mt-0.5 leading-snug">
+                                            Buyer escalated this rejected return. Mediation is underway. Seller can no longer approve or reject.
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -1057,31 +1099,54 @@ const hasActiveFilters = computed(() => {
                             </div>
                         </template>
 
-                        <!-- IF REJECTING -->
+                        <!-- IF REJECTING (SEL-RET-003, SEL-RET-004 / A25: 10-300 characters) -->
                         <template v-else>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700">Rejection Reason Code</label>
-                                <select
-                                    v-model="decisionForm.rejection_reason"
-                                    class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs text-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-hidden"
-                                    required
-                                >
-                                    <option value="" disabled>Select rejection reason...</option>
-                                    <option v-for="r in rejectionReasons" :key="r.value" :value="r.label">
-                                        {{ r.label }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700">Detailed Explanation for Customer</label>
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-bold text-slate-700">Rejection Reason (10–300 characters)</label>
+                                    <span class="text-[10px] font-mono text-slate-400">
+                                        {{ (decisionForm.rejection_reason || '').length }}/300
+                                    </span>
+                                </div>
                                 <textarea
-                                    v-model="decisionForm.seller_response"
-                                    rows="3"
-                                    placeholder="Explain why this request is rejected under your return policy..."
+                                    v-model="decisionForm.rejection_reason"
+                                    rows="4"
+                                    minlength="10"
+                                    maxlength="300"
+                                    placeholder="Explain in detail why this request is rejected (10–300 characters)..."
                                     class="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-hidden"
                                     required
                                 ></textarea>
+                                <p v-if="decisionForm.errors.rejection_reason || decisionForm.errors.reason" class="mt-1 text-xs text-rose-600 font-semibold">
+                                    {{ decisionForm.errors.rejection_reason || decisionForm.errors.reason }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-[11px] font-bold text-slate-500 mb-1.5">Common Rejection Presets:</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <button
+                                        type="button"
+                                        @click="decisionForm.rejection_reason = 'Item shows signs of use and the tag is removed.'"
+                                        class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:bg-slate-100 transition text-left"
+                                    >
+                                        Item shows signs of use and the tag is removed.
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="decisionForm.rejection_reason = 'Missing original packaging, accessories, and warranty card.'"
+                                        class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:bg-slate-100 transition text-left"
+                                    >
+                                        Missing original packaging and accessories.
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="decisionForm.rejection_reason = 'Item returned after the 7-day return policy window expired.'"
+                                        class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:bg-slate-100 transition text-left"
+                                    >
+                                        Return policy window has expired.
+                                    </button>
+                                </div>
                             </div>
                         </template>
 

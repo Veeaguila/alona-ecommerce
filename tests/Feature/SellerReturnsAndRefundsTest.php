@@ -8,341 +8,509 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderReturnRequest;
 use App\Models\Product;
-use App\Models\RefundLedger;
-use App\Models\StockAdjustment;
+use App\Models\SellerNotification;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class SellerReturnsAndRefundsTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $seller;
-    protected User $buyer;
-    protected Product $product;
-    protected Order $order;
-    protected OrderItem $orderItem;
+    private User $seller1;
+    private User $seller2;
+    private User $buyer1;
+    private Product $productP02;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->seller = User::factory()->create([
+        $this->seller1 = User::factory()->create([
             'usertype' => 'seller',
             'status' => 'approved',
-            'store_name' => 'Apex Electronics',
-            'street_address' => '123 Warehouse St',
-            'province' => 'Metro Manila',
-            'municipality' => 'Pasig City',
+            'store_name' => 'Store 1',
+            'street_address' => '123 Market St',
             'barangay' => 'San Antonio',
+            'municipality' => 'Pasig',
+            'province' => 'Metro Manila',
         ]);
 
-        $this->buyer = User::factory()->create([
+        $this->seller2 = User::factory()->create([
+            'usertype' => 'seller',
+            'status' => 'approved',
+            'store_name' => 'Store 2',
+        ]);
+
+        $this->buyer1 = User::factory()->create([
             'usertype' => 'buyer',
             'status' => 'approved',
-            'name' => 'Juan Dela Cruz',
+            'name' => 'Buyer One',
+            'email' => 'buyer1@example.com',
+            'email_verified_at' => now(),
         ]);
 
         $category = Category::create([
-            'name' => 'Electronics',
-            'slug' => 'electronics',
+            'name' => 'Handicrafts',
+            'slug' => 'handicrafts',
         ]);
 
-        $this->product = Product::create([
+        $this->productP02 = Product::create([
+            'seller_id' => $this->seller1->id,
             'category_id' => $category->id,
-            'seller_id' => $this->seller->id,
-            'name' => 'Wireless Gaming Headset',
-            'slug' => 'wireless-gaming-headset',
-            'price' => 1500.00,
-            'stock' => 10,
+            'name' => 'Woven Basket P-02',
+            'sku' => 'P-02',
+            'price' => 450.00,
+            'stock' => 20,
             'status' => 'approved',
         ]);
+    }
 
-        $this->order = Order::create([
-            'user_id' => $this->buyer->id,
-            'order_number' => 'ALN-20261015-883921',
-            'total' => 1500.00,
-            'shipping_address' => '123 Buyer St, Manila',
-            'status' => 'completed',
+    private function createOrderWithItem(float $price = 450.00, int $quantity = 1, string $status = 'delivered'): array
+    {
+        $order = Order::create([
+            'user_id' => $this->buyer1->id,
+            'order_number' => 'ORD-' . strtoupper(uniqid()),
+            'status' => $status,
             'payment_status' => 'paid',
             'payment_method' => 'gcash',
+            'shipping_method' => 'standard',
+            'shipping_fee' => 0.00,
+            'subtotal' => $price * $quantity,
+            'total' => $price * $quantity,
+            'shipping_address' => '456 Elm St, Pasig City',
         ]);
 
-        $this->orderItem = OrderItem::create([
-            'order_id' => $this->order->id,
-            'product_id' => $this->product->id,
-            'product_name' => $this->product->name,
-            'price' => 1500.00,
-            'quantity' => 1,
-            'status' => 'delivered',
+        $orderItem = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $this->productP02->id,
+            'product_name' => $this->productP02->name,
+            'price' => $price,
+            'quantity' => $quantity,
+            'status' => $status,
         ]);
+
+        return [$order, $orderItem];
     }
 
     /**
-     * SELLER-36 & SELLER-37: Dedicated returns center renders with dynamic status counts & filters.
+     * SEL-RET-001: View a return request with evidence.
+     * Shows reason, description, both photos, item, amount, and response deadline (3 days).
      */
-    public function test_dedicated_returns_center_renders_with_actual_counts_and_filters(): void
+    public function test_sel_ret_001_view_return_request_with_evidence(): void
     {
-        // Create return requests with various statuses
-        OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
+        $returnRequest = OrderReturnRequest::create([
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
             'type' => 'return_and_refund',
-            'reason' => 'defective',
-            'reason_details' => 'Microphone is not working',
-            'requested_amount' => 1500.00,
+            'reason' => 'Damaged or defective',
+            'reason_details' => 'The woven handle was completely torn upon delivery.',
+            'requested_amount' => 450.00,
+            'evidence_images' => ['returns/photo1.jpg', 'returns/photo2.jpg'],
             'status' => 'pending',
+            'response_deadline' => now()->addDays(3),
         ]);
 
-        OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
-            'type' => 'refund_only',
-            'reason' => 'wrong_item',
-            'requested_amount' => 1500.00,
-            'status' => 'approved',
-        ]);
-
-        $response = $this->actingAs($this->seller)->get(route('seller.returns'));
+        $response = $this->actingAs($this->seller1)
+            ->get(route('seller.returns'));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('Seller/Returns')
-            ->has('returnRequests.data', 2)
-            ->where('statusCounts.all', 2)
-            ->where('statusCounts.pending', 1)
-            ->where('statusCounts.approved', 1)
-            ->where('statusCounts.rejected', 0)
-        );
+        $response->assertInertia(function ($page) use ($returnRequest) {
+            $page->component('Seller/Returns');
+            $data = $page->toArray()['props']['returnRequests']['data'];
+            $found = collect($data)->firstWhere('id', $returnRequest->id);
+            $this->assertNotNull($found);
+            $this->assertSame('Damaged or defective', $found['reason']);
+            $this->assertSame('The woven handle was completely torn upon delivery.', $found['reason_details']);
+            $this->assertCount(2, $found['evidence_images']);
+            $this->assertSame('returns/photo1.jpg', $found['evidence_images'][0]);
+            $this->assertSame('returns/photo2.jpg', $found['evidence_images'][1]);
+            $this->assertSame('Woven Basket P-02', $found['order_item']['product_name']);
+            $this->assertEquals(450.00, (float) $found['requested_amount']);
+            $this->assertStringContainsString('3 days', $found['response_deadline_label']);
+        });
 
-        // Test filtering by status
-        $pendingResponse = $this->actingAs($this->seller)->get(route('seller.returns', ['status' => 'pending']));
-        $pendingResponse->assertOk();
-        $pendingResponse->assertInertia(fn (Assert $page) => $page
-            ->component('Seller/Returns')
-            ->has('returnRequests.data', 1)
-            ->where('returnRequests.data.0.status', 'pending')
-        );
+        // Direct show endpoint
+        $showResponse = $this->actingAs($this->seller1)
+            ->getJson(route('seller.returns.show', $returnRequest->id));
+
+        $showResponse->assertOk()
+            ->assertJsonPath('reason', 'Damaged or defective')
+            ->assertJsonPath('reason_details', 'The woven handle was completely torn upon delivery.')
+            ->assertJsonPath('requested_amount', '450.00')
+            ->assertJsonCount(2, 'evidence_images');
     }
 
     /**
-     * SELLER-38: Seller return decisioning (Approve with return instructions and warehouse address).
+     * SEL-RET-002: Approve a return request.
+     * Status Return Approved on both sides. Buyer 1 is notified and sees return instructions.
+     * The amount moves out of Seller 1's pending earnings.
      */
-    public function test_seller_can_approve_return_request_with_instructions(): void
+    public function test_sel_ret_002_approve_return_request(): void
     {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'processing');
+
         $returnRequest = OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
             'type' => 'return_and_refund',
-            'reason' => 'damaged_in_transit',
-            'requested_amount' => 1500.00,
+            'reason' => 'Damaged or defective',
+            'reason_details' => 'Damaged basket handle.',
+            'requested_amount' => 450.00,
             'status' => 'pending',
+            'response_deadline' => now()->addDays(3),
         ]);
 
-        $response = $this->actingAs($this->seller)->post(
-            route('seller.returns.decision', $returnRequest->id),
-            [
+        // Prior to approval, verify ₱450.00 is in pending earnings
+        $reportBefore = $this->actingAs($this->seller1)->get(route('seller.reports'));
+        $pendingBefore = $reportBefore->viewData('page')['props']['summary']['pending_payments'];
+        $this->assertEquals(450.00, $pendingBefore);
+
+        // Seller 1 clicks Approve
+        $approveResponse = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
                 'decision' => 'approved',
-                'return_instructions' => 'Pack in bubble wrap with original box.',
-                'return_warehouse_address' => 'Apex Returns Depot, Gate 3, Pasig City',
-            ]
+                'return_instructions' => 'Pack securely in original box and drop off at J&T Express branch.',
+                'return_warehouse_address' => '123 Market St, San Antonio, Pasig',
+            ]);
+
+        $approveResponse->assertRedirect();
+        $returnRequest->refresh();
+
+        // 1. Status Return Approved on both sides
+        $this->assertSame('approved', $returnRequest->status);
+        $this->assertSame('Return Approved', $returnRequest->status_label);
+
+        // Buyer opens order details
+        $buyerResponse = $this->actingAs($this->buyer1)
+            ->get(route('buyer.orders.show', $order->id));
+
+        $buyerResponse->assertOk();
+        $buyerResponse->assertInertia(function ($page) {
+            $items = $page->toArray()['props']['order']['items'];
+            $this->assertNotEmpty($items);
+            $req = $items[0]['latest_return_request'];
+            $this->assertSame('approved', $req['status']);
+            $this->assertStringContainsString('Pack securely', $req['return_instructions']);
+            $this->assertStringContainsString('123 Market St', $req['return_warehouse_address']);
+        });
+
+        // 2. Buyer 1 is notified
+        $this->assertTrue(
+            BuyerNotification::where('user_id', $this->buyer1->id)
+                ->where('title', 'Return Request Approved')
+                ->exists()
         );
 
-        $response->assertSessionHas('status');
-
-        $returnRequest->refresh();
-        $this->assertEquals('approved', $returnRequest->status);
-        $this->assertEquals('approved', $returnRequest->decision);
-        $this->assertEquals('Pack in bubble wrap with original box.', $returnRequest->return_instructions);
-        $this->assertEquals('Apex Returns Depot, Gate 3, Pasig City', $returnRequest->return_warehouse_address);
-        $this->assertNotNull($returnRequest->seller_responded_at);
-
-        // Verify initial shipping milestone was generated
-        $this->assertNotEmpty($returnRequest->return_shipping_history);
-        $this->assertEquals('approved', $returnRequest->return_shipping_status);
-
-        // Verify buyer was notified
-        $this->assertDatabaseHas('buyer_notifications', [
-            'user_id' => $this->buyer->id,
-            'title' => 'Return Request Approved',
-        ]);
+        // 3. Amount moves out of Seller 1's pending earnings
+        $reportAfter = $this->actingAs($this->seller1)->get(route('seller.reports'));
+        $pendingAfter = $reportAfter->viewData('page')['props']['summary']['pending_payments'];
+        $this->assertEquals(0.00, $pendingAfter);
     }
 
     /**
-     * SELLER-38: Seller return decisioning (Reject with required rejection reason and explanation).
+     * SEL-RET-003: Reject without a reason.
+     * Click Reject and submit with an empty reason, then with 9 characters ('Item used').
+     * Both are blocked; the reason needs 10-300 characters. The request stays pending.
      */
-    public function test_seller_can_reject_return_request_with_reason(): void
+    public function test_sel_ret_003_reject_without_a_reason_blocks_and_stays_pending(): void
     {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
         $returnRequest = OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
             'type' => 'return_and_refund',
-            'reason' => 'changed_mind',
-            'requested_amount' => 1500.00,
+            'reason' => 'Damaged or defective',
+            'requested_amount' => 450.00,
             'status' => 'pending',
+            'response_deadline' => now()->addDays(3),
         ]);
 
-        $response = $this->actingAs($this->seller)->post(
-            route('seller.returns.decision', $returnRequest->id),
-            [
+        // Attempt 1: Empty reason
+        $responseEmpty = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
                 'decision' => 'rejected',
-                'rejection_reason' => 'Item has been heavily used or altered',
-                'seller_response' => 'Our store policy does not accept returns for opened personal audio equipment.',
-            ]
-        );
+                'rejection_reason' => '',
+            ]);
 
-        $response->assertSessionHas('status');
-
+        $responseEmpty->assertSessionHasErrors(['rejection_reason']);
         $returnRequest->refresh();
-        $this->assertEquals('rejected', $returnRequest->status);
-        $this->assertEquals('rejected', $returnRequest->decision);
-        $this->assertEquals('Item has been heavily used or altered', $returnRequest->rejection_reason);
-        $this->assertNotNull($returnRequest->seller_responded_at);
-        $this->assertNotNull($returnRequest->resolved_at);
+        $this->assertSame('pending', $returnRequest->status);
 
-        // Verify buyer notification
-        $this->assertDatabaseHas('buyer_notifications', [
-            'user_id' => $this->buyer->id,
-            'title' => 'Return Request Rejected',
-        ]);
+        // Attempt 2: 9 characters ('Item used')
+        $this->assertSame(9, strlen('Item used'));
+        $responseShort = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
+                'decision' => 'rejected',
+                'rejection_reason' => 'Item used',
+            ]);
+
+        $responseShort->assertSessionHasErrors(['rejection_reason']);
+        $returnRequest->refresh();
+        $this->assertSame('pending', $returnRequest->status);
+
+        // Attempt 3: 301 characters (exceeds 300)
+        $responseLong = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
+                'decision' => 'rejected',
+                'rejection_reason' => str_repeat('a', 301),
+            ]);
+
+        $responseLong->assertSessionHasErrors(['rejection_reason']);
+        $returnRequest->refresh();
+        $this->assertSame('pending', $returnRequest->status);
     }
 
     /**
-     * SELLER-39: Return parcel tracking (Milestones, waybill tracking, transition to item_returned).
+     * SEL-RET-004: Reject with a reason.
+     * Reject with: "Item shows signs of use and the tag is removed."
+     * Status Rejected on both sides; Buyer 1 sees the exact reason and an Escalate button.
      */
-    public function test_return_parcel_tracking_milestones_and_delivery_transition(): void
+    public function test_sel_ret_004_reject_with_a_reason(): void
     {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
         $returnRequest = OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
             'type' => 'return_and_refund',
-            'reason' => 'defective',
-            'requested_amount' => 1500.00,
+            'reason' => 'Damaged or defective',
+            'requested_amount' => 450.00,
+            'status' => 'pending',
+            'response_deadline' => now()->addDays(3),
+        ]);
+
+        $reason = 'Item shows signs of use and the tag is removed.';
+
+        $rejectResponse = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
+                'decision' => 'rejected',
+                'rejection_reason' => $reason,
+            ]);
+
+        $rejectResponse->assertRedirect();
+        $returnRequest->refresh();
+
+        // Status Rejected on both sides
+        $this->assertSame('rejected', $returnRequest->status);
+        $this->assertSame($reason, $returnRequest->rejection_reason);
+        $this->assertSame($reason, $returnRequest->seller_response);
+        $this->assertTrue($returnRequest->can_escalate);
+
+        // Buyer 1 opens order details
+        $buyerResponse = $this->actingAs($this->buyer1)
+            ->get(route('buyer.orders.show', $order->id));
+
+        $buyerResponse->assertOk();
+        $buyerResponse->assertInertia(function ($page) use ($reason) {
+            $items = $page->toArray()['props']['order']['items'];
+            $req = $items[0]['latest_return_request'];
+            $this->assertSame('rejected', $req['status']);
+            $this->assertSame($reason, $req['rejection_reason']);
+            $this->assertTrue($req['can_escalate']);
+        });
+    }
+
+    /**
+     * SEL-RET-005: Escalate to a dispute.
+     * Request rejected less than 3 days ago.
+     * 1. Buyer 1 clicks Escalate.
+     * 2. Seller 1 opens the request.
+     * 3. Buyer 1 tries to escalate again.
+     * Expected Result: Status In Dispute on both sides. Seller 1 can no longer approve or reject.
+     * A second escalation is not possible.
+     */
+    public function test_sel_ret_005_escalate_to_a_dispute(): void
+    {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
+        $returnRequest = OrderReturnRequest::create([
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
+            'type' => 'return_and_refund',
+            'reason' => 'Damaged or defective',
+            'requested_amount' => 450.00,
+            'status' => 'rejected',
+            'rejection_reason' => 'Item shows signs of use and the tag is removed.',
+            'seller_responded_at' => now()->subDay(),
+            'response_deadline' => now()->addDays(2),
+        ]);
+
+        // Step 1: Buyer 1 clicks Escalate
+        $escalateResponse = $this->actingAs($this->buyer1)
+            ->post(route('buyer.return-requests.escalate', $returnRequest->id), [
+                'reason' => 'The item arrived damaged in shipment before I ever opened it.',
+            ]);
+
+        $escalateResponse->assertRedirect();
+        $returnRequest->refresh();
+
+        // Status In Dispute on both sides
+        $this->assertSame('in_dispute', $returnRequest->status);
+        $this->assertSame('In Dispute', $returnRequest->status_label);
+        $this->assertNotNull($returnRequest->escalated_at);
+
+        // Step 2: Seller 1 opens request
+        $sellerResponse = $this->actingAs($this->seller1)
+            ->get(route('seller.returns'));
+
+        $sellerResponse->assertOk();
+        $sellerResponse->assertInertia(function ($page) use ($returnRequest) {
+            $data = $page->toArray()['props']['returnRequests']['data'];
+            $found = collect($data)->firstWhere('id', $returnRequest->id);
+            $this->assertNotNull($found);
+            $this->assertSame('in_dispute', $found['status']);
+        });
+
+        // Seller 1 cannot approve or reject
+        $attemptApprove = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.decision', $returnRequest->id), [
+                'decision' => 'approved',
+            ]);
+
+        $attemptApprove->assertSessionHasErrors(['status']);
+        $returnRequest->refresh();
+        $this->assertSame('in_dispute', $returnRequest->status);
+
+        // Step 3: Buyer 1 tries to escalate again (second escalation blocked)
+        $secondEscalate = $this->actingAs($this->buyer1)
+            ->post(route('buyer.return-requests.escalate', $returnRequest->id));
+
+        $secondEscalate->assertSessionHasErrors(['status']);
+        $this->assertFalse($returnRequest->can_escalate);
+    }
+
+    /**
+     * SEL-RET-006: No response within 3 days.
+     * Pending before 3 days; Auto-approved after, and Buyer 1 is notified.
+     */
+    public function test_sel_ret_006_no_response_within_3_days_auto_approved(): void
+    {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
+        // Created 2 days and 23 hours ago (just BEFORE 3 days)
+        $returnRequest = OrderReturnRequest::create([
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
+            'type' => 'return_and_refund',
+            'reason' => 'Damaged or defective',
+            'requested_amount' => 450.00,
+            'status' => 'pending',
+            'created_at' => now()->subDays(3)->addMinutes(10),
+            'response_deadline' => now()->addMinutes(10),
+        ]);
+
+        // Check before 3 days: stays pending
+        $this->actingAs($this->seller1)->get(route('seller.returns'));
+        $returnRequest->refresh();
+        $this->assertSame('pending', $returnRequest->status);
+
+        // Fast-forward past 3 days (e.g. created 3 days and 1 hour ago)
+        $returnRequest->forceFill([
+            'created_at' => now()->subDays(3)->subHour(),
+            'response_deadline' => now()->subHour(),
+        ])->save();
+
+        // Check after 3 days: auto-approved
+        $this->actingAs($this->seller1)->get(route('seller.returns'));
+        $returnRequest->refresh();
+
+        $this->assertSame('approved', $returnRequest->status);
+        $this->assertSame('approved', $returnRequest->decision);
+        $this->assertNotNull($returnRequest->auto_approved_at);
+        $this->assertStringContainsString('Auto-approved', $returnRequest->seller_response);
+
+        // Buyer 1 is notified
+        $this->assertTrue(
+            BuyerNotification::where('user_id', $this->buyer1->id)
+                ->where('title', 'Return Request Auto-Approved')
+                ->exists()
+        );
+    }
+
+    /**
+     * SEL-RET-007: Refunded amount removed from earnings.
+     * A return for P-02 (₱450.00) was approved and refunded.
+     * Open Sales Reports and Earnings.
+     * ₱450.00 and its commission are excluded from gross sales and earnings.
+     */
+    public function test_sel_ret_007_refunded_amount_removed_from_earnings(): void
+    {
+        [$order, $orderItem] = $this->createOrderWithItem(450.00, 1, 'delivered');
+
+        $returnRequest = OrderReturnRequest::create([
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'buyer_id' => $this->buyer1->id,
+            'seller_id' => $this->seller1->id,
+            'type' => 'return_and_refund',
+            'reason' => 'Damaged or defective',
+            'requested_amount' => 450.00,
             'status' => 'approved',
+            'response_deadline' => now()->addDays(3),
         ]);
 
-        // Step 1: Update tracking to in_transit
-        $response1 = $this->actingAs($this->seller)->post(
-            route('seller.returns.tracking', $returnRequest->id),
-            [
-                'return_carrier' => 'J&T Express',
-                'return_tracking_number' => 'JNT-RET-9901827',
-                'return_shipping_status' => 'in_transit',
-                'milestone_location' => 'Makati Sorting Hub',
-            ]
-        );
-        $response1->assertSessionHas('status');
-
-        $returnRequest->refresh();
-        $this->assertEquals('J&T Express', $returnRequest->return_carrier);
-        $this->assertEquals('JNT-RET-9901827', $returnRequest->return_tracking_number);
-        $this->assertEquals('in_transit', $returnRequest->return_shipping_status);
-        $this->assertNotNull($returnRequest->buyer_shipped_at);
-        $this->assertCount(1, $returnRequest->return_shipping_history);
-
-        // Step 2: Milestone update to delivered (advances status to item_returned for inspection)
-        $response2 = $this->actingAs($this->seller)->post(
-            route('seller.returns.tracking', $returnRequest->id),
-            [
-                'return_carrier' => 'J&T Express',
-                'return_tracking_number' => 'JNT-RET-9901827',
-                'return_shipping_status' => 'delivered',
-                'milestone_location' => 'Apex Warehouse Gate 3',
-            ]
-        );
-        $response2->assertSessionHas('status');
-
-        $returnRequest->refresh();
-        $this->assertEquals('delivered', $returnRequest->return_shipping_status);
-        $this->assertEquals('item_returned', $returnRequest->status);
-        $this->assertNotNull($returnRequest->item_received_at);
-        $this->assertCount(2, $returnRequest->return_shipping_history);
-    }
-
-    /**
-     * SELLER-40 & SELLER-41: Return item inspection, inventory restocking, and refund ledger creation.
-     */
-    public function test_item_inspection_restocks_inventory_and_logs_refund_ledger(): void
-    {
-        $initialStock = $this->product->stock; // 10
-
-        $returnRequest = OrderReturnRequest::create([
-            'order_id' => $this->order->id,
-            'order_item_id' => $this->orderItem->id,
-            'buyer_id' => $this->buyer->id,
-            'seller_id' => $this->seller->id,
-            'type' => 'return_and_refund',
-            'reason' => 'defective',
-            'requested_amount' => 1500.00,
-            'status' => 'item_returned',
-        ]);
-
-        $response = $this->actingAs($this->seller)->post(
-            route('seller.returns.inspect-resolve', $returnRequest->id),
-            [
+        // Seller inspects and issues refund of ₱450.00
+        $refundResponse = $this->actingAs($this->seller1)
+            ->post(route('seller.returns.inspect-resolve', $returnRequest->id), [
                 'inspection_status' => 'passed',
-                'inspection_notes' => 'Product in pristine condition, accessories all present.',
-                'refund_amount' => 1500.00,
+                'inspection_notes' => 'Passed inspection. Item returned in good order.',
+                'refund_amount' => 450.00,
                 'refund_method' => 'original_payment',
                 'restock_inventory' => true,
-            ]
-        );
+            ]);
 
-        $response->assertSessionHas('status');
-
+        $refundResponse->assertRedirect();
         $returnRequest->refresh();
-        $this->assertEquals('refunded', $returnRequest->status);
-        $this->assertEquals('passed', $returnRequest->inspection_status);
-        $this->assertEquals(1500.00, (float) $returnRequest->refunded_amount);
-        $this->assertTrue($returnRequest->restocked);
-        $this->assertNotNull($returnRequest->resolved_at);
+        $orderItem->refresh();
 
-        // Verify product stock incremented from 10 to 11 (SELLER-40)
-        $this->product->refresh();
-        $this->assertEquals($initialStock + 1, $this->product->stock);
+        $this->assertSame('refunded', $returnRequest->status);
+        $this->assertSame('refunded', $orderItem->status);
+        $this->assertEquals(450.00, (float) $returnRequest->refunded_amount);
 
-        // Verify stock adjustment audit was created
-        $this->assertDatabaseHas('stock_adjustments', [
-            'product_id' => $this->product->id,
-            'type' => 'return',
-            'quantity' => 1,
-            'before_stock' => $initialStock,
-            'after_stock' => $initialStock + 1,
-        ]);
+        // Open Sales Reports
+        $reportResponse = $this->actingAs($this->seller1)
+            ->get(route('seller.reports'));
 
-        // Verify SELLER-41 RefundLedger transaction was recorded
-        $this->assertDatabaseHas('refund_ledgers', [
-            'order_return_request_id' => $returnRequest->id,
-            'seller_id' => $this->seller->id,
-            'buyer_id' => $this->buyer->id,
-            'refunded_amount' => 1500.00,
-            'status' => 'completed',
-        ]);
+        $reportResponse->assertOk();
+        $reportResponse->assertInertia(function ($page) {
+            $summary = $page->toArray()['props']['summary'];
+            // ₱450.00 and its 5% commission (₱22.50) are excluded
+            $this->assertEquals(0.00, (float) $summary['gross_revenue']);
+            $this->assertEquals(0.00, (float) $summary['platform_fees']);
+            $this->assertEquals(0.00, (float) $summary['net_earnings']);
+            $this->assertEquals(0.00, (float) $summary['pending_payments']);
+            $this->assertEquals(0, $summary['orders']);
+            $this->assertEquals(0, $summary['units_sold']);
+        });
 
-        $ledger = RefundLedger::where('order_return_request_id', $returnRequest->id)->first();
-        $this->assertNotNull($ledger);
-        $this->assertStringStartsWith('REF-', $ledger->refund_reference);
+        // Open Dashboard
+        $dashboardResponse = $this->actingAs($this->seller1)
+            ->get(route('seller.dashboard'));
 
-        // Verify OrderItem status updated to refunded
-        $this->orderItem->refresh();
-        $this->assertEquals('refunded', $this->orderItem->status);
-
-        // Verify buyer notification
-        $this->assertDatabaseHas('buyer_notifications', [
-            'user_id' => $this->buyer->id,
-            'title' => 'Refund Issued',
-        ]);
+        $dashboardResponse->assertOk();
+        $dashboardResponse->assertInertia(function ($page) {
+            $stats = $page->toArray()['props']['stats'];
+            $this->assertEquals(0.00, (float) $stats['total_sales']);
+            $this->assertEquals(0.00, (float) $stats['estimated_platform_fees']);
+            $this->assertEquals(0.00, (float) $stats['estimated_net_profit']);
+            $this->assertEquals(0.00, (float) $stats['pending_sales']);
+        });
     }
 }

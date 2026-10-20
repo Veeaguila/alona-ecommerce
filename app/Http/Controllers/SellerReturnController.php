@@ -26,6 +26,8 @@ class SellerReturnController extends Controller
      */
     public function index(Request $request): Response
     {
+        OrderReturnRequest::autoApproveExpiredPendingRequests();
+
         $sellerId = $request->user()->id;
 
         $status = $request->input('status', 'all');
@@ -44,11 +46,12 @@ class SellerReturnController extends Controller
                 'refundLedger',
             ]);
 
-        // Status counts for tabs (SELLER-37)
+        // Status counts for tabs (SELLER-37 / SEL-RET-001 - SEL-RET-006)
         $statusCounts = [
             'all' => OrderReturnRequest::where('seller_id', $sellerId)->count(),
             'pending' => OrderReturnRequest::where('seller_id', $sellerId)->where('status', 'pending')->count(),
             'approved' => OrderReturnRequest::where('seller_id', $sellerId)->where('status', 'approved')->count(),
+            'in_dispute' => OrderReturnRequest::where('seller_id', $sellerId)->where('status', 'in_dispute')->count(),
             'rejected' => OrderReturnRequest::where('seller_id', $sellerId)->where('status', 'rejected')->count(),
             'item_returned' => OrderReturnRequest::where('seller_id', $sellerId)->where('status', 'item_returned')->count(),
             'refunded' => OrderReturnRequest::where('seller_id', $sellerId)->whereIn('status', ['refunded', 'completed'])->count(),
@@ -183,28 +186,64 @@ class SellerReturnController extends Controller
     }
 
     /**
-     * Seller approves or rejects a return request (SELLER-38).
+     * View a single return request with evidence (SEL-RET-001).
+     */
+    public function show(Request $request, OrderReturnRequest $returnRequest)
+    {
+        abort_unless((int) $returnRequest->seller_id === (int) $request->user()->id, 403);
+
+        $returnRequest->load([
+            'order:id,order_number,created_at,payment_method,payment_status,total',
+            'orderItem:id,order_id,product_id,product_variant_id,product_name,variant_title,price,quantity,image_url,status',
+            'buyer:id,name,email,avatar,contact_number',
+            'refundLedger',
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json($returnRequest);
+        }
+
+        return redirect()->route('seller.returns', [
+            'search' => $returnRequest->order?->order_number ?? $returnRequest->id,
+        ]);
+    }
+
+    /**
+     * Seller approves or rejects a return request (SELLER-38 / SEL-RET-002, SEL-RET-003, SEL-RET-004, SEL-RET-005).
      */
     public function decision(Request $request, OrderReturnRequest $returnRequest): RedirectResponse
     {
         abort_unless((int) $returnRequest->seller_id === (int) $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'decision' => 'required|in:approved,rejected',
-            'return_instructions' => 'nullable|string|max:1000',
-            'return_warehouse_address' => 'nullable|string|max:500',
-            'rejection_reason' => 'required_if:decision,rejected|nullable|string|max:100',
-            'seller_response' => 'required_if:decision,rejected|nullable|string|max:2000',
-            'refund_now' => 'nullable|boolean',
-        ]);
+        // SEL-RET-005: Once in dispute or already decided, seller cannot approve or reject
+        if ($returnRequest->status !== 'pending') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => "This return request is {$returnRequest->status_label} and can no longer be approved or rejected.",
+            ]);
+        }
+
+        $decision = $request->input('decision');
+        if (! in_array($decision, ['approved', 'rejected'], true)) {
+            // Check if action was specified via route name or action param
+            if ($request->routeIs('seller.returns.approve')) {
+                $decision = 'approved';
+            } elseif ($request->routeIs('seller.returns.reject')) {
+                $decision = 'rejected';
+            } else {
+                $validated = $request->validate([
+                    'decision' => 'required|in:approved,rejected',
+                ]);
+                $decision = $validated['decision'];
+            }
+        }
 
         $order = $returnRequest->order;
         $orderItem = $returnRequest->orderItem;
 
-        if ($validated['decision'] === 'approved') {
+        if ($decision === 'approved') {
             // Check if seller wants to immediately refund a refund_only request
             if ($returnRequest->type === 'refund_only' && $request->boolean('refund_now')) {
-                DB::transaction(function () use ($returnRequest, $validated, $order, $orderItem, $request) {
+                DB::transaction(function () use ($returnRequest, $order, $orderItem, $request) {
                     $refundAmount = (float) $returnRequest->requested_amount;
 
                     $returnRequest->update([
@@ -212,7 +251,7 @@ class SellerReturnController extends Controller
                         'status' => 'refunded',
                         'refunded_amount' => $refundAmount,
                         'refund_method' => 'original_payment',
-                        'seller_response' => $validated['seller_response'] ?? 'Refund approved directly without item return.',
+                        'seller_response' => $request->input('seller_response') ?? 'Refund approved directly without item return.',
                         'seller_responded_at' => now(),
                         'resolved_at' => now(),
                     ]);
@@ -231,7 +270,7 @@ class SellerReturnController extends Controller
                         'refund_method' => 'original_payment',
                         'status' => 'completed',
                         'reason' => $returnRequest->reason,
-                        'notes' => $validated['seller_response'] ?? 'Instant refund approved by seller',
+                        'notes' => $request->input('seller_response') ?? 'Instant refund approved by seller',
                         'processed_by' => $request->user()->id,
                         'processed_at' => now(),
                     ]);
@@ -253,13 +292,26 @@ class SellerReturnController extends Controller
                 return back()->with('status', 'Refund request approved and processed immediately.');
             }
 
-            // Normal Return & Refund Approval: Buyer authorized to ship item back
+            $user = $request->user();
+            $defaultStoreAddress = trim(
+                implode(', ', array_filter([
+                    $user->street_address ?? $user->address ?? null,
+                    $user->barangay,
+                    $user->municipality,
+                    $user->province,
+                ]))
+            ) ?: 'Seller Store Warehouse';
+
+            $returnInstructions = $request->input('return_instructions') ?: 'Please pack the item securely in its original packaging and ship to our return warehouse.';
+            $warehouseAddress = $request->input('return_warehouse_address') ?: $defaultStoreAddress;
+
+            // Normal Return & Refund Approval: Buyer authorized to ship item back (SEL-RET-002)
             $returnRequest->update([
                 'decision' => 'approved',
                 'status' => 'approved',
-                'return_instructions' => $validated['return_instructions'] ?? 'Please pack the item securely in its original packaging and ship to our return warehouse.',
-                'return_warehouse_address' => $validated['return_warehouse_address'] ?? null,
-                'seller_response' => $validated['seller_response'] ?? null,
+                'return_instructions' => $returnInstructions,
+                'return_warehouse_address' => $warehouseAddress,
+                'seller_response' => $request->input('seller_response'),
                 'seller_responded_at' => now(),
             ]);
 
@@ -267,38 +319,50 @@ class SellerReturnController extends Controller
             $returnRequest->addShippingMilestone(
                 'approved',
                 'Return Authorized by Seller',
-                $validated['return_warehouse_address'] ?? 'Seller Warehouse',
+                $warehouseAddress,
                 'Seller has approved return. Please ship item back within policy window.'
             );
 
-            // Notify buyer
+            // Notify buyer (SEL-RET-002 / A23)
             if (Schema::hasTable('buyer_notifications')) {
                 BuyerNotification::create([
                     'user_id' => $returnRequest->buyer_id,
                     'title' => 'Return Request Approved',
-                    'message' => "Seller approved your return for Order #{$order->order_number}. Please ship item back to: " . ($validated['return_warehouse_address'] ?? 'Seller address') . ".",
+                    'message' => "Seller approved your return for Order #{$order->order_number}. Please ship item back to: {$warehouseAddress}.",
                 ]);
             }
 
             return back()->with('status', 'Return request approved. Buyer has been notified with return instructions.');
         }
 
-        // Rejection
+        // Rejection validation (SEL-RET-003 / A25: Reason needs 10-300 characters)
+        $rawReason = trim((string) ($request->input('reason') ?? $request->input('rejection_reason') ?? $request->input('seller_response') ?? ''));
+        $reasonLength = mb_strlen($rawReason);
+
+        if ($rawReason === '' || $reasonLength < 10 || $reasonLength > 300) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'rejection_reason' => 'The rejection reason must be between 10 and 300 characters.',
+                'reason' => 'The rejection reason must be between 10 and 300 characters.',
+                'seller_response' => 'The rejection reason must be between 10 and 300 characters.',
+            ]);
+        }
+
+        // Rejection with reason (SEL-RET-004)
         $returnRequest->update([
             'decision' => 'rejected',
             'status' => 'rejected',
-            'rejection_reason' => $validated['rejection_reason'],
-            'seller_response' => $validated['seller_response'],
+            'rejection_reason' => $rawReason,
+            'seller_response' => $rawReason,
             'seller_responded_at' => now(),
             'resolved_at' => now(),
         ]);
 
-        // Notify buyer
+        // Notify buyer (SEL-RET-004 / A23)
         if (Schema::hasTable('buyer_notifications')) {
             BuyerNotification::create([
                 'user_id' => $returnRequest->buyer_id,
                 'title' => 'Return Request Rejected',
-                'message' => "Your return request for Order #{$order->order_number} was rejected. Reason: {$validated['rejection_reason']}.",
+                'message' => "Your return request for Order #{$order->order_number} was rejected. Reason: {$rawReason}.",
             ]);
         }
 
