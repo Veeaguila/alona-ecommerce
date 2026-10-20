@@ -28,14 +28,29 @@ const dateTo = ref(props.filters.date_to ?? '')
 
 const statuses = [
     'All Orders',
+    'New',
+    'To Ship',
+    'Shipping',
+    'Completed',
+    'Cancelled',
+    'Return/Refund',
     'Pending',
     'Processing',
     'Packed',
     'Ready for Pickup',
     'Shipped',
     'Delivered',
-    'Cancelled',
 ]
+
+const orderTabs = computed(() => [
+    { key: 'All Orders', label: 'All Orders', count: props.summary?.total ?? 0 },
+    { key: 'New', label: 'New', count: props.summary?.new ?? props.summary?.pending ?? 0 },
+    { key: 'To Ship', label: 'To Ship', count: props.summary?.to_ship ?? 0 },
+    { key: 'Shipping', label: 'Shipping', count: props.summary?.shipping ?? 0 },
+    { key: 'Completed', label: 'Completed', count: props.summary?.completed_tab ?? props.summary?.completed ?? 0 },
+    { key: 'Cancelled', label: 'Cancelled', count: props.summary?.cancelled ?? 0 },
+    { key: 'Return/Refund', label: 'Return/Refund', count: props.summary?.return_refund ?? 0 },
+])
 
 const orderRows = computed(() => props.orders?.data ?? [])
 
@@ -454,6 +469,26 @@ watch(
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- S9 ORDER TABS (SEL-ORD-001) -->
+                <div class="mt-5 flex flex-wrap gap-2">
+                    <button
+                        v-for="tab in orderTabs"
+                        :key="tab.key"
+                        type="button"
+                        @click="status = tab.key"
+                        class="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition"
+                        :class="status === tab.key ? 'border-[#087F8C] bg-[#087F8C] text-white' : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C] hover:text-[#087F8C]'"
+                    >
+                        <span>{{ tab.label }}</span>
+                        <span
+                            class="rounded-full px-2 py-0.5 text-[10px]"
+                            :class="status === tab.key ? 'bg-white/20 text-white' : 'bg-[#F1F5F9] text-[#475569]'"
+                        >
+                            {{ tab.count }}
+                        </span>
+                    </button>
                 </div>
 
                 <!-- FILTERS -->

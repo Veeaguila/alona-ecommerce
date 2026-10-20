@@ -62,6 +62,9 @@ class SellerOrderController extends Controller
                                         'like',
                                         "%{$search}%"
                                     );
+                                    if (is_numeric($search)) {
+                                        $orderQuery->orWhere('id', (int) $search);
+                                    }
                                 }
                             )
                             ->orWhereHas(
@@ -74,6 +77,9 @@ class SellerOrderController extends Controller
                                     );
                                 }
                             );
+                        if (is_numeric($search)) {
+                            $query->orWhere('order_items.id', (int) $search);
+                        }
                     });
                 }
             )
@@ -81,29 +87,27 @@ class SellerOrderController extends Controller
                 $request->filled('status') &&
                 $request->input('status') !== 'All Orders',
                 function ($query) use ($request) {
-                    $status = strtolower(
-                        trim(
-                            str_replace(
-                                ' ',
-                                '_',
-                                $request->input('status')
-                            )
-                        )
-                    );
+                    $rawStatus = strtolower(trim((string) $request->input('status')));
+                    $status = str_replace([' ', '/', '-'], '_', $rawStatus);
 
-                    if ($status === 'to_ship') {
-                        $query->whereIn('status', ['processing', 'packed', 'ready_for_pickup']);
-                    } elseif ($status === 'in_transit') {
-                        $query->whereIn('status', ['shipped', 'out_for_delivery']);
-                    } elseif ($status === 'delivered') {
-                        $query->whereIn('status', ['delivered', 'completed']);
-                    } elseif ($status === 'returned') {
+                    if (in_array($status, ['return_refund', 'returned', 'returns'], true)) {
                         $query->whereHas('returnRequests');
+                    } elseif ($status === 'new') {
+                        $query->whereDoesntHave('returnRequests')->where('status', 'pending');
+                    } elseif ($status === 'to_ship') {
+                        $query->whereDoesntHave('returnRequests')->whereIn('status', ['processing', 'packed', 'ready_for_pickup']);
+                    } elseif (in_array($status, ['shipping', 'in_transit'], true)) {
+                        $query->whereDoesntHave('returnRequests')->whereIn('status', ['shipped', 'out_for_delivery']);
+                    } elseif ($status === 'completed') {
+                        $query->whereDoesntHave('returnRequests')->whereIn('status', ['delivered', 'completed']);
+                    } elseif ($status === 'delivered') {
+                        $query->whereDoesntHave('returnRequests')->whereIn('status', ['delivered', 'completed']);
+                    } elseif ($status === 'cancelled') {
+                        $query->whereDoesntHave('returnRequests')->where('status', 'cancelled');
+                    } elseif ($status === 'accepted') {
+                        $query->where('status', 'processing');
                     } else {
-                        $query->where(
-                            'status',
-                            $status
-                        );
+                        $query->where('status', $status);
                     }
                 }
             )
@@ -212,10 +216,35 @@ class SellerOrderController extends Controller
                         ->count(),
 
                     'cancelled' => (clone $base())
+                        ->whereDoesntHave('returnRequests')
                         ->where(
                             'status',
                             'cancelled'
                         )
+                        ->count(),
+
+                    'new' => (clone $base())
+                        ->whereDoesntHave('returnRequests')
+                        ->where('status', 'pending')
+                        ->count(),
+
+                    'to_ship' => (clone $base())
+                        ->whereDoesntHave('returnRequests')
+                        ->whereIn('status', ['processing', 'packed', 'ready_for_pickup'])
+                        ->count(),
+
+                    'shipping' => (clone $base())
+                        ->whereDoesntHave('returnRequests')
+                        ->whereIn('status', ['shipped', 'out_for_delivery'])
+                        ->count(),
+
+                    'completed_tab' => (clone $base())
+                        ->whereDoesntHave('returnRequests')
+                        ->whereIn('status', ['delivered', 'completed'])
+                        ->count(),
+
+                    'return_refund' => (clone $base())
+                        ->whereHas('returnRequests')
                         ->count(),
                 ],
 
@@ -241,6 +270,8 @@ class SellerOrderController extends Controller
             $orderItem
         );
 
+        $sellerId = (int) $request->user()->id;
+
         $orderItem->load([
             'product',
             'order.user',
@@ -249,8 +280,49 @@ class SellerOrderController extends Controller
             'parcel.pickupRequests',
         ]);
 
+        // Load only this seller's items in the parent order (SEL-ORD-007 & SEL-ORD-008)
+        $sellerItems = collect();
+        if ($orderItem->order) {
+            $sellerItems = OrderItem::query()
+                ->where('order_id', $orderItem->order_id)
+                ->whereHas('product', fn ($q) => $q->where('seller_id', $sellerId))
+                ->with(['product:id,seller_id,name,image_path,weight', 'variant:id,product_id,color,size,sku'])
+                ->orderBy('id')
+                ->get();
+
+            $orderItem->order->setRelation('items', $sellerItems);
+        }
+
+        $sellerSubtotal = (float) $sellerItems->sum(fn (OrderItem $i) => (float) $i->price * (int) $i->quantity);
+        $parentOrder = $orderItem->order;
+        $discountAmount = (float) ($parentOrder?->discount ?? 0);
+        $shippingFee = (float) ($parentOrder?->shipping_fee ?? 0);
+
+        $orderSummary = [
+            'order_id' => $parentOrder?->id,
+            'order_number' => $parentOrder?->order_number,
+            'items' => $sellerItems,
+            'subtotal' => number_format($sellerSubtotal, 2, '.', ''),
+            'voucher_code' => $parentOrder?->voucher_code,
+            'discount' => number_format($discountAmount, 2, '.', ''),
+            'voucher_label' => $parentOrder?->voucher_code
+                ? ($parentOrder->voucher_code . ' −₱' . number_format($discountAmount, 2))
+                : null,
+            'shipping_fee' => number_format($shippingFee, 2, '.', ''),
+            'total' => number_format(max(0, $sellerSubtotal - $discountAmount) + $shippingFee, 2, '.', ''),
+            'buyer_note' => $parentOrder?->buyer_note,
+            'payment_method' => $parentOrder?->payment_method,
+            'payment_method_label' => strtoupper((string) ($parentOrder?->payment_method ?? 'COD')),
+            'payment_status' => $parentOrder?->payment_status,
+            'refund_status' => $parentOrder?->refund_status,
+            'refund_amount' => $parentOrder?->refund_amount !== null
+                ? number_format((float) $parentOrder->refund_amount, 2, '.', '')
+                : null,
+            'shipping_address' => $parentOrder?->shipping_address,
+        ];
+
         $deliveryService = app(\App\Services\SellerParcelDelivery::class);
-        $delivery = $deliveryService->details($orderItem, (int) $request->user()->id);
+        $delivery = $deliveryService->details($orderItem, $sellerId);
         $unverifiedLink = $orderItem->parcel && $delivery === null;
         if ($unverifiedLink) $orderItem->unsetRelation('parcel');
 
@@ -258,6 +330,8 @@ class SellerOrderController extends Controller
             'Seller/OrderDetails',
             [
                 'orderItem' => $orderItem,
+                'sellerItems' => $sellerItems,
+                'orderSummary' => $orderSummary,
                 'deliveryDetails' => $delivery,
                 'deliveryLinkUnverified' => $unverifiedLink,
             ]
@@ -467,8 +541,11 @@ class SellerOrderController extends Controller
             'parcel.pickupRequests',
         ]);
 
+        $waybill = $this->buildWaybillData($orderItem, $request->user());
+
         return Inertia::render('Seller/ShippingDocuments', [
             'item' => $orderItem,
+            'waybill' => $waybill,
             'initialTab' => 'waybill',
         ]);
     }
@@ -489,10 +566,48 @@ class SellerOrderController extends Controller
             'parcel.pickupRequests',
         ]);
 
+        $waybill = $this->buildWaybillData($orderItem, $request->user());
+
         return Inertia::render('Seller/ShippingDocuments', [
             'item' => $orderItem,
+            'waybill' => $waybill,
             'initialTab' => $request->query('tab', 'waybill'),
         ]);
+    }
+
+    private function buildWaybillData(OrderItem $orderItem, $seller): array
+    {
+        $unitWeight = (float) ($orderItem->product?->weight ?? 0.8);
+        if ($unitWeight <= 0) {
+            $unitWeight = 0.8;
+        }
+        $totalWeight = round($unitWeight * max(1, (int) $orderItem->quantity), 2);
+        $isCod = strtolower((string) ($orderItem->order?->payment_method ?? 'cod')) === 'cod';
+        $codAmount = $isCod
+            ? (float) ($orderItem->order?->total ?? $orderItem->lineTotal())
+            : 0.0;
+
+        $pickupAddress = $orderItem->parcel?->collection_address
+            ?: ($seller?->address ?: trim(implode(', ', array_filter([
+                $seller?->street_address,
+                $seller?->barangay,
+                $seller?->municipality,
+                $seller?->province,
+            ]))));
+
+        return [
+            'tracking_number' => $orderItem->tracking_number,
+            'order_number' => $orderItem->order?->order_number,
+            'buyer_name' => $orderItem->order?->user?->name,
+            'shipping_address' => $orderItem->order?->shipping_address,
+            'seller_store_name' => $seller?->store_name ?: $seller?->name,
+            'pickup_address' => $pickupAddress,
+            'weight_kg' => $totalWeight,
+            'weight_label' => number_format($totalWeight, 1, '.', '') . ' kg',
+            'payment_method' => strtoupper((string) ($orderItem->order?->payment_method ?? 'COD')),
+            'cod_amount' => number_format($codAmount, 2, '.', ''),
+            'cod_label' => $isCod ? ('COD ₱' . number_format($codAmount, 2)) : 'PREPAID (₱0.00)',
+        ];
     }
 
     /**
@@ -519,25 +634,24 @@ class SellerOrderController extends Controller
         );
 
         abort_unless(
-            in_array(
-                $orderItem->status,
-                [
-                    'pending',
-                    'processing',
-                    'packed',
-                ],
-                true
-            ),
+            $orderItem->canBeCancelledBySeller(),
             422,
             'This item can no longer be cancelled.'
         );
 
+        if (! $request->filled('reason') && $request->filled('cancellation_reason')) {
+            $request->merge(['reason' => $request->input('cancellation_reason')]);
+        }
+
         $data = $request->validate([
             'reason' => [
-                'nullable',
+                'required',
                 'string',
+                'min:2',
                 'max:500',
             ],
+        ], [
+            'reason.required' => 'Please select or enter a cancellation reason.',
         ]);
 
         /*
@@ -557,20 +671,11 @@ class SellerOrderController extends Controller
             $orderItem->load('variant');
         }
 
-        /*
-         * Restore stock.
-         *
-         * Variant product:
-         * restore variant stock.
-         *
-         * Non-variant product:
-         * restore main product stock.
-         */
         \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $request, $data): void {
         $finance = app(\App\Services\SellerShipmentFinance::class);
         $finance->assertMutable($finance->lockItem($orderItem->id));
-        $orderItem = OrderItem::with('product', 'variant', 'order')->lockForUpdate()->findOrFail($orderItem->id);
-        abort_unless(in_array($orderItem->status, ['pending', 'processing', 'packed'], true), 422, 'This item can no longer be cancelled.');
+        $orderItem = OrderItem::with('product', 'variant', 'order', 'parcel')->lockForUpdate()->findOrFail($orderItem->id);
+        abort_unless($orderItem->canBeCancelledBySeller(), 422, 'This item can no longer be cancelled.');
         if ($orderItem->variant) {
             $orderItem->variant->increment(
                 'stock',
@@ -618,8 +723,48 @@ class SellerOrderController extends Controller
             $reason
         );
 
-        // SEL-VOU-011 / A21: If entire order is now cancelled, restore voucher usage count and wallet claim
         $parentOrder = $orderItem->order ? $orderItem->order->fresh() : null;
+        if ($parentOrder && $parentOrder->status === 'cancelled') {
+            $orderUpdate = [
+                'cancellation_reason' => $reason,
+                'cancelled_at' => now(),
+            ];
+
+            // SEL-ORD-005: If the order was prepaid/paid, start a full refund
+            $wasPaid = in_array(strtolower((string) $parentOrder->payment_status), ['paid', 'completed'], true);
+            if ($wasPaid) {
+                $refundAmount = (float) ($parentOrder->total ?? $orderItem->lineTotal());
+                $orderUpdate['payment_status'] = 'refunded';
+                if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'refund_status')) {
+                    $orderUpdate['refund_status'] = 'refund_started';
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'refund_amount')) {
+                    $orderUpdate['refund_amount'] = $refundAmount;
+                }
+
+                if (\Illuminate\Support\Facades\Schema::hasTable('refund_ledgers')) {
+                    \App\Models\RefundLedger::create([
+                        'refund_reference' => 'REF-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                        'order_id' => $parentOrder->id,
+                        'order_item_id' => $orderItem->id,
+                        'seller_id' => $request->user()->id,
+                        'buyer_id' => $parentOrder->user_id,
+                        'original_amount' => $refundAmount,
+                        'refunded_amount' => $refundAmount,
+                        'refund_type' => 'full',
+                        'refund_method' => $parentOrder->payment_method ?? 'ewallet',
+                        'status' => 'processing',
+                        'reason' => $reason,
+                        'notes' => 'Auto-initiated full refund after seller cancelled prepaid order.',
+                    ]);
+                }
+            }
+
+            $parentOrder->update($orderUpdate);
+            $parentOrder->refresh();
+        }
+
+        // SEL-VOU-011 / SEL-ORD-004 / A21: If entire order is now cancelled, restore voucher usage count and wallet claim
         if ($parentOrder && $parentOrder->status === 'cancelled' && $parentOrder->voucher_id) {
             $voucher = \App\Models\Voucher::whereKey($parentOrder->voucher_id)->lockForUpdate()->first();
             if ($voucher) {

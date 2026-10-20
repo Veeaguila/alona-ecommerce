@@ -334,6 +334,11 @@ Route::middleware([
         'process',
     ])->name('seller.orders.process');
 
+    Route::patch('/seller/orders/{orderItem}/accept', [
+        SellerOrderController::class,
+        'process',
+    ])->name('seller.orders.accept');
+
     Route::patch('/seller/orders/{orderItem}/pack', [
         SellerOrderController::class,
         'pack',

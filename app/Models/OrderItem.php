@@ -78,10 +78,19 @@ class OrderItem extends Model
         'preferred_carrier',
         'pickup_notes',
         'seller_note',
+        'accepted_at',
         'packed_at',
+        'ready_for_pickup_at',
         'shipped_at',
         'delivered_at',
         'cancelled_at',
+    ];
+
+    protected $appends = [
+        'seller_status_label',
+        'can_cancel',
+        'can_edit',
+        'available_actions',
     ];
 
     protected function casts(): array
@@ -90,7 +99,9 @@ class OrderItem extends Model
             'price' => 'decimal:2',
             'quantity' => 'integer',
             'scheduled_pickup_date' => 'date',
+            'accepted_at' => 'datetime',
             'packed_at' => 'datetime',
+            'ready_for_pickup_at' => 'datetime',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'cancelled_at' => 'datetime',
@@ -141,12 +152,98 @@ class OrderItem extends Model
         )->latestOfMany();
     }
 
+    public function isParcelPickedUp(): bool
+    {
+        if (in_array($this->status, ['shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled'], true)) {
+            return true;
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasTable('parcels')) {
+            return false;
+        }
+
+        $parcel = $this->relationLoaded('parcel')
+            ? $this->parcel
+            : ($this->id ? Parcel::where('order_item_id', $this->id)->first() : null);
+
+        if (! $parcel) {
+            return false;
+        }
+
+        $pickedUpStatuses = [
+            'PICKED_UP',
+            'IN_TRANSIT',
+            'AT_HUB',
+            'ARRIVED_AT_SORTING_CENTER',
+            'DISPATCHED_FROM_SORTING_CENTER',
+            'OUT_FOR_DELIVERY',
+            'DELIVERED',
+            'FAILED_DELIVERY',
+            'RETURN_TO_SENDER',
+            'RETURNED_TO_SENDER',
+        ];
+
+        return in_array(strtoupper((string) $parcel->status), $pickedUpStatuses, true);
+    }
+
+    public function canBeCancelledBySeller(): bool
+    {
+        if (! in_array($this->status, ['pending', 'processing', 'packed', 'ready_for_pickup'], true)) {
+            return false;
+        }
+
+        return ! $this->isParcelPickedUp();
+    }
+
+    public function getCanCancelAttribute(): bool
+    {
+        return $this->canBeCancelledBySeller();
+    }
+
+    public function getCanEditAttribute(): bool
+    {
+        return $this->canBeCancelledBySeller();
+    }
+
+    public function getAvailableActionsAttribute(): array
+    {
+        return match ($this->status) {
+            'pending' => ['accept', 'cancel'],
+            'processing' => ['pack', 'cancel'],
+            'packed' => ['ready_for_pickup', 'cancel'],
+            'ready_for_pickup' => $this->canBeCancelledBySeller()
+                ? ['print_waybill', 'cancel']
+                : ['print_waybill'],
+            default => [],
+        };
+    }
+
+    public function getSellerStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => 'New',
+            'processing' => 'Accepted',
+            'packed' => 'Packed',
+            'ready_for_pickup' => 'Ready for Pickup',
+            'shipped' => 'Shipped',
+            'out_for_delivery' => 'Out for Delivery',
+            'delivered' => 'Delivered',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+            default => ucfirst(str_replace('_', ' ', (string) $this->status)),
+        };
+    }
+
     /**
      * Determine whether this item can move from its current
      * status to the requested status.
      */
     public function canMoveTo(string $status): bool
     {
+        if ($status === 'cancelled') {
+            return $this->canBeCancelledBySeller();
+        }
+
         $allowedTransitions = [
             'pending' => [
                 'processing',
@@ -237,7 +334,11 @@ class OrderItem extends Model
         );
 
         $timestampColumn = match ($status) {
+            'processing' => \Illuminate\Support\Facades\Schema::hasColumn('order_items', 'accepted_at') ? 'accepted_at' : null,
+
             'packed' => 'packed_at',
+
+            'ready_for_pickup' => \Illuminate\Support\Facades\Schema::hasColumn('order_items', 'ready_for_pickup_at') ? 'ready_for_pickup_at' : null,
 
             'shipped',
             'out_for_delivery' => 'shipped_at',

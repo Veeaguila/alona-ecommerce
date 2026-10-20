@@ -8,6 +8,8 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    sellerItems: { type: Array, default: () => [] },
+    orderSummary: { type: Object, default: null },
     deliveryDetails: { type: Object, default: null },
     deliveryLinkUnverified: { type: Boolean, default: false },
 })
@@ -376,6 +378,9 @@ const canReadyForPickup = computed(() => {
 })
 
 const canCancel = computed(() => {
+    if (item.value?.can_cancel !== undefined) {
+        return Boolean(item.value.can_cancel)
+    }
     return [
         'pending',
         'processing',

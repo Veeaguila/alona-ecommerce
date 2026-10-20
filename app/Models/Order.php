@@ -20,10 +20,13 @@ class Order extends Model
         'discount',
         'total',
         'shipping_address',
+        'buyer_note',
         'shipping_method',
         'shipping_fee',
         'payment_method',
         'payment_status',
+        'refund_status',
+        'refund_amount',
         'payment_method_id',
         'cancellation_reason',
         'cancelled_at',
@@ -67,6 +70,7 @@ class Order extends Model
             'shipping_discount' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
             'cancelled_at' => 'datetime',
         ];
     }

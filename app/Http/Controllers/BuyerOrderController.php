@@ -681,11 +681,25 @@ class BuyerOrderController extends Controller
     public function store(
         Request $request
     ): RedirectResponse {
+        if (! $request->filled('buyer_note')) {
+            if ($request->filled('note')) {
+                $request->merge(['buyer_note' => $request->input('note')]);
+            } elseif ($request->filled('notes')) {
+                $request->merge(['buyer_note' => $request->input('notes')]);
+            }
+        }
+
         $data = $request->validate([
             'shipping_address' => [
                 'required',
                 'string',
                 'max:2000',
+            ],
+
+            'buyer_note' => [
+                'nullable',
+                'string',
+                'max:200',
             ],
 
             'payment_method' => [
@@ -1237,6 +1251,9 @@ class BuyerOrderController extends Controller
                 $order->user_id = $user->id;
                 $order->shipping_address =
                     $data['shipping_address'];
+                if (Schema::hasColumn('orders', 'buyer_note') && ! empty($data['buyer_note'])) {
+                    $order->buyer_note = trim((string) $data['buyer_note']);
+                }
                 $order->payment_method =
                     $data['payment_method'];
                 $order->shipping_method = $shippingMethod;
