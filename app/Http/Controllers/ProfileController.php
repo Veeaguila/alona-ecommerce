@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
+use App\Notifications\EmailChangeOtpNotification;
+use App\Notifications\PhoneChangeOtpNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,6 +46,20 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $data = $request->validated();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Profile avatar upload (BUY-ACCT-001)
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->hasFile('profile_photo')) {
+            $data['avatar'] = $request->file('profile_photo')->store('avatars', 'public');
+        } elseif ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        unset($data['profile_photo']);
 
         /*
         |--------------------------------------------------------------------------
@@ -130,16 +151,102 @@ class ProfileController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Email verification reset.
+        | Email verification challenge (BUY-ACCT-006 & BUY-ACCT-007)
+        |--------------------------------------------------------------------------
+        | Changing email does NOT directly update the users.email database record.
+        | Instead, it triggers a 6-digit OTP challenge to the pending new address.
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isset($data['email']) &&
-            $data['email'] !== $user->email
-        ) {
-            $user->email_verified_at = null;
+        $emailChanged = false;
+        $submittedEmail = Str::lower(trim((string) ($data['email'] ?? '')));
+
+        if ($submittedEmail !== '' && $submittedEmail !== Str::lower((string) $user->email)) {
+            $emailChanged = true;
+            $emailOtp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            $user->pending_email = $submittedEmail;
+            $user->pending_email_otp = $emailOtp;
+            $user->pending_email_otp_expires_at = now()->addMinutes(5);
+
+            try {
+                Notification::route('mail', $submittedEmail)
+                    ->notify(new EmailChangeOtpNotification($emailOtp, $user));
+            } catch (\Throwable $e) {
+                Log::warning('Email change OTP failed to dispatch mail: ' . $e->getMessage());
+            }
+
+            try {
+                if (method_exists($user, 'buyerNotifications')) {
+                    $user->buyerNotifications()->create([
+                        'type' => 'email_change_otp',
+                        'title' => 'Email Verification Code',
+                        'message' => "Your verification code to update your email to {$submittedEmail} is {$emailOtp} (valid for 5 minutes).",
+                        'is_read' => false,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('In-app email change notification failed: ' . $e->getMessage());
+            }
         }
+
+        unset($data['email']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Phone verification challenge (BUY-ACCT-009)
+        |--------------------------------------------------------------------------
+        | Changing phone number does NOT directly update the users.contact_no record.
+        | Instead, it triggers a 6-digit OTP verification challenge.
+        |--------------------------------------------------------------------------
+        */
+
+        $phoneChanged = false;
+        $submittedPhone = trim((string) ($data['contact_no'] ?? ''));
+
+        if ($submittedPhone !== '' && $submittedPhone !== (string) $user->contact_no) {
+            $existingPhone = User::where('id', '!=', $user->id)
+                ->where(function ($query) use ($submittedPhone) {
+                    $clean = ltrim($submittedPhone, '+');
+                    $query->where('contact_no', $submittedPhone)
+                        ->orWhere('contact_no', 'like', "%{$clean}");
+                })
+                ->exists();
+
+            if ($existingPhone) {
+                throw ValidationException::withMessages([
+                    'contact_no' => 'This mobile number is already in use by another account.',
+                ]);
+            }
+
+            $phoneChanged = true;
+            $phoneOtp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            $user->pending_phone = $submittedPhone;
+            $user->pending_phone_otp = $phoneOtp;
+            $user->pending_phone_otp_expires_at = now()->addMinutes(5);
+
+            try {
+                $user->notify(new PhoneChangeOtpNotification($phoneOtp, $submittedPhone));
+            } catch (\Throwable $e) {
+                Log::warning('Phone change OTP notification failed: ' . $e->getMessage());
+            }
+
+            try {
+                if (method_exists($user, 'buyerNotifications')) {
+                    $user->buyerNotifications()->create([
+                        'type' => 'phone_change_otp',
+                        'title' => 'Phone Verification Code',
+                        'message' => "Your verification code to update your phone number to {$submittedPhone} is {$phoneOtp} (valid for 5 minutes).",
+                        'is_read' => false,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('In-app phone change notification failed: ' . $e->getMessage());
+            }
+        }
+
+        unset($data['contact_no']);
 
         /*
         |--------------------------------------------------------------------------
@@ -171,25 +278,12 @@ class ProfileController extends Controller
                 ->first();
 
             if ($defaultAddress) {
-                /*
-                |------------------------------------------------------------------
-                | Update existing default address.
-                |------------------------------------------------------------------
-                */
-
                 $defaultAddress->update([
                     'label' => 'Home',
                     'address' => $fullAddress,
                     'is_default' => true,
                 ]);
             } else {
-                /*
-                |------------------------------------------------------------------
-                | No default address exists yet.
-                | Create one automatically.
-                |------------------------------------------------------------------
-                */
-
                 $user->addresses()->create([
                     'label' => 'Home',
                     'address' => $fullAddress,
@@ -200,25 +294,235 @@ class ProfileController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Redirect according to the current ERP section.
+        | Redirect according to the current ERP section with contextual status.
         |--------------------------------------------------------------------------
         */
 
-        if ($request->routeIs('buyer.account.update')) {
-            return Redirect::route(
-                'buyer.account'
-            )->with(
-                'status',
-                'Account information and address saved successfully.'
-            );
+        if ($emailChanged && $phoneChanged) {
+            $statusMessage = 'Profile saved. Please verify the 6-digit codes sent for your new email and phone number.';
+        } elseif ($emailChanged) {
+            $statusMessage = 'Profile saved. Please enter the 6-digit verification code sent to your new email.';
+        } elseif ($phoneChanged) {
+            $statusMessage = 'Profile saved. Please enter the 6-digit verification code sent for your new phone number.';
+        } else {
+            $statusMessage = 'Profile information saved successfully.';
         }
 
-        return Redirect::route(
-            'profile.edit'
-        )->with(
-            'status',
-            'Profile information saved successfully.'
-        );
+        if ($request->routeIs('buyer.account.update')) {
+            return Redirect::route('buyer.account')->with('status', $statusMessage);
+        }
+
+        return Redirect::route('profile.edit')->with('status', $statusMessage);
+    }
+
+    /**
+     * Verify email change OTP (BUY-ACCT-006 & BUY-ACCT-007).
+     */
+    public function verifyEmailChange(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'otp' => ['required', 'string', 'regex:/^\d{6}$/'],
+        ], [
+            'otp.required' => 'Please enter the 6-digit verification code.',
+            'otp.regex' => 'The verification code must be a 6-digit number.',
+        ]);
+
+        $user = $request->user();
+
+        if (! $user->pending_email || ! $user->pending_email_otp) {
+            throw ValidationException::withMessages([
+                'otp' => 'No pending email change request was found.',
+            ]);
+        }
+
+        if ($user->pending_email_otp !== trim((string) $request->otp)) {
+            throw ValidationException::withMessages([
+                'otp' => 'Invalid verification code.',
+            ]);
+        }
+
+        if (! $user->pending_email_otp_expires_at || now()->greaterThan($user->pending_email_otp_expires_at)) {
+            throw ValidationException::withMessages([
+                'otp' => 'The verification code has expired. Please request a new code.',
+            ]);
+        }
+
+        $newEmail = $user->pending_email;
+
+        // Ensure email was not claimed in the interim
+        $taken = User::where('id', '!=', $user->id)->where('email', $newEmail)->exists();
+        if ($taken) {
+            $user->forceFill([
+                'pending_email' => null,
+                'pending_email_otp' => null,
+                'pending_email_otp_expires_at' => null,
+            ])->save();
+
+            throw ValidationException::withMessages([
+                'otp' => 'The email has already been taken by another account.',
+            ]);
+        }
+
+        $user->forceFill([
+            'email' => $newEmail,
+            'email_verified_at' => now(),
+            'pending_email' => null,
+            'pending_email_otp' => null,
+            'pending_email_otp_expires_at' => null,
+        ])->save();
+
+        return back()->with('status', 'Email address verified and updated successfully.');
+    }
+
+    /**
+     * Resend email change OTP.
+     */
+    public function resendEmailChangeOtp(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->pending_email) {
+            throw ValidationException::withMessages([
+                'otp' => 'No pending email change request was found.',
+            ]);
+        }
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $user->forceFill([
+            'pending_email_otp' => $otp,
+            'pending_email_otp_expires_at' => now()->addMinutes(5),
+        ])->save();
+
+        try {
+            Notification::route('mail', $user->pending_email)
+                ->notify(new EmailChangeOtpNotification($otp, $user));
+        } catch (\Throwable $e) {
+            Log::warning('Resend email OTP failed to send email: ' . $e->getMessage());
+        }
+
+        try {
+            if (method_exists($user, 'buyerNotifications')) {
+                $user->buyerNotifications()->create([
+                    'type' => 'email_change_otp',
+                    'title' => 'Email Verification Code Resent',
+                    'message' => "Your new verification code to update your email to {$user->pending_email} is {$otp} (valid for 5 minutes).",
+                    'is_read' => false,
+                ]);
+            }
+        } catch (\Throwable $e) {}
+
+        return back()->with('status', 'A new 6-digit verification code has been sent to your new email.');
+    }
+
+    /**
+     * Cancel pending email change.
+     */
+    public function cancelEmailChange(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $user->forceFill([
+            'pending_email' => null,
+            'pending_email_otp' => null,
+            'pending_email_otp_expires_at' => null,
+        ])->save();
+
+        return back()->with('status', 'Pending email change cancelled.');
+    }
+
+    /**
+     * Verify phone number change OTP (BUY-ACCT-009).
+     */
+    public function verifyPhoneChange(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'otp' => ['required', 'string', 'regex:/^\d{6}$/'],
+        ], [
+            'otp.required' => 'Please enter the 6-digit verification code.',
+            'otp.regex' => 'The verification code must be a 6-digit number.',
+        ]);
+
+        $user = $request->user();
+
+        if (! $user->pending_phone || ! $user->pending_phone_otp) {
+            throw ValidationException::withMessages([
+                'otp' => 'No pending phone number change request was found.',
+            ]);
+        }
+
+        if ($user->pending_phone_otp !== trim((string) $request->otp)) {
+            throw ValidationException::withMessages([
+                'otp' => 'Invalid verification code.',
+            ]);
+        }
+
+        if (! $user->pending_phone_otp_expires_at || now()->greaterThan($user->pending_phone_otp_expires_at)) {
+            throw ValidationException::withMessages([
+                'otp' => 'The verification code has expired. Please request a new code.',
+            ]);
+        }
+
+        $newPhone = $user->pending_phone;
+
+        $user->forceFill([
+            'contact_no' => $newPhone,
+            'pending_phone' => null,
+            'pending_phone_otp' => null,
+            'pending_phone_otp_expires_at' => null,
+        ])->save();
+
+        return back()->with('status', 'Phone number verified and updated successfully.');
+    }
+
+    /**
+     * Resend phone change OTP.
+     */
+    public function resendPhoneChangeOtp(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->pending_phone) {
+            throw ValidationException::withMessages([
+                'otp' => 'No pending phone number change request was found.',
+            ]);
+        }
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $user->forceFill([
+            'pending_phone_otp' => $otp,
+            'pending_phone_otp_expires_at' => now()->addMinutes(5),
+        ])->save();
+
+        try {
+            $user->notify(new PhoneChangeOtpNotification($otp, $user->pending_phone));
+        } catch (\Throwable $e) {}
+
+        try {
+            if (method_exists($user, 'buyerNotifications')) {
+                $user->buyerNotifications()->create([
+                    'type' => 'phone_change_otp',
+                    'title' => 'Phone Verification Code Resent',
+                    'message' => "Your new verification code to update your phone to {$user->pending_phone} is {$otp} (valid for 5 minutes).",
+                    'is_read' => false,
+                ]);
+            }
+        } catch (\Throwable $e) {}
+
+        return back()->with('status', 'A new 6-digit verification code has been generated.');
+    }
+
+    /**
+     * Cancel pending phone change.
+     */
+    public function cancelPhoneChange(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $user->forceFill([
+            'pending_phone' => null,
+            'pending_phone_otp' => null,
+            'pending_phone_otp_expires_at' => null,
+        ])->save();
+
+        return back()->with('status', 'Pending phone number change cancelled.');
     }
 
     /**

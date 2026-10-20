@@ -23,11 +23,17 @@ use Laravel\Sanctum\HasApiTokens;
     'suffix',
     'sex',
     'email',
+    'pending_email',
+    'pending_email_otp',
+    'pending_email_otp_expires_at',
     'google_id',
     'avatar',
 
     // Personal information
     'contact_no',
+    'pending_phone',
+    'pending_phone_otp',
+    'pending_phone_otp_expires_at',
     'birthday',
     'age',
 
@@ -110,6 +116,15 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'avatar_url',
+    ];
 
     /*
     |--------------------------------------------------------------------------
@@ -262,6 +277,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'address_geography' => 'array',
             'email_verified_at' => 'datetime',
             'otp_expires_at' => 'datetime',
+            'pending_email_otp_expires_at' => 'datetime',
+            'pending_phone_otp_expires_at' => 'datetime',
 
             // Personal information
             'birthday' => 'date',
@@ -280,6 +297,22 @@ class User extends Authenticatable implements MustVerifyEmail
             'operating_hours' => 'array',
             'vacation_mode' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the resolved public URL for the user's avatar.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://') || str_starts_with($this->avatar, 'data:')) {
+            return $this->avatar;
+        }
+
+        return asset('storage/' . ltrim($this->avatar, '/'));
     }
 
     /**

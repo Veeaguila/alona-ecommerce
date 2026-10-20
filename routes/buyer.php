@@ -357,10 +357,42 @@ Route::middleware([
         'edit',
     ])->name('buyer.account');
 
-    Route::patch('/buyer/account', [
+    Route::match(['patch', 'post'], '/buyer/account', [
         ProfileController::class,
         'update',
     ])->name('buyer.account.update');
+
+    // Email Change OTP Verification (BUY-ACCT-006 & BUY-ACCT-007)
+    Route::post('/buyer/account/email/verify-otp', [
+        ProfileController::class,
+        'verifyEmailChange',
+    ])->name('buyer.account.email.verify');
+
+    Route::post('/buyer/account/email/resend-otp', [
+        ProfileController::class,
+        'resendEmailChangeOtp',
+    ])->name('buyer.account.email.resend');
+
+    Route::post('/buyer/account/email/cancel', [
+        ProfileController::class,
+        'cancelEmailChange',
+    ])->name('buyer.account.email.cancel');
+
+    // Phone Change OTP Verification (BUY-ACCT-009)
+    Route::post('/buyer/account/phone/verify-otp', [
+        ProfileController::class,
+        'verifyPhoneChange',
+    ])->name('buyer.account.phone.verify');
+
+    Route::post('/buyer/account/phone/resend-otp', [
+        ProfileController::class,
+        'resendPhoneChangeOtp',
+    ])->name('buyer.account.phone.resend');
+
+    Route::post('/buyer/account/phone/cancel', [
+        ProfileController::class,
+        'cancelPhoneChange',
+    ])->name('buyer.account.phone.cancel');
 
     // Login Session Management (BUYER-39)
     Route::delete('/buyer/sessions/{session}', [

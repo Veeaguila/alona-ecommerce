@@ -51,13 +51,14 @@ const buildFullName = (
 
 const profilePhoto = ref(null)
 const profilePhotoPreview = ref('')
+const photoError = ref('')
 
 const savedProfilePhoto = computed(() => {
     const value =
-        user.value.profile_photo_url ||
-        user.value.profile_photo ||
         user.value.avatar_url ||
         user.value.avatar ||
+        user.value.profile_photo_url ||
+        user.value.profile_photo ||
         ''
 
     if (!value) {
@@ -95,9 +96,7 @@ const initials = computed(() => {
 
 const handleProfilePhoto = event => {
     const file = event.target.files?.[0] || null
-
-    profilePhoto.value = file
-    form.profile_photo = file
+    photoError.value = ''
 
     if (profilePhotoPreview.value) {
         URL.revokeObjectURL(profilePhotoPreview.value)
@@ -105,15 +104,27 @@ const handleProfilePhoto = event => {
     }
 
     if (!file) {
-        return
-    }
-
-    if (!file.type.startsWith('image/')) {
         profilePhoto.value = null
         form.profile_photo = null
         return
     }
 
+    if (!file.type.startsWith('image/')) {
+        photoError.value = 'Please select a valid image file (JPG, PNG, or WEBP).'
+        profilePhoto.value = null
+        form.profile_photo = null
+        return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        photoError.value = 'Profile photo cannot exceed 5MB.'
+        profilePhoto.value = null
+        form.profile_photo = null
+        return
+    }
+
+    profilePhoto.value = file
+    form.profile_photo = file
     profilePhotoPreview.value = URL.createObjectURL(file)
 }
 
@@ -427,6 +438,11 @@ const submit = () => {
 
     form.name = fullName
 
+    const targetRoute =
+        typeof route === 'function' && route().has('buyer.account.update')
+            ? route('buyer.account.update')
+            : route('profile.update')
+
     form
         .transform(data => ({
             ...data,
@@ -442,7 +458,7 @@ const submit = () => {
             age: age.value,
         }))
         .patch(
-            route('buyer.account.update'),
+            targetRoute,
             {
                 forceFormData: true,
                 preserveScroll: true,
@@ -460,6 +476,13 @@ const submit = () => {
 
                         profilePhotoPreview.value = ''
                     }
+
+                    if (user.value.pending_email) {
+                        showEmailOtpModal.value = true
+                    }
+                    if (user.value.pending_phone) {
+                        showPhoneOtpModal.value = true
+                    }
                 },
 
                 onError: errors => {
@@ -470,6 +493,110 @@ const submit = () => {
                 },
             },
         )
+}
+
+/*
+|--------------------------------------------------------------------------
+| Email & Phone OTP Verification (BUY-ACCT-006, BUY-ACCT-007, BUY-ACCT-009)
+|--------------------------------------------------------------------------
+*/
+
+const showEmailOtpModal = ref(false)
+const showPhoneOtpModal = ref(false)
+
+const emailOtpForm = useForm({
+    otp: '',
+})
+
+const phoneOtpForm = useForm({
+    otp: '',
+})
+
+const pendingEmail = computed(() => user.value.pending_email || '')
+const pendingPhone = computed(() => user.value.pending_phone || '')
+
+watch(
+    () => user.value.pending_email,
+    newVal => {
+        if (newVal) {
+            showEmailOtpModal.value = true
+        }
+    },
+    { immediate: true }
+)
+
+watch(
+    () => user.value.pending_phone,
+    newVal => {
+        if (newVal) {
+            showPhoneOtpModal.value = true
+        }
+    },
+    { immediate: true }
+)
+
+const resolveRoute = (buyerName, fallbackName) => {
+    try {
+        if (typeof route === 'function' && route().has(buyerName)) {
+            return route(buyerName)
+        }
+        if (typeof route === 'function' && route().has(fallbackName)) {
+            return route(fallbackName)
+        }
+    } catch (e) {}
+    return `/${buyerName.replace(/\./g, '/')}`
+}
+
+const submitEmailOtp = () => {
+    emailOtpForm.post(resolveRoute('buyer.account.email.verify', 'profile.email.verify'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            emailOtpForm.reset()
+            showEmailOtpModal.value = false
+        },
+    })
+}
+
+const resendEmailOtp = () => {
+    emailOtpForm.post(resolveRoute('buyer.account.email.resend', 'profile.email.resend'), {
+        preserveScroll: true,
+    })
+}
+
+const cancelEmailChange = () => {
+    emailOtpForm.post(resolveRoute('buyer.account.email.cancel', 'profile.email.cancel'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showEmailOtpModal.value = false
+            form.email = user.value.email || ''
+        },
+    })
+}
+
+const submitPhoneOtp = () => {
+    phoneOtpForm.post(resolveRoute('buyer.account.phone.verify', 'profile.phone.verify'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            phoneOtpForm.reset()
+            showPhoneOtpModal.value = false
+        },
+    })
+}
+
+const resendPhoneOtp = () => {
+    phoneOtpForm.post(resolveRoute('buyer.account.phone.resend', 'profile.phone.resend'), {
+        preserveScroll: true,
+    })
+}
+
+const cancelPhoneChange = () => {
+    phoneOtpForm.post(resolveRoute('buyer.account.phone.cancel', 'profile.phone.cancel'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showPhoneOtpModal.value = false
+            form.contact_no = user.value.contact_no || ''
+        },
+    })
 }
 
 /*
@@ -603,9 +730,12 @@ onBeforeUnmount(() => {
                         </p>
 
                         <label
-                            class="mt-2 inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-[#087F8C] hover:text-[#066B76]"
+                            class="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#087F8C]/20 bg-[#E8F7F6] px-3 py-1.5 text-xs font-bold text-[#087F8C] transition hover:bg-[#D5EFEF]"
                         >
-                            <span>Upload a profile photo</span>
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>Upload profile photo</span>
 
                             <input
                                 type="file"
@@ -614,6 +744,12 @@ onBeforeUnmount(() => {
                                 @change="handleProfilePhoto"
                             />
                         </label>
+                        <p v-if="photoError" class="mt-1.5 text-[11px] font-semibold text-rose-600">
+                            {{ photoError }}
+                        </p>
+                        <p v-else class="mt-1 text-[10px] text-[#94A3B8]">
+                            Supports JPG, PNG, WEBP (Max 5MB)
+                        </p>
                     </div>
                 </div>
 
@@ -635,7 +771,7 @@ onBeforeUnmount(() => {
             </div>
 
             <InputError
-                :message="form.errors.profile_photo"
+                :message="form.errors.profile_photo || form.errors.avatar"
                 class="mt-3"
             />
         </div>
@@ -836,40 +972,111 @@ onBeforeUnmount(() => {
                 <div class="grid gap-3">
 
                     <!-- Email -->
-                    <label>
-                        <span class="label">
-                            E-mail *
-                        </span>
+                    <div>
+                        <label>
+                            <span class="label">
+                                E-mail *
+                            </span>
 
-                        <input
-                            v-model="form.email"
-                            type="email"
-                            required
-                            class="field"
-                        />
+                            <input
+                                v-model="form.email"
+                                type="email"
+                                required
+                                class="field"
+                            />
 
-                        <InputError
-                            :message="form.errors.email"
-                        />
-                    </label>
+                            <InputError
+                                :message="form.errors.email"
+                            />
+                        </label>
+
+                        <!-- Pending Email Change OTP Banner -->
+                        <div
+                            v-if="user.pending_email"
+                            class="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="font-bold text-amber-900">
+                                        Pending Email Change: <span class="font-mono text-amber-950">{{ user.pending_email }}</span>
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] text-amber-700">
+                                        A 6-digit OTP code was sent to this email.
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        @click="showEmailOtpModal = true"
+                                        class="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-700"
+                                    >
+                                        Enter Code
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="cancelEmailChange"
+                                        class="text-[11px] font-semibold text-amber-700 underline hover:text-amber-900"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Contact -->
-                    <label>
-                        <span class="label">
-                            Contact No. *
-                        </span>
+                    <div>
+                        <label>
+                            <span class="label">
+                                Contact No. *
+                            </span>
 
-                        <input
-                            v-model="form.contact_no"
-                            type="tel"
-                            required
-                            class="field"
-                        />
+                            <input
+                                v-model="form.contact_no"
+                                type="tel"
+                                required
+                                placeholder="09171234567"
+                                class="field"
+                            />
 
-                        <InputError
-                            :message="form.errors.contact_no"
-                        />
-                    </label>
+                            <InputError
+                                :message="form.errors.contact_no"
+                            />
+                        </label>
+
+                        <!-- Pending Phone Change OTP Banner -->
+                        <div
+                            v-if="user.pending_phone"
+                            class="mt-2 rounded-xl border border-teal-300 bg-teal-50 p-3 text-xs"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="font-bold text-teal-900">
+                                        Pending Phone Change: <span class="font-mono text-teal-950">{{ user.pending_phone }}</span>
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] text-teal-700">
+                                        A 6-digit verification code was issued for this number.
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        @click="showPhoneOtpModal = true"
+                                        class="rounded-lg bg-[#087F8C] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#066B76]"
+                                    >
+                                        Enter Code
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="cancelPhoneChange"
+                                        class="text-[11px] font-semibold text-teal-700 underline hover:text-teal-900"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- EMAIL VERIFICATION -->
                     <div
@@ -1144,6 +1351,180 @@ onBeforeUnmount(() => {
             </div>
 
         </form>
+
+        <!-- EMAIL OTP VERIFICATION MODAL (BUY-ACCT-006 & BUY-ACCT-007) -->
+        <div
+            v-if="showEmailOtpModal && user.pending_email"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
+            <div
+                class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5"
+            >
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="text-base font-extrabold text-[#1F2937]">Verify New Email</h3>
+                            <p class="text-xs text-slate-500">Enter the 6-digit verification code</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showEmailOtpModal = false"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div class="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                    We sent a 6-digit verification code to <strong class="text-slate-800">{{ user.pending_email }}</strong>. Please check your inbox. Code expires in 5 minutes.
+                </div>
+
+                <form @submit.prevent="submitEmailOtp" class="mt-4">
+                    <label class="block">
+                        <span class="text-xs font-bold text-slate-700">6-Digit Code</span>
+                        <input
+                            v-model="emailOtpForm.otp"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="6"
+                            placeholder="123456"
+                            autofocus
+                            required
+                            class="mt-1 block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-center font-mono text-xl font-bold tracking-widest text-slate-800 focus:border-[#087F8C] focus:ring focus:ring-[#087F8C]/20"
+                        />
+                        <InputError :message="emailOtpForm.errors.otp" class="mt-1 text-center" />
+                    </label>
+
+                    <div class="mt-4 flex items-center justify-between text-xs">
+                        <button
+                            type="button"
+                            :disabled="emailOtpForm.processing"
+                            @click="resendEmailOtp"
+                            class="font-bold text-[#087F8C] hover:underline disabled:opacity-50"
+                        >
+                            Resend Code
+                        </button>
+                        <button
+                            type="button"
+                            @click="cancelEmailChange"
+                            class="font-semibold text-rose-600 hover:underline"
+                        >
+                            Cancel Email Change
+                        </button>
+                    </div>
+
+                    <div class="mt-5 flex gap-2">
+                        <button
+                            type="button"
+                            @click="showEmailOtpModal = false"
+                            class="w-1/3 rounded-xl border border-slate-300 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                            Close
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="emailOtpForm.processing"
+                            class="w-2/3 rounded-xl bg-[#087F8C] py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#066B76] disabled:opacity-50"
+                        >
+                            {{ emailOtpForm.processing ? 'Verifying...' : 'Verify & Update' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PHONE OTP VERIFICATION MODAL (BUY-ACCT-009) -->
+        <div
+            v-if="showPhoneOtpModal && user.pending_phone"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
+            <div
+                class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5"
+            >
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="text-base font-extrabold text-[#1F2937]">Verify New Phone</h3>
+                            <p class="text-xs text-slate-500">Enter the 6-digit verification code</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showPhoneOtpModal = false"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div class="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                    A verification challenge was issued for <strong class="text-slate-800">{{ user.pending_phone }}</strong>. Enter the 6-digit code below to confirm. Code expires in 5 minutes.
+                </div>
+
+                <form @submit.prevent="submitPhoneOtp" class="mt-4">
+                    <label class="block">
+                        <span class="text-xs font-bold text-slate-700">6-Digit Code</span>
+                        <input
+                            v-model="phoneOtpForm.otp"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="6"
+                            placeholder="123456"
+                            autofocus
+                            required
+                            class="mt-1 block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-center font-mono text-xl font-bold tracking-widest text-slate-800 focus:border-[#087F8C] focus:ring focus:ring-[#087F8C]/20"
+                        />
+                        <InputError :message="phoneOtpForm.errors.otp" class="mt-1 text-center" />
+                    </label>
+
+                    <div class="mt-4 flex items-center justify-between text-xs">
+                        <button
+                            type="button"
+                            :disabled="phoneOtpForm.processing"
+                            @click="resendPhoneOtp"
+                            class="font-bold text-[#087F8C] hover:underline disabled:opacity-50"
+                        >
+                            Resend Code
+                        </button>
+                        <button
+                            type="button"
+                            @click="cancelPhoneChange"
+                            class="font-semibold text-rose-600 hover:underline"
+                        >
+                            Cancel Phone Change
+                        </button>
+                    </div>
+
+                    <div class="mt-5 flex gap-2">
+                        <button
+                            type="button"
+                            @click="showPhoneOtpModal = false"
+                            class="w-1/3 rounded-xl border border-slate-300 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                            Close
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="phoneOtpForm.processing"
+                            class="w-2/3 rounded-xl bg-[#087F8C] py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#066B76] disabled:opacity-50"
+                        >
+                            {{ phoneOtpForm.processing ? 'Verifying...' : 'Verify & Update' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </section>
 </template>
 

@@ -234,10 +234,40 @@ Route::middleware('auth')->group(function () {
         'edit',
     ])->name('profile.edit');
 
-    Route::patch('/profile', [
+    Route::match(['patch', 'post'], '/profile', [
         ProfileController::class,
         'update',
     ])->name('profile.update');
+
+    Route::post('/profile/email/verify-otp', [
+        ProfileController::class,
+        'verifyEmailChange',
+    ])->name('profile.email.verify');
+
+    Route::post('/profile/email/resend-otp', [
+        ProfileController::class,
+        'resendEmailChangeOtp',
+    ])->name('profile.email.resend');
+
+    Route::post('/profile/email/cancel', [
+        ProfileController::class,
+        'cancelEmailChange',
+    ])->name('profile.email.cancel');
+
+    Route::post('/profile/phone/verify-otp', [
+        ProfileController::class,
+        'verifyPhoneChange',
+    ])->name('profile.phone.verify');
+
+    Route::post('/profile/phone/resend-otp', [
+        ProfileController::class,
+        'resendPhoneChangeOtp',
+    ])->name('profile.phone.resend');
+
+    Route::post('/profile/phone/cancel', [
+        ProfileController::class,
+        'cancelPhoneChange',
+    ])->name('profile.phone.cancel');
 
     Route::delete('/profile', [
         ProfileController::class,
