@@ -51,6 +51,9 @@ class Product extends Model
     protected static function booted(): void
     {
         static::saving(function (self $product): void {
+            if (empty($product->slug) && !empty($product->name)) {
+                $product->slug = \Illuminate\Support\Str::slug($product->name) . '-' . strtolower(\Illuminate\Support\Str::random(6));
+            }
             $threshold = (int) ($product->low_stock_threshold ?? 5);
             if ((int) ($product->stock ?? 0) > $threshold) {
                 $product->low_stock_alerted = false;

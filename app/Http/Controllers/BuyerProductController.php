@@ -253,8 +253,48 @@ class BuyerProductController extends Controller
                 ->avg('rating'),
         ];
 
+        $vouchers = \App\Models\Voucher::query()
+            ->where('seller_id', $product->seller_id)
+            ->where('is_active', true)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+                $q->whereNull('ended_at');
+            })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('display_mode')
+                        ->orWhere('display_mode', '!=', 'code_only');
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('starts_at')
+                  ->orWhereDate('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhereDate('expires_at', '>=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('usage_limit')
+                  ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->latest()
+            ->get()
+            ->filter(fn (\App\Models\Voucher $v) => $v->appliesToProduct((int) $product->id, (int) $product->seller_id))
+            ->values();
+
+        $claimedVoucherIds = [];
+        if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('user_vouchers')) {
+            $claimedVoucherIds = \App\Models\UserVoucher::where('user_id', auth()->id())
+                ->whereIn('voucher_id', $vouchers->pluck('id'))
+                ->where('status', 'claimed')
+                ->pluck('voucher_id')
+                ->toArray();
+        }
+
         return Inertia::render('Buyer/Show', [
             'product' => $product,
+            'vouchers' => $vouchers,
+            'claimed_voucher_ids' => $claimedVoucherIds,
             'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
             'isGuest' => !auth()->check(),

@@ -30,7 +30,36 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    vouchers: {
+        type: Array,
+        default: () => [],
+    },
+    claimed_voucher_ids: {
+        type: Array,
+        default: () => [],
+    },
 })
+
+const claimedVoucherIds = ref([...props.claimed_voucher_ids])
+
+const claimProductVoucher = voucher => {
+    if (isGuestUser.value) {
+        router.visit(route('login'))
+        return
+    }
+    router.post(
+        route('buyer.vouchers.claim', voucher.id),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (!claimedVoucherIds.value.includes(voucher.id)) {
+                    claimedVoucherIds.value.push(voucher.id)
+                }
+            },
+        }
+    )
+}
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user ?? null)
@@ -1210,6 +1239,40 @@ const breadcrumbs = computed(() => {
                                 >
                                     {{ product.discount_badge || 'SALE' }}
                                 </span>
+                            </div>
+
+                            <!-- CLAIMABLE STORE VOUCHERS (SEL-VOU-001) -->
+                            <div
+                                v-if="vouchers && vouchers.length > 0"
+                                class="mt-4 space-y-2 rounded-xl border border-[#B2DFDB] bg-[#E8F7F6]/50 p-3"
+                            >
+                                <p class="text-[11px] font-bold uppercase tracking-wide text-[#087F8C]">
+                                    Store Vouchers Available
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <div
+                                        v-for="v in vouchers"
+                                        :key="v.id"
+                                        class="flex items-center justify-between gap-3 rounded-lg border border-[#087F8C]/30 bg-white px-3 py-1.5 text-xs shadow-2xs"
+                                    >
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{ v.claim_label || `Claim ₱${Number(v.value).toFixed(0)} off` }}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            @click="claimProductVoucher(v)"
+                                            :disabled="!isGuestUser && claimedVoucherIds.includes(v.id)"
+                                            class="rounded-md px-2.5 py-1 text-[11px] font-bold transition"
+                                            :class="
+                                                !isGuestUser && claimedVoucherIds.includes(v.id)
+                                                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                                    : 'bg-[#087F8C] text-white hover:bg-[#066B76]'
+                                            "
+                                        >
+                                            {{ !isGuestUser && claimedVoucherIds.includes(v.id) ? 'Claimed' : 'Claim' }}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- DESCRIPTION -->

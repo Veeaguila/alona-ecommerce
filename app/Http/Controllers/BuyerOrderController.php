@@ -445,8 +445,8 @@ class BuyerOrderController extends Controller
         }
 
         if (
-            Schema::hasColumn('vouchers', 'is_active') &&
-            !$voucher->is_active
+            (Schema::hasColumn('vouchers', 'is_active') && !$voucher->is_active) ||
+            (Schema::hasColumn('vouchers', 'ended_at') && $voucher->ended_at !== null)
         ) {
             return response()->json([
                 'valid' => false,
@@ -896,11 +896,8 @@ class BuyerOrderController extends Controller
                     */
 
                     if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'is_active'
-                        ) &&
-                        !$voucher->is_active
+                        (Schema::hasColumn('vouchers', 'is_active') && !$voucher->is_active) ||
+                        (Schema::hasColumn('vouchers', 'ended_at') && $voucher->ended_at !== null)
                     ) {
                         throw ValidationException::withMessages([
                             'voucher_code' =>
@@ -1664,6 +1661,29 @@ class BuyerOrderController extends Controller
                 $order,
                 'cancelled'
             );
+
+            // SEL-VOU-011 / A21: Decrement voucher usage count & return voucher to buyer's wallet if not expired
+            if ($order->voucher_id) {
+                $voucher = Voucher::whereKey($order->voucher_id)->lockForUpdate()->first();
+                if ($voucher) {
+                    if (Schema::hasColumn('vouchers', 'used_count') && (int) $voucher->used_count > 0) {
+                        $voucher->decrement('used_count');
+                    }
+                    if (Schema::hasTable('user_vouchers')) {
+                        $notExpired = ! $voucher->expires_at || ! $voucher->expires_at->copy()->endOfDay()->isPast();
+                        $notEnded = $voucher->is_active && (! Schema::hasColumn('vouchers', 'ended_at') || $voucher->ended_at === null);
+                        if ($notExpired && $notEnded) {
+                            UserVoucher::where('user_id', $order->user_id)
+                                ->where('voucher_id', $voucher->id)
+                                ->where('status', 'used')
+                                ->update([
+                                    'status' => 'claimed',
+                                    'used_at' => null,
+                                ]);
+                        }
+                    }
+                }
+            }
 
             // Buyer notification
             if (Schema::hasTable('buyer_notifications')) {

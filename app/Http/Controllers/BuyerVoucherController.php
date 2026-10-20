@@ -27,6 +27,18 @@ class BuyerVoucherController extends Controller
         // Check for expiring vouchers and notify the buyer (BUYER-27)
         $this->checkAndNotifyExpiringVouchers($user);
 
+        // Remove any claimed vouchers whose voucher was ended/deactivated by seller (SEL-VOU-010 / A27)
+        UserVoucher::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'claimed')
+            ->whereHas('voucher', function ($query) {
+                $query->where('is_active', false);
+                if (Schema::hasColumn('vouchers', 'ended_at')) {
+                    $query->orWhereNotNull('ended_at');
+                }
+            })
+            ->delete();
+
         // Update any claimed vouchers that have passed expiration date
         UserVoucher::query()
             ->where('user_id', $user->id)
@@ -94,9 +106,9 @@ class BuyerVoucherController extends Controller
     {
         $user = $request->user();
 
-        if (!$voucher->isValidNow()) {
+        if (! $voucher->isClaimableByBuyer()) {
             throw ValidationException::withMessages([
-                'voucher' => 'This voucher is no longer active or has reached its usage limit.',
+                'voucher' => 'This voucher is no longer active or cannot be claimed directly.',
             ]);
         }
 
@@ -151,6 +163,15 @@ class BuyerVoucherController extends Controller
 
         return Voucher::query()
             ->where('is_active', true)
+            ->when(Schema::hasColumn('vouchers', 'ended_at'), function ($query) {
+                $query->whereNull('ended_at');
+            })
+            ->when(Schema::hasColumn('vouchers', 'display_mode'), function ($query) {
+                $query->where(function ($sub) {
+                    $sub->whereNull('display_mode')
+                        ->orWhere('display_mode', '!=', 'code_only');
+                });
+            })
             ->whereNotIn('id', $claimedVoucherIds)
             ->where(function ($query) {
                 $query->whereNull('starts_at')

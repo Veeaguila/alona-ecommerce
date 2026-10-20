@@ -618,6 +618,30 @@ class SellerOrderController extends Controller
             $reason
         );
 
+        // SEL-VOU-011 / A21: If entire order is now cancelled, restore voucher usage count and wallet claim
+        $parentOrder = $orderItem->order ? $orderItem->order->fresh() : null;
+        if ($parentOrder && $parentOrder->status === 'cancelled' && $parentOrder->voucher_id) {
+            $voucher = \App\Models\Voucher::whereKey($parentOrder->voucher_id)->lockForUpdate()->first();
+            if ($voucher) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'used_count') && (int) $voucher->used_count > 0) {
+                    $voucher->decrement('used_count');
+                }
+                if (\Illuminate\Support\Facades\Schema::hasTable('user_vouchers')) {
+                    $notExpired = ! $voucher->expires_at || ! $voucher->expires_at->copy()->endOfDay()->isPast();
+                    $notEnded = $voucher->is_active && (! \Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at') || $voucher->ended_at === null);
+                    if ($notExpired && $notEnded) {
+                        \App\Models\UserVoucher::where('user_id', $parentOrder->user_id)
+                            ->where('voucher_id', $voucher->id)
+                            ->where('status', 'used')
+                            ->update([
+                                'status' => 'claimed',
+                                'used_at' => null,
+                            ]);
+                    }
+                }
+            }
+        }
+
         /*
          * Keep a seller-side notification/audit record.
          *

@@ -154,16 +154,33 @@ class BuyerStoreController extends Controller
                 ->values();
         }
 
-        // Authentic store vouchers
+        // Authentic store vouchers (SEL-VOU-001, SEL-VOU-003: exclude code-only vouchers)
         $vouchers = Voucher::query()
             ->where('seller_id', $seller->id)
             ->where(function ($q) {
                 $q->where('is_active', true)
                   ->orWhereNull('is_active');
             })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+                $q->whereNull('ended_at');
+            })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('display_mode')
+                        ->orWhere('display_mode', '!=', 'code_only');
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('starts_at')
+                  ->orWhereDate('starts_at', '<=', now()->toDateString());
+            })
             ->where(function ($q) {
                 $q->whereNull('expires_at')
                   ->orWhereDate('expires_at', '>=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('usage_limit')
+                  ->orWhereColumn('used_count', '<', 'usage_limit');
             })
             ->latest()
             ->get();

@@ -9,8 +9,13 @@ class Voucher extends Model
 {
     protected $fillable = [
         'seller_id', 'is_platform', 'code', 'type', 'value', 'max_discount', 'min_spend',
-        'usage_limit', 'per_customer_limit', 'target_type', 'targeted_product_ids', 'targeted_category_ids',
-        'used_count', 'starts_at', 'expires_at', 'is_active',
+        'usage_limit', 'per_customer_limit', 'target_type', 'display_mode', 'targeted_product_ids', 'targeted_category_ids',
+        'used_count', 'starts_at', 'expires_at', 'ended_at', 'is_active',
+    ];
+
+    protected $appends = [
+        'status_label',
+        'claim_label',
     ];
 
     protected function casts(): array
@@ -27,6 +32,7 @@ class Voucher extends Model
             'used_count' => 'integer',
             'starts_at' => 'date',
             'expires_at' => 'date',
+            'ended_at' => 'datetime',
             'is_active' => 'boolean',
         ];
     }
@@ -53,17 +59,85 @@ class Voucher extends Model
             ->withTimestamps();
     }
 
+    /**
+     * S7 Status label: 'Upcoming', 'Ongoing', or 'Ended'
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        if (! $this->is_active || $this->ended_at !== null) {
+            return 'Ended';
+        }
+
+        if ($this->expires_at && $this->expires_at->copy()->endOfDay()->isPast()) {
+            return 'Ended';
+        }
+
+        if ($this->starts_at && $this->starts_at->copy()->startOfDay()->isFuture()) {
+            return 'Upcoming';
+        }
+
+        return 'Ongoing';
+    }
+
+    /**
+     * S7 Claimable banner text (SEL-VOU-001): e.g. "Claim ₱50 off, min. spend ₱300"
+     */
+    public function getClaimLabelAttribute(): string
+    {
+        if ($this->type === 'percentage') {
+            $pct = (int) round((float) $this->value);
+            $discountPart = "{$pct}% off";
+        } elseif ($this->type === 'free_shipping') {
+            $discountPart = 'Free Shipping';
+        } else {
+            $val = (float) $this->value;
+            $formattedVal = floor($val) == $val ? number_format($val, 0) : number_format($val, 2);
+            $discountPart = "₱{$formattedVal} off";
+        }
+
+        $minSpend = (float) ($this->min_spend ?? 0);
+        if ($minSpend > 0) {
+            $formattedMin = floor($minSpend) == $minSpend ? number_format($minSpend, 0) : number_format($minSpend, 2);
+            return "Claim {$discountPart}, min. spend ₱{$formattedMin}";
+        }
+
+        return "Claim {$discountPart}";
+    }
+
+    public function isClaimableByBuyer(): bool
+    {
+        if (($this->display_mode ?? 'claimable') === 'code_only') {
+            return false;
+        }
+
+        return $this->isValidNow();
+    }
+
+    public function appliesToProduct(int $productId, ?int $sellerId = null): bool
+    {
+        if ($this->seller_id !== null && $sellerId !== null && (int) $this->seller_id !== (int) $sellerId) {
+            return false;
+        }
+
+        if (($this->target_type ?? 'all') === 'product' && ! empty($this->targeted_product_ids)) {
+            $targeted = array_map('intval', (array) $this->targeted_product_ids);
+            return in_array((int) $productId, $targeted, true);
+        }
+
+        return true;
+    }
+
     public function isValidNow(): bool
     {
-        if (! $this->is_active) {
+        if (! $this->is_active || $this->ended_at !== null) {
             return false;
         }
 
-        if ($this->starts_at && $this->starts_at->isFuture()) {
+        if ($this->starts_at && $this->starts_at->copy()->startOfDay()->isFuture()) {
             return false;
         }
 
-        if ($this->expires_at && $this->expires_at->isPast()) {
+        if ($this->expires_at && $this->expires_at->copy()->endOfDay()->isPast()) {
             return false;
         }
 
@@ -76,7 +150,7 @@ class Voucher extends Model
 
     public function isExpiringSoon(): bool
     {
-        if (! $this->is_active || ! $this->expires_at) {
+        if (! $this->is_active || $this->ended_at !== null || ! $this->expires_at) {
             return false;
         }
 

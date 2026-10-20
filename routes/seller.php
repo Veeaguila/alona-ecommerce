@@ -201,6 +201,11 @@ Route::middleware([
         'update',
     ])->name('seller.vouchers.update');
 
+    Route::match(['post', 'patch'], '/seller/vouchers/{voucher}/end', [
+        SellerVoucherController::class,
+        'endNow',
+    ])->name('seller.vouchers.end');
+
     Route::delete('/seller/vouchers/{voucher}', [
         SellerVoucherController::class,
         'destroy',

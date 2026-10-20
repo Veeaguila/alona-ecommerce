@@ -701,7 +701,7 @@ const formatTime = (timeStr) => {
 
                             <div class="min-w-0 flex-1 pr-3">
                                 <h3 class="text-sm sm:text-base font-black text-[#087F8C]">
-                                    {{ formatVoucherTitle(voucher) }}
+                                    {{ voucher.claim_label || formatVoucherTitle(voucher) }}
                                 </h3>
 
                                 <p class="text-[11px] text-slate-600 mt-0.5">

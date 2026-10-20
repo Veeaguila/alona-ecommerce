@@ -163,12 +163,17 @@ const form = useForm({
     max_discount: '',
     per_customer_limit: 1,
     target_type: 'all',
+    display_mode: 'claimable',
     targeted_product_ids: [],
     min_spend: '',
     usage_limit: '',
     starts_at: '',
     expires_at: '',
     is_active: true,
+})
+
+const isClaimedVoucher = computed(() => {
+    return Boolean(editingVoucher.value && Number(editingVoucher.value.claimed_count ?? 0) > 0)
 })
 
 /*
@@ -282,7 +287,8 @@ const getExpiryInfo = voucher => {
 }
 
 const statusLabel = voucher => {
-    if (!voucher.is_active) return 'Inactive'
+    if (voucher.status_label) return voucher.status_label
+    if (!voucher.is_active) return 'Ended'
 
     if (voucher.usage_limit && Number(voucher.used_count ?? 0) >= Number(voucher.usage_limit)) {
         return 'Limit Reached'
@@ -293,27 +299,29 @@ const statusLabel = voucher => {
 
     if (voucher.starts_at) {
         const start = new Date(`${String(voucher.starts_at).slice(0, 10)}T00:00:00`)
-        if (start > today) return 'Scheduled'
+        if (start > today) return 'Upcoming'
     }
 
     const expiryInfo = getExpiryInfo(voucher)
-    if (expiryInfo.isExpired) return 'Expired'
-    if (expiryInfo.isExpiringSoon) return 'Expiring Soon'
+    if (expiryInfo.isExpired) return 'Ended'
 
-    return 'Active'
+    return 'Ongoing'
 }
 
 const statusClass = voucher => {
     const status = statusLabel(voucher)
     switch (status) {
+        case 'Ongoing':
         case 'Active':
             return 'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A]'
         case 'Expiring Soon':
             return 'border-amber-300 bg-amber-50 text-amber-700 font-bold'
+        case 'Upcoming':
         case 'Scheduled':
             return 'border-[#BDE9E7] bg-[#E8F7F6] text-[#087F8C]'
         case 'Limit Reached':
             return 'border-[#FDE68A] bg-[#FFFBEB] text-[#B77900]'
+        case 'Ended':
         case 'Expired':
             return 'border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]'
         default:
@@ -341,6 +349,7 @@ const openCreateModal = () => {
     form.max_discount = ''
     form.per_customer_limit = 1
     form.target_type = 'all'
+    form.display_mode = 'claimable'
     form.targeted_product_ids = []
     form.min_spend = ''
     form.usage_limit = ''
@@ -360,6 +369,7 @@ const openEditModal = voucher => {
     form.max_discount = voucher.max_discount ?? ''
     form.per_customer_limit = voucher.per_customer_limit ?? 1
     form.target_type = voucher.target_type ?? 'all'
+    form.display_mode = voucher.display_mode ?? 'claimable'
     form.targeted_product_ids = Array.isArray(voucher.targeted_product_ids) ? [...voucher.targeted_product_ids] : []
     form.min_spend = voucher.min_spend ?? ''
     form.usage_limit = voucher.usage_limit ?? ''
@@ -369,6 +379,13 @@ const openEditModal = voucher => {
     form.clearErrors()
     productSearch.value = ''
     showModal.value = true
+}
+
+const endVoucherNow = voucher => {
+    if (!window.confirm(`End voucher "${voucher.code}" now? Unclaimed/unused copies will be removed from buyer wallets.`)) return
+    useForm({}).post(route('seller.vouchers.end', voucher.id), {
+        preserveScroll: true,
+    })
 }
 
 const closeModal = () => {
@@ -710,7 +727,7 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                             {{ voucher.per_customer_limit ? voucher.per_customer_limit + 'x per user' : 'Unlimited' }}
                                         </p>
                                         <p class="mt-0.5 text-[11px] text-slate-400">
-                                            Total uses: {{ voucher.used_count ?? 0 }} {{ voucher.usage_limit ? '/ ' + voucher.usage_limit : '' }}
+                                            Usage: {{ voucher.used_count ?? 0 }} of {{ voucher.usage_limit || '∞' }}
                                         </p>
                                     </td>
 
@@ -765,16 +782,12 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                     <td class="px-5 py-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5">
                                             <button
+                                                v-if="voucher.is_active && statusLabel(voucher) !== 'Ended'"
                                                 type="button"
-                                                @click="toggleVoucher(voucher)"
-                                                class="rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition"
-                                                :class="
-                                                    voucher.is_active
-                                                        ? 'border-[#FDE68A] bg-[#FFF8E7] text-[#A66A00] hover:bg-[#FFF1C9]'
-                                                        : 'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A] hover:bg-[#DDF8EA]'
-                                                "
+                                                @click="endVoucherNow(voucher)"
+                                                class="rounded-lg border border-[#FDE68A] bg-[#FFF8E7] px-2.5 py-1.5 text-[10px] font-bold text-[#A66A00] transition hover:bg-[#FFF1C9]"
                                             >
-                                                {{ voucher.is_active ? 'Deactivate' : 'Activate' }}
+                                                End Now
                                             </button>
 
                                             <button
@@ -923,21 +936,43 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                 <!-- FORM -->
                 <form @submit.prevent="submit">
                     <div class="max-h-[72vh] space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
-                        <!-- CODE -->
-                        <div>
-                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">
-                                Voucher Promo Code <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                v-model="form.code"
-                                type="text"
-                                maxlength="30"
-                                placeholder="e.g. FLASH20, FREESHIP80, MEGA50"
-                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 text-sm uppercase text-[#1F2937] outline-none transition placeholder:normal-case placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
-                            />
-                            <p v-if="form.errors.code" class="mt-1 text-xs font-medium text-[#DC2626]">
-                                {{ form.errors.code }}
-                            </p>
+                        <div
+                            v-if="isClaimedVoucher"
+                            class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800"
+                        >
+                            Buyers have already claimed this voucher. Only the <strong>Expiry Date</strong> and <strong>Total Campaign Limit</strong> can be increased; all other fields are locked.
+                        </div>
+
+                        <!-- CODE & DISPLAY MODE -->
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">
+                                    Voucher Promo Code <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    v-model="form.code"
+                                    type="text"
+                                    maxlength="12"
+                                    :disabled="isClaimedVoucher"
+                                    placeholder="e.g. MCH50, MCH10 (4–12 letters/digits)"
+                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 text-sm uppercase text-[#1F2937] outline-none transition placeholder:normal-case placeholder:text-[#94A3B8] disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                />
+                                <p v-if="form.errors.code" class="mt-1 text-xs font-medium text-[#DC2626]">
+                                    {{ form.errors.code }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-[#1F2937]">Display Mode</label>
+                                <select
+                                    v-model="form.display_mode"
+                                    :disabled="isClaimedVoucher"
+                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                >
+                                    <option value="claimable">Claimable (Shown on Store & Product pages)</option>
+                                    <option value="code_only">Code-Only (Hidden, applied by typing code)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- SELLER-29: TYPE (Percentage, Fixed, Free Shipping) -->
@@ -946,7 +981,8 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                 <label class="mb-1 block text-xs font-bold text-[#1F2937]">Discount Type</label>
                                 <select
                                     v-model="form.type"
-                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
+                                    :disabled="isClaimedVoucher"
+                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:ring-2 focus:ring-[#E8F7F6]"
                                 >
                                     <option value="percentage">Percentage (%)</option>
                                     <option value="fixed">Fixed Amount (₱)</option>
@@ -966,7 +1002,7 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                         type="number"
                                         min="0"
                                         :step="form.type === 'percentage' ? '1' : '0.01'"
-                                        :disabled="form.type === 'free_shipping'"
+                                        :disabled="form.type === 'free_shipping' || isClaimedVoucher"
                                         :placeholder="form.type === 'free_shipping' ? '100% Free' : form.type === 'percentage' ? '20' : '100'"
                                         class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                         :class="form.type === 'fixed' ? 'pl-8 pr-3' : 'px-3'"
@@ -988,8 +1024,9 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                         type="number"
                                         min="0.01"
                                         step="0.01"
+                                        :disabled="isClaimedVoucher"
                                         placeholder="Optional Cap"
-                                        class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-8 pr-3 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                        class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-8 pr-3 text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     />
                                 </div>
                                 <p class="mt-0.5 text-[10px] text-slate-400">
@@ -1010,8 +1047,9 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                         type="number"
                                         min="0"
                                         step="0.01"
+                                        :disabled="isClaimedVoucher"
                                         placeholder="0"
-                                        class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-8 pr-3 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                        class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-8 pr-3 text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     />
                                 </div>
                                 <p v-if="form.errors.min_spend" class="mt-1 text-xs text-red-600">{{ form.errors.min_spend }}</p>
@@ -1025,8 +1063,9 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                                     min="1"
                                     max="100"
                                     step="1"
+                                    :disabled="isClaimedVoucher"
                                     placeholder="1"
-                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
+                                    class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 text-sm text-[#1F2937] outline-none transition disabled:bg-slate-100 disabled:text-slate-400 focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                 />
                                 <p class="mt-0.5 text-[10px] text-slate-400">Claims/uses allowed per buyer.</p>
                                 <p v-if="form.errors.per_customer_limit" class="mt-1 text-xs text-red-600">{{ form.errors.per_customer_limit }}</p>

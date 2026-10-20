@@ -232,6 +232,15 @@ if ($topSellingIds->isNotEmpty()) {
                 'seller:id,name',
             ])
             ->where('is_active', true)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+                $q->whereNull('ended_at');
+            })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('display_mode')
+                        ->orWhere('display_mode', '!=', 'code_only');
+                });
+            })
             ->where(function ($query) use ($today) {
                 $query
                     ->whereNull('starts_at')
