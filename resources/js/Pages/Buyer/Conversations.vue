@@ -684,7 +684,7 @@ onMounted(() => {
                                 <input
                                     ref="attachmentInput"
                                     type="file"
-                                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                    accept="image/jpeg,image/png"
                                     @change="handleFileSelect"
                                     class="hidden"
                                 />
@@ -698,7 +698,7 @@ onMounted(() => {
                                             ref="messageInput"
                                             v-model="form.body"
                                             rows="2"
-                                            maxlength="5000"
+                                            maxlength="1000"
                                             placeholder="Write a message to seller..."
                                             class="min-h-[64px] w-full min-w-0 resize-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                             :disabled="form.processing"

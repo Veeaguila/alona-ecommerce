@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -110,16 +111,63 @@ class SellerConversationController extends Controller
     }
 
     /**
-     * Send a message with text, media attachments (SELLER-42), and order snippets (SELLER-43).
+     * Send a message with text, media attachments (SELLER-42, SEL-REV-005, SEL-REV-006, SEL-REV-007), and order snippets (SELLER-43).
      */
     public function store(Request $request, Conversation $conversation): RedirectResponse
     {
         abort_unless((int) $conversation->seller_id === (int) $request->user()->id, 403);
 
+        $hasAttachment = $request->hasFile('attachment');
+        $hasOrder = ! empty($request->input('order_id'));
+        $rawBody = $request->input('body');
+        $trimmedBody = is_string($rawBody) ? trim($rawBody) : '';
+
+        // SEL-REV-007: Empty and spaces-only messages are not sent (A25)
+        if (! $hasAttachment && ! $hasOrder && $trimmedBody === '') {
+            throw ValidationException::withMessages([
+                'body' => 'Message cannot be empty or contain only spaces.',
+            ]);
+        }
+
         $validated = $request->validate([
-            'body' => ['nullable', 'string', 'max:5000', 'required_without_all:attachment,order_id'],
-            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
+            'body' => ['nullable', 'string', 'max:1000'],
+            'attachment' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpeg,jpg,png',
+                'mimetypes:image/jpeg,image/png',
+                'max:5120',
+                function ($attribute, $value, $fail) {
+                    if (! $value instanceof \Illuminate\Http\UploadedFile) {
+                        return;
+                    }
+                    $path = $value->getRealPath();
+                    if (! $path || ! file_exists($path)) {
+                        return;
+                    }
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $realMime = finfo_file($finfo, $path);
+                    finfo_close($finfo);
+
+                    if (! in_array($realMime, ['image/jpeg', 'image/png'], true)) {
+                        $fail('The attachment must be a valid JPG or PNG image (executable or non-image content is rejected).');
+                        return;
+                    }
+
+                    $imageInfo = @getimagesize($path);
+                    if ($imageInfo === false || ! in_array($imageInfo[2] ?? 0, [IMAGETYPE_JPEG, IMAGETYPE_PNG], true)) {
+                        $fail('The attachment file content is not a valid JPG or PNG image.');
+                    }
+                },
+            ],
             'order_id' => ['nullable', 'exists:orders,id'],
+        ], [
+            'body.max' => 'The message must not exceed 1,000 characters.',
+            'attachment.max' => 'The attachment must not exceed 5 MB.',
+            'attachment.image' => 'The attachment must be a valid JPG or PNG image.',
+            'attachment.mimes' => 'The attachment must be a JPG or PNG file.',
+            'attachment.mimetypes' => 'The attachment must be a valid JPG or PNG image (executable or non-image content is rejected).',
         ]);
 
         $attachmentPath = null;
@@ -136,8 +184,8 @@ class SellerConversationController extends Controller
             $attachmentPath = $file->store('chat_attachments', 'public');
         }
 
-        $bodyText = $validated['body'] ?? '';
-        if (trim($bodyText) === '') {
+        $bodyText = $trimmedBody;
+        if ($bodyText === '') {
             if ($attachmentName) {
                 $bodyText = "Sent an attachment: {$attachmentName}";
             } elseif (!empty($validated['order_id'])) {

@@ -20,6 +20,7 @@ class ProductVariant extends Model
     ];
 
     protected $appends = [
+        'title',
         'regular_price',
         'old_price',
     ];
@@ -86,6 +87,11 @@ class ProductVariant extends Model
         return collect([$this->color, $this->size])
             ->filter(fn ($val) => $val !== null && $val !== '')
             ->implode('-');
+    }
+
+    public function getTitleAttribute(): string
+    {
+        return $this->label();
     }
 
     public function product(): BelongsTo

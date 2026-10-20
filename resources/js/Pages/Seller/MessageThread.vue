@@ -434,7 +434,7 @@ const getStatusBadgeClass = (status) => {
                         <input
                             ref="fileInput"
                             type="file"
-                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                            accept="image/jpeg,image/png"
                             @change="handleFileSelect"
                             class="hidden"
                         />
@@ -444,6 +444,7 @@ const getStatusBadgeClass = (status) => {
                                 id="message"
                                 v-model="form.body"
                                 rows="3"
+                                maxlength="1000"
                                 :placeholder="isSupportChat ? 'Write your message to Shopalona Admin Support...' : 'Type a message to your customer...'"
                                 class="w-full resize-none rounded-xl border border-[#CBD5E1] bg-[#F8FAF9] p-3 text-sm text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
                                 @keydown.enter.exact.prevent="submit"
@@ -452,17 +453,17 @@ const getStatusBadgeClass = (status) => {
                             <!-- Quick attachment action buttons bar inside composer -->
                             <div class="mt-2 flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-1.5">
-                                    <!-- Attach Media Button (SELLER-42) -->
+                                    <!-- Attach Media Button (SELLER-42, SEL-REV-005, SEL-REV-006 / A16: JPG or PNG only, max 5MB) -->
                                     <button
                                         type="button"
                                         @click="$refs.fileInput.click()"
-                                        title="Attach image or file"
+                                        title="Attach image (JPG, PNG max 5MB)"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-[#CBD5E1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#64748B] hover:border-[#087F8C] hover:text-[#087F8C]"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                                         </svg>
-                                        Attach File
+                                        Attach Image
                                     </button>
 
                                     <!-- Share Order Snippet Button (SELLER-43) -->

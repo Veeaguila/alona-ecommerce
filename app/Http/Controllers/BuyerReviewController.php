@@ -263,6 +263,40 @@ class BuyerReviewController extends Controller
     }
 
     /**
+     * Display all reviews for a specific product (SEL-REV-001, SEL-REV-002).
+     */
+    public function productReviews(Request $request, Product $product): Response
+    {
+        $rating = $request->input('rating');
+        $query = Review::query()
+            ->where('product_id', $product->id)
+            ->with([
+                'user:id,name,avatar',
+                'variant:id,product_id,color,size',
+            ])
+            ->latest();
+
+        if ($rating) {
+            $query->where('rating', (int) $rating);
+        }
+
+        $reviews = $query->paginate(10)->withQueryString();
+
+        return Inertia::render('Buyer/ProductReviews', [
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'image_path' => $product->image_path,
+                'rating' => (float) $product->rating,
+                'reviews_count' => (int) $product->reviews_count,
+                'seller_id' => $product->seller_id,
+            ],
+            'reviews' => $reviews,
+            'selectedRating' => $rating,
+        ]);
+    }
+
+    /**
      * Rate and review a seller after a completed order (BUYER-30).
      */
     public function storeSellerReview(

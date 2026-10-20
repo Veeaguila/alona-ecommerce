@@ -162,7 +162,11 @@ const submitReply = (review, isStoreReview = false) => {
         ? route('seller.store-reviews.reply', review.id)
         : route('seller.reviews.reply', review.id)
 
-    form.post(targetRoute, {
+    const isEdit = !!review.seller_reply
+    form.transform((data) => ({
+        ...data,
+        is_edit: isEdit,
+    })).post(targetRoute, {
         preserveScroll: true,
         onSuccess: () => {
             review.seller_reply = form.seller_reply
@@ -652,6 +656,12 @@ const reasonLabel = (val) => {
                                     <template v-if="activeTab === 'product' && review.product">
                                         <span>•</span>
                                         <span class="font-medium text-slate-700">Product: {{ review.product.name }}</span>
+                                        <span
+                                            v-if="review.variant_name || review.variant?.title"
+                                            class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600"
+                                        >
+                                            Variant: {{ review.variant_name || review.variant?.title }}
+                                        </span>
                                     </template>
 
                                     <!-- Order Info if Store Review -->

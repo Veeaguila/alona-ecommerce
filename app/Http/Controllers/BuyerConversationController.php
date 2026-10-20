@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -265,13 +266,38 @@ class BuyerConversationController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Validate message.
+        | Validate message (SEL-REV-005, SEL-REV-006, SEL-REV-007 / A16, A25).
         |--------------------------------------------------------------------------
         */
+        $hasAttachment = $request->hasFile('attachment');
+        $hasOrder = ! empty($request->input('order_id'));
+        $rawBody = $request->input('body');
+        $trimmedBody = is_string($rawBody) ? trim($rawBody) : '';
+
+        // Empty and spaces-only messages are blocked unless attachment or order is present
+        if (! $hasAttachment && ! $hasOrder && $trimmedBody === '') {
+            throw ValidationException::withMessages([
+                'body' => 'Message cannot be empty or contain only spaces.',
+            ]);
+        }
+
         $data = $request->validate([
-            'body' => ['nullable', 'string', 'max:5000', 'required_without_all:attachment,order_id'],
-            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
+            'body' => ['nullable', 'string', 'max:1000'],
+            'attachment' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpeg,jpg,png',
+                'mimetypes:image/jpeg,image/png',
+                'max:5120',
+            ],
             'order_id' => ['nullable', 'exists:orders,id'],
+        ], [
+            'body.max' => 'The message must not exceed 1,000 characters.',
+            'attachment.max' => 'The attachment must not exceed 5 MB.',
+            'attachment.image' => 'The attachment must be a valid JPG or PNG image.',
+            'attachment.mimes' => 'The attachment must be a JPG or PNG file.',
+            'attachment.mimetypes' => 'The attachment must be a valid JPG or PNG image (executable or non-image content is rejected).',
         ]);
 
         $attachmentPath = null;
@@ -288,8 +314,8 @@ class BuyerConversationController extends Controller
             $attachmentPath = $file->store('chat_attachments', 'public');
         }
 
-        $bodyText = $data['body'] ?? '';
-        if (trim($bodyText) === '') {
+        $bodyText = $trimmedBody;
+        if ($bodyText === '') {
             if ($attachmentName) {
                 $bodyText = "Sent an attachment: {$attachmentName}";
             } elseif (!empty($data['order_id'])) {

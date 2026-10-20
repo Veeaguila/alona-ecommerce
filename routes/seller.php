@@ -484,17 +484,22 @@ Route::middleware([
         'index',
     ])->name('seller.reviews');
 
-    Route::post('/seller/reviews/{review}/reply', [
+    Route::match(['post', 'put', 'patch'], '/seller/reviews/{review}/reply', [
         SellerReviewController::class,
         'reply',
     ])->name('seller.reviews.reply');
+
+    Route::delete('/seller/reviews/{review}', [
+        SellerReviewController::class,
+        'destroy',
+    ])->name('seller.reviews.destroy');
 
     Route::post('/seller/reviews/{review}/report', [
         SellerReviewController::class,
         'report',
     ])->name('seller.reviews.report');
 
-    Route::post('/seller/store-reviews/{sellerReview}/reply', [
+    Route::match(['post', 'put', 'patch'], '/seller/store-reviews/{sellerReview}/reply', [
         SellerReviewController::class,
         'replyStoreReview',
     ])->name('seller.store-reviews.reply');

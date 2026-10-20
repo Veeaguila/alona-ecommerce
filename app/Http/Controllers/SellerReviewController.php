@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,6 +118,7 @@ class SellerReviewController extends Controller
                 ->with([
                     'user:id,name,email,profile_photo_path',
                     'product:id,name,image_path,price,slug',
+                    'variant:id,product_id,color,size',
                 ]);
 
             if ($selectedRating) {
@@ -178,12 +180,20 @@ class SellerReviewController extends Controller
     }
 
     /**
-     * Post a reply to a product review.
+     * Post a reply to a product review (SEL-REV-002, SEL-REV-003 / A12).
      */
     public function reply(Request $request, Review $review): RedirectResponse
     {
         $review->loadMissing('product');
         abort_unless($review->product && (int) $review->product->seller_id === (int) $request->user()->id, 403);
+
+        // SEL-REV-003: Check if already replied and trying to post a second reply without edit flag/method
+        $isEdit = $request->boolean('is_edit') || $request->isMethod('put') || $request->isMethod('patch');
+        if ($review->seller_reply !== null && ! $isEdit) {
+            throw ValidationException::withMessages([
+                'seller_reply' => 'A second reply is not possible. You may edit your existing reply instead.',
+            ]);
+        }
 
         $data = $request->validate([
             'seller_reply' => ['required', 'string', 'max:1500'],
@@ -208,15 +218,24 @@ class SellerReviewController extends Controller
             }
         }
 
-        return back()->with('status', 'Your response has been posted.');
+        $message = $isEdit ? 'Your response has been updated.' : 'Your response has been posted.';
+
+        return back()->with('status', $message);
     }
 
     /**
-     * Post a reply to a store rating (SELLER-33).
+     * Post a reply to a store rating (SELLER-33, SEL-REV-003).
      */
     public function replyStoreReview(Request $request, SellerReview $sellerReview): RedirectResponse
     {
         abort_unless((int) $sellerReview->seller_id === (int) $request->user()->id, 403);
+
+        $isEdit = $request->boolean('is_edit') || $request->isMethod('put') || $request->isMethod('patch');
+        if ($sellerReview->seller_reply !== null && ! $isEdit) {
+            throw ValidationException::withMessages([
+                'seller_reply' => 'A second reply is not possible. You may edit your existing reply instead.',
+            ]);
+        }
 
         $data = $request->validate([
             'seller_reply' => ['required', 'string', 'max:1500'],
@@ -241,7 +260,18 @@ class SellerReviewController extends Controller
             }
         }
 
-        return back()->with('status', 'Your response to the store rating has been posted.');
+        $message = $isEdit ? 'Your response has been updated.' : 'Your response to the store rating has been posted.';
+
+        return back()->with('status', $message);
+    }
+
+    /**
+     * Direct delete request is blocked (SEL-REV-004, Assumption A12).
+     * Sellers are not permitted to delete or hide customer reviews.
+     */
+    public function destroy(Request $request, Review $review): RedirectResponse
+    {
+        abort(403, 'Sellers are not permitted to delete or hide customer reviews.');
     }
 
     /**
