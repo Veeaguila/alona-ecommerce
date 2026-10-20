@@ -59,6 +59,17 @@ class Order extends Model
                 }
             }
         });
+
+        static::saved(function (self $order): void {
+            $status = strtolower((string) ($order->status ?? ''));
+            $refundStatus = strtolower((string) ($order->refund_status ?? ''));
+
+            if (in_array($status, ['completed', 'delivered'], true) && $refundStatus !== 'refunded') {
+                app(\App\Services\CommissionService::class)->recordCommissionsForOrder($order);
+            } elseif ($status === 'cancelled' || $refundStatus === 'refunded') {
+                app(\App\Services\CommissionService::class)->cancelCommissionsForOrder($order);
+            }
+        });
     }
 
     protected function casts(): array

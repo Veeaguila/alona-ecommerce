@@ -133,6 +133,8 @@ class AdminReportingController extends Controller
      */
     public function commissionReport(Request $request)
     {
+        app(\App\Services\CommissionService::class)->syncCompletedOrders();
+
         [$from, $to] = $this->resolveRange($request);
 
         $start = $from->copy()->startOfDay();

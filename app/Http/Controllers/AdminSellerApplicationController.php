@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ApplicantNotificationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -38,7 +39,14 @@ class AdminSellerApplicationController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return back()->with('status', 'Seller application approved.');
+        $emailSent = app(ApplicantNotificationService::class)->notifyApproval($user);
+
+        $msg = 'Seller application approved.';
+        if (! $emailSent) {
+            $msg .= ' (Notice: Decision email could not be delivered; in-app notification was dispatched.)';
+        }
+
+        return back()->with('status', $msg);
     }
 
     public function reject(Request $request, User $user)
@@ -54,6 +62,13 @@ class AdminSellerApplicationController extends Controller
             'rejection_reason' => $validated['reason'],
         ]);
 
-        return back()->with('status', 'Seller application rejected.');
+        $emailSent = app(ApplicantNotificationService::class)->notifyRejection($user, $validated['reason']);
+
+        $msg = 'Seller application rejected.';
+        if (! $emailSent) {
+            $msg .= ' (Notice: Decision email could not be delivered; in-app notification was dispatched.)';
+        }
+
+        return back()->with('status', $msg);
     }
 }

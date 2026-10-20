@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ApplicantNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -216,17 +217,14 @@ class AdminApplicationController extends Controller
         }
         });
 
-        $this->notifyApplicant(
-            $user,
-            'Your application has been approved.',
-            'Your application has been approved. You may now sign in and access your restricted dashboard.'
-        );
+        $emailSent = app(ApplicantNotificationService::class)->notifyApproval($user);
 
-        return back()->with(
-            'status',
-            ucfirst($user->usertype).
-                ' application approved.'
-        );
+        $flashMessage = ucfirst($user->usertype) . ' application approved.';
+        if (! $emailSent) {
+            $flashMessage .= ' (Notice: Decision email could not be delivered to ' . ($user->email ?: 'applicant') . '; in-app notification was dispatched.)';
+        }
+
+        return back()->with('status', $flashMessage);
     }
 
     /*
@@ -273,18 +271,14 @@ class AdminApplicationController extends Controller
         }
         });
 
-        $this->notifyApplicant(
-            $user,
-            'Your application was not approved.',
-            "Your application was rejected for the following reason:\n\n".
-                $validated['reason']
-        );
+        $emailSent = app(ApplicantNotificationService::class)->notifyRejection($user, $validated['reason']);
 
-        return back()->with(
-            'status',
-            ucfirst($user->usertype).
-                ' application rejected.'
-        );
+        $flashMessage = ucfirst($user->usertype) . ' application rejected.';
+        if (! $emailSent) {
+            $flashMessage .= ' (Notice: Decision email could not be delivered to ' . ($user->email ?: 'applicant') . '; in-app notification was dispatched.)';
+        }
+
+        return back()->with('status', $flashMessage);
     }
 
     /*
@@ -297,25 +291,7 @@ class AdminApplicationController extends Controller
         User $user,
         string $subject,
         string $message
-    ): void {
-        if (! filled($user->email)) {
-            return;
-        }
-
-        try {
-            Mail::raw(
-                $message,
-                function ($mail) use ($user, $subject) {
-                    $mail
-                        ->to($user->email)
-                        ->subject($subject);
-                }
-            );
-        } catch (\Throwable $exception) {
-            Log::warning('Application decision email could not be sent.', [
-                'user_id' => $user->id,
-                'exception' => $exception::class,
-            ]);
-        }
+    ): bool {
+        return app(ApplicantNotificationService::class)->dispatch($user, $subject, $message);
     }
 }

@@ -46,6 +46,9 @@ const resolution = ref(
 
 const processing = ref(false)
 
+const issueRefund = ref(false)
+const refundAmount = ref(props.complaint?.order?.total ?? '')
+
 /*
 |--------------------------------------------------------------------------
 | Status Configuration
@@ -200,9 +203,9 @@ const saveResolution = () => {
         ),
         {
             status: status.value,
-
-            resolution:
-                resolution.value.trim(),
+            resolution: resolution.value.trim(),
+            issue_refund: status.value === 'resolved' ? issueRefund.value : false,
+            refund_amount: status.value === 'resolved' && issueRefund.value ? refundAmount.value : null,
         },
         {
             preserveScroll: true,
@@ -1040,6 +1043,62 @@ const setStatus = (value) => {
                                 >
                                     Rejected
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- ORDER FORCE-REFUND ARBITRATION -->
+                        <div
+                            v-if="complaint.order"
+                            class="mt-5 rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] p-3.5"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-[#1F2937]">
+                                        Linked Order #{{ complaint.order.order_number }}
+                                    </p>
+                                    <p class="text-[11px] text-[#64748B]">
+                                        Total: ₱{{ Number(complaint.order.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}
+                                        <span v-if="complaint.order.refund_status === 'refunded'" class="ml-2 font-semibold text-emerald-600">
+                                            (Already Refunded)
+                                        </span>
+                                    </p>
+                                </div>
+                                <span
+                                    class="rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                                    :class="complaint.order.refund_status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'"
+                                >
+                                    {{ complaint.order.refund_status || 'No refund' }}
+                                </span>
+                            </div>
+
+                            <div v-if="status === 'resolved' && complaint.order.refund_status !== 'refunded'" class="mt-3 border-t border-[#E5E7EB] pt-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        v-model="issueRefund"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-gray-300 text-[#087F8C] focus:ring-[#087F8C]"
+                                    />
+                                    <span class="text-xs font-semibold text-[#1F2937]">
+                                        Execute Force Refund to Buyer
+                                    </span>
+                                </label>
+
+                                <div v-if="issueRefund" class="mt-3 flex flex-col gap-1.5 pl-6">
+                                    <label class="text-[11px] font-medium text-[#64748B]">
+                                        Refund Amount (₱)
+                                    </label>
+                                    <input
+                                        v-model="refundAmount"
+                                        type="number"
+                                        step="0.01"
+                                        :max="complaint.order.total"
+                                        class="w-full max-w-xs rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                                        placeholder="Amount"
+                                    />
+                                    <p class="text-[10px] text-[#087F8C]">
+                                        Will credit the buyer ledger, debit seller balance, cancel platform commissions, and notify both parties.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
