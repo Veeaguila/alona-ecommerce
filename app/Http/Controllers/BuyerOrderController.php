@@ -148,7 +148,8 @@ class BuyerOrderController extends Controller
             ->with([
                 'product.category',
                 'product.variants',
-                'variant',
+                'product.sales',
+                'variant.product.sales',
             ])
             ->whereIn('id', $selectedIds)
             ->get()

@@ -10,6 +10,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    sales: {
+        type: Array,
+        default: () => [],
+    },
     analytics: {
         type: Object,
         default: () => ({
@@ -25,6 +29,114 @@ const props = defineProps({
         default: () => [],
     },
 })
+
+const showSaleModal = ref(false)
+const editingSale = ref(null)
+
+const saleForm = useForm({
+    product_id: '',
+    type: 'percentage',
+    value: '',
+    starts_at: '',
+    ends_at: '',
+})
+
+const selectedSaleProduct = computed(() => {
+    return props.products.find(p => Number(p.id) === Number(saleForm.product_id)) || null
+})
+
+const previewSalePrice = computed(() => {
+    const prod = selectedSaleProduct.value
+    if (!prod) return null
+    const reg = Number(prod.regular_price ?? prod.price ?? 0)
+    const val = Number(saleForm.value || 0)
+    if (!val || val <= 0) return null
+    if (saleForm.type === 'percentage') {
+        if (val < 1 || val > 99) return null
+        return (reg * (100 - val)) / 100
+    }
+    if (val < 1 || val >= reg) return null
+    return val
+})
+
+const formatDateTimeLocal = dt => {
+    if (!dt) return ''
+    const d = new Date(dt)
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const formatDateTimeDisplay = dt => {
+    if (!dt) return '—'
+    const d = new Date(dt)
+    if (Number.isNaN(d.getTime())) return '—'
+    return d.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+const openCreateSaleModal = () => {
+    editingSale.value = null
+    saleForm.reset()
+    saleForm.clearErrors()
+    saleForm.product_id = props.products[0]?.id ?? ''
+    saleForm.type = 'percentage'
+    saleForm.value = ''
+    saleForm.starts_at = ''
+    saleForm.ends_at = ''
+    showSaleModal.value = true
+}
+
+const openEditSaleModal = sale => {
+    editingSale.value = sale
+    saleForm.clearErrors()
+    saleForm.product_id = sale.product_id
+    saleForm.type = sale.type
+    saleForm.value = sale.type === 'percentage' ? Math.round(Number(sale.value)) : Number(sale.value)
+    saleForm.starts_at = formatDateTimeLocal(sale.starts_at)
+    saleForm.ends_at = formatDateTimeLocal(sale.ends_at)
+    showSaleModal.value = true
+}
+
+const closeSaleModal = () => {
+    if (saleForm.processing) return
+    showSaleModal.value = false
+    editingSale.value = null
+    saleForm.clearErrors()
+}
+
+const submitSale = () => {
+    if (editingSale.value) {
+        saleForm.patch(route('seller.sales.update', editingSale.value.id), {
+            preserveScroll: true,
+            onSuccess: () => closeSaleModal(),
+        })
+        return
+    }
+    saleForm.post(route('seller.sales.store'), {
+        preserveScroll: true,
+        onSuccess: () => closeSaleModal(),
+    })
+}
+
+const endSaleNow = sale => {
+    if (!window.confirm('End this running sale now? Buyers will immediately see the regular price.')) return
+    useForm({}).post(route('seller.sales.end', sale.id), {
+        preserveScroll: true,
+    })
+}
+
+const deleteSale = sale => {
+    if (!window.confirm('Delete this scheduled sale?')) return
+    useForm({}).delete(route('seller.sales.destroy', sale.id), {
+        preserveScroll: true,
+    })
+}
 
 const showModal = ref(false)
 const editingVoucher = ref(null)
@@ -350,16 +462,25 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        @click="openCreateModal"
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#087F8C] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76]"
-                    >
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Create New Voucher
-                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            @click="openCreateSaleModal"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#087F8C] bg-white px-4 text-xs font-bold text-[#087F8C] shadow-sm transition hover:bg-[#E8F7F6]"
+                        >
+                            + Schedule Product Sale
+                        </button>
+                        <button
+                            type="button"
+                            @click="openCreateModal"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#087F8C] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76]"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Create New Voucher
+                        </button>
+                    </div>
                 </div>
 
                 <!-- FLASH MESSAGE -->
@@ -414,6 +535,99 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                         <p class="mt-1 text-[11px] text-[#64748B]">Gross sales per ₱1 discount</p>
                     </div>
                 </div>
+
+                <!-- MODULE S6: PRODUCT DISCOUNTS & SCHEDULED SALES -->
+                <section class="mt-6 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-bold text-[#1F2937]">Product Discounts & Scheduled Sales</h2>
+                            <span class="rounded-full bg-[#E8F7F6] px-2.5 py-0.5 text-xs font-bold text-[#087F8C]">
+                                {{ sales.length }}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            @click="openCreateSaleModal"
+                            class="rounded-xl bg-[#087F8C] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#066B76]"
+                        >
+                            + Schedule Sale
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table v-if="sales.length" class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-[#E5E7EB] bg-[#F8FAF9]">
+                                    <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Product</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Discount</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Price Preview</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Schedule</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Status</th>
+                                    <th class="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#F1F5F9]">
+                                <tr v-for="sale in sales" :key="sale.id" class="hover:bg-[#FAFCFB]">
+                                    <td class="px-5 py-3.5 text-sm font-bold text-[#1F2937]">
+                                        {{ sale.product?.name || 'Product' }}
+                                    </td>
+                                    <td class="px-5 py-3.5 text-xs font-bold text-[#E85D5D]">
+                                        {{ sale.type === 'percentage' ? `${Math.round(Number(sale.value))}% off (${sale.discount_badge})` : `Fixed ${money(sale.value)}` }}
+                                    </td>
+                                    <td class="px-5 py-3.5 text-xs">
+                                        <span class="font-bold text-[#16845A]">{{ money(sale.sale_price) }}</span>
+                                        <span v-if="sale.product?.regular_price" class="ml-1.5 text-[#94A3B8] line-through">{{ money(sale.product.regular_price) }}</span>
+                                    </td>
+                                    <td class="px-5 py-3.5 text-xs text-[#64748B]">
+                                        {{ formatDateTimeDisplay(sale.starts_at) }} → {{ formatDateTimeDisplay(sale.ends_at) }}
+                                    </td>
+                                    <td class="px-5 py-3.5">
+                                        <span
+                                            class="inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold"
+                                            :class="{
+                                                'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A]': sale.status_label === 'Ongoing',
+                                                'border-[#BDE9E7] bg-[#E8F7F6] text-[#087F8C]': sale.status_label === 'Upcoming',
+                                                'border-[#E5E7EB] bg-[#F8FAF9] text-[#64748B]': sale.status_label === 'Ended',
+                                            }"
+                                        >
+                                            {{ sale.status_label }}
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-3.5 text-right">
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            <button
+                                                v-if="sale.status_label !== 'Ended'"
+                                                type="button"
+                                                @click="openEditSaleModal(sale)"
+                                                class="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[10px] font-bold text-[#64748B] hover:border-[#087F8C] hover:text-[#087F8C]"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                v-if="sale.status_label === 'Ongoing'"
+                                                type="button"
+                                                @click="endSaleNow(sale)"
+                                                class="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-bold text-amber-800 hover:bg-amber-100"
+                                            >
+                                                End Now
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="deleteSale(sale)"
+                                                class="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-2.5 py-1.5 text-[10px] font-bold text-[#DC2626] hover:bg-[#FDE8E8]"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-else class="px-6 py-8 text-center text-xs text-[#94A3B8]">
+                            No product sales scheduled yet. Click "+ Schedule Sale" to create a percentage or fixed-price sale.
+                        </div>
+                    </div>
+                </section>
 
                 <!-- DESKTOP VOUCHERS TABLE -->
                 <section class="mt-6 hidden overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm lg:block">
@@ -958,6 +1172,107 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                             class="h-10 rounded-xl bg-[#087F8C] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#066B76] disabled:opacity-60"
                         >
                             {{ form.processing ? 'Saving...' : editingVoucher ? 'Update Voucher' : 'Create Voucher' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CREATE / EDIT PRODUCT SALE MODAL (MODULE S6) -->
+        <div
+            v-if="showSaleModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#1F2937]/60 p-4 backdrop-blur-[2px]"
+            @click.self="closeSaleModal"
+        >
+            <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                    <div>
+                        <h2 class="text-base font-bold text-[#1F2937]">
+                            {{ editingSale ? 'Edit Product Sale' : 'Schedule Product Sale' }}
+                        </h2>
+                        <p class="text-xs text-[#94A3B8]">
+                            Set a whole percentage (1%–99%) or fixed sale price below the regular price.
+                        </p>
+                    </div>
+                    <button type="button" @click="closeSaleModal" class="rounded-lg p-1.5 text-[#94A3B8] hover:bg-[#F8FAF9]">✕</button>
+                </div>
+
+                <form @submit.prevent="submitSale" class="space-y-4 p-5">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold text-[#1F2937]">Product <span class="text-red-500">*</span></label>
+                        <select
+                            v-model="saleForm.product_id"
+                            :disabled="Boolean(editingSale)"
+                            class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm text-[#1F2937] outline-none focus:border-[#087F8C]"
+                        >
+                            <option v-for="prod in products" :key="prod.id" :value="prod.id">
+                                {{ prod.name }} (Regular: ₱{{ Number(prod.regular_price ?? prod.price).toFixed(2) }})
+                            </option>
+                        </select>
+                        <p v-if="saleForm.errors.product_id" class="mt-1 text-xs text-red-600">{{ saleForm.errors.product_id }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Sale Type</label>
+                            <select
+                                v-model="saleForm.type"
+                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-sm text-[#1F2937] outline-none focus:border-[#087F8C]"
+                            >
+                                <option value="percentage">Percentage Off (1%–99%)</option>
+                                <option value="fixed">Fixed Sale Price (₱)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">
+                                {{ saleForm.type === 'percentage' ? 'Discount (%)' : 'Fixed Sale Price (₱)' }}
+                            </label>
+                            <input
+                                v-model="saleForm.value"
+                                type="number"
+                                :min="saleForm.type === 'percentage' ? 1 : 1"
+                                :max="saleForm.type === 'percentage' ? 99 : undefined"
+                                :step="saleForm.type === 'percentage' ? 1 : 0.01"
+                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 text-sm text-[#1F2937] outline-none focus:border-[#087F8C] focus:bg-white"
+                            />
+                            <p v-if="saleForm.errors.value" class="mt-1 text-xs text-red-600">{{ saleForm.errors.value }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div v-if="selectedSaleProduct && previewSalePrice !== null" class="rounded-xl border border-[#BDE9E7] bg-[#E8F7F6] p-3 text-xs">
+                        <span class="font-semibold text-[#087F8C]">Sale Price Preview: </span>
+                        <span class="font-bold text-[#1F2937]">{{ money(previewSalePrice) }}</span>
+                        <span class="ml-2 text-[#64748B] line-through">{{ money(selectedSaleProduct.regular_price ?? selectedSaleProduct.price) }}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">Start Date & Time</label>
+                            <input
+                                v-model="saleForm.starts_at"
+                                type="datetime-local"
+                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                            />
+                            <p v-if="saleForm.errors.starts_at" class="mt-1 text-xs text-red-600">{{ saleForm.errors.starts_at }}</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-[#1F2937]">End Date & Time</label>
+                            <input
+                                v-model="saleForm.ends_at"
+                                type="datetime-local"
+                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                            />
+                            <p v-if="saleForm.errors.ends_at" class="mt-1 text-xs text-red-600">{{ saleForm.errors.ends_at }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 border-t border-[#E5E7EB] pt-3">
+                        <button type="button" @click="closeSaleModal" class="h-9 rounded-xl border border-[#E5E7EB] px-4 text-xs font-bold text-[#64748B]">
+                            Cancel
+                        </button>
+                        <button type="submit" :disabled="saleForm.processing" class="h-9 rounded-xl bg-[#087F8C] px-4 text-xs font-bold text-white">
+                            {{ saleForm.processing ? 'Saving...' : editingSale ? 'Update Sale' : 'Save Sale' }}
                         </button>
                     </div>
                 </form>

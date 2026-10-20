@@ -19,6 +19,11 @@ class ProductVariant extends Model
         'image_path',
     ];
 
+    protected $appends = [
+        'regular_price',
+        'old_price',
+    ];
+
     protected static function booted(): void
     {
         static::saving(function (self $variant): void {
@@ -35,6 +40,45 @@ class ProductVariant extends Model
             'stock' => 'integer',
             'low_stock_alerted' => 'boolean',
         ];
+    }
+
+    public function getRegularPriceAttribute(): string
+    {
+        return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+    }
+
+    public function getPriceAttribute($value): string
+    {
+        $regular = (float) ($value ?? $this->attributes['price'] ?? 0);
+        $product = $this->relationLoaded('product')
+            ? $this->product
+            : ($this->product_id ? Product::find($this->product_id) : null);
+
+        $sale = $product?->activeSale();
+        if ($sale && $regular > 0) {
+            return number_format($sale->discountedPriceFor($regular), 2, '.', '');
+        }
+
+        return number_format($regular, 2, '.', '');
+    }
+
+    public function getOldPriceAttribute(): ?string
+    {
+        $regular = (float) ($this->attributes['price'] ?? 0);
+        if ($regular <= 0) {
+            return null;
+        }
+
+        $product = $this->relationLoaded('product')
+            ? $this->product
+            : ($this->product_id ? Product::find($this->product_id) : null);
+
+        $sale = $product?->activeSale();
+        if ($sale) {
+            return number_format($regular, 2, '.', '');
+        }
+
+        return null;
     }
 
     public function label(): string

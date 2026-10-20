@@ -180,7 +180,7 @@ const changeCategory = category => {
                             <span
                                 v-else
                                 class="text-3xl sm:text-4xl"
-                            ><Icon name="bag" class="h-4 w-4" /></span>
+                            ><Icon name="bag" class="h-4 w-4" /></span><span v-if="product.discount_badge" class="absolute right-2 top-2 rounded-full bg-[#FFF1F1] px-2 py-0.5 text-[10px] font-bold text-[#E85D5D] shadow-xs">{{ product.discount_badge }}</span>
 
                         </div>
 

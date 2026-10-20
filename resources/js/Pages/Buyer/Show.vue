@@ -492,7 +492,7 @@ const formattedUnitPrice = computed(() => {
 
 const formattedOldPrice = computed(() =>
     Number(
-        product.value.old_price || 0
+        selectedVariant.value?.old_price || product.value.old_price || 0
     ).toLocaleString(
         'en-PH',
         {
@@ -1208,7 +1208,7 @@ const breadcrumbs = computed(() => {
                                     "
                                     class="rounded-full bg-[#FFF1F1] px-2.5 py-1 text-[10px] font-bold text-[#E85D5D]"
                                 >
-                                    SALE
+                                    {{ product.discount_badge || 'SALE' }}
                                 </span>
                             </div>
 

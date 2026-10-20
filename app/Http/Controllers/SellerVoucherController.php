@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductSale;
 use App\Models\Voucher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,8 +42,16 @@ class SellerVoucherController extends Controller
             ->orderBy('name')
             ->get();
 
+        $sales = \Illuminate\Support\Facades\Schema::hasTable('product_sales')
+            ? ProductSale::with('product:id,name,price,image_path')
+                ->where('seller_id', $seller->id)
+                ->latest('id')
+                ->get()
+            : collect();
+
         return Inertia::render('Seller/Vouchers', [
             'vouchers' => $vouchers,
+            'sales' => $sales,
             'analytics' => $analytics,
             'products' => $products,
         ]);

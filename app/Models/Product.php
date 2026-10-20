@@ -38,11 +38,14 @@ class Product extends Model
     ];
 
     protected $appends = [
+        'regular_price',
         'min_price',
         'max_price',
         'price_range',
         'is_sold_out',
         'stock_status_label',
+        'has_active_sale',
+        'discount_badge',
     ];
 
     protected static function booted(): void
@@ -70,6 +73,65 @@ class Product extends Model
             'low_stock_alerted' => 'boolean',
             'variation_types' => 'array',
         ];
+    }
+
+    public function activeSale(): ?ProductSale
+    {
+        if (!$this->id || !\Illuminate\Support\Facades\Schema::hasTable('product_sales')) {
+            return null;
+        }
+
+        $now = now();
+
+        if ($this->relationLoaded('sales')) {
+            return $this->sales->first(fn (ProductSale $sale) => $sale->isActiveNow());
+        }
+
+        return ProductSale::query()
+            ->where('product_id', $this->id)
+            ->whereNull('ended_at')
+            ->where('starts_at', '<=', $now)
+            ->where('ends_at', '>', $now)
+            ->latest('id')
+            ->first();
+    }
+
+    public function getRegularPriceAttribute(): string
+    {
+        return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+    }
+
+    public function getPriceAttribute($value): string
+    {
+        $regular = (float) ($value ?? $this->attributes['price'] ?? 0);
+        $sale = $this->activeSale();
+
+        if ($sale) {
+            return number_format($sale->discountedPriceFor($regular), 2, '.', '');
+        }
+
+        return number_format($regular, 2, '.', '');
+    }
+
+    public function getOldPriceAttribute($value): ?string
+    {
+        $sale = $this->activeSale();
+
+        if ($sale) {
+            return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+        }
+
+        return $value !== null ? number_format((float) $value, 2, '.', '') : null;
+    }
+
+    public function getHasActiveSaleAttribute(): bool
+    {
+        return $this->activeSale() !== null;
+    }
+
+    public function getDiscountBadgeAttribute(): ?string
+    {
+        return $this->activeSale()?->discount_badge;
     }
 
     public function getIsSoldOutAttribute(): bool
@@ -127,7 +189,8 @@ class Product extends Model
         $min = (float) $this->min_price;
         $max = (float) $this->max_price;
 
-        $formatVal = fn (float $val) => floor($val) == $val
+        $hasActiveSale = $this->has_active_sale;
+        $formatVal = fn (float $val) => (!$hasActiveSale && floor($val) == $val)
             ? '₱' . number_format($val, 0)
             : '₱' . number_format($val, 2);
 
@@ -163,6 +226,11 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function sales(): HasMany
+    {
+        return $this->hasMany(ProductSale::class);
     }
 
     public function images(): HasMany

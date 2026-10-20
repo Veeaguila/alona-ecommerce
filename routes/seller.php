@@ -11,6 +11,7 @@ use App\Http\Controllers\SellerProductQuestionController;
 use App\Http\Controllers\SellerReportController;
 use App\Http\Controllers\SellerReturnController;
 use App\Http\Controllers\SellerReviewController;
+use App\Http\Controllers\SellerSaleController;
 use App\Http\Controllers\SellerSettingController;
 use App\Http\Controllers\SellerStoreCategoryController;
 use App\Http\Controllers\SellerStoreController;
@@ -204,6 +205,37 @@ Route::middleware([
         SellerVoucherController::class,
         'destroy',
     ])->name('seller.vouchers.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELLER PRODUCT DISCOUNTS & SALES (MODULE S6)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/seller/sales', [
+        SellerVoucherController::class,
+        'index',
+    ])->name('seller.sales');
+
+    Route::post('/seller/sales', [
+        SellerSaleController::class,
+        'store',
+    ])->name('seller.sales.store');
+
+    Route::patch('/seller/sales/{sale}', [
+        SellerSaleController::class,
+        'update',
+    ])->name('seller.sales.update');
+
+    Route::match(['post', 'patch'], '/seller/sales/{sale}/end', [
+        SellerSaleController::class,
+        'endNow',
+    ])->name('seller.sales.end');
+
+    Route::delete('/seller/sales/{sale}', [
+        SellerSaleController::class,
+        'destroy',
+    ])->name('seller.sales.destroy');
 
 
     /*
