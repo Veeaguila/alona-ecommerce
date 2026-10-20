@@ -310,4 +310,114 @@ class AdminReportingController extends Controller
 
         return [$from, $to];
     }
+
+    /**
+     * One-click CSV Export for Sales Summary Report (Tax-Free).
+     */
+    public function exportSalesSummary(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        [$from, $to] = $this->resolveRange($request);
+        $start = $from->copy()->startOfDay();
+        $end = $to->copy()->endOfDay();
+
+        $orders = Order::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->with(['user:id,name,email', 'items'])
+            ->latest('created_at')
+            ->get();
+
+        $filename = 'sales_summary_' . $from->format('Ymd') . '_to_' . $to->format('Ymd') . '.csv';
+
+        return response()->streamDownload(function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, [
+                'Order Number',
+                'Date',
+                'Customer Name',
+                'Customer Email',
+                'Payment Method',
+                'Status',
+                'Items Count',
+                'Total Amount (PHP)',
+            ]);
+
+            foreach ($orders as $order) {
+                fputcsv($handle, [
+                    $order->order_number,
+                    $order->created_at?->format('Y-m-d H:i:s') ?? '',
+                    $order->user?->name ?? 'Guest',
+                    $order->user?->email ?? '',
+                    strtoupper((string) $order->payment_method),
+                    ucfirst((string) $order->status),
+                    $order->items->sum('quantity'),
+                    number_format((float) $order->total, 2, '.', ''),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * One-click CSV Export for Commission Report (Tax-Free).
+     */
+    public function exportCommissionReport(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        app(\App\Services\CommissionService::class)->syncCompletedOrders();
+
+        [$from, $to] = $this->resolveRange($request);
+        $start = $from->copy()->startOfDay();
+        $end = $to->copy()->endOfDay();
+
+        $commissions = Commission::query()
+            ->whereBetween('recorded_at', [$start, $end])
+            ->where('status', '!=', 'cancelled')
+            ->with([
+                'seller:id,name,store_name,email',
+                'order:id,order_number',
+            ])
+            ->orderByDesc('recorded_at')
+            ->get();
+
+        $filename = 'commission_report_' . $from->format('Ymd') . '_to_' . $to->format('Ymd') . '.csv';
+
+        return response()->streamDownload(function () use ($commissions) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, [
+                'Order Number',
+                'Recorded At',
+                'Seller Name',
+                'Store Name',
+                'Gross Sale (PHP)',
+                'Commission Rate (%)',
+                'Platform Commission (PHP)',
+                'Seller Net Payout (PHP)',
+                'Status',
+            ]);
+
+            foreach ($commissions as $row) {
+                fputcsv($handle, [
+                    $row->order?->order_number ?? 'N/A',
+                    $row->recorded_at?->format('Y-m-d H:i:s') ?? '',
+                    $row->seller?->name ?? 'N/A',
+                    $row->seller?->store_name ?? 'N/A',
+                    number_format((float) $row->sale_amount, 2, '.', ''),
+                    number_format((float) $row->commission_rate, 2, '.', ''),
+                    number_format((float) $row->commission_amount, 2, '.', ''),
+                    number_format((float) $row->seller_amount, 2, '.', ''),
+                    ucfirst((string) $row->status),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

@@ -55,6 +55,19 @@ const isSalesReport = computed(() => {
     return !isCommissionReport.value
 })
 
+const exportUrl = computed(() => {
+    const baseUrl = isCommissionReport.value
+        ? route('admin.reports.commission.export')
+        : route('admin.reports.sales-summary.export')
+
+    const params = new URLSearchParams()
+    if (from.value) params.append('from', from.value)
+    if (to.value) params.append('to', to.value)
+
+    const queryStr = params.toString()
+    return queryStr ? `${baseUrl}?${queryStr}` : baseUrl
+})
+
 /*
 |--------------------------------------------------------------------------
 | Formatting
@@ -503,6 +516,17 @@ const statusLabel = (status) => {
                         >
                             Reset
                         </button>
+
+                        <a
+                            :href="exportUrl"
+                            class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100 shadow-xs"
+                            title="Download CSV spreadsheet"
+                        >
+                            <svg class="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Export to CSV
+                        </a>
                     </div>
 
                     <div

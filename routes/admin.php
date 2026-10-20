@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminApplicationController;
+use App\Http\Controllers\AdminAuditLogController;
+use App\Http\Controllers\AdminCategoryController;
+use App\Http\Controllers\AdminDeliveryZoneController;
+use App\Http\Controllers\AdminVoucherController;
 use App\Http\Controllers\AdminComplaintController;
 use App\Http\Controllers\AdminComplianceController;
 use App\Http\Controllers\AdminDashboardController;
@@ -170,10 +174,20 @@ Route::prefix('admin')
             'salesSummary',
         ])->name('admin.reports.sales-summary');
 
+        Route::get('/reports/sales-summary/export', [
+            AdminReportingController::class,
+            'exportSalesSummary',
+        ])->name('admin.reports.sales-summary.export');
+
         Route::get('/reports/commission', [
             AdminReportingController::class,
             'commissionReport',
         ])->name('admin.reports.commission');
+
+        Route::get('/reports/commission/export', [
+            AdminReportingController::class,
+            'exportCommissionReport',
+        ])->name('admin.reports.commission.export');
 
 
         /*
@@ -291,5 +305,45 @@ Route::prefix('admin')
             'updateStatus',
         ])->name('admin.payout-requests.status');
 
-    });
 
+        /*
+        |--------------------------------------------------------------------------
+        | CATEGORIES & TAXONOMY
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/categories', [AdminCategoryController::class, 'index'])->name('admin.categories');
+        Route::post('/categories', [AdminCategoryController::class, 'store'])->name('admin.categories.store');
+        Route::patch('/categories/{category}', [AdminCategoryController::class, 'update'])->name('admin.categories.update');
+        Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])->name('admin.categories.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | PLATFORM VOUCHERS & CAMPAIGNS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/vouchers', [AdminVoucherController::class, 'index'])->name('admin.vouchers');
+        Route::post('/vouchers', [AdminVoucherController::class, 'store'])->name('admin.vouchers.store');
+        Route::patch('/vouchers/{voucher}', [AdminVoucherController::class, 'update'])->name('admin.vouchers.update');
+        Route::delete('/vouchers/{voucher}', [AdminVoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN AUDIT LOGS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/audit-logs', [AdminAuditLogController::class, 'index'])->name('admin.audit-logs');
+
+        /*
+        |--------------------------------------------------------------------------
+        | SHIPPING RATES & HUB ZONES
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/shipping-rates', [AdminDeliveryZoneController::class, 'index'])->name('admin.shipping-rates');
+        Route::post('/shipping-rates', [AdminDeliveryZoneController::class, 'store'])->name('admin.shipping-rates.store');
+        Route::patch('/shipping-rates/{deliveryZone}', [AdminDeliveryZoneController::class, 'update'])->name('admin.shipping-rates.update');
+        Route::delete('/shipping-rates/{deliveryZone}', [AdminDeliveryZoneController::class, 'destroy'])->name('admin.shipping-rates.destroy');
+    });
