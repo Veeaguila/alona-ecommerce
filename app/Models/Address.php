@@ -7,7 +7,30 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Address extends Model
 {
-    protected $fillable = ['user_id', 'label', 'address', 'is_default'];
-    protected function casts(): array { return ['is_default' => 'boolean']; }
-    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    protected $fillable = [
+        'user_id',
+        'label',
+        'recipient_name',
+        'recipient_phone',
+        'region',
+        'province',
+        'municipality',
+        'barangay',
+        'street_address',
+        'postal_code',
+        'address',
+        'is_default',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_default' => 'boolean',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

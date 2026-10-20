@@ -434,6 +434,11 @@ Route::middleware([
         'update',
     ])->name('buyer.addresses.update');
 
+    Route::patch('/buyer/addresses/{address}/default', [
+        BuyerAddressController::class,
+        'setDefault',
+    ])->name('buyer.addresses.default');
+
     Route::delete('/buyer/addresses/{address}', [
         BuyerAddressController::class,
         'destroy',
