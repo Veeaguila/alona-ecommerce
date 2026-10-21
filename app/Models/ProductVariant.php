@@ -45,7 +45,17 @@ class ProductVariant extends Model
 
     public function getRegularPriceAttribute(): string
     {
-        return number_format((float) ($this->attributes['price'] ?? 0), 2, '.', '');
+        $price = (float) ($this->attributes['price'] ?? 0);
+        if ($price <= 0) {
+            $product = $this->relationLoaded('product')
+                ? $this->product
+                : ($this->product_id ? Product::find($this->product_id) : null);
+            if ($product && (float) $product->getRawOriginal('price') > 0) {
+                $price = (float) $product->getRawOriginal('price');
+            }
+        }
+
+        return number_format($price, 2, '.', '');
     }
 
     public function getPriceAttribute($value): string
@@ -54,6 +64,10 @@ class ProductVariant extends Model
         $product = $this->relationLoaded('product')
             ? $this->product
             : ($this->product_id ? Product::find($this->product_id) : null);
+
+        if ($regular <= 0 && $product && (float) $product->getRawOriginal('price') > 0) {
+            $regular = (float) $product->getRawOriginal('price');
+        }
 
         $sale = $product?->activeSale();
         if ($sale && $regular > 0) {

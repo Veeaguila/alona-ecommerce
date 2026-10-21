@@ -321,40 +321,34 @@ class BuyerOrderController extends Controller
                 }
             }
 
+            $isNcr = str_contains($addressLower, 'ncr') ||
+                str_contains($addressLower, 'metro manila') ||
+                str_contains($addressLower, 'manila') ||
+                str_contains($addressLower, 'quezon city');
+
+            $isVisayas = str_contains($addressLower, 'visayas') ||
+                str_contains($addressLower, 'cebu') ||
+                str_contains($addressLower, 'leyte');
+
             if ($matchedZone) {
                 $baseRate = (float) $matchedZone->base_shipping_rate;
                 $perKgRate = (float) ($matchedZone->per_kg_rate ?? 20.0);
-            } elseif (
-                str_contains($addressLower, 'visayas') ||
-                str_contains($addressLower, 'cebu') ||
-                str_contains($addressLower, 'leyte')
-            ) {
+            } elseif ($isVisayas) {
                 // BUY-CHK-002: Visayas shipping is ₱120
                 $baseRate = 120.0;
                 $perKgRate = 25.0;
-            } elseif (
-                str_contains($addressLower, 'ncr') ||
-                str_contains($addressLower, 'metro manila') ||
-                str_contains($addressLower, 'manila') ||
-                str_contains($addressLower, 'quezon city')
-            ) {
+            } elseif ($isNcr) {
                 // BUY-CHK-002: NCR shipping is ₱50
                 $baseRate = 50.0;
                 $perKgRate = 20.0;
             } else {
-                // Fallback / standard
-                $baseRate = (float) ($methodConfig['fee_per_seller'] ?? 50.0);
+                // BUY-CHK-003: Standard tier base ₱60 (first 1 kg), or method config
+                $baseRate = $hasExplicitWeight ? 60.0 : (float) ($methodConfig['fee_per_seller'] ?? 50.0);
                 $perKgRate = 20.0;
             }
 
             if ($isExpress) {
                 $baseRate = max($baseRate, 120.0);
-            }
-
-            // If explicit product weight and not Visayas, standard tier is base ₱60 for 1st kg, +₱20/kg thereafter (BUY-CHK-003)
-            if ($hasExplicitWeight && !$isExpress && !str_contains($addressLower, 'visayas')) {
-                $baseRate = 60.0;
-                $perKgRate = 20.0;
             }
 
             $sellerFee = $baseRate + max(0, $billedKg - 1) * $perKgRate;
@@ -1077,6 +1071,39 @@ class BuyerOrderController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
+                | Validate price changes (BUY-CHK-008)
+                |--------------------------------------------------------------------------
+                */
+
+                $expectedPrices = $data['expected_prices'] ?? [];
+                if (!empty($expectedPrices) && is_array($expectedPrices)) {
+                    foreach ($items as $item) {
+                        $expectedPrice = null;
+                        if (array_key_exists($item->id, $expectedPrices)) {
+                            $expectedPrice = (float) $expectedPrices[$item->id];
+                        } elseif (array_key_exists((string) $item->id, $expectedPrices)) {
+                            $expectedPrice = (float) $expectedPrices[(string) $item->id];
+                        } elseif (array_key_exists($item->product_id, $expectedPrices)) {
+                            $expectedPrice = (float) $expectedPrices[$item->product_id];
+                        } elseif (array_key_exists((string) $item->product_id, $expectedPrices)) {
+                            $expectedPrice = (float) $expectedPrices[(string) $item->product_id];
+                        }
+
+                        if ($expectedPrice !== null) {
+                            $currentPrice = (float) $this->itemPrice($item);
+                            if (abs($currentPrice - $expectedPrice) > 0.01) {
+                                throw ValidationException::withMessages([
+                                    'expected_prices' => "The price for {$item->product->name} has changed. Please review the updated price before placing your order.",
+                                    'price_changed' => "The price for {$item->product->name} has changed. Please review the updated price before placing your order.",
+                                    'selected_items' => "The price for {$item->product->name} has changed. Please review your order before proceeding.",
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
                 | Calculate subtotal (with S8 Flash Sale splits, Bundle & Buy X Get Y)
                 |--------------------------------------------------------------------------
                 */
@@ -1102,12 +1129,14 @@ class BuyerOrderController extends Controller
                 $shippingFeeBeforeDiscount = $this->calculateShippingFee(
                     $shippingMethod,
                     $items,
-                    $subtotal
+                    $subtotal,
+                    $data['shipping_address']
                 );
 
                 $itemDiscount = 0.0;
                 $shippingDiscount = 0.0;
                 $appliedVouchersMeta = [];
+                $vouchers = collect();
 
                 if (!empty($voucherCodes)) {
                     $vouchers = Voucher::query()
@@ -1309,6 +1338,153 @@ class BuyerOrderController extends Controller
                     }
                 }
 
+                $sellerGroups = $items->groupBy(fn ($item) => (int) ($item->product?->seller_id ?? 0));
+
+                if ($sellerGroups->count() > 1) {
+                    $createdOrders = [];
+                    $totalSubtotal = $subtotal;
+                    $remainingShippingDiscount = $shippingDiscount;
+
+                    foreach ($sellerGroups as $sellerId => $sellerItems) {
+                        $sellerEval = app(\App\Services\CartPromotionCalculator::class)->evaluate($sellerItems);
+                        $storeSubtotal = (float) $sellerEval['subtotal_after_promotions'];
+                        $storeShippingBeforeDiscount = $this->calculateShippingFee(
+                            $shippingMethod,
+                            $sellerItems,
+                            $storeSubtotal,
+                            $data['shipping_address']
+                        );
+
+                        $storeDiscount = 0.0;
+                        $storeShippingDiscount = 0.0;
+                        $storeAppliedVouchers = [];
+
+                        foreach ($appliedVouchersMeta as $vMeta) {
+                            $cat = $vMeta['category'] ?? null;
+                            if ($cat === 'store') {
+                                if ((int) ($vMeta['seller_id'] ?? 0) === (int) $sellerId) {
+                                    $vDisc = min($storeSubtotal, (float) ($vMeta['discount'] ?? 0.0));
+                                    $storeDiscount += $vDisc;
+                                    $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($vDisc, 2)]);
+                                }
+                            } elseif ($cat === 'platform') {
+                                $ratio = $totalSubtotal > 0 ? ($storeSubtotal / $totalSubtotal) : (1.0 / $sellerGroups->count());
+                                $platDisc = round((float) ($vMeta['discount'] ?? 0.0) * $ratio, 2);
+                                $storeDiscount += $platDisc;
+                                $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($platDisc, 2)]);
+                            } elseif ($cat === 'shipping') {
+                                $shipDisc = min($storeShippingBeforeDiscount, $remainingShippingDiscount);
+                                $storeShippingDiscount += $shipDisc;
+                                $remainingShippingDiscount = max(0.0, $remainingShippingDiscount - $shipDisc);
+                                if ($shipDisc > 0) {
+                                    $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($shipDisc, 2)]);
+                                }
+                            }
+                        }
+
+                        $storeDiscount = round(min($storeSubtotal, $storeDiscount), 2);
+                        $storeShippingDiscount = round(min($storeShippingBeforeDiscount, $storeShippingDiscount), 2);
+                        $storeFinalShippingFee = round(max(0, $storeShippingBeforeDiscount - $storeShippingDiscount), 2);
+                        $storeTotal = round(max(0, $storeSubtotal - $storeDiscount) + $storeFinalShippingFee, 2);
+
+                        $storeOrder = new Order();
+                        $storeOrder->order_number = $this->generateOrderNumber();
+                        $storeOrder->user_id = $user->id;
+                        $storeOrder->shipping_address = $data['shipping_address'];
+                        if (Schema::hasColumn('orders', 'buyer_note') && ! empty($data['buyer_note'])) {
+                            $storeOrder->buyer_note = trim((string) $data['buyer_note']);
+                        }
+                        $storeOrder->payment_method = $data['payment_method'];
+                        $storeOrder->shipping_method = $shippingMethod;
+                        $storeOrder->shipping_fee = $storeFinalShippingFee;
+                        $storeOrder->shipping_fee_before_discount = $storeShippingBeforeDiscount;
+                        $storeOrder->shipping_discount = $storeShippingDiscount;
+                        $storeOrder->delivery_fee_payer = 'seller';
+                        $storeOrder->payment_status = 'unpaid';
+                        $storeOrder->payment_method_id = $savedPaymentMethod?->id;
+                        $storeOrder->subtotal = $storeSubtotal;
+                        $storeOrder->discount = $storeDiscount;
+                        $storeOrder->total = $storeTotal;
+                        $storeOrder->status = 'pending';
+
+                        if (!empty($storeAppliedVouchers)) {
+                            $storeOrder->applied_vouchers = $storeAppliedVouchers;
+                            $storeOrder->voucher_id = $storeAppliedVouchers[0]['id'];
+                            $storeOrder->voucher_code = implode(', ', array_column($storeAppliedVouchers, 'code'));
+                        }
+
+                        $storeOrder->save();
+
+                        foreach ($sellerItems as $cartItem) {
+                            $product = $cartItem->product;
+                            $itemMeta = $sellerEval['item_pricing_map'][$cartItem->id] ?? null;
+                            $linesToCreate = !empty($itemMeta['lines'])
+                                ? $itemMeta['lines']
+                                : [
+                                    [
+                                        'quantity' => (int) $cartItem->quantity,
+                                        'unit_price' => $this->itemPrice($cartItem),
+                                        'is_flash_sale' => false,
+                                        'flash_sale_id' => null,
+                                    ],
+                                ];
+
+                            foreach ($linesToCreate as $lineRow) {
+                                $lineQty = (int) ($lineRow['quantity'] ?? $cartItem->quantity);
+                                $lineUnitPrice = isset($itemMeta['is_free_gift']) && $itemMeta['is_free_gift']
+                                    ? (float) ($itemMeta['effective_unit_price'] ?? 0.0)
+                                    : (float) ($lineRow['unit_price'] ?? $this->itemPrice($cartItem));
+
+                                $orderItemData = [
+                                    'order_id' => $storeOrder->id,
+                                    'product_id' => $product->id,
+                                    'product_name' => $product->name,
+                                    'quantity' => $lineQty,
+                                    'price' => $lineUnitPrice,
+                                ];
+
+                                if (Schema::hasColumn('order_items', 'product_variant_id') && $cartItem->variant) {
+                                    $orderItemData['product_variant_id'] = $cartItem->variant->id;
+                                }
+
+                                if (Schema::hasColumn('order_items', 'variant_label')) {
+                                    $orderItemData['variant_label'] = $this->variantLabel($cartItem->variant);
+                                }
+
+                                if (Schema::hasColumn('order_items', 'subtotal')) {
+                                    $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
+                                }
+
+                                OrderItem::create($orderItemData);
+
+                                if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
+                                    $lockedFlash = \App\Models\FlashSale::whereKey($lineRow['flash_sale_id'])
+                                        ->lockForUpdate()
+                                        ->first();
+                                    if ($lockedFlash) {
+                                        $lockedFlash->increment('sold_quantity', $lineQty);
+                                    }
+                                }
+                            }
+
+                            $this->deductStock($cartItem);
+                            $this->notifySellerNewOrder($storeOrder, $cartItem);
+                            $this->notifySellerLowStock($cartItem);
+                        }
+
+                        app(\App\Services\SellerShipmentFinance::class)->createMembership($storeOrder);
+                        $this->createOrderStatusHistory($storeOrder, 'pending');
+
+                        $createdOrders[] = $storeOrder;
+                    }
+
+                    $user->cartItems()
+                        ->whereIn('id', $selectedIds)
+                        ->delete();
+
+                    return $createdOrders;
+                }
+
                 $orderNumber = $this->generateOrderNumber();
 
                 $order = new Order();
@@ -1460,29 +1636,37 @@ class BuyerOrderController extends Controller
             }
         );
 
+        $allOrders = is_array($order) ? $order : [$order];
+        $primaryOrder = $allOrders[0];
+        $orderCount = count($allOrders);
+
         if (Schema::hasTable('buyer_notifications')) {
-            try {
-                BuyerNotification::create([
-                    'user_id' => $user->id,
-                    'title' => "Order #{$order->order_number} placed",
-                    'type' => 'order',
-                    'message' => "Your order with total ₱" . number_format((float) $order->total, 2) . " has been placed and is waiting for fulfillment.",
-                    'action_url' => route('buyer.orders.show', $order->id),
-                ]);
-            } catch (\Throwable $e) {
-                // Ignore notification logging errors
+            foreach ($allOrders as $ord) {
+                try {
+                    BuyerNotification::create([
+                        'user_id' => $user->id,
+                        'title' => "Order #{$ord->order_number} placed",
+                        'type' => 'order',
+                        'message' => "Your order with total ₱" . number_format((float) $ord->total, 2) . " has been placed and is waiting for fulfillment.",
+                        'action_url' => route('buyer.orders.show', $ord->id),
+                    ]);
+                } catch (\Throwable $e) {
+                    // Ignore notification logging errors
+                }
             }
         }
+
+        $statusMsg = $orderCount > 1
+            ? "Your checkout was split into {$orderCount} store orders."
+            : 'Order placed successfully.';
 
         return redirect()
             ->route(
                 'buyer.orders.show',
-                $order
+                $primaryOrder
             )
-            ->with(
-                'status',
-                'Order placed successfully.'
-            );
+            ->with('status', $statusMsg)
+            ->with('success', $statusMsg);
     }
 
     /*
@@ -2217,12 +2401,17 @@ class BuyerOrderController extends Controller
     private function itemPrice(
         CartItem $item
     ): float {
-        return (float) (
-            $item->variant?->price ??
-            $item->product?->price ??
-            $item->price ??
-            0
-        );
+        $varPrice = (float) ($item->variant?->price ?? 0);
+        if ($varPrice > 0) {
+            return $varPrice;
+        }
+
+        $prodPrice = (float) ($item->product?->price ?? 0);
+        if ($prodPrice > 0) {
+            return $prodPrice;
+        }
+
+        return (float) ($item->price ?? 0);
     }
 
     /**

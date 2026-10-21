@@ -53,9 +53,9 @@ class CartPromotionCalculator
             }
 
             $qty = max(1, (int) $item->quantity);
-            $baseRegular = $item->variant
-                ? (float) $item->variant->getRawOriginal('price')
-                : (float) $product->getRawOriginal('price');
+            $varPrice = $item->variant ? (float) $item->variant->getRawOriginal('price') : 0.0;
+            $prodPrice = (float) $product->getRawOriginal('price');
+            $baseRegular = $varPrice > 0 ? $varPrice : $prodPrice;
 
             $nonFlashPrice = $product->nonFlashPriceFor($baseRegular);
             $flash = $flashSalesByProduct[$product->id] ?? null;

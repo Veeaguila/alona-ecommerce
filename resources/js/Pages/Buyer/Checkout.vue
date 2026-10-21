@@ -66,6 +66,7 @@ const form = useForm({
     payment_method_id: null,
     voucher_code: '',
     voucher_codes: [],
+    expected_prices: {},
     selected_items: [...selectedItems.value],
 })
 
@@ -134,14 +135,13 @@ const variantLabel = item => {
         .join(' / ')
 }
 
-const itemPrice = item =>
-    Number(
-        item.effective_price ??
-        item.unit_price ??
-        item.price ??
-        item.product?.price ??
-        0
-    )
+const itemPrice = item => {
+    const eff = Number(item.effective_price ?? item.unit_price ?? item.price ?? 0)
+    if (eff > 0) return eff
+    const varPrice = Number(item.variant?.price ?? 0)
+    if (varPrice > 0) return varPrice
+    return Number(item.product?.price ?? 0)
+}
 
 const itemQuantity = item =>
     Number(item.quantity || 0)
@@ -170,6 +170,63 @@ const merchandiseTotal = computed(() =>
     Math.max(0, subtotal.value - discount.value)
 )
 
+const isAddressUnserviceable = computed(() => {
+    const addr = (form.shipping_address || '').toLowerCase()
+    return ['batanes', 'kalayaan', 'pag-asa island'].some(loc => addr.includes(loc))
+})
+
+const calculateStoreShipping = (option, sellerItems) => {
+    if (option.key === 'pickup') return 0
+    if (
+        option.key !== 'express' &&
+        props.free_shipping_threshold !== null &&
+        props.free_shipping_threshold !== undefined &&
+        merchandiseTotal.value >= Number(props.free_shipping_threshold)
+    ) {
+        return 0
+    }
+
+    const addr = (form.shipping_address || '').toLowerCase()
+    const isExpress = option.key === 'express'
+    let sellerWeight = 0
+    let hasExplicitWeight = false
+    for (const item of sellerItems) {
+        const w = Number(item.product?.weight || 0)
+        const q = Number(item.quantity || 1)
+        if (w > 0) {
+            sellerWeight += w * q
+            hasExplicitWeight = true
+        }
+    }
+
+    const billedKg = hasExplicitWeight ? Math.max(1, Math.ceil(sellerWeight)) : 1
+
+    let baseRate = Number(option.fee_per_seller || 50)
+    let perKgRate = 20
+
+    if (addr.includes('visayas') || addr.includes('cebu') || addr.includes('leyte')) {
+        baseRate = 120
+        perKgRate = 25
+    } else if (
+        addr.includes('ncr') ||
+        addr.includes('metro manila') ||
+        addr.includes('manila') ||
+        addr.includes('quezon city')
+    ) {
+        baseRate = 50
+        perKgRate = 20
+    } else {
+        baseRate = hasExplicitWeight ? 60 : Number(option.fee_per_seller || 50)
+        perKgRate = 20
+    }
+
+    if (isExpress) {
+        baseRate = Math.max(baseRate, 120)
+    }
+
+    return baseRate + Math.max(0, billedKg - 1) * perKgRate
+}
+
 // Mirrors the server-side calculation (the server is authoritative).
 const feeFor = option => {
     if (
@@ -181,7 +238,24 @@ const feeFor = option => {
         return 0
     }
 
-    return Number(option.fee_per_seller) * sellerCount.value
+    const groups = {}
+    for (const item of activeItems.value) {
+        const sId = item.product?.seller_id || 0
+        if (!groups[sId]) groups[sId] = []
+        groups[sId].push(item)
+    }
+
+    const sellerKeys = Object.keys(groups)
+    if (sellerKeys.length === 0) {
+        return Number(option.fee_per_seller || 50) * sellerCount.value
+    }
+
+    let totalFee = 0
+    for (const sId of sellerKeys) {
+        totalFee += calculateStoreShipping(option, groups[sId])
+    }
+
+    return totalFee
 }
 
 const selectedShipping = computed(() =>
@@ -352,10 +426,16 @@ const removeItemFromCheckout = itemId => {
 const submit = () => {
     if (!selectedItems.value.length) return
     if (!form.shipping_address.trim()) return
+    if (isAddressUnserviceable.value) return
 
     form.selected_items = [
         ...selectedItems.value,
     ]
+
+    form.expected_prices = activeItems.value.reduce((map, item) => {
+        map[item.id] = itemPrice(item)
+        return map
+    }, {})
 
     form.post(
         route('buyer.orders.store'),
@@ -367,6 +447,18 @@ const submit = () => {
                     'Checkout validation errors:',
                     errors
                 )
+                if (errors.voucher_code) {
+                    appliedVouchers.value = {
+                        store: null,
+                        platform: null,
+                        shipping: null,
+                    }
+                    syncFormVouchers()
+                    voucherError.value = errors.voucher_code
+                }
+                if (errors.price_changed || errors.selected_items || errors.shipping_address) {
+                    voucherError.value = errors.price_changed || errors.selected_items || errors.shipping_address
+                }
             },
         }
     )
@@ -930,7 +1022,8 @@ const submit = () => {
                                 :disabled="
                                     form.processing ||
                                     !form.shipping_address.trim() ||
-                                    !selectedItems.length
+                                    !selectedItems.length ||
+                                    isAddressUnserviceable
                                 "
                                 class="mt-4 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#066C76] disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -945,7 +1038,15 @@ const submit = () => {
                             </p>
 
                             <p
-                                v-if="!form.shipping_address"
+                                v-if="isAddressUnserviceable"
+                                class="mt-3 flex items-center justify-center gap-1 rounded-lg bg-[#FFF1F1] p-2 text-center text-[11px] font-semibold leading-4 text-[#C24141]"
+                            >
+                                <span><Icon name="warning" class="h-4 w-4" /></span>
+                                The selected delivery address is outside courier serviceable coverage.
+                            </p>
+
+                            <p
+                                v-else-if="!form.shipping_address"
                                 class="mt-3 flex items-center justify-center gap-1 text-center text-[10px] leading-4 text-[#9A6B08]"
                             >
                                 <span><Icon name="warning" class="h-4 w-4" /></span>

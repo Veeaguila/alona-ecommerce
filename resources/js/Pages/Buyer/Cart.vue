@@ -156,12 +156,16 @@ const stockFor = item => {
 }
 
 const itemPrice = item => {
-    if (item?.effective_price !== undefined && item?.effective_price !== null) {
+    if (item?.effective_price !== undefined && item?.effective_price !== null && Number(item.effective_price) > 0) {
         return Number(item.effective_price)
     }
+    const varPrice = Number(item?.variant?.price ?? 0)
+    if (varPrice > 0) {
+        return varPrice
+    }
     return Number(
-        item?.variant?.price ??
         item?.product?.price ??
+        item?.price ??
         0
     )
 }
