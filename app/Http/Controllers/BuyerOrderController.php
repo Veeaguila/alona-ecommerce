@@ -459,9 +459,9 @@ class BuyerOrderController extends Controller
                 $returnDays = 7;
             }
 
-            $deliveredAt = $item->delivered_at ?? $order->delivered_at ?? $item->updated_at ?? now();
-            $returnDeadline = Carbon::parse($deliveredAt)->addDays($returnDays);
-            $isWithinReturnWindow = now()->lessThanOrEqualTo($returnDeadline);
+            $deliveredAt = $this->resolveDeliveredAt($item, $order);
+            $returnDeadline = $deliveredAt ? $deliveredAt->copy()->addDays($returnDays) : null;
+            $isWithinReturnWindow = $isDelivered && $returnDeadline ? now()->lessThanOrEqualTo($returnDeadline) : false;
 
             // Active return request
             $activeReturn = $item->returnRequests
@@ -2319,13 +2319,13 @@ class BuyerOrderController extends Controller
     public function storeReturnRequest(
         Request $request,
         OrderItem $orderItem
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         $orderItem->load('order.user', 'product.seller', 'returnRequests');
 
         abort_unless(
             (int) $orderItem->order->user_id ===
             (int) $request->user()->id,
-            404
+            403
         );
 
         $itemStatus = strtolower((string) ($orderItem->status ?? $orderItem->order->status));
@@ -2342,8 +2342,14 @@ class BuyerOrderController extends Controller
             $returnDays = 7;
         }
 
-        $deliveredAt = $orderItem->delivered_at ?? $orderItem->updated_at ?? now();
-        $returnDeadline = Carbon::parse($deliveredAt)->addDays($returnDays);
+        $deliveredAt = $this->resolveDeliveredAt($orderItem, $orderItem->order);
+        if (! $deliveredAt) {
+            throw ValidationException::withMessages([
+                'reason' => 'Returns and refunds can only be requested after the item has been delivered.',
+            ]);
+        }
+
+        $returnDeadline = $deliveredAt->copy()->addDays($returnDays);
 
         if (now()->greaterThan($returnDeadline)) {
             throw ValidationException::withMessages([
@@ -2377,13 +2383,15 @@ class BuyerOrderController extends Controller
                 'max:100',
             ],
             'reason_details' => [
-                'nullable',
+                'required',
                 'string',
+                'min:10',
                 'max:1500',
             ],
             'evidence_images' => [
-                'nullable',
+                'required',
                 'array',
+                'min:1',
                 'max:5',
             ],
             'evidence_images.*' => [
@@ -2391,6 +2399,12 @@ class BuyerOrderController extends Controller
                 'mimes:jpeg,png,jpg,webp',
                 'max:5120',
             ],
+        ], [
+            'reason_details.required' => 'Please provide an explanation for your return request (at least 10 characters).',
+            'reason_details.min' => 'The explanation must be at least 10 characters.',
+            'evidence_images.required' => 'Please upload at least 1 photo as evidence.',
+            'evidence_images.min' => 'Please upload at least 1 photo as evidence.',
+            'evidence_images.max' => 'You can upload up to 5 photos only.',
         ]);
 
         $evidencePaths = [];
@@ -2429,6 +2443,13 @@ class BuyerOrderController extends Controller
             ]);
         }
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Return / refund request submitted successfully.',
+                'return_request' => $returnRequest,
+            ], 201);
+        }
+
         return back()->with(
             'status',
             'Return / refund request submitted successfully.'
@@ -2441,11 +2462,11 @@ class BuyerOrderController extends Controller
     public function cancelReturnRequest(
         Request $request,
         OrderReturnRequest $returnRequest
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         abort_unless(
             (int) $returnRequest->buyer_id ===
             (int) $request->user()->id,
-            404
+            403
         );
 
         if ($returnRequest->status !== 'pending') {
@@ -2457,6 +2478,13 @@ class BuyerOrderController extends Controller
         $returnRequest->update([
             'status' => 'cancelled',
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Return request has been cancelled.',
+                'return_request' => $returnRequest->fresh(),
+            ]);
+        }
 
         return back()->with(
             'status',
@@ -3357,5 +3385,54 @@ class BuyerOrderController extends Controller
         OrderItem $item
     ): void {
         \App\Services\SellerNotificationService::sendReturnRequestAlert($returnRequest);
+    }
+
+    /**
+     * Resolve the exact datetime when an order item was delivered.
+     */
+    private function resolveDeliveredAt(OrderItem $item, ?Order $order = null): ?Carbon
+    {
+        $order = $order ?? $item->order;
+
+        if ($item->delivered_at) {
+            return Carbon::parse($item->delivered_at);
+        }
+
+        if ($order?->delivered_at) {
+            return Carbon::parse($order->delivered_at);
+        }
+
+        if (Schema::hasTable('order_item_status_histories')) {
+            $history = $item->statusHistories()
+                ->whereIn('status', ['delivered', 'completed'])
+                ->oldest()
+                ->first();
+            if ($history?->created_at) {
+                return Carbon::parse($history->created_at);
+            }
+        }
+
+        if (Schema::hasTable('order_status_histories') && $order) {
+            $orderHistory = DB::table('order_status_histories')
+                ->where('order_id', $order->id)
+                ->whereIn('status', ['delivered', 'completed'])
+                ->oldest()
+                ->first();
+            if ($orderHistory?->created_at) {
+                return Carbon::parse($orderHistory->created_at);
+            }
+        }
+
+        $itemStatus = strtolower((string) ($item->status ?? $order?->status ?? ''));
+        if (in_array($itemStatus, ['delivered', 'completed'], true)) {
+            if ($item->updated_at) {
+                return Carbon::parse($item->updated_at);
+            }
+            if ($order?->updated_at) {
+                return Carbon::parse($order->updated_at);
+            }
+        }
+
+        return null;
     }
 }

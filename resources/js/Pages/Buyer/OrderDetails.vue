@@ -448,6 +448,18 @@ const handleFileChange = e => {
 const submitReturnRequest = () => {
     if (!returningItem.value || returnForm.processing) return
 
+    returnForm.clearErrors()
+
+    if (!returnForm.reason_details || returnForm.reason_details.trim().length < 10) {
+        returnForm.setError('reason_details', 'Please provide an explanation of at least 10 characters.')
+        return
+    }
+
+    if (!returnForm.evidence_images || returnForm.evidence_images.length === 0) {
+        returnForm.setError('evidence_images', 'Please upload at least 1 photo as evidence.')
+        return
+    }
+
     returnForm.post(route('buyer.order-items.return', returningItem.value.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -1228,11 +1240,11 @@ const imageUrl = path => {
 
                     <!-- REASON DETAILS -->
                     <div>
-                        <label class="block text-xs font-bold text-[#475569]">Description & Details</label>
+                        <label class="block text-xs font-bold text-[#475569]">Description & Details (Min 10 characters) *</label>
                         <textarea
                             v-model="returnForm.reason_details"
                             rows="3"
-                            placeholder="Please describe the issue in detail to help the seller process your request..."
+                            placeholder="Please describe the issue in detail (at least 10 characters)..."
                             class="mt-1.5 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-3 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:ring-2 focus:ring-[#E8F7F6]"
                         ></textarea>
                         <p v-if="returnForm.errors.reason_details" class="mt-1 text-xs text-[#DC2626]">
@@ -1242,7 +1254,7 @@ const imageUrl = path => {
 
                     <!-- EVIDENCE UPLOADS (BUYER-23) -->
                     <div>
-                        <label class="block text-xs font-bold text-[#475569]">Upload Evidence Photos (Max 5)</label>
+                        <label class="block text-xs font-bold text-[#475569]">Upload Evidence Photos (1 to 5 photos required) *</label>
                         <input
                             type="file"
                             multiple
