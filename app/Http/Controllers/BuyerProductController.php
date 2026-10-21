@@ -291,6 +291,13 @@ class BuyerProductController extends Controller
                 ->toArray();
         }
 
+        $userPurchasedCount = 0;
+        $userRemainingLimit = null;
+        if (auth()->check()) {
+            $userPurchasedCount = $product->purchasedUnitsCountFor(auth()->user());
+            $userRemainingLimit = $product->remainingPurchaseLimitFor(auth()->user());
+        }
+
         return Inertia::render('Buyer/Show', [
             'product' => $product,
             'vouchers' => $vouchers,
@@ -298,6 +305,8 @@ class BuyerProductController extends Controller
             'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
             'isGuest' => !auth()->check(),
+            'userPurchasedCount' => $userPurchasedCount,
+            'userRemainingLimit' => $userRemainingLimit,
         ]);
     }
 }

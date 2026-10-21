@@ -848,6 +848,17 @@ class BuyerOrderController extends Controller
                         ]);
                     }
 
+                    if ($item->product->effective_per_buyer_limit) {
+                        $limit = $item->product->effective_per_buyer_limit;
+                        $alreadyPurchased = $item->product->purchasedUnitsCountFor($user);
+                        $orderQtyForProduct = (int) $items->where('product_id', $item->product_id)->sum('quantity');
+                        if (($alreadyPurchased + $orderQtyForProduct) > $limit) {
+                            throw ValidationException::withMessages([
+                                'selected_items' => "Purchase limit of {$limit} item(s) exceeded for {$item->product->name}.",
+                            ]);
+                        }
+                    }
+
                     $stock = $this->stockForCartItem(
                         $item
                     );

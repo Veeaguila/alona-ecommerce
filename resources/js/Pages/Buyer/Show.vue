@@ -2,7 +2,7 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
@@ -37,6 +37,14 @@ const props = defineProps({
     claimed_voucher_ids: {
         type: Array,
         default: () => [],
+    },
+    userPurchasedCount: {
+        type: Number,
+        default: 0,
+    },
+    userRemainingLimit: {
+        type: Number,
+        default: null,
     },
 })
 
@@ -449,22 +457,113 @@ const lowStock = computed(() =>
 
 /*
 |--------------------------------------------------------------------------
-| QUANTITY
+| LIVE FLASH SALE COUNTDOWN TIMER (BUY-PDP-006)
+|--------------------------------------------------------------------------
+*/
+
+const flashCountdown = ref({
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+    totalSeconds: 0,
+    isEnded: false,
+})
+
+let flashTimerInterval = null
+
+function updateCountdown() {
+    if (!product.value?.has_active_flash_sale || !product.value?.flash_ends_at) {
+        return
+    }
+
+    const end = new Date(product.value.flash_ends_at).getTime()
+    const now = Date.now()
+    const diff = Math.max(0, Math.floor((end - now) / 1000))
+
+    if (diff <= 0) {
+        flashCountdown.value = {
+            hours: '00',
+            minutes: '00',
+            seconds: '00',
+            totalSeconds: 0,
+            isEnded: true,
+        }
+        return
+    }
+
+    const hours = Math.floor(diff / 3600)
+    const minutes = Math.floor((diff % 3600) / 60)
+    const seconds = diff % 60
+
+    flashCountdown.value = {
+        hours: String(hours).padStart(2, '0'),
+        minutes: String(minutes).padStart(2, '0'),
+        seconds: String(seconds).padStart(2, '0'),
+        totalSeconds: diff,
+        isEnded: false,
+    }
+}
+
+onMounted(() => {
+    if (product.value?.has_active_flash_sale) {
+        updateCountdown()
+        flashTimerInterval = setInterval(updateCountdown, 1000)
+    }
+})
+
+onUnmounted(() => {
+    if (flashTimerInterval) {
+        clearInterval(flashTimerInterval)
+    }
+})
+
+/*
+|--------------------------------------------------------------------------
+| QUANTITY & PURCHASE LIMITS (BUY-PDP-004 & BUY-PDP-005)
 |--------------------------------------------------------------------------
 */
 
 const quantity = ref(1)
+const quantityError = ref('')
+
+const effectivePerBuyerLimit = computed(() => {
+    return Number(product.value?.per_buyer_limit || product.value?.effective_per_buyer_limit || 0)
+})
+
+const remainingPerBuyer = computed(() => {
+    if (!effectivePerBuyerLimit.value || effectivePerBuyerLimit.value <= 0) {
+        return null
+    }
+    if (props.userRemainingLimit !== undefined && props.userRemainingLimit !== null) {
+        return Number(props.userRemainingLimit)
+    }
+    return effectivePerBuyerLimit.value
+})
+
+const isPurchaseLimitReached = computed(() => {
+    return remainingPerBuyer.value !== null && remainingPerBuyer.value <= 0
+})
+
+const maxAllowedQuantity = computed(() => {
+    const stock = Number(availableStock.value || 0)
+    if (remainingPerBuyer.value !== null) {
+        return Math.max(0, Math.min(stock, remainingPerBuyer.value))
+    }
+    return Math.max(0, stock)
+})
 
 watch(
     availableStock,
     stock => {
+        quantityError.value = ''
         if (stock <= 0) {
             quantity.value = 1
             return
         }
 
-        if (quantity.value > stock) {
-            quantity.value = stock
+        const max = maxAllowedQuantity.value > 0 ? maxAllowedQuantity.value : stock
+        if (quantity.value > max) {
+            quantity.value = max
         }
 
         if (quantity.value < 1) {
@@ -476,18 +575,56 @@ watch(
     }
 )
 
+function onQuantityChange(event) {
+    const rawVal = event.target.value
+    quantityError.value = ''
+
+    if (rawVal === '' || rawVal === null) {
+        quantityError.value = 'Please enter a valid quantity.'
+        return
+    }
+
+    const val = parseInt(rawVal, 10)
+    if (isNaN(val) || val < 1) {
+        quantityError.value = 'Quantity must be at least 1.'
+        quantity.value = 1
+        return
+    }
+
+    if (val > availableStock.value) {
+        quantityError.value = `Cannot exceed available stock of ${availableStock.value}.`
+        quantity.value = availableStock.value
+        return
+    }
+
+    if (remainingPerBuyer.value !== null && val > remainingPerBuyer.value) {
+        quantityError.value = remainingPerBuyer.value > 0
+            ? `Purchase limit: max ${effectivePerBuyerLimit.value} per customer. You can only buy up to ${remainingPerBuyer.value} more.`
+            : `Purchase limit reached. Maximum ${effectivePerBuyerLimit.value} allowed per customer.`
+        quantity.value = Math.max(1, remainingPerBuyer.value)
+        return
+    }
+
+    quantity.value = val
+}
+
 function increaseQuantity() {
-    if (
-        quantity.value <
-        availableStock.value
-    ) {
+    quantityError.value = ''
+    if (quantity.value < maxAllowedQuantity.value) {
         quantity.value++
+    } else if (remainingPerBuyer.value !== null && quantity.value >= remainingPerBuyer.value) {
+        quantityError.value = `Purchase limit: max ${effectivePerBuyerLimit.value} per customer.`
+    } else if (quantity.value >= availableStock.value) {
+        quantityError.value = `Cannot exceed available stock of ${availableStock.value}.`
     }
 }
 
 function decreaseQuantity() {
+    quantityError.value = ''
     if (quantity.value > 1) {
         quantity.value--
+    } else {
+        quantityError.value = 'Quantity must be at least 1.'
     }
 }
 
@@ -556,6 +693,7 @@ const canPurchase = computed(() =>
     Boolean(product.value.id) &&
     availableStock.value > 0 &&
     !isSellerOnVacation.value &&
+    !isPurchaseLimitReached.value &&
     (
         !hasVariants.value ||
         (Boolean(selectedVariant.value) && Number(selectedVariant.value.stock ?? 0) > 0)
@@ -588,14 +726,13 @@ function requireLogin() {
 const cartForm = useForm({
     quantity: 1,
     product_variant_id: null,
+    buy_now: false,
 })
 
-function prepareCartForm() {
-    cartForm.quantity =
-        quantity.value
-
-    cartForm.product_variant_id =
-        selectedVariant.value?.id ?? null
+function prepareCartForm(isBuyNow = false) {
+    cartForm.quantity = quantity.value
+    cartForm.product_variant_id = selectedVariant.value?.id ?? null
+    cartForm.buy_now = Boolean(isBuyNow)
 }
 
 /*
@@ -618,7 +755,7 @@ function addToCart() {
         return
     }
 
-    prepareCartForm()
+    prepareCartForm(false)
 
     cartForm.post(
         safeRoute(
@@ -633,7 +770,7 @@ function addToCart() {
 
 /*
 |--------------------------------------------------------------------------
-| BUY NOW
+| BUY NOW (BUY-PDP-007)
 |--------------------------------------------------------------------------
 */
 
@@ -651,7 +788,7 @@ function buyNow() {
         return
     }
 
-    prepareCartForm()
+    prepareCartForm(true)
 
     cartForm.post(
         safeRoute(
@@ -660,14 +797,6 @@ function buyNow() {
         ),
         {
             preserveScroll: true,
-
-            onSuccess: () => {
-                router.visit(
-                    safeRoute(
-                        'buyer.cart'
-                    )
-                )
-            },
         }
     )
 }
@@ -1241,20 +1370,32 @@ const breadcrumbs = computed(() => {
                                 </span>
                             </div>
 
-                                                        <!-- FLASH SALE BANNER (SEL-FLASH-001) -->
+                            <!-- FLASH SALE BANNER WITH LIVE COUNTDOWN TIMER (SEL-FLASH-001 / BUY-PDP-006) -->
                             <div
                                 v-if="product.has_active_flash_sale"
-                                class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs"
+                                class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs shadow-sm"
                             >
                                 <div class="flex items-center gap-2 font-bold text-amber-900">
-                                    <span class="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">
+                                    <span class="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-sm">
                                         ⚡ Flash Sale
                                     </span>
                                     <span v-if="product.flash_remaining_label" class="text-red-600 font-extrabold">
                                         {{ product.flash_remaining_label }}
                                     </span>
                                 </div>
-                                <div v-if="product.flash_ends_at" class="text-[11px] font-semibold text-amber-800">
+                                
+                                <!-- Live Countdown Timer Display -->
+                                <div v-if="product.flash_ends_at && !flashCountdown.isEnded" class="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                                    <span class="text-[11px] font-medium text-amber-800">Ends in</span>
+                                    <div class="flex items-center gap-1 font-mono text-[11px] font-bold text-white">
+                                        <span class="flex h-5 w-6 items-center justify-center rounded bg-amber-700/90 px-1">{{ flashCountdown.hours }}</span>
+                                        <span class="text-amber-800 font-black">:</span>
+                                        <span class="flex h-5 w-6 items-center justify-center rounded bg-amber-700/90 px-1">{{ flashCountdown.minutes }}</span>
+                                        <span class="text-amber-800 font-black">:</span>
+                                        <span class="flex h-5 w-6 items-center justify-center rounded bg-amber-700/90 px-1">{{ flashCountdown.seconds }}</span>
+                                    </div>
+                                </div>
+                                <div v-else-if="product.flash_ends_at" class="text-[11px] font-semibold text-amber-800">
                                     Ends at {{ new Date(product.flash_ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                 </div>
                             </div>
@@ -1539,46 +1680,70 @@ const breadcrumbs = computed(() => {
                                     </p>
                                 </div>
 
+                                <!-- Purchase Limit Notice (BUY-PDP-005) -->
                                 <div
-                                    class="mt-2.5 flex w-fit items-center overflow-hidden rounded-lg border border-[#E5E7EB]"
+                                    v-if="effectivePerBuyerLimit > 0"
+                                    class="mt-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs"
+                                    :class="isPurchaseLimitReached ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-amber-200 bg-amber-50 text-amber-900'"
                                 >
-                                    <button
-                                        type="button"
-                                        @click="
-                                            decreaseQuantity
-                                        "
-                                        :disabled="
-                                            quantity <= 1 ||
-                                            availableStock <=
-                                                0
-                                        "
-                                        class="flex h-8 w-8 items-center justify-center text-sm text-[#64748B] hover:bg-[#F8FAF9] disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        −
-                                    </button>
-
-                                    <span
-                                        class="flex h-8 w-10 items-center justify-center border-x border-[#E5E7EB] text-xs font-semibold"
-                                    >
-                                        {{ quantity }}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        @click="
-                                            increaseQuantity
-                                        "
-                                        :disabled="
-                                            quantity >=
-                                                availableStock ||
-                                            availableStock <=
-                                                0
-                                        "
-                                        class="flex h-8 w-8 items-center justify-center text-sm text-[#64748B] hover:bg-[#F8FAF9] disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        +
-                                    </button>
+                                    <Icon name="info" class="h-4 w-4 shrink-0" :class="isPurchaseLimitReached ? 'text-rose-600' : 'text-amber-600'" />
+                                    <div class="min-w-0">
+                                        <span v-if="isPurchaseLimitReached" class="font-bold">
+                                            You have reached the purchase limit of {{ effectivePerBuyerLimit }} item(s) for this product.
+                                        </span>
+                                        <span v-else>
+                                            Purchase limit: <strong>{{ effectivePerBuyerLimit }}</strong> per customer
+                                            <span v-if="remainingPerBuyer !== null" class="text-[#64748B]">
+                                                (max {{ remainingPerBuyer }} more allowed)
+                                            </span>
+                                        </span>
+                                    </div>
                                 </div>
+
+                                <!-- Quantity Controls with Editable Input (BUY-PDP-004) -->
+                                <div class="mt-2.5 flex items-center gap-3">
+                                    <div
+                                        class="flex w-fit items-center overflow-hidden rounded-lg border border-[#E5E7EB] bg-white"
+                                    >
+                                        <button
+                                            type="button"
+                                            @click="decreaseQuantity"
+                                            :disabled="quantity <= 1 || availableStock <= 0 || isPurchaseLimitReached"
+                                            class="flex h-8 w-8 items-center justify-center text-sm text-[#64748B] hover:bg-[#F8FAF9] disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            −
+                                        </button>
+
+                                        <input
+                                            id="pdp-quantity-input"
+                                            type="number"
+                                            :value="quantity"
+                                            @input="onQuantityChange"
+                                            :min="1"
+                                            :max="maxAllowedQuantity"
+                                            :disabled="availableStock <= 0 || isPurchaseLimitReached"
+                                            class="flex h-8 w-12 items-center justify-center border-y-0 border-x border-[#E5E7EB] bg-transparent text-center text-xs font-semibold text-[#1F2937] focus:outline-none focus:ring-1 focus:ring-[#087F8C] p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            @click="increaseQuantity"
+                                            :disabled="quantity >= maxAllowedQuantity || availableStock <= 0 || isPurchaseLimitReached"
+                                            class="flex h-8 w-8 items-center justify-center text-sm text-[#64748B] hover:bg-[#F8FAF9] disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+
+                                    <span v-if="effectivePerBuyerLimit > 0" class="text-[11px] text-[#64748B]">
+                                        (Max {{ effectivePerBuyerLimit }} per buyer)
+                                    </span>
+                                </div>
+
+                                <!-- Inline Quantity Warning (BUY-PDP-004) -->
+                                <p v-if="quantityError" class="mt-1.5 text-xs font-semibold text-rose-600">
+                                    {{ quantityError }}
+                                </p>
                             </div>
 
                             <!-- ================================================= -->
@@ -1613,16 +1778,19 @@ const breadcrumbs = computed(() => {
                                     @click="addToCart"
                                     :disabled="
                                         !canPurchase ||
-                                        cartForm.processing
+                                        cartForm.processing ||
+                                        isPurchaseLimitReached
                                     "
                                     class="rounded-xl border border-[#087F8C] px-4 py-3 text-xs font-semibold text-[#087F8C] transition hover:bg-[#E8F7F6] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {{
-                                        isSellerOnVacation
-                                            ? 'Store on Vacation'
-                                            : cartForm.processing
-                                                ? 'Adding...'
-                                                : 'Add to Cart'
+                                        isPurchaseLimitReached
+                                            ? 'Limit Reached'
+                                            : isSellerOnVacation
+                                                ? 'Store on Vacation'
+                                                : cartForm.processing
+                                                    ? 'Adding...'
+                                                    : 'Add to Cart'
                                     }}
                                 </button>
 
@@ -1631,16 +1799,19 @@ const breadcrumbs = computed(() => {
                                     @click="buyNow"
                                     :disabled="
                                         !canPurchase ||
-                                        cartForm.processing
+                                        cartForm.processing ||
+                                        isPurchaseLimitReached
                                     "
                                     class="rounded-xl bg-[#087F8C] px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {{
-                                        isSellerOnVacation
-                                            ? 'Store on Vacation'
-                                            : cartForm.processing
-                                                ? 'Processing...'
-                                                : 'Buy Now'
+                                        isPurchaseLimitReached
+                                            ? 'Limit Reached'
+                                            : isSellerOnVacation
+                                                ? 'Store on Vacation'
+                                                : cartForm.processing
+                                                    ? 'Processing...'
+                                                    : 'Buy Now'
                                     }}
                                 </button>
                             </div>

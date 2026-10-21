@@ -21,6 +21,7 @@ class Product extends Model
         'price',
         'old_price',
         'stock',
+        'per_buyer_limit',
         'low_stock_threshold',
         'low_stock_alerted',
         'image_path',
@@ -53,6 +54,7 @@ class Product extends Model
         'flash_ends_at',
         'flash_countdown_seconds',
         'upcoming_flash_sale',
+        'effective_per_buyer_limit',
     ];
 
     protected static function booted(): void
@@ -79,10 +81,47 @@ class Product extends Model
             'height' => 'decimal:2',
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
+            'per_buyer_limit' => 'integer',
             'low_stock_threshold' => 'integer',
             'low_stock_alerted' => 'boolean',
             'variation_types' => 'array',
         ];
+    }
+
+    public function getEffectivePerBuyerLimitAttribute(): ?int
+    {
+        return $this->per_buyer_limit !== null && $this->per_buyer_limit > 0
+            ? (int) $this->per_buyer_limit
+            : null;
+    }
+
+    public function purchasedUnitsCountFor(?\App\Models\User $user): int
+    {
+        if (!$user || !$this->id) {
+            return 0;
+        }
+
+        return (int) \App\Models\OrderItem::whereHas('order', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->whereNotIn('status', ['cancelled']);
+        })->where('product_id', $this->id)->sum('quantity');
+    }
+
+    public function remainingPurchaseLimitFor(?\App\Models\User $user): ?int
+    {
+        $limit = $this->effective_per_buyer_limit;
+        if ($limit === null) {
+            return null;
+        }
+
+        if (!$user) {
+            return $limit;
+        }
+
+        $alreadyPurchased = $this->purchasedUnitsCountFor($user);
+        $inCart = (int) $user->cartItems()->where('product_id', $this->id)->sum('quantity');
+
+        return max(0, $limit - $alreadyPurchased - $inCart);
     }
 
     public function activeSale(): ?ProductSale

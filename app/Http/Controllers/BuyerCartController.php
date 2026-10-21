@@ -128,7 +128,7 @@ class BuyerCartController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | STOCK
+        | STOCK & QUANTITY VALIDATION
         |--------------------------------------------------------------------------
         */
 
@@ -142,10 +142,40 @@ class BuyerCartController extends Controller
             ]);
         }
 
-        $quantityToAdd = min(
-            $requestedQuantity,
-            $availableStock
-        );
+        if ($requestedQuantity > $availableStock) {
+            return back()->withErrors([
+                'quantity' => "The requested quantity ({$requestedQuantity}) exceeds available stock ({$availableStock}).",
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PER-BUYER PURCHASE LIMIT ENFORCEMENT (BUY-PDP-005)
+        |--------------------------------------------------------------------------
+        */
+        if ($product->effective_per_buyer_limit) {
+            $limit = $product->effective_per_buyer_limit;
+            $alreadyPurchased = $product->purchasedUnitsCountFor($request->user());
+            $currentCartQty = (int) $request->user()->cartItems()->where('product_id', $product->id)->sum('quantity');
+
+            if ($alreadyPurchased >= $limit) {
+                return back()->withErrors([
+                    'quantity' => "Purchase limit reached. You have already purchased the maximum limit of {$limit} unit(s) for this product.",
+                ]);
+            }
+
+            if (($alreadyPurchased + $currentCartQty + $requestedQuantity) > $limit) {
+                $remainingAllowed = max(0, $limit - $alreadyPurchased - $currentCartQty);
+                $msg = $remainingAllowed > 0
+                    ? "Purchase limit of {$limit} unit(s) per customer. You can only add {$remainingAllowed} more unit(s)."
+                    : "Purchase limit of {$limit} unit(s) per customer reached in your cart and order history.";
+                return back()->withErrors([
+                    'quantity' => $msg,
+                ]);
+            }
+        }
+
+        $quantityToAdd = $requestedQuantity;
 
         /*
         |--------------------------------------------------------------------------
@@ -199,10 +229,21 @@ class BuyerCartController extends Controller
                     $variant?->id;
             }
 
-            $request
+            $cartItem = $request
                 ->user()
                 ->cartItems()
                 ->create($payload);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | BUY NOW REDIRECTION (BUY-PDP-007)
+        |--------------------------------------------------------------------------
+        */
+        if ($request->boolean('buy_now')) {
+            return redirect()->route('buyer.checkout', [
+                'selected_items' => [$cartItem->id],
+            ]);
         }
 
         return back()->with(
@@ -281,6 +322,28 @@ class BuyerCartController extends Controller
         $requestedQuantity = isset($data['quantity'])
             ? (int) $data['quantity']
             : (int) $cartItem->quantity;
+
+        if ($requestedQuantity > $availableStock) {
+            return back()->withErrors([
+                'quantity' => "The requested quantity ({$requestedQuantity}) exceeds available stock ({$availableStock}).",
+            ]);
+        }
+
+        if ($cartItem->product->effective_per_buyer_limit) {
+            $limit = $cartItem->product->effective_per_buyer_limit;
+            $alreadyPurchased = $cartItem->product->purchasedUnitsCountFor($request->user());
+            $otherCartQty = (int) $request->user()->cartItems()
+                ->where('product_id', $cartItem->product_id)
+                ->where('id', '!=', $cartItem->id)
+                ->sum('quantity');
+
+            if (($alreadyPurchased + $otherCartQty + $requestedQuantity) > $limit) {
+                $remaining = max(0, $limit - $alreadyPurchased - $otherCartQty);
+                return back()->withErrors([
+                    'quantity' => "Purchase limit of {$limit} unit(s) exceeded for this product. Maximum allowed is {$remaining}.",
+                ]);
+            }
+        }
 
         $newQuantity = min($requestedQuantity, $availableStock);
 
