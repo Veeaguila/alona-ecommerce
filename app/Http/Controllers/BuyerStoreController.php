@@ -199,6 +199,15 @@ class BuyerStoreController extends Controller
             ? Carbon::parse($seller->created_at)->diffForHumans(null, true) . ' ago'
             : null;
 
+        // Store followers calculation
+        $followersCount = \App\Models\StoreFollower::where('seller_id', $seller->id)->count();
+        $isFollowing = false;
+        if ($request->user()) {
+            $isFollowing = \App\Models\StoreFollower::where('seller_id', $seller->id)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+        }
+
         return Inertia::render('Buyer/SellerStore', [
             'seller' => [
                 'id' => $seller->id,
@@ -230,10 +239,12 @@ class BuyerStoreController extends Controller
             'categories' => $categories,
             'vouchers' => $vouchers,
             'claimed_voucher_ids' => $claimedVoucherIds,
+            'is_following' => $isFollowing,
             'stats' => [
                 'total_products' => $totalProducts,
                 'avg_rating' => $avgRating,
                 'total_reviews' => $totalReviews,
+                'followers_count' => $followersCount,
                 'joined' => $joinedAgo,
                 'has_bir' => !empty($seller->business_permit_path),
                 'return_policy_days' => $seller->return_policy_days ? (int) $seller->return_policy_days : 7,
@@ -245,5 +256,63 @@ class BuyerStoreController extends Controller
                 'category' => $categorySlug,
             ],
         ]);
+    }
+
+    /**
+     * Toggle following a seller store (BUY-WISH-004 & BUY-WISH-005).
+     */
+    public function toggleFollow(Request $request, User $seller)
+    {
+        abort_unless(
+            $seller->usertype === 'seller' &&
+            in_array($seller->status, ['active', 'approved'], true),
+            404
+        );
+
+        if (!auth()->check()) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+            return redirect()->guest(route('login'));
+        }
+
+        $user = $request->user();
+
+        if ($user->id === $seller->id) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'You cannot follow your own store.'], 422);
+            }
+            return back()->with('error', 'You cannot follow your own store.');
+        }
+
+        $existing = \App\Models\StoreFollower::where('user_id', $user->id)
+            ->where('seller_id', $seller->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            $isFollowing = false;
+            $message = 'Unfollowed store successfully.';
+        } else {
+            \App\Models\StoreFollower::firstOrCreate([
+                'user_id' => $user->id,
+                'seller_id' => $seller->id,
+            ]);
+            $isFollowing = true;
+            $message = 'Following store successfully.';
+        }
+
+        $followersCount = \App\Models\StoreFollower::where('seller_id', $seller->id)->count();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_following' => $isFollowing,
+                'followers_count' => $followersCount,
+                'message' => $message,
+            ]);
+        }
+
+        return back()->with('success', $message);
     }
 }

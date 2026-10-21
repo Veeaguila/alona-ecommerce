@@ -1,6 +1,6 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
@@ -38,6 +38,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    is_following: {
+        type: Boolean,
+        default: false,
+    },
     filters: {
         type: Object,
         default: () => ({
@@ -56,21 +60,53 @@ const layoutComponent = computed(() => isGuest.value ? GuestLayout : BuyerLayout
 // Active category filter: 'all' or category slug
 const activeCategory = ref(props.filters.category || 'all')
 
-// Follow State (persisted in localStorage)
-const isFollowing = ref(false)
+// Follow State (persisted in database via buyer.store.follow API)
+const isFollowing = ref(Boolean(props.is_following))
+const followersCount = ref(Number(props.stats?.followers_count || 0))
+const followProcessing = ref(false)
 
-onMounted(() => {
-    try {
-        const followed = localStorage.getItem(`followed_seller_${props.seller.id}`)
-        isFollowing.value = followed === 'true'
-    } catch (e) {}
-})
+watch(
+    () => props.is_following,
+    newVal => {
+        isFollowing.value = Boolean(newVal)
+    }
+)
+watch(
+    () => props.stats?.followers_count,
+    newVal => {
+        if (newVal !== undefined) {
+            followersCount.value = Number(newVal)
+        }
+    }
+)
 
 const toggleFollow = () => {
-    isFollowing.value = !isFollowing.value
-    try {
-        localStorage.setItem(`followed_seller_${props.seller.id}`, String(isFollowing.value))
-    } catch (e) {}
+    if (isGuest.value) {
+        router.visit(route('login'))
+        return
+    }
+
+    if (followProcessing.value) return
+    followProcessing.value = true
+
+    const willFollow = !isFollowing.value
+    isFollowing.value = willFollow
+    followersCount.value = Math.max(0, followersCount.value + (willFollow ? 1 : -1))
+
+    router.post(
+        route('buyer.store.follow', props.seller.id),
+        {},
+        {
+            preserveScroll: true,
+            onError: () => {
+                isFollowing.value = !willFollow
+                followersCount.value = Math.max(0, followersCount.value + (!willFollow ? 1 : -1))
+            },
+            onFinish: () => {
+                followProcessing.value = false
+            },
+        }
+    )
 }
 
 // Chat Trigger (Dispatches event to FloatingChatWidget)
@@ -432,6 +468,17 @@ const formatTime = (timeStr) => {
                                             </svg>
                                             <span>{{ seller.response_time_label || 'Replies within the day' }}</span>
                                         </span>
+
+                                        <!-- Followers Count Badge (BUY-WISH-004) -->
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/15 text-white/90 border border-white/20 backdrop-blur-xs">
+                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                                <circle cx="9" cy="7" r="4"></circle>
+                                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                            </svg>
+                                            <span>{{ followersCount }} Followers</span>
+                                        </span>
                                     </div>
 
                                     <!-- Description if present in database -->
@@ -459,14 +506,20 @@ const formatTime = (timeStr) => {
                                     <span>Chat with Seller</span>
                                 </button>
 
-                                <!-- Follow Button -->
+                                <!-- Follow Button (BUY-WISH-004) -->
                                 <button
                                     type="button"
                                     @click="toggleFollow"
-                                    class="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-white/40 hover:bg-white/15 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition cursor-pointer"
+                                    :disabled="followProcessing"
+                                    class="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-white/40 hover:bg-white/15 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                                 >
-                                    <span v-if="!isFollowing">+ Follow</span>
-                                    <span v-else class="text-emerald-300">✓ Following</span>
+                                    <span v-if="!isFollowing">+ Follow ({{ followersCount }})</span>
+                                    <span v-else class="text-emerald-300 flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                        Following ({{ followersCount }})
+                                    </span>
                                 </button>
 
                                 <!-- Report Store -->

@@ -251,6 +251,8 @@ class BuyerProductController extends Controller
                 ->where('status', 'approved')
                 ->whereNotNull('rating')
                 ->avg('rating'),
+
+            'followers_count' => \App\Models\StoreFollower::where('seller_id', $product->seller_id)->count(),
         ];
 
         $vouchers = \App\Models\Voucher::query()
@@ -293,9 +295,20 @@ class BuyerProductController extends Controller
 
         $userPurchasedCount = 0;
         $userRemainingLimit = null;
+        $inWishlist = false;
+        $isFollowingStore = false;
+
         if (auth()->check()) {
             $userPurchasedCount = $product->purchasedUnitsCountFor(auth()->user());
             $userRemainingLimit = $product->remainingPurchaseLimitFor(auth()->user());
+            $inWishlist = \App\Models\Wishlist::where('user_id', auth()->id())
+                ->where('product_id', $product->id)
+                ->exists();
+            if ($product->seller_id) {
+                $isFollowingStore = \App\Models\StoreFollower::where('user_id', auth()->id())
+                    ->where('seller_id', $product->seller_id)
+                    ->exists();
+            }
         }
 
         return Inertia::render('Buyer/Show', [
@@ -305,6 +318,8 @@ class BuyerProductController extends Controller
             'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
             'isGuest' => !auth()->check(),
+            'inWishlist' => $inWishlist,
+            'isFollowingStore' => $isFollowingStore,
             'userPurchasedCount' => $userPurchasedCount,
             'userRemainingLimit' => $userRemainingLimit,
         ]);

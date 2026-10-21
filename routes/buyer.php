@@ -16,6 +16,7 @@ use App\Http\Controllers\BuyerReviewController;
 use App\Http\Controllers\BuyerStoreController;
 use App\Http\Controllers\BuyerSupportController;
 use App\Http\Controllers\BuyerVoucherController;
+use App\Http\Controllers\BuyerWishlistController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -105,6 +106,40 @@ Route::middleware([
         BuyerCartController::class,
         'destroy',
     ])->name('buyer.cart.destroy');
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| BUYER WISHLIST & STORE FOLLOW (BUY-WISH-001 - BUY-WISH-005)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'auth',
+    'buyer',
+])->group(function () {
+
+    Route::get('/buyer/wishlist', [
+        BuyerWishlistController::class,
+        'index',
+    ])->name('buyer.wishlist');
+
+    Route::post('/buyer/wishlist/{product}', [
+        BuyerWishlistController::class,
+        'toggle',
+    ])->name('buyer.wishlist.toggle');
+
+    Route::delete('/buyer/wishlist/{product}', [
+        BuyerWishlistController::class,
+        'destroy',
+    ])->name('buyer.wishlist.destroy');
+
+    Route::post('/buyer/store/{seller}/follow', [
+        BuyerStoreController::class,
+        'toggleFollow',
+    ])->name('buyer.store.follow');
 
 });
 

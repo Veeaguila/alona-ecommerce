@@ -260,6 +260,26 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(RefundLedger::class, 'seller_id')->latest();
     }
 
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function wishlistProducts()
+    {
+        return $this->belongsToMany(Product::class, 'wishlists')->withTimestamps();
+    }
+
+    public function followingStores()
+    {
+        return $this->belongsToMany(User::class, 'store_followers', 'user_id', 'seller_id')->withTimestamps();
+    }
+
+    public function storeFollowers()
+    {
+        return $this->belongsToMany(User::class, 'store_followers', 'seller_id', 'user_id')->withTimestamps();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Attribute casting

@@ -46,6 +46,14 @@ const props = defineProps({
         type: Number,
         default: null,
     },
+    inWishlist: {
+        type: Boolean,
+        default: false,
+    },
+    isFollowingStore: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const claimedVoucherIds = ref([...props.claimed_voucher_ids])
@@ -835,6 +843,97 @@ function messageSeller() {
 
 /*
 |--------------------------------------------------------------------------
+| WISHLIST & FOLLOW STORE (BUY-WISH-001 - BUY-WISH-005)
+|--------------------------------------------------------------------------
+*/
+
+const inWishlist = ref(Boolean(props.inWishlist))
+const wishlistProcessing = ref(false)
+
+watch(
+    () => props.inWishlist,
+    val => {
+        inWishlist.value = Boolean(val)
+    }
+)
+
+function toggleWishlist() {
+    if (isGuestUser.value) {
+        requireLogin()
+        return
+    }
+
+    if (wishlistProcessing.value || !product.value.id) return
+    wishlistProcessing.value = true
+
+    const willWishlist = !inWishlist.value
+    inWishlist.value = willWishlist
+
+    router.post(
+        route('buyer.wishlist.toggle', product.value.id),
+        {},
+        {
+            preserveScroll: true,
+            onError: () => {
+                inWishlist.value = !willWishlist
+            },
+            onFinish: () => {
+                wishlistProcessing.value = false
+            },
+        }
+    )
+}
+
+const isFollowingStore = ref(Boolean(props.isFollowingStore))
+const storeFollowersCount = ref(Number(props.sellerStats?.followers_count ?? 0))
+const followStoreProcessing = ref(false)
+
+watch(
+    () => props.isFollowingStore,
+    val => {
+        isFollowingStore.value = Boolean(val)
+    }
+)
+watch(
+    () => props.sellerStats?.followers_count,
+    val => {
+        if (val !== undefined) {
+            storeFollowersCount.value = Number(val)
+        }
+    }
+)
+
+function toggleFollowStore() {
+    if (isGuestUser.value) {
+        requireLogin()
+        return
+    }
+
+    if (!seller.value?.id || followStoreProcessing.value) return
+    followStoreProcessing.value = true
+
+    const willFollow = !isFollowingStore.value
+    isFollowingStore.value = willFollow
+    storeFollowersCount.value = Math.max(0, storeFollowersCount.value + (willFollow ? 1 : -1))
+
+    router.post(
+        route('buyer.store.follow', seller.value.id),
+        {},
+        {
+            preserveScroll: true,
+            onError: () => {
+                isFollowingStore.value = !willFollow
+                storeFollowersCount.value = Math.max(0, storeFollowersCount.value + (!willFollow ? 1 : -1))
+            },
+            onFinish: () => {
+                followStoreProcessing.value = false
+            },
+        }
+    )
+}
+
+/*
+|--------------------------------------------------------------------------
 | REPORT PRODUCT (BUYER-34)
 |--------------------------------------------------------------------------
 */
@@ -1032,8 +1131,31 @@ const breadcrumbs = computed(() => {
                         <!-- ================================================= -->
 
                         <div
-                            class="flex flex-col items-center justify-center gap-4 bg-[#E8F7F6] p-8"
+                            class="relative flex flex-col items-center justify-center gap-4 bg-[#E8F7F6] p-8"
                         >
+                            <!-- WISHLIST HEART BUTTON (BUY-WISH-001 & BUY-WISH-005) -->
+                            <button
+                                type="button"
+                                @click="toggleWishlist"
+                                :disabled="wishlistProcessing"
+                                :title="inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'"
+                                class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-sm backdrop-blur-xs transition hover:scale-110 hover:bg-rose-50 disabled:opacity-50"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    :class="inWishlist ? 'fill-current text-rose-500' : 'text-slate-400 hover:text-rose-400'"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    fill="none"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                    />
+                                </svg>
+                            </button>
 
                             <!-- MAIN IMAGE -->
 
@@ -1235,43 +1357,78 @@ const breadcrumbs = computed(() => {
                                                     }}
                                                     products
                                                 </span>
+
+                                                <span
+                                                    class="h-3 w-px bg-[#E5E7EB]"
+                                                ></span>
+
+                                                <span
+                                                    class="text-[11px] text-[#64748B]"
+                                                >
+                                                    {{
+                                                        storeFollowersCount
+                                                    }}
+                                                    followers
+                                                </span>
                                             </div>
                                         </div>
 
-                                        <!-- VISIT STORE -->
-
-                                        <Link
-                                            v-if="product.seller?.id"
-                                            :href="
-                                                safeRoute(
-                                                    'buyer.store.show',
-                                                    product.seller.id
-                                                )
-                                            "
-                                            class="hidden shrink-0 items-center gap-1.5 rounded-lg border border-[#087F8C] bg-white px-3 py-2 text-[10px] font-bold text-[#087F8C] transition hover:bg-[#E8F7F6] sm:inline-flex"
-                                        >
-                                            Visit Store
-
-                                            <svg
-                                                class="h-3.5 w-3.5"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
+                                        <!-- VISIT STORE & FOLLOW STORE -->
+                                        <div class="hidden shrink-0 items-center gap-1.5 sm:flex">
+                                            <button
+                                                v-if="product.seller?.id"
+                                                type="button"
+                                                @click="toggleFollowStore"
+                                                :disabled="followStoreProcessing"
+                                                class="items-center gap-1 rounded-lg border px-2.5 py-2 text-[10px] font-bold transition inline-flex"
+                                                :class="
+                                                    isFollowingStore
+                                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                        : 'border-[#087F8C] bg-white text-[#087F8C] hover:bg-[#E8F7F6]'
+                                                "
                                             >
-                                                <path
-                                                    d="M5 12h14"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                />
+                                                <span v-if="!isFollowingStore">+ Follow</span>
+                                                <span v-else class="flex items-center gap-1">
+                                                    <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                                    </svg>
+                                                    Following
+                                                </span>
+                                            </button>
 
-                                                <path
-                                                    d="m13 6 6 6-6 6"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                />
-                                            </svg>
-                                        </Link>
+                                            <Link
+                                                v-if="product.seller?.id"
+                                                :href="
+                                                    safeRoute(
+                                                        'buyer.store.show',
+                                                        product.seller.id
+                                                    )
+                                                "
+                                                class="items-center gap-1.5 rounded-lg border border-[#087F8C] bg-white px-3 py-2 text-[10px] font-bold text-[#087F8C] transition hover:bg-[#E8F7F6] inline-flex"
+                                            >
+                                                Visit Store
+
+                                                <svg
+                                                    class="h-3.5 w-3.5"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <path
+                                                        d="M5 12h14"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    />
+
+                                                    <path
+                                                        d="m13 6 6 6-6 6"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    />
+                                                </svg>
+                                            </Link>
+                                        </div>
                                     </div>
 
                                     <!-- VACATION MODE ALERT (SELLER-65) -->
@@ -1824,6 +1981,35 @@ const breadcrumbs = computed(() => {
                                 v-if="product.id"
                                 class="mt-3 flex items-center gap-2"
                             >
+                                <button
+                                    type="button"
+                                    @click="toggleWishlist"
+                                    :disabled="wishlistProcessing"
+                                    :title="inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'"
+                                    class="inline-flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-xs font-semibold transition cursor-pointer"
+                                    :class="
+                                        inWishlist
+                                            ? 'border-rose-300 bg-rose-50 text-rose-600'
+                                            : 'border-[#E5E7EB] bg-white text-[#1F2937] hover:border-rose-300 hover:text-rose-600'
+                                    "
+                                >
+                                    <svg
+                                        class="h-4 w-4"
+                                        :class="inWishlist ? 'fill-current text-rose-500' : 'text-slate-400'"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        fill="none"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                        />
+                                    </svg>
+                                    <span>{{ inWishlist ? 'Wishlisted' : 'Wishlist' }}</span>
+                                </button>
+
                                 <button
                                     type="button"
                                     @click="

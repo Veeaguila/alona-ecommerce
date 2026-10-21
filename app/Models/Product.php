@@ -81,6 +81,7 @@ class Product extends Model
             'height' => 'decimal:2',
             'rating' => 'decimal:2',
             'is_featured' => 'boolean',
+            'is_sold_out' => 'boolean',
             'per_buyer_limit' => 'integer',
             'low_stock_threshold' => 'integer',
             'low_stock_alerted' => 'boolean',
@@ -314,12 +315,18 @@ class Product extends Model
 
     public function getIsSoldOutAttribute(): bool
     {
+        if ($this->relationLoaded('variants') && $this->variants->isNotEmpty()) {
+            return $this->variants->sum('stock') <= 0;
+        }
         return (int) ($this->attributes['stock'] ?? 0) <= 0;
     }
 
     public function getStockStatusLabelAttribute(): string
     {
-        $stock = (int) ($this->attributes['stock'] ?? 0);
+        $stock = $this->relationLoaded('variants') && $this->variants->isNotEmpty()
+            ? $this->variants->sum('stock')
+            : (int) ($this->attributes['stock'] ?? 0);
+
         if ($stock <= 0) {
             return 'Sold out';
         }
@@ -459,5 +466,18 @@ class Product extends Model
             'product_id',
             'store_category_id'
         )->withTimestamps();
+    }
+
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function isWishlistedBy(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+        return Wishlist::where('user_id', $user->id)->where('product_id', $this->id)->exists();
     }
 }

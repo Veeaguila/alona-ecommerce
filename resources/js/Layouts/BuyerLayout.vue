@@ -356,6 +356,18 @@ const openVouchers = () => {
     }
 }
 
+const openWishlist = () => {
+    closeMenus()
+
+    const destination = safeRoute(
+        'buyer.wishlist'
+    )
+
+    if (destination !== '#') {
+        router.visit(destination)
+    }
+}
+
 const openReviews = () => {
     closeMenus()
 
@@ -711,6 +723,32 @@ onUnmounted(() => {
                 >
                     <template v-if="user">
 
+
+                    <!-- ================================================= -->
+                    <!-- WISHLIST -->
+                    <!-- ================================================= -->
+
+                    <button
+                        type="button"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
+                        aria-label="Wishlist"
+                        title="Wishlist"
+                        @click="openWishlist"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        >
+                            <path
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </button>
 
                     <!-- ================================================= -->
                     <!-- CART -->
@@ -1392,6 +1430,42 @@ onUnmounted(() => {
 
                                     </button>
 
+                                    <!-- WISHLIST -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="
+                                            openWishlist
+                                        "
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <path
+                                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+                                        My Wishlist
+
+                                    </button>
+
                                     <!-- REVIEWS -->
 
                                     <button
@@ -1599,6 +1673,31 @@ onUnmounted(() => {
 
 
 
+
+                    <!-- MOBILE WISHLIST -->
+
+                    <button
+                        v-if="user"
+                        type="button"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
+                        aria-label="Wishlist"
+                        title="Wishlist"
+                        @click="openWishlist"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        >
+                            <path
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </button>
 
                     <!-- MOBILE CART -->
 
@@ -2293,6 +2392,42 @@ onUnmounted(() => {
 
 
                                     My Vouchers
+
+                                </button>
+
+                                <!-- WISHLIST -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="
+                                        openWishlist
+                                    "
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <path
+                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+                                    My Wishlist
 
                                 </button>
 
