@@ -354,12 +354,19 @@ const submitSellerReview = () => {
                                 <!-- EDIT / DELETE BUTTONS (BUYER-29) -->
                                 <div class="flex items-center gap-2">
                                     <button
+                                        v-if="review.can_edit"
                                         type="button"
                                         class="rounded-lg border border-[#E2E8F0] px-2.5 py-1 text-xs font-bold text-[#087F8C] hover:bg-[#E8F7F6]"
                                         @click="openEditReviewModal(review)"
                                     >
                                         Edit
                                     </button>
+                                    <span
+                                        v-else-if="review.edit_count >= 1"
+                                        class="rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px] font-medium text-[#64748B]"
+                                    >
+                                        Edited (1/1)
+                                    </span>
                                     <button
                                         type="button"
                                         class="rounded-lg px-2 py-1 text-xs font-bold text-[#DC2626] hover:bg-[#FEF2F2]"
@@ -600,10 +607,14 @@ const submitSellerReview = () => {
 
                     <!-- COMMENT -->
                     <div>
-                        <label class="block text-xs font-bold text-[#475569]">Review Details</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-[#475569]">Review Details</label>
+                            <span class="text-[11px] text-[#94A3B8]">{{ (productReviewForm.comment || '').length }}/500</span>
+                        </div>
                         <textarea
                             v-model="productReviewForm.comment"
                             rows="3"
+                            maxlength="500"
                             placeholder="How is the quality, packaging, and fit? Share your thoughts..."
                             class="mt-1.5 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-3 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:ring-2 focus:ring-[#E8F7F6]"
                         ></textarea>

@@ -354,16 +354,18 @@ const confirmDelivery = itemId => {
 
 const showReviewModal = ref(false)
 const reviewingItem = ref(null)
+const editingReview = ref(null)
 const reviewForm = useForm({
     rating: 5,
     comment: '',
 })
 
-const openReviewModal = item => {
+const openReviewModal = (item, existingReview = null) => {
     if (!item?.product_id) return
     reviewingItem.value = item
-    reviewForm.rating = 5
-    reviewForm.comment = ''
+    editingReview.value = existingReview
+    reviewForm.rating = existingReview?.rating || 5
+    reviewForm.comment = existingReview?.comment || ''
     reviewForm.clearErrors()
     showReviewModal.value = true
 }
@@ -372,17 +374,27 @@ const closeReviewModal = () => {
     if (reviewForm.processing) return
     showReviewModal.value = false
     reviewingItem.value = null
+    editingReview.value = null
     reviewForm.reset()
 }
 
 const submitReview = () => {
     if (reviewForm.processing || !reviewingItem.value?.product_id) return
-    reviewForm.post(route('buyer.reviews.store', reviewingItem.value.product_id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closeReviewModal()
-        },
-    })
+    if (editingReview.value) {
+        reviewForm.patch(route('buyer.reviews.update', editingReview.value.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeReviewModal()
+            },
+        })
+    } else {
+        reviewForm.post(route('buyer.reviews.store', reviewingItem.value.product_id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeReviewModal()
+            },
+        })
+    }
 }
 
 /*
@@ -893,14 +905,22 @@ const imageUrl = path => {
                                                     {{ confirmingItemId === item.id ? 'Confirming...' : '✓ Order Received' }}
                                                 </button>
 
-                                                <!-- WRITE REVIEW / RATE (BUY-TRK-003) -->
+                                                <!-- WRITE REVIEW / RATE (BUY-TRK-003, BUY-RATE-003) -->
                                                 <button
-                                                    v-if="item.can_review"
+                                                    v-if="item.can_review && !item.has_reviewed"
                                                     type="button"
                                                     class="inline-flex items-center rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-3.5 py-1.5 text-xs font-bold text-[#B45309] transition hover:bg-[#FEF3C7]"
                                                     @click="openReviewModal(item)"
                                                 >
                                                     ★ Rate / Review
+                                                </button>
+                                                <button
+                                                    v-else-if="item.has_reviewed && item.user_review?.can_edit"
+                                                    type="button"
+                                                    class="inline-flex items-center rounded-xl border border-[#D7E0E2] bg-white px-3.5 py-1.5 text-xs font-bold text-[#087F8C] transition hover:bg-[#E8F7F6]"
+                                                    @click="openReviewModal(item, item.user_review)"
+                                                >
+                                                    ★ Edit Review
                                                 </button>
 
                                                 <!-- REQUEST RETURN / REFUND (BUYER-21, 22) -->
@@ -1316,7 +1336,9 @@ const imageUrl = path => {
             <div class="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-2xl sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-extrabold text-[#1F2937]">Write a Review</h3>
+                        <h3 class="text-base font-extrabold text-[#1F2937]">
+                            {{ editingReview ? 'Edit Your Review' : 'Write a Review' }}
+                        </h3>
                         <p class="mt-1 text-xs text-[#64748B]">{{ reviewingItem?.product_name }}</p>
                     </div>
                     <button type="button" class="text-xl text-[#94A3B8] hover:text-[#475569]" @click="closeReviewModal">✕</button>
@@ -1340,10 +1362,14 @@ const imageUrl = path => {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-[#475569]">Review Details</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-[#475569]">Review Details</label>
+                            <span class="text-[11px] text-[#94A3B8]">{{ (reviewForm.comment || '').length }}/500</span>
+                        </div>
                         <textarea
                             v-model="reviewForm.comment"
                             rows="3"
+                            maxlength="500"
                             placeholder="Share your experience with this product..."
                             class="mt-1.5 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-3 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:ring-2 focus:ring-[#E8F7F6]"
                         ></textarea>
@@ -1363,7 +1389,7 @@ const imageUrl = path => {
                             :disabled="reviewForm.processing"
                             class="flex-1 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#066B76] disabled:opacity-50"
                         >
-                            {{ reviewForm.processing ? 'Submitting...' : 'Submit Review' }}
+                            {{ reviewForm.processing ? 'Saving...' : (editingReview ? 'Update Review' : 'Submit Review') }}
                         </button>
                     </div>
                 </form>

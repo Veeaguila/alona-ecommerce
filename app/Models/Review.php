@@ -15,6 +15,8 @@ class Review extends Model
         'variant_name',
         'rating',
         'comment',
+        'edit_count',
+        'edited_at',
         'media',
         'seller_reply',
         'seller_replied_at',
@@ -25,15 +27,29 @@ class Review extends Model
         'reported_at',
     ];
 
+    protected $appends = [
+        'can_edit',
+    ];
+
     protected function casts(): array
     {
         return [
             'rating' => 'integer',
+            'edit_count' => 'integer',
+            'edited_at' => 'datetime',
             'media' => 'array',
             'seller_replied_at' => 'datetime',
             'is_reported' => 'boolean',
             'reported_at' => 'datetime',
         ];
+    }
+
+    public function getCanEditAttribute(): bool
+    {
+        $notEdited = ((int) ($this->edit_count ?? 0)) < 1;
+        $within30Days = $this->created_at ? ! $this->created_at->copy()->addDays(30)->isPast() : true;
+
+        return $notEdited && $within30Days;
     }
 
     public function user(): BelongsTo

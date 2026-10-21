@@ -290,7 +290,7 @@ Route::middleware([
         'store',
     ])->name('buyer.reviews.store');
 
-    Route::patch('/buyer/reviews/{review}', [
+    Route::match(['patch', 'post'], '/buyer/reviews/{review}', [
         BuyerReviewController::class,
         'update',
     ])->name('buyer.reviews.update');

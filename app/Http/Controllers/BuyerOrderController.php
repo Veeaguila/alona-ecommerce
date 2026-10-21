@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\OrderReturnRequest;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\Review;
 use App\Models\SellerNotification;
 use App\Models\UserVoucher;
 use App\Models\Voucher;
@@ -475,9 +476,16 @@ class BuyerOrderController extends Controller
                 && (!Schema::hasColumn('products', 'status') || $item->product->status === 'approved')
                 && $this->stockForOrderItem($item) > 0;
 
+            $userReview = Review::query()
+                ->where('user_id', $order->user_id)
+                ->where('product_id', $item->product_id)
+                ->first();
+
             return array_merge($item->toArray(), [
                 'can_confirm_delivery' => $itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'),
                 'can_review' => $isDelivered,
+                'has_reviewed' => (bool) $userReview,
+                'user_review' => $userReview,
                 'can_return' => $canReturn,
                 'can_reorder' => $isProductAvailable,
                 'return_deadline' => $isDelivered ? $returnDeadline->toIso8601String() : null,

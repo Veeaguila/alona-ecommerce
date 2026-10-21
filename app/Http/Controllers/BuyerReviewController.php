@@ -120,7 +120,7 @@ class BuyerReviewController extends Controller
             'comment' => [
                 'nullable',
                 'string',
-                'max:1000',
+                'max:500',
             ],
             'media' => [
                 'nullable',
@@ -135,15 +135,19 @@ class BuyerReviewController extends Controller
         ]);
 
         // Check buyer eligibility
-        $eligible = OrderItem::query()
+        $eligibleItemQuery = OrderItem::query()
             ->where('product_id', $product->id)
             ->whereIn('status', ['delivered', 'completed'])
             ->whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
-            })
-            ->exists();
+            });
 
-        if (!$eligible) {
+        $eligibleItem = (clone $eligibleItemQuery)
+            ->when($request->filled('order_item_id'), fn ($q) => $q->where('id', $request->order_item_id))
+            ->latest('id')
+            ->first();
+
+        if (!$eligibleItem) {
             throw ValidationException::withMessages([
                 'rating' => 'You can only review products that you have received and confirmed delivered.',
             ]);
@@ -166,9 +170,13 @@ class BuyerReviewController extends Controller
         $review = Review::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
+            'order_item_id' => $eligibleItem->id,
+            'variant_id' => $eligibleItem->variant_id,
+            'variant_name' => $eligibleItem->variant_name,
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
             'media' => $mediaPaths,
+            'edit_count' => 0,
         ]);
 
         $this->recalculateProductRating($product);
@@ -188,7 +196,21 @@ class BuyerReviewController extends Controller
         Request $request,
         Review $review
     ): RedirectResponse {
-        abort_unless((int) $review->user_id === (int) $request->user()->id, 404);
+        abort_unless((int) $review->user_id === (int) $request->user()->id, 403);
+
+        // Enforce 1-edit limit (BUY-RATE-005)
+        if ((int) ($review->edit_count ?? 0) >= 1) {
+            throw ValidationException::withMessages([
+                'rating' => 'You can only edit your review once.',
+            ]);
+        }
+
+        // Enforce 30-day cutoff window (BUY-RATE-005)
+        if ($review->created_at && $review->created_at->copy()->addDays(30)->isPast()) {
+            throw ValidationException::withMessages([
+                'rating' => 'The 30-day window to edit this review has expired.',
+            ]);
+        }
 
         $validated = $request->validate([
             'rating' => [
@@ -200,7 +222,7 @@ class BuyerReviewController extends Controller
             'comment' => [
                 'nullable',
                 'string',
-                'max:1000',
+                'max:500',
             ],
             'existing_media' => [
                 'nullable',
@@ -219,6 +241,13 @@ class BuyerReviewController extends Controller
         ]);
 
         $mediaPaths = $validated['existing_media'] ?? [];
+        $newMediaCount = $request->hasFile('media') ? count($request->file('media')) : 0;
+
+        if (count($mediaPaths) + $newMediaCount > 5) {
+            throw ValidationException::withMessages([
+                'media' => 'You cannot have more than 5 photos or videos in total.',
+            ]);
+        }
 
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
@@ -230,6 +259,8 @@ class BuyerReviewController extends Controller
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
             'media' => array_values($mediaPaths),
+            'edit_count' => ((int) ($review->edit_count ?? 0)) + 1,
+            'edited_at' => now(),
         ]);
 
         if ($review->product) {
@@ -247,7 +278,7 @@ class BuyerReviewController extends Controller
      */
     public function destroy(Request $request, Review $review): RedirectResponse
     {
-        abort_unless((int) $review->user_id === (int) $request->user()->id, 404);
+        abort_unless((int) $review->user_id === (int) $request->user()->id, 403);
 
         $product = $review->product;
         $review->delete();
