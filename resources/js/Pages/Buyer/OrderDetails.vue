@@ -70,6 +70,13 @@ const normalizeStatus = value => String(value ?? '').toLowerCase()
 const getStatusBadge = value => {
     const status = normalizeStatus(value)
 
+    if (props.order.payment_status === 'unpaid' && props.order.payment_method !== 'cod' && status !== 'cancelled') {
+        return {
+            label: 'To Pay',
+            color: 'bg-[#FFFBEB] text-[#B45309] ring-1 ring-[#F59E0B]/30',
+        }
+    }
+
     const badges = {
         pending: {
             label: 'To Pack',
@@ -249,6 +256,43 @@ const reorderEntireOrder = () => {
             isReordering.value = false
         },
     })
+}
+
+/*
+|--------------------------------------------------------------------------
+| Payment Actions (BUY-PAY-002, BUY-PAY-003, BUY-PAY-004)
+|--------------------------------------------------------------------------
+*/
+
+const showPayModal = ref(false)
+const selectedPayMethod = ref(props.order.payment_method !== 'cod' ? props.order.payment_method : 'gcash')
+const isPaying = ref(false)
+
+const openPayModal = () => {
+    showPayModal.value = true
+}
+
+const closePayModal = () => {
+    if (isPaying.value) return
+    showPayModal.value = false
+}
+
+const submitPayment = (action = 'success') => {
+    isPaying.value = true
+    router.post(
+        route('buyer.orders.pay', props.order.id),
+        {
+            action,
+            payment_method: selectedPayMethod.value,
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                isPaying.value = false
+                showPayModal.value = false
+            },
+        }
+    )
 }
 
 const reorderingItemId = ref(null)
@@ -440,6 +484,17 @@ const imageUrl = path => {
                     </Link>
 
                     <div class="flex flex-wrap items-center gap-2">
+                        <!-- PAY NOW BUTTON (BUY-PAY-002, BUY-PAY-003) -->
+                        <button
+                            v-if="order.payment_status === 'unpaid' && order.payment_method !== 'cod' && order.status !== 'cancelled'"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76]"
+                            @click="openPayModal"
+                        >
+                            <span><Icon name="check" class="h-4 w-4" /></span>
+                            <span>Pay Now</span>
+                        </button>
+
                         <!-- CANCEL ORDER BUTTON (BUYER-18) -->
                         <button
                             v-if="order.can_cancel"
@@ -473,6 +528,15 @@ const imageUrl = path => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l4 4L19 6" />
                     </svg>
                     <span>{{ status }}</span>
+                </div>
+
+                <!-- PAYMENT ERROR / WARNING MESSAGE -->
+                <div
+                    v-if="$page.props.errors?.payment"
+                    class="mt-4 flex items-start gap-2.5 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] px-3.5 py-3 text-xs font-bold text-[#DC2626] sm:text-sm"
+                >
+                    <span class="mt-0.5"><Icon name="warning" class="h-4 w-4 shrink-0" /></span>
+                    <span>{{ $page.props.errors.payment }}</span>
                 </div>
 
                 <!-- CANCELLED BANNER -->
@@ -900,6 +964,27 @@ const imageUrl = path => {
                                     <p v-if="order.payment_status" class="mt-0.5 text-[11px] text-[#64748B] capitalize">
                                         Status: {{ order.payment_status }}
                                     </p>
+
+                                    <!-- AWAITING PAYMENT ALERT (BUY-PAY-003, BUY-PAY-006) -->
+                                    <div
+                                        v-if="order.payment_status === 'unpaid' && order.payment_method !== 'cod' && order.status !== 'cancelled'"
+                                        class="mt-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-3 text-xs text-[#92400E]"
+                                    >
+                                        <div class="flex items-center gap-1.5 font-bold">
+                                            <span><Icon name="clock" class="h-4 w-4" /></span>
+                                            <span>Awaiting Payment</span>
+                                        </div>
+                                        <p class="mt-1 text-[11px] leading-relaxed">
+                                            Please complete payment within 1 hour. Unpaid orders auto-cancel after 1 hour and stock is returned.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            class="mt-2.5 inline-flex w-full items-center justify-center rounded-lg bg-[#087F8C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#066B76]"
+                                            @click="openPayModal"
+                                        >
+                                            Pay Now / Pay Again
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -907,6 +992,86 @@ const imageUrl = path => {
                 </div>
             </div>
         </main>
+
+        <!-- PAY ORDER MODAL (BUY-PAY-002, BUY-PAY-003, BUY-PAY-004) -->
+        <div
+            v-if="showPayModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4 backdrop-blur-sm"
+            @click.self="closePayModal"
+        >
+            <div class="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-2xl sm:p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-[#1F2937]">Pay for Order</h3>
+                        <p class="mt-1 text-xs text-[#64748B]">
+                            Complete payment for Order #{{ order.order_number }} (Total: {{ money(order.total) }}).
+                        </p>
+                    </div>
+                    <button type="button" class="text-xl text-[#94A3B8] hover:text-[#475569]" @click="closePayModal">✕</button>
+                </div>
+
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-[#475569]">Select Payment Method</label>
+                        <div class="mt-2 space-y-2">
+                            <label
+                                class="flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition"
+                                :class="selectedPayMethod === 'gcash' ? 'border-[#087F8C] bg-[#E8F7F6]' : 'border-[#E5E7EB] bg-[#F8FAF9]'"
+                            >
+                                <input type="radio" v-model="selectedPayMethod" value="gcash" class="text-[#087F8C] focus:ring-[#087F8C]" />
+                                <span class="text-xs font-bold text-[#1F2937]">GCash</span>
+                            </label>
+
+                            <label
+                                class="flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition"
+                                :class="selectedPayMethod === 'maya' ? 'border-[#087F8C] bg-[#E8F7F6]' : 'border-[#E5E7EB] bg-[#F8FAF9]'"
+                            >
+                                <input type="radio" v-model="selectedPayMethod" value="maya" class="text-[#087F8C] focus:ring-[#087F8C]" />
+                                <span class="text-xs font-bold text-[#1F2937]">Maya</span>
+                            </label>
+
+                            <label
+                                class="flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition"
+                                :class="selectedPayMethod === 'card' ? 'border-[#087F8C] bg-[#E8F7F6]' : 'border-[#E5E7EB] bg-[#F8FAF9]'"
+                            >
+                                <input type="radio" v-model="selectedPayMethod" value="card" class="text-[#087F8C] focus:ring-[#087F8C]" />
+                                <span class="text-xs font-bold text-[#1F2937]">Credit / Debit Card</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <button
+                            type="button"
+                            :disabled="isPaying"
+                            class="w-full rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76] disabled:opacity-50"
+                            @click="submitPayment('success')"
+                        >
+                            {{ isPaying ? 'Processing...' : `Pay ${money(order.total)} Now` }}
+                        </button>
+
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                :disabled="isPaying"
+                                class="flex-1 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[11px] font-bold text-[#DC2626] hover:bg-[#FEE2E2] disabled:opacity-50"
+                                @click="submitPayment('fail')"
+                            >
+                                Simulate Failure
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="isPaying"
+                                class="flex-1 rounded-xl border border-[#E5E7EB] px-3 py-2 text-[11px] font-bold text-[#64748B] hover:bg-[#F8FAF9] disabled:opacity-50"
+                                @click="submitPayment('cancel')"
+                            >
+                                Cancel at Gateway
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- CANCEL ORDER MODAL (BUYER-18) -->
         <div

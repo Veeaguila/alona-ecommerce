@@ -111,3 +111,6 @@ Route::post('/logistics/logout', function (Request $request) {
 
     return response()->json(['message' => 'Signed out.']);
 })->middleware('auth:sanctum');
+
+// Payment Webhook (BUY-PAY-005)
+Route::post('/webhooks/payment', [\App\Http\Controllers\BuyerOrderController::class, 'paymentWebhook'])->name('payment.webhook');

@@ -170,6 +170,11 @@ Route::middleware([
         'store',
     ])->name('buyer.orders.store');
 
+    Route::post('/buyer/orders/{order}/pay', [
+        BuyerOrderController::class,
+        'pay',
+    ])->name('buyer.orders.pay');
+
     Route::get('/buyer/orders', [
         BuyerOrderController::class,
         'index',

@@ -52,6 +52,10 @@ class BuyerOrderController extends Controller
                 ->count(),
             'to_ship' => $user->orders()
                 ->whereIn('status', ['pending', 'processing', 'packed', 'ready_for_pickup'])
+                ->where(function ($q) {
+                    $q->where('payment_status', 'paid')
+                        ->orWhere('payment_method', 'cod');
+                })
                 ->count(),
             'in_transit' => $user->orders()
                 ->whereIn('status', ['shipped', 'out_for_delivery'])
@@ -83,7 +87,11 @@ class BuyerOrderController extends Controller
                 ->where('payment_method', '!=', 'cod')
                 ->where('status', '!=', 'cancelled'),
             'to_ship' => $ordersQuery
-                ->whereIn('status', ['pending', 'processing', 'packed', 'ready_for_pickup']),
+                ->whereIn('status', ['pending', 'processing', 'packed', 'ready_for_pickup'])
+                ->where(function ($q) {
+                    $q->where('payment_status', 'paid')
+                        ->orWhere('payment_method', 'cod');
+                }),
             'in_transit', 'to_receive' => $ordersQuery
                 ->whereIn('status', ['shipped', 'out_for_delivery']),
             'delivered' => $ordersQuery
@@ -1667,6 +1675,165 @@ class BuyerOrderController extends Controller
             )
             ->with('status', $statusMsg)
             ->with('success', $statusMsg);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ORDER PAYMENT & WEBHOOKS (BUY-PAY-001 to BUY-PAY-007)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Process payment or retry payment for an order (BUY-PAY-002, BUY-PAY-003, BUY-PAY-004, BUY-PAY-007).
+     */
+    public function pay(Request $request, Order $order): RedirectResponse
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
+
+        // Advance auto-cancel check if 1 hour has passed (BUY-PAY-007)
+        if ($order->created_at && $order->created_at->lessThanOrEqualTo(now()->subHour())) {
+            Order::autoCancelExpiredUnpaidOrders();
+            $order->refresh();
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->withErrors([
+                    'payment' => 'The payment window for this order has expired (1 hour). The order has been cancelled and stock has been restored.',
+                ]);
+        }
+
+        if ($order->status === 'cancelled') {
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->withErrors([
+                    'payment' => 'This order has already been cancelled and cannot be paid.',
+                ]);
+        }
+
+        if ($order->payment_status === 'paid') {
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->with('status', 'This order has already been paid.');
+        }
+
+        $validated = $request->validate([
+            'action' => 'nullable|string|in:success,fail,cancel',
+            'payment_method' => 'nullable|string|in:' . implode(',', array_keys(config('checkout.payment_methods', []))),
+            'payment_reference' => 'nullable|string|max:100',
+        ]);
+
+        $action = $validated['action'] ?? 'success';
+
+        // BUY-PAY-004: Buyer cancels at gateway
+        if ($action === 'cancel') {
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->with('warning', 'Payment cancelled at gateway. You can retry paying before the 1-hour window expires.');
+        }
+
+        // BUY-PAY-003: Payment fails
+        if ($action === 'fail') {
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->withErrors([
+                    'payment' => 'Payment failed. Please retry payment or choose another payment method.',
+                ]);
+        }
+
+        // BUY-PAY-002: Payment succeeds
+        DB::transaction(function () use ($order, $validated, $request) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (!empty($validated['payment_method'])) {
+                $lockedOrder->payment_method = $validated['payment_method'];
+            }
+
+            $lockedOrder->payment_status = 'paid';
+            $lockedOrder->status = 'pending';
+            $lockedOrder->save();
+
+            if (Schema::hasTable('order_status_histories')) {
+                DB::table('order_status_histories')->insert([
+                    'order_id' => $lockedOrder->id,
+                    'status' => 'paid',
+                    'note' => 'Payment completed successfully via ' . strtoupper($lockedOrder->payment_method) . (!empty($validated['payment_reference']) ? " (Ref: {$validated['payment_reference']})" : ''),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if (Schema::hasTable('buyer_notifications')) {
+                try {
+                    BuyerNotification::create([
+                        'user_id' => $request->user()->id,
+                        'title' => "Payment confirmed for Order #{$lockedOrder->order_number}",
+                        'type' => 'payment',
+                        'message' => "Your payment of ₱" . number_format((float) $lockedOrder->total, 2) . " was successful. Your order is now being processed for shipping.",
+                        'action_url' => route('buyer.orders.show', $lockedOrder->id),
+                    ]);
+                } catch (\Throwable $e) {}
+            }
+        });
+
+        return redirect()
+            ->route('buyer.orders.show', $order)
+            ->with('status', 'Payment successful! Your order has moved to To Ship.')
+            ->with('success', 'Payment successful! Your order has moved to To Ship.');
+    }
+
+    /**
+     * Handle payment webhook updates (BUY-PAY-005).
+     */
+    public function paymentWebhook(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'order_id' => 'required',
+            'status' => 'required|string',
+            'reference' => 'nullable|string',
+        ]);
+
+        $order = Order::whereKey($validated['order_id'])
+            ->orWhere('order_number', $validated['order_id'])
+            ->first();
+
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+
+        if ($order->created_at && $order->created_at->lessThanOrEqualTo(now()->subHour()) && $order->payment_status === 'unpaid') {
+            Order::autoCancelExpiredUnpaidOrders();
+            return response()->json(['status' => 'cancelled', 'message' => 'Order expired and auto-cancelled'], 400);
+        }
+
+        $statusLower = strtolower($validated['status']);
+
+        if (in_array($statusLower, ['paid', 'succeeded', 'completed', 'success'], true)) {
+            $order->update([
+                'payment_status' => 'paid',
+                'status' => 'pending',
+            ]);
+
+            if (Schema::hasTable('order_status_histories')) {
+                DB::table('order_status_histories')->insert([
+                    'order_id' => $order->id,
+                    'status' => 'paid',
+                    'note' => 'Payment verified via webhook' . (!empty($validated['reference']) ? " (Ref: {$validated['reference']})" : ''),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'order_id' => $order->id,
+                'payment_status' => 'paid',
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'unpaid',
+            'order_id' => $order->id,
+            'payment_status' => $order->payment_status,
+        ]);
     }
 
     /*
