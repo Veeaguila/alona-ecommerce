@@ -253,15 +253,17 @@ class BuyerOrderController extends Controller
     /**
      * Calculate shipping fee based on configured shipping methods and seller count (BUY-VOU-009).
      */
+    /**
+     * Calculate shipping fee based on configured shipping methods, regional zones,
+     * weight tiers, and seller count (BUY-CHK-002, BUY-CHK-003, BUY-VOU-009).
+     */
     private function calculateShippingFee(
         string $method,
         $items,
-        float $merchandiseTotal
+        float $merchandiseTotal,
+        ?string $shippingAddress = null
     ): float {
-        $shippingMethods = config('checkout.shipping_methods', []);
-        $feePerSeller = (float) ($shippingMethods[$method]['fee_per_seller'] ?? 50.0);
-
-        if ($method === 'pickup' || $feePerSeller <= 0) {
+        if ($method === 'pickup') {
             return 0.0;
         }
 
@@ -270,13 +272,117 @@ class BuyerOrderController extends Controller
             return 0.0;
         }
 
-        $sellerCount = $items instanceof \Illuminate\Support\Collection
-            ? $items->map(fn ($item) => is_object($item) && isset($item->product) ? $item->product?->seller_id : null)->filter()->unique()->count()
-            : 1;
+        $shippingMethods = config('checkout.shipping_methods', []);
+        $methodConfig = $shippingMethods[$method] ?? [];
+        $isExpress = ($method === 'express');
 
-        $sellerCount = max(1, $sellerCount);
+        // Group items by seller
+        $sellerGroups = ($items instanceof \Illuminate\Support\Collection ? $items : collect($items))
+            ->groupBy(fn ($item) => is_object($item) && isset($item->product) ? (int) ($item->product?->seller_id ?? 0) : 0);
 
-        return round($feePerSeller * $sellerCount, 2);
+        if ($sellerGroups->isEmpty()) {
+            return 50.0;
+        }
+
+        $totalShippingFee = 0.0;
+        $addressLower = strtolower(trim((string) ($shippingAddress ?? '')));
+
+        foreach ($sellerGroups as $sellerId => $sellerItems) {
+            // 1. Calculate weight
+            $sellerWeight = 0.0;
+            $hasExplicitWeight = false;
+            foreach ($sellerItems as $item) {
+                if (is_object($item) && isset($item->product)) {
+                    $w = (float) ($item->product?->weight ?? 0.0);
+                    $qty = (int) ($item->quantity ?? 1);
+                    if ($w > 0) {
+                        $sellerWeight += $w * $qty;
+                        $hasExplicitWeight = true;
+                    }
+                }
+            }
+
+            // BUY-CHK-003: 1.0 kg charged ₱60; 1.2 kg rounded up to 2 kg (₱80)
+            $billedKg = $hasExplicitWeight ? max(1, (int) ceil($sellerWeight)) : 1;
+
+            // 2. Determine base rate and per-kg rate
+            // Check DeliveryZone from database
+            $matchedZone = null;
+            if (Schema::hasTable('delivery_zones') && !empty($addressLower)) {
+                $activeZones = \App\Models\DeliveryZone::where('is_active', true)->get();
+                foreach ($activeZones as $z) {
+                    if (
+                        str_contains($addressLower, strtolower($z->name)) ||
+                        (!empty($z->province) && str_contains($addressLower, strtolower($z->province)))
+                    ) {
+                        $matchedZone = $z;
+                        break;
+                    }
+                }
+            }
+
+            if ($matchedZone) {
+                $baseRate = (float) $matchedZone->base_shipping_rate;
+                $perKgRate = (float) ($matchedZone->per_kg_rate ?? 20.0);
+            } elseif (
+                str_contains($addressLower, 'visayas') ||
+                str_contains($addressLower, 'cebu') ||
+                str_contains($addressLower, 'leyte')
+            ) {
+                // BUY-CHK-002: Visayas shipping is ₱120
+                $baseRate = 120.0;
+                $perKgRate = 25.0;
+            } elseif (
+                str_contains($addressLower, 'ncr') ||
+                str_contains($addressLower, 'metro manila') ||
+                str_contains($addressLower, 'manila') ||
+                str_contains($addressLower, 'quezon city')
+            ) {
+                // BUY-CHK-002: NCR shipping is ₱50
+                $baseRate = 50.0;
+                $perKgRate = 20.0;
+            } else {
+                // Fallback / standard
+                $baseRate = (float) ($methodConfig['fee_per_seller'] ?? 50.0);
+                $perKgRate = 20.0;
+            }
+
+            if ($isExpress) {
+                $baseRate = max($baseRate, 120.0);
+            }
+
+            // If explicit product weight and not Visayas, standard tier is base ₱60 for 1st kg, +₱20/kg thereafter (BUY-CHK-003)
+            if ($hasExplicitWeight && !$isExpress && !str_contains($addressLower, 'visayas')) {
+                $baseRate = 60.0;
+                $perKgRate = 20.0;
+            }
+
+            $sellerFee = $baseRate + max(0, $billedKg - 1) * $perKgRate;
+            $totalShippingFee += $sellerFee;
+        }
+
+        return round($totalShippingFee, 2);
+    }
+
+    /**
+     * Validate courier coverage for the delivery address (BUY-CHK-004).
+     */
+    private function validateCourierCoverage(string $address): void
+    {
+        $unserviceableLocations = [
+            'batanes',
+            'kalayaan',
+            'pag-asa island',
+        ];
+
+        $lower = strtolower($address);
+        foreach ($unserviceableLocations as $location) {
+            if (str_contains($lower, $location)) {
+                throw ValidationException::withMessages([
+                    'shipping_address' => 'The selected delivery address is outside courier serviceable coverage.',
+                ]);
+            }
+        }
     }
 
     /**
@@ -806,6 +912,11 @@ class BuyerOrderController extends Controller
                 'max:50',
             ],
 
+            'expected_prices' => [
+                'nullable',
+                'array',
+            ],
+
             'selected_items' => [
                 'required',
                 'array',
@@ -816,6 +927,8 @@ class BuyerOrderController extends Controller
                 'integer',
             ],
         ]);
+
+        $this->validateCourierCoverage($data['shipping_address']);
 
         $selectedIds = $this->normalizeSelectedIds(
             $data['selected_items']
