@@ -587,6 +587,12 @@ const imageUrl = path => {
                             <p v-if="order.cancelled_at" class="mt-1 text-[11px] text-[#DC2626]">
                                 Cancelled on {{ formatDate(order.cancelled_at) }}
                             </p>
+                            <div v-if="order.payment_status === 'refunded' || order.refund_status" class="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-bold text-[#991B1B]">
+                                <span>↩️</span>
+                                <span>
+                                    Refund: {{ order.refund_status === 'refund_started' ? 'Refund Started' : (order.refund_status || 'Refunded') }} ({{ money(order.refund_amount || order.total) }})
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

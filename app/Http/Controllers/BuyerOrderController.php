@@ -2023,7 +2023,7 @@ class BuyerOrderController extends Controller
         abort_unless(
             (int) $order->user_id ===
             (int) $request->user()->id,
-            404
+            403
         );
 
         if (!$request->filled('reason') && $request->filled('cancellation_reason')) {
@@ -2049,18 +2049,59 @@ class BuyerOrderController extends Controller
         $order->load('items.product', 'items.variant');
 
         DB::transaction(function () use ($order, $data, $cancellableStatuses) {
-            Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if (!in_array(strtolower((string) $lockedOrder->status), $cancellableStatuses, true)) {
+                throw ValidationException::withMessages([
+                    'reason' => 'This order cannot be cancelled anymore as it has already progressed in fulfillment.',
+                ]);
+            }
+
             $finance = app(\App\Services\SellerShipmentFinance::class);
             foreach (\App\Models\SellerShipment::where('order_id', $order->id)->orderBy('id')->lockForUpdate()->get() as $shipment) {
                 $finance->assertMutable($shipment);
             }
             $order->setRelation('items', $order->items()->with('product', 'variant')->lockForUpdate()->get());
             abort_unless($order->items->every(fn ($item) => in_array($item->status, $cancellableStatuses, true)), 422, 'This order can no longer be cancelled.');
-            $order->update([
+
+            $orderUpdate = [
                 'status' => 'cancelled',
                 'cancellation_reason' => $data['reason'],
                 'cancelled_at' => now(),
-            ]);
+            ];
+
+            // BUY-CAN-003: If the order was prepaid/paid, automatically initiate a full refund
+            $wasPaid = in_array(strtolower((string) $order->payment_status), ['paid', 'completed'], true);
+            if ($wasPaid) {
+                $refundAmount = (float) $order->total;
+                $orderUpdate['payment_status'] = 'refunded';
+                if (Schema::hasColumn('orders', 'refund_status')) {
+                    $orderUpdate['refund_status'] = 'refund_started';
+                }
+                if (Schema::hasColumn('orders', 'refund_amount')) {
+                    $orderUpdate['refund_amount'] = $refundAmount;
+                }
+
+                if (Schema::hasTable('refund_ledgers')) {
+                    $firstItem = $order->items->first();
+                    $sellerId = $firstItem?->product?->seller_id ?? $firstItem?->seller_id;
+                    \App\Models\RefundLedger::create([
+                        'refund_reference' => 'REF-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                        'order_id' => $order->id,
+                        'order_item_id' => $firstItem?->id,
+                        'seller_id' => $sellerId,
+                        'buyer_id' => $order->user_id,
+                        'original_amount' => $refundAmount,
+                        'refunded_amount' => $refundAmount,
+                        'refund_type' => 'full',
+                        'refund_method' => $order->payment_method ?? 'ewallet',
+                        'status' => 'processing',
+                        'reason' => $data['reason'],
+                        'notes' => 'Auto-initiated full refund after buyer cancelled prepaid order.',
+                    ]);
+                }
+            }
+
+            $order->update($orderUpdate);
 
             foreach ($order->items as $item) {
                 $itemStatus = strtolower((string) ($item->status ?? 'pending'));
@@ -2103,6 +2144,13 @@ class BuyerOrderController extends Controller
                 ]);
             }
         });
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Order cancelled successfully.',
+                'order' => $order->fresh(),
+            ]);
+        }
 
         return back()->with(
             'status',
