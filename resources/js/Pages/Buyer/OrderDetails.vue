@@ -191,15 +191,36 @@ const milestones = computed(() => {
 
     const currentWeight = statusWeights[status] || 1
 
+    const getStageDate = (stageKey) => {
+        if (stageKey === 'pending') return props.order.created_at
+        if (stageKey === 'delivered') return props.order.delivered_at || props.order.items?.[0]?.delivered_at
+        const historyMatch = props.order.status_histories?.find(h => normalizeStatus(h.status) === stageKey)
+        return historyMatch?.created_at || null
+    }
+
     return stages.map(stage => {
         const stageWeight = statusWeights[stage.key] || 1
         return {
             ...stage,
             completed: currentWeight >= stageWeight,
             active: currentWeight === stageWeight,
+            date: getStageDate(stage.key),
         }
     })
 })
+
+const isMarkingReceived = ref(false)
+const markOrderReceived = () => {
+    if (isMarkingReceived.value) return
+    if (!confirm('Have you received all items in this order in good condition?')) return
+    isMarkingReceived.value = true
+    router.post(route('buyer.orders.receive', props.order.id), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            isMarkingReceived.value = false
+        },
+    })
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -484,6 +505,18 @@ const imageUrl = path => {
                     </Link>
 
                     <div class="flex flex-wrap items-center gap-2">
+                        <!-- ORDER RECEIVED BUTTON (BUY-TRK-003, BUY-TRK-004) -->
+                        <button
+                            v-if="normalizeStatus(order.status) === 'delivered'"
+                            type="button"
+                            :disabled="isMarkingReceived"
+                            class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76] disabled:opacity-50"
+                            @click="markOrderReceived"
+                        >
+                            <span>✓</span>
+                            <span>{{ isMarkingReceived ? 'Completing...' : 'Order Received' }}</span>
+                        </button>
+
                         <!-- PAY NOW BUTTON (BUY-PAY-002, BUY-PAY-003) -->
                         <button
                             v-if="order.payment_status === 'unpaid' && order.payment_method !== 'cod' && order.status !== 'cancelled'"
@@ -831,7 +864,7 @@ const imageUrl = path => {
 
                                             <!-- ITEM ACTIONS (BUYER-20, BUYER-21, BUYER-22) -->
                                             <div class="mt-3 flex flex-wrap gap-2">
-                                                <!-- CONFIRM DELIVERY -->
+                                                <!-- CONFIRM DELIVERY / ORDER RECEIVED (BUY-TRK-003, BUY-TRK-004) -->
                                                 <button
                                                     v-if="item.can_confirm_delivery"
                                                     type="button"
@@ -839,17 +872,17 @@ const imageUrl = path => {
                                                     class="inline-flex items-center rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:bg-[#066B76] disabled:opacity-60"
                                                     @click="confirmDelivery(item.id)"
                                                 >
-                                                    {{ confirmingItemId === item.id ? 'Confirming...' : '✓ Confirm Delivery' }}
+                                                    {{ confirmingItemId === item.id ? 'Confirming...' : '✓ Order Received' }}
                                                 </button>
 
-                                                <!-- WRITE REVIEW -->
+                                                <!-- WRITE REVIEW / RATE (BUY-TRK-003) -->
                                                 <button
                                                     v-if="item.can_review"
                                                     type="button"
                                                     class="inline-flex items-center rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-3.5 py-1.5 text-xs font-bold text-[#B45309] transition hover:bg-[#FEF3C7]"
                                                     @click="openReviewModal(item)"
                                                 >
-                                                    ★ Write Review
+                                                    ★ Rate / Review
                                                 </button>
 
                                                 <!-- REQUEST RETURN / REFUND (BUYER-21, 22) -->

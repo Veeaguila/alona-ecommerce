@@ -36,6 +36,7 @@ class BuyerOrderController extends Controller
     public function index(Request $request): Response
     {
         Order::autoCancelExpiredUnpaidOrders();
+        Order::autoCompleteDeliveredOrders();
         OrderReturnRequest::autoApproveExpiredPendingRequests();
 
         $user = $request->user();
@@ -60,8 +61,14 @@ class BuyerOrderController extends Controller
             'in_transit' => $user->orders()
                 ->whereIn('status', ['shipped', 'out_for_delivery'])
                 ->count(),
+            'to_receive' => $user->orders()
+                ->whereIn('status', ['shipped', 'out_for_delivery'])
+                ->count(),
             'delivered' => $user->orders()
-                ->whereIn('status', ['delivered', 'completed'])
+                ->where('status', 'delivered')
+                ->count(),
+            'completed' => $user->orders()
+                ->where('status', 'completed')
                 ->count(),
             'cancelled' => $user->orders()
                 ->where('status', 'cancelled')
@@ -95,7 +102,9 @@ class BuyerOrderController extends Controller
             'in_transit', 'to_receive' => $ordersQuery
                 ->whereIn('status', ['shipped', 'out_for_delivery']),
             'delivered' => $ordersQuery
-                ->whereIn('status', ['delivered', 'completed']),
+                ->where('status', 'delivered'),
+            'completed' => $ordersQuery
+                ->where('status', 'completed'),
             'cancelled' => $ordersQuery
                 ->where('status', 'cancelled'),
             'returns' => $ordersQuery
@@ -396,13 +405,14 @@ class BuyerOrderController extends Controller
         Order $order
     ): Response {
         Order::autoCancelExpiredUnpaidOrders();
+        Order::autoCompleteDeliveredOrders();
         OrderReturnRequest::autoApproveExpiredPendingRequests();
         $order->refresh();
 
         abort_unless(
             (int) $order->user_id ===
             (int) $request->user()->id,
-            404
+            403
         );
 
         $order->load([
@@ -421,6 +431,14 @@ class BuyerOrderController extends Controller
                 ->get()
             : collect();
 
+        if ($orderStatusHistories->isEmpty()) {
+            $orderStatusHistories = $order->items
+                ->flatMap(fn ($item) => $item->statusHistories)
+                ->unique(fn ($history) => $history->status . '_' . ($history->created_at?->format('Y-m-d H:i') ?? ''))
+                ->sortBy('created_at')
+                ->values();
+        }
+
         // Calculate order cancellability:
         // Allowed if order is in pending, processing, packed and not shipped/ready for pickup
         $cancellableStatuses = ['pending', 'processing', 'packed'];
@@ -430,9 +448,10 @@ class BuyerOrderController extends Controller
             });
 
         // Add item-level metadata
-        $itemsWithMeta = $order->items->map(function ($item) {
+        $itemsWithMeta = $order->items->map(function ($item) use ($order) {
             $itemStatus = strtolower((string) ($item->status ?? 'pending'));
-            $isDelivered = in_array($itemStatus, ['delivered', 'completed'], true);
+            $isDelivered = in_array($itemStatus, ['delivered', 'completed'], true)
+                || in_array(strtolower((string) $order->status), ['delivered', 'completed'], true);
 
             // Return policy window
             $returnDays = (int) ($item->product?->seller?->return_policy_days ?? 7);
@@ -440,7 +459,7 @@ class BuyerOrderController extends Controller
                 $returnDays = 7;
             }
 
-            $deliveredAt = $item->delivered_at ?? $item->updated_at ?? now();
+            $deliveredAt = $item->delivered_at ?? $order->delivered_at ?? $item->updated_at ?? now();
             $returnDeadline = Carbon::parse($deliveredAt)->addDays($returnDays);
             $isWithinReturnWindow = now()->lessThanOrEqualTo($returnDeadline);
 
@@ -457,7 +476,7 @@ class BuyerOrderController extends Controller
                 && $this->stockForOrderItem($item) > 0;
 
             return array_merge($item->toArray(), [
-                'can_confirm_delivery' => in_array($itemStatus, ['shipped', 'out_for_delivery'], true),
+                'can_confirm_delivery' => $itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'),
                 'can_review' => $isDelivered,
                 'can_return' => $canReturn,
                 'can_reorder' => $isProductAvailable,
@@ -472,6 +491,7 @@ class BuyerOrderController extends Controller
             'order' => array_merge($order->toArray(), [
                 'items' => $itemsWithMeta,
                 'can_cancel' => $canCancelOrder,
+                'can_mark_received' => strtolower((string) $order->status) === 'delivered',
                 'status_histories' => $orderStatusHistories,
             ]),
         ]);
@@ -1862,7 +1882,7 @@ class BuyerOrderController extends Controller
         abort_unless(
             (int) $item->order->user_id ===
             (int) $request->user()->id,
-            404
+            403
         );
 
         if ($item->seller_shipment_id) {
@@ -1880,22 +1900,10 @@ class BuyerOrderController extends Controller
 
         $isAlreadyDelivered = strtolower((string) $currentStatus) === 'delivered';
 
-        if (
-            !in_array(
-                strtolower(
-                    (string) $currentStatus
-                ),
-                [
-                    'shipped',
-                    'out_for_delivery',
-                    'delivered',
-                ],
-                true
-            )
-        ) {
+        if (! $isAlreadyDelivered) {
             throw ValidationException::withMessages([
                 'status' =>
-                    'This item cannot be confirmed as delivered or received yet.',
+                    'This item cannot be confirmed as received until it is delivered.',
             ]);
         }
 
@@ -1957,16 +1965,16 @@ class BuyerOrderController extends Controller
     }
 
     /**
-     * Buyer marks delivered order as received/completed (SEL-EARN-002, A15).
+     * Buyer marks delivered order as received/completed (SEL-EARN-002, A15, BUY-TRK-003, BUY-TRK-004).
      */
     public function orderReceived(Request $request, Order $order)
     {
-        abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 403);
 
         $status = strtolower((string) $order->status);
-        if (! in_array($status, ['shipped', 'out_for_delivery', 'delivered'], true)) {
+        if ($status !== 'delivered') {
             throw ValidationException::withMessages([
-                'status' => 'Only shipped or delivered orders can be marked as received.',
+                'status' => 'Order must be delivered before it can be marked as received.',
             ]);
         }
 
@@ -1976,8 +1984,16 @@ class BuyerOrderController extends Controller
 
         $order->items()->whereNotIn('status', ['cancelled', 'refunded'])->update([
             'status' => 'completed',
-            'delivered_at' => now(),
         ]);
+
+        foreach ($order->items as $item) {
+            if (Schema::hasTable('order_item_status_histories')) {
+                $item->statusHistories()->create([
+                    'status' => 'completed',
+                    'note' => 'Order marked as received by buyer.',
+                ]);
+            }
+        }
 
         $this->createOrderStatusHistory($order, 'completed');
 

@@ -48,6 +48,7 @@ const tabs = [
     { key: 'to_ship', label: 'To Ship', countKey: 'to_ship' },
     { key: 'in_transit', label: 'In Transit', countKey: 'in_transit' },
     { key: 'delivered', label: 'Delivered', countKey: 'delivered' },
+    { key: 'completed', label: 'Completed', countKey: 'completed' },
     { key: 'cancelled', label: 'Cancelled', countKey: 'cancelled' },
     { key: 'returns', label: 'Returns / Refunds', countKey: 'returns' },
 ]
@@ -202,6 +203,19 @@ const reorder = orderId => {
             },
         }
     )
+}
+
+const receivingOrderId = ref(null)
+const markOrderReceived = orderId => {
+    if (!orderId || receivingOrderId.value) return
+    if (!confirm('Have you received this order in good condition?')) return
+    receivingOrderId.value = orderId
+    router.post(route('buyer.orders.receive', orderId), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            receivingOrderId.value = null
+        },
+    })
 }
 </script>
 
@@ -408,6 +422,17 @@ const reorder = orderId => {
                             </div>
 
                             <div class="flex flex-wrap items-center gap-2">
+                                <button
+                                    v-if="normalizeStatus(order.status) === 'delivered'"
+                                    type="button"
+                                    :disabled="receivingOrderId === order.id"
+                                    class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76] disabled:opacity-50"
+                                    @click="markOrderReceived(order.id)"
+                                >
+                                    <span>✓</span>
+                                    {{ receivingOrderId === order.id ? 'Completing...' : 'Order Received' }}
+                                </button>
+
                                 <button
                                     type="button"
                                     :disabled="reorderingId === order.id"

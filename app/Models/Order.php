@@ -30,6 +30,7 @@ class Order extends Model
         'payment_method_id',
         'cancellation_reason',
         'cancelled_at',
+        'delivered_at',
         'status',
         'shipping_fee_before_discount',
         'shipping_discount',
@@ -42,6 +43,7 @@ class Order extends Model
     ];
 
     private static bool $isAutoCancelling = false;
+    private static bool $isAutoCompleting = false;
 
     protected static function booted(): void
     {
@@ -60,6 +62,23 @@ class Order extends Model
                     $order->refresh();
                 } finally {
                     self::$isAutoCancelling = false;
+                }
+            }
+
+            if (
+                ! self::$isAutoCompleting &&
+                $order->status === 'delivered' &&
+                (
+                    ($order->delivered_at && $order->delivered_at->lessThanOrEqualTo(now()->subDays(7))) ||
+                    (! $order->delivered_at && $order->updated_at && $order->updated_at->lessThanOrEqualTo(now()->subDays(7)))
+                )
+            ) {
+                self::$isAutoCompleting = true;
+                try {
+                    self::autoCompleteDeliveredOrders();
+                    $order->refresh();
+                } finally {
+                    self::$isAutoCompleting = false;
                 }
             }
         });
@@ -87,6 +106,7 @@ class Order extends Model
             'total' => 'decimal:2',
             'refund_amount' => 'decimal:2',
             'cancelled_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'applied_vouchers' => 'array',
         ];
     }
@@ -104,6 +124,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at', 'asc');
     }
 
     public function returnRequests(): HasMany
@@ -225,7 +250,7 @@ class Order extends Model
 
         /*
          * If every active item has reached completed/delivered,
-         * the overall order is completed.
+         * check if all completed; otherwise stay delivered.
          */
         if (
             $activeStatuses->every(
@@ -240,12 +265,20 @@ class Order extends Model
                     )
             )
         ) {
-            $status = 'completed';
+            $status = $activeStatuses->every(fn ($itemStatus) => $itemStatus === 'completed')
+                ? 'completed'
+                : 'delivered';
         }
 
-        $this->update([
+        $updateData = [
             'status' => $status,
-        ]);
+        ];
+
+        if ($status === 'delivered' && ! $this->delivered_at) {
+            $updateData['delivered_at'] = now();
+        }
+
+        $this->update($updateData);
     }
 
     /**
@@ -351,6 +384,93 @@ class Order extends Model
         }
 
         return $cancelledCount;
+    }
+
+    /**
+     * Auto-complete delivered orders older than 7 days (BUY-TRK-005).
+     */
+    public static function autoCompleteDeliveredOrders(): int
+    {
+        $cutoff = now()->subDays(7);
+
+        $deliveredIds = self::query()
+            ->where('status', 'delivered')
+            ->where(function ($q) use ($cutoff) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'delivered_at')) {
+                    $q->where(function ($sub) use ($cutoff) {
+                        $sub->whereNotNull('delivered_at')
+                            ->where('delivered_at', '<=', $cutoff);
+                    })->orWhere(function ($sub) use ($cutoff) {
+                        $sub->whereNull('delivered_at')
+                            ->where('updated_at', '<=', $cutoff);
+                    });
+                } else {
+                    $q->where('updated_at', '<=', $cutoff);
+                }
+            })
+            ->pluck('id');
+
+        if ($deliveredIds->isEmpty()) {
+            return 0;
+        }
+
+        $completedCount = 0;
+
+        foreach ($deliveredIds as $orderId) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, &$completedCount) {
+                $order = self::query()
+                    ->whereKey($orderId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $order || $order->status !== 'delivered') {
+                    return;
+                }
+
+                $order->load('items');
+
+                $order->update([
+                    'status' => 'completed',
+                ]);
+
+                $order->items()
+                    ->whereNotIn('status', ['cancelled', 'refunded'])
+                    ->update([
+                        'status' => 'completed',
+                    ]);
+
+                foreach ($order->items as $item) {
+                    if (\Illuminate\Support\Facades\Schema::hasTable('order_item_status_histories')) {
+                        $item->statusHistories()->create([
+                            'status' => 'completed',
+                            'note' => 'Order auto-completed after 7 days in delivered status.',
+                        ]);
+                    }
+                }
+
+                if (\Illuminate\Support\Facades\Schema::hasTable('order_status_histories')) {
+                    \Illuminate\Support\Facades\DB::table('order_status_histories')->insert([
+                        'order_id' => $order->id,
+                        'status' => 'completed',
+                        'note' => 'Order auto-completed after 7 days in delivered status.',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                if (\Illuminate\Support\Facades\Schema::hasTable('buyer_notifications')) {
+                    \App\Models\BuyerNotification::create([
+                        'user_id' => $order->user_id,
+                        'title' => "Order #{$order->order_number} completed",
+                        'message' => 'Your order has been automatically completed after 7 days of delivery.',
+                    ]);
+                }
+
+                $completedCount++;
+            });
+        }
+
+        return $completedCount;
     }
 
     /**
