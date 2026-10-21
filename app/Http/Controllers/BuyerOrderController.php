@@ -221,14 +221,14 @@ class BuyerOrderController extends Controller
                     'key' => $key,
                     'label' => $method['label'],
                     'description' => $method['description'],
-                    'fee_per_seller' => 0.0,
+                    'fee_per_seller' => (float) ($method['fee_per_seller'] ?? 0.0),
                 ])
                 ->values()
                 ->all(),
 
             'seller_count' => max(1, $sellerCount),
 
-            'free_shipping_threshold' => null,
+            'free_shipping_threshold' => config('checkout.free_shipping_threshold'),
 
             'default_shipping_method' => config('checkout.default_shipping_method'),
 
@@ -251,16 +251,32 @@ class BuyerOrderController extends Controller
     }
 
     /**
-     * Buyer shipping is zero for new seller-funded orders, including express.
+     * Calculate shipping fee based on configured shipping methods and seller count (BUY-VOU-009).
      */
     private function calculateShippingFee(
         string $method,
         $items,
         float $merchandiseTotal
     ): float {
-        // This path creates new seller-funded orders only. Historical totals and
-        // selected express/standard method metadata are never recalculated.
-        return 0.0;
+        $shippingMethods = config('checkout.shipping_methods', []);
+        $feePerSeller = (float) ($shippingMethods[$method]['fee_per_seller'] ?? 50.0);
+
+        if ($method === 'pickup' || $feePerSeller <= 0) {
+            return 0.0;
+        }
+
+        $freeThreshold = config('checkout.free_shipping_threshold');
+        if ($method !== 'express' && $freeThreshold !== null && $merchandiseTotal >= (float) $freeThreshold) {
+            return 0.0;
+        }
+
+        $sellerCount = $items instanceof \Illuminate\Support\Collection
+            ? $items->map(fn ($item) => is_object($item) && isset($item->product) ? $item->product?->seller_id : null)->filter()->unique()->count()
+            : 1;
+
+        $sellerCount = max(1, $sellerCount);
+
+        return round($feePerSeller * $sellerCount, 2);
     }
 
     /**
@@ -369,7 +385,7 @@ class BuyerOrderController extends Controller
             'voucher_code' => [
                 'required',
                 'string',
-                'max:30',
+                'max:50',
             ],
 
             'selected_items' => [
@@ -380,6 +396,20 @@ class BuyerOrderController extends Controller
 
             'selected_items.*' => [
                 'integer',
+            ],
+
+            'applied_codes' => [
+                'nullable',
+                'array',
+            ],
+
+            'applied_codes.*' => [
+                'string',
+            ],
+
+            'shipping_method' => [
+                'nullable',
+                'string',
             ],
         ]);
 
@@ -544,6 +574,36 @@ class BuyerOrderController extends Controller
             }
         }
 
+        $category = $voucher->getStackCategory();
+        $appliedCodes = array_map('strtoupper', array_map('trim', (array) ($data['applied_codes'] ?? [])));
+        if (in_array(strtoupper($voucher->code), $appliedCodes, true)) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'This voucher is already applied.',
+            ], 422);
+        }
+
+        if (!empty($appliedCodes)) {
+            $existingApplied = Voucher::query()
+                ->whereIn('code', $appliedCodes)
+                ->get();
+
+            foreach ($existingApplied as $otherVoucher) {
+                if ($otherVoucher->getStackCategory() === $category) {
+                    $catLabel = match ($category) {
+                        'store' => 'store',
+                        'platform' => 'platform',
+                        'shipping' => 'free shipping',
+                        default => $category,
+                    };
+                    return response()->json([
+                        'valid' => false,
+                        'message' => "Only one {$catLabel} voucher can be applied per order.",
+                    ], 422);
+                }
+            }
+        }
+
         $eligibleItems = $items->filter(
             function ($item) use ($voucher) {
                 if (!$item->product) {
@@ -629,12 +689,12 @@ class BuyerOrderController extends Controller
             ], 422);
         }
 
-        $shippingEstimate = 80.00;
+        $shippingEstimate = 50.00;
         if ($voucher->type === 'free_shipping') {
             $shippingMethod = $request->input('shipping_method', 'standard');
             $shippingEstimate = $this->calculateShippingFee($shippingMethod, $items, $eligibleSubtotal);
             if ($shippingEstimate <= 0) {
-                $shippingEstimate = 80.00;
+                $shippingEstimate = 50.00;
             }
         }
 
@@ -658,14 +718,24 @@ class BuyerOrderController extends Controller
                 'id' => $voucher->id,
                 'code' => $voucher->code,
                 'type' => $voucher->type,
+                'category' => $category,
+                'seller_id' => $voucher->seller_id,
+                'is_platform' => (bool) $voucher->is_platform,
                 'value' => (float) $voucher->value,
                 'discount' => $discount,
+                'eligible_subtotal' => $eligibleSubtotal,
 
                 'min_spend' => Schema::hasColumn(
                     'vouchers',
                     'min_spend'
                 )
                     ? (float) ($voucher->min_spend ?? 0)
+                    : 0,
+                'max_discount' => Schema::hasColumn(
+                    'vouchers',
+                    'max_discount'
+                )
+                    ? (float) ($voucher->max_discount ?? 0)
                     : 0,
             ],
         ]);
@@ -722,7 +792,18 @@ class BuyerOrderController extends Controller
             'voucher_code' => [
                 'nullable',
                 'string',
-                'max:30',
+                'max:255',
+            ],
+
+            'voucher_codes' => [
+                'nullable',
+                'array',
+                'max:3',
+            ],
+
+            'voucher_codes.*' => [
+                'string',
+                'max:50',
             ],
 
             'selected_items' => [
@@ -892,332 +973,209 @@ class BuyerOrderController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Voucher
+                | Vouchers (Stacking: 1 Store + 1 Platform + 1 Free Shipping)
                 |--------------------------------------------------------------------------
                 */
 
-                $voucher = null;
-                $discount = 0;
-                $eligibleSubtotal = 0;
+                $rawCodes = [];
+                if (!empty($data['voucher_codes']) && is_array($data['voucher_codes'])) {
+                    $rawCodes = $data['voucher_codes'];
+                } elseif (!empty($data['voucher_code'])) {
+                    $rawCodes = explode(',', (string) $data['voucher_code']);
+                }
+                $voucherCodes = array_values(array_unique(array_filter(array_map('trim', $rawCodes))));
 
-                $voucherCode = trim(
-                    (string) (
-                        $data['voucher_code'] ?? ''
-                    )
+                $shippingMethod = $data['shipping_method'];
+                $shippingFeeBeforeDiscount = $this->calculateShippingFee(
+                    $shippingMethod,
+                    $items,
+                    $subtotal
                 );
 
-                if ($voucherCode !== '') {
-                    $voucher = Voucher::query()
-                        ->whereRaw(
-                            'LOWER(code) = ?',
-                            [strtolower($voucherCode)]
-                        )
-                        ->lockForUpdate()
-                        ->first();
+                $itemDiscount = 0.0;
+                $shippingDiscount = 0.0;
+                $appliedVouchersMeta = [];
 
-                    if (!$voucher) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' =>
-                                'Voucher code not found.',
-                        ]);
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Active status
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        (Schema::hasColumn('vouchers', 'is_active') && !$voucher->is_active) ||
-                        (Schema::hasColumn('vouchers', 'ended_at') && $voucher->ended_at !== null)
-                    ) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' =>
-                                'This voucher is no longer active.',
-                        ]);
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Start date
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'starts_at'
-                        ) &&
-                        $voucher->starts_at
-                    ) {
-                        $startsAt = Carbon::parse(
-                            $voucher->starts_at
-                        )->toDateString();
-
-                        if (
-                            now()->toDateString() <
-                            $startsAt
-                        ) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' =>
-                                    'This voucher is not active yet.',
-                            ]);
-                        }
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Expiration date
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'expires_at'
-                        ) &&
-                        $voucher->expires_at
-                    ) {
-                        $expiresAt = Carbon::parse(
-                            $voucher->expires_at
-                        )->toDateString();
-
-                        if (
-                            now()->toDateString() >
-                            $expiresAt
-                        ) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' =>
-                                    'This voucher has expired.',
-                            ]);
-                        }
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Usage limit
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'usage_limit'
-                        ) &&
-                        $voucher->usage_limit !== null
-                    ) {
-                        $usedCount =
-                            Schema::hasColumn(
-                                'vouchers',
-                                'used_count'
-                            )
-                                ? (int) $voucher->used_count
-                                : 0;
-
-                        if (
-                            $usedCount >=
-                            (int) $voucher->usage_limit
-                        ) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' =>
-                                    'This voucher has reached its usage limit.',
-                            ]);
-                        }
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Per-customer usage limit
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn('vouchers', 'per_customer_limit') &&
-                        $voucher->per_customer_limit !== null
-                    ) {
-                        $userOrdersWithVoucher = Order::query()
-                            ->where('user_id', $user->id)
-                            ->where('voucher_id', $voucher->id)
-                            ->where('status', '!=', 'cancelled')
-                            ->count();
-
-                        if ($userOrdersWithVoucher >= (int) $voucher->per_customer_limit) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' => "You have reached the maximum usage limit ({$voucher->per_customer_limit}) for this voucher.",
-                            ]);
-                        }
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Seller-specific & Product/Category targeting eligibility
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $eligibleItems = $items->filter(
-                        function ($item) use ($voucher) {
-                            if (!$item->product) {
-                                return false;
+                if (!empty($voucherCodes)) {
+                    $vouchers = Voucher::query()
+                        ->where(function ($q) use ($voucherCodes) {
+                            foreach ($voucherCodes as $vc) {
+                                $q->orWhereRaw('LOWER(code) = ?', [strtolower($vc)]);
                             }
+                        })
+                        ->lockForUpdate()
+                        ->get();
 
-                            if (
-                                Schema::hasColumn(
-                                    'vouchers',
-                                    'seller_id'
-                                ) &&
-                                $voucher->seller_id !== null
-                            ) {
-                                if ((int) $item->product->seller_id !== (int) $voucher->seller_id) {
+                    if ($vouchers->count() !== count($voucherCodes)) {
+                        throw ValidationException::withMessages([
+                            'voucher_code' => 'One or more voucher codes not found.',
+                        ]);
+                    }
+
+                    $usedCategories = [];
+                    foreach ($vouchers as $v) {
+                        $cat = $v->getStackCategory();
+                        if (isset($usedCategories[$cat])) {
+                            $catLabel = match ($cat) {
+                                'store' => 'store',
+                                'platform' => 'platform',
+                                'shipping' => 'free shipping',
+                                default => $cat,
+                            };
+                            throw ValidationException::withMessages([
+                                'voucher_code' => "Only one {$catLabel} voucher can be applied per order.",
+                            ]);
+                        }
+                        $usedCategories[$cat] = $v;
+                    }
+
+                    foreach ($vouchers as $v) {
+                        if (
+                            (Schema::hasColumn('vouchers', 'is_active') && !$v->is_active) ||
+                            (Schema::hasColumn('vouchers', 'ended_at') && $v->ended_at !== null)
+                        ) {
+                            throw ValidationException::withMessages([
+                                'voucher_code' => "Voucher {$v->code} is no longer active.",
+                            ]);
+                        }
+
+                        if (Schema::hasColumn('vouchers', 'starts_at') && $v->starts_at) {
+                            $startsAt = Carbon::parse($v->starts_at)->toDateString();
+                            if (now()->toDateString() < $startsAt) {
+                                throw ValidationException::withMessages([
+                                    'voucher_code' => "Voucher {$v->code} is not active yet.",
+                                ]);
+                            }
+                        }
+
+                        if (Schema::hasColumn('vouchers', 'expires_at') && $v->expires_at) {
+                            $expiresAt = Carbon::parse($v->expires_at)->toDateString();
+                            if (now()->toDateString() > $expiresAt) {
+                                throw ValidationException::withMessages([
+                                    'voucher_code' => "Voucher {$v->code} has expired.",
+                                ]);
+                            }
+                        }
+
+                        if (Schema::hasColumn('vouchers', 'usage_limit') && $v->usage_limit !== null) {
+                            $usedCount = Schema::hasColumn('vouchers', 'used_count') ? (int) $v->used_count : 0;
+                            if ($usedCount >= (int) $v->usage_limit) {
+                                throw ValidationException::withMessages([
+                                    'voucher_code' => "Voucher {$v->code} has reached its usage limit.",
+                                ]);
+                            }
+                        }
+
+                        if (Schema::hasColumn('vouchers', 'per_customer_limit') && $v->per_customer_limit !== null) {
+                            $userOrdersWithVoucher = Order::query()
+                                ->where('user_id', $user->id)
+                                ->where(function ($q) use ($v) {
+                                    $q->where('voucher_id', $v->id)
+                                        ->orWhereJsonContains('applied_vouchers', ['id' => $v->id]);
+                                })
+                                ->where('status', '!=', 'cancelled')
+                                ->count();
+
+                            if ($userOrdersWithVoucher >= (int) $v->per_customer_limit) {
+                                throw ValidationException::withMessages([
+                                    'voucher_code' => "You have reached the maximum usage limit ({$v->per_customer_limit}) for voucher {$v->code}.",
+                                ]);
+                            }
+                        }
+
+                        $eligibleItems = $items->filter(function ($item) use ($v) {
+                            if (!$item->product) return false;
+                            if (Schema::hasColumn('vouchers', 'seller_id') && $v->seller_id !== null) {
+                                if ((int) $item->product->seller_id !== (int) $v->seller_id) {
                                     return false;
                                 }
                             }
-
-                            if (
-                                Schema::hasColumn('vouchers', 'target_type') &&
-                                $voucher->target_type === 'product' &&
-                                !empty($voucher->targeted_product_ids)
-                            ) {
-                                $targeted = array_map('intval', (array) $voucher->targeted_product_ids);
+                            if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'product' && !empty($v->targeted_product_ids)) {
+                                $targeted = array_map('intval', (array) $v->targeted_product_ids);
                                 if (!in_array((int) $item->product_id, $targeted, true)) {
                                     return false;
                                 }
                             }
-
-                            if (
-                                Schema::hasColumn('vouchers', 'target_type') &&
-                                $voucher->target_type === 'category' &&
-                                !empty($voucher->targeted_category_ids)
-                            ) {
-                                $targetedCats = array_map('intval', (array) $voucher->targeted_category_ids);
+                            if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'category' && !empty($v->targeted_category_ids)) {
+                                $targetedCats = array_map('intval', (array) $v->targeted_category_ids);
                                 if (!in_array((int) $item->product->category_id, $targetedCats, true)) {
                                     return false;
                                 }
                             }
-
                             return true;
-                        }
-                    );
+                        });
 
-                    if ($eligibleItems->isEmpty()) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' =>
-                                'This voucher does not apply to the selected products.',
-                        ]);
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Eligible subtotal
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $eligibleSubtotal =
-                        $eligibleItems->sum(
-                            function ($item) {
-                                return $this->itemPrice($item) *
-                                    (int) $item->quantity;
-                            }
-                        );
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Minimum spend
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'min_spend'
-                        ) &&
-                        $voucher->min_spend !== null &&
-                        $eligibleSubtotal <
-                            (float) $voucher->min_spend
-                    ) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' =>
-                                'Minimum spend of ' .
-                                $this->money(
-                                    $voucher->min_spend
-                                ) .
-                                ' is required for this voucher.',
-                        ]);
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Calculate discount
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $shippingMethod = $data['shipping_method'];
-
-                    $shippingFee = $this->calculateShippingFee(
-                        $shippingMethod,
-                        $items,
-                        $subtotal
-                    );
-
-                    $discount =
-                        $this->calculateVoucherDiscount(
-                            $voucher,
-                            $eligibleSubtotal,
-                            $shippingFee
-                        );
-
-                    if ($discount <= 0) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' =>
-                                'This voucher does not provide a valid discount.',
-                        ]);
-                    }
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Increment usage
-                    |--------------------------------------------------------------------------
-                    */
-
-                    if (
-                        Schema::hasColumn(
-                            'vouchers',
-                            'used_count'
-                        )
-                    ) {
-                        $voucher->increment(
-                            'used_count'
-                        );
-
-                        $voucher->refresh();
-                    }
-
-                    if (Schema::hasTable('user_vouchers')) {
-                        UserVoucher::where('user_id', $user->id)
-                            ->where('voucher_id', $voucher->id)
-                            ->where('status', 'claimed')
-                            ->update([
-                                'status' => 'used',
-                                'used_at' => now(),
+                        if ($eligibleItems->isEmpty()) {
+                            throw ValidationException::withMessages([
+                                'voucher_code' => "Voucher {$v->code} does not apply to the selected products.",
                             ]);
+                        }
+
+                        $eligibleSubtotal = $eligibleItems->sum(function ($item) {
+                            return $this->itemPrice($item) * (int) $item->quantity;
+                        });
+
+                        if (Schema::hasColumn('vouchers', 'min_spend') && $v->min_spend !== null && $eligibleSubtotal < (float) $v->min_spend) {
+                            throw ValidationException::withMessages([
+                                'voucher_code' => 'Minimum spend of ' . $this->money($v->min_spend) . " is required for voucher {$v->code}.",
+                            ]);
+                        }
+
+                        $cat = $v->getStackCategory();
+                        if ($cat === 'shipping') {
+                            $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, $shippingFeeBeforeDiscount);
+                            $shippingDiscount += $vDiscount;
+                        } else {
+                            $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, 0);
+                            $itemDiscount += $vDiscount;
+                        }
+
+                        if ($vDiscount <= 0) {
+                            throw ValidationException::withMessages([
+                                'voucher_code' => "Voucher {$v->code} does not provide a valid discount.",
+                            ]);
+                        }
+
+                        $appliedVouchersMeta[] = [
+                            'id' => $v->id,
+                            'code' => $v->code,
+                            'type' => $v->type,
+                            'category' => $cat,
+                            'seller_id' => $v->seller_id,
+                            'is_platform' => (bool) $v->is_platform,
+                            'value' => (float) $v->value,
+                            'discount' => round($vDiscount, 2),
+                            'min_spend' => (float) ($v->min_spend ?? 0),
+                            'max_discount' => (float) ($v->max_discount ?? 0),
+                        ];
+
+                        if (Schema::hasColumn('vouchers', 'used_count')) {
+                            $v->increment('used_count');
+                            $v->refresh();
+                        }
+
+                        if (Schema::hasTable('user_vouchers')) {
+                            UserVoucher::where('user_id', $user->id)
+                                ->where('voucher_id', $v->id)
+                                ->where('status', 'claimed')
+                                ->update([
+                                    'status' => 'used',
+                                    'used_at' => now(),
+                                ]);
+                        }
                     }
                 }
 
                 /*
                 |--------------------------------------------------------------------------
-                | Final total
+                | Final totals
                 |--------------------------------------------------------------------------
                 */
 
-                $shippingMethod = $data['shipping_method'];
-
-                if (!isset($shippingFee)) {
-                    $shippingFee = $this->calculateShippingFee(
-                        $shippingMethod,
-                        $items,
-                        max(0, $subtotal - $discount)
-                    );
-                }
+                $itemDiscount = round(min($subtotal, $itemDiscount), 2);
+                $shippingDiscount = round(min($shippingFeeBeforeDiscount, $shippingDiscount), 2);
+                $finalShippingFee = round(max(0, $shippingFeeBeforeDiscount - $shippingDiscount), 2);
+                $total = round(max(0, $subtotal - $itemDiscount) + $finalShippingFee, 2);
 
                 $savedPaymentMethod = null;
 
@@ -1238,84 +1196,32 @@ class BuyerOrderController extends Controller
                     }
                 }
 
-                $total = max(
-                    0,
-                    $subtotal - $discount
-                ) + $shippingFee;
-
-                /*
-                |--------------------------------------------------------------------------
-                | Create order
-                |--------------------------------------------------------------------------
-                |
-                | IMPORTANT:
-                | order_number is explicitly generated here.
-                | This fixes the MySQL error:
-                |
-                | Field 'order_number' doesn't have a default value
-                |
-                */
-
                 $orderNumber = $this->generateOrderNumber();
 
                 $order = new Order();
-
                 $order->order_number = $orderNumber;
                 $order->user_id = $user->id;
-                $order->shipping_address =
-                    $data['shipping_address'];
+                $order->shipping_address = $data['shipping_address'];
                 if (Schema::hasColumn('orders', 'buyer_note') && ! empty($data['buyer_note'])) {
                     $order->buyer_note = trim((string) $data['buyer_note']);
                 }
-                $order->payment_method =
-                    $data['payment_method'];
+                $order->payment_method = $data['payment_method'];
                 $order->shipping_method = $shippingMethod;
-                $order->shipping_fee = $shippingFee;
+                $order->shipping_fee = $finalShippingFee;
+                $order->shipping_fee_before_discount = $shippingFeeBeforeDiscount;
+                $order->shipping_discount = $shippingDiscount;
                 $order->delivery_fee_payer = 'seller';
-                $order->shipping_fee_before_discount = 0;
-                $order->shipping_discount = 0;
                 $order->payment_status = 'unpaid';
                 $order->payment_method_id = $savedPaymentMethod?->id;
                 $order->subtotal = $subtotal;
+                $order->discount = $itemDiscount;
                 $order->total = $total;
                 $order->status = 'pending';
 
-                /*
-                |--------------------------------------------------------------------------
-                | Optional voucher columns
-                |--------------------------------------------------------------------------
-                */
-
-                if (
-                    $voucher &&
-                    Schema::hasColumn(
-                        'orders',
-                        'voucher_id'
-                    )
-                ) {
-                    $order->voucher_id =
-                        $voucher->id;
-                }
-
-                if (
-                    $voucher &&
-                    Schema::hasColumn(
-                        'orders',
-                        'voucher_code'
-                    )
-                ) {
-                    $order->voucher_code =
-                        $voucher->code;
-                }
-
-                if (
-                    Schema::hasColumn(
-                        'orders',
-                        'discount'
-                    )
-                ) {
-                    $order->discount =
-                        $discount;
+                if (!empty($appliedVouchersMeta)) {
+                    $order->applied_vouchers = $appliedVouchersMeta;
+                    $order->voucher_id = $appliedVouchersMeta[0]['id'];
+                    $order->voucher_code = implode(', ', array_column($appliedVouchersMeta, 'code'));
                 }
 
                 $order->save();
@@ -1705,28 +1611,8 @@ class BuyerOrderController extends Controller
                 'cancelled'
             );
 
-            // SEL-VOU-011 / A21: Decrement voucher usage count & return voucher to buyer's wallet if not expired
-            if ($order->voucher_id) {
-                $voucher = Voucher::whereKey($order->voucher_id)->lockForUpdate()->first();
-                if ($voucher) {
-                    if (Schema::hasColumn('vouchers', 'used_count') && (int) $voucher->used_count > 0) {
-                        $voucher->decrement('used_count');
-                    }
-                    if (Schema::hasTable('user_vouchers')) {
-                        $notExpired = ! $voucher->expires_at || ! $voucher->expires_at->copy()->endOfDay()->isPast();
-                        $notEnded = $voucher->is_active && (! Schema::hasColumn('vouchers', 'ended_at') || $voucher->ended_at === null);
-                        if ($notExpired && $notEnded) {
-                            UserVoucher::where('user_id', $order->user_id)
-                                ->where('voucher_id', $voucher->id)
-                                ->where('status', 'used')
-                                ->update([
-                                    'status' => 'claimed',
-                                    'used_at' => null,
-                                ]);
-                        }
-                    }
-                }
-            }
+            // BUY-VOU-012 / SEL-VOU-011: Decrement voucher usage count & return voucher to buyer's wallet if not expired
+            $order->restoreVouchers();
 
             // Buyer notification
             if (Schema::hasTable('buyer_notifications')) {
@@ -2336,18 +2222,25 @@ class BuyerOrderController extends Controller
         float $eligibleSubtotal,
         float $shippingFee = 0
     ): float {
-        if ($eligibleSubtotal <= 0) {
+        if ($eligibleSubtotal <= 0 && $voucher->type !== 'free_shipping') {
             return 0;
         }
 
         if ($voucher->type === 'free_shipping') {
             $shipping = max(0, $shippingFee);
+            $cap = null;
             if (
                 Schema::hasColumn('vouchers', 'max_discount') &&
                 $voucher->max_discount !== null &&
                 (float) $voucher->max_discount > 0
             ) {
-                return round(min($shipping, (float) $voucher->max_discount), 2);
+                $cap = (float) $voucher->max_discount;
+            } elseif ($voucher->value !== null && (float) $voucher->value > 0) {
+                $cap = (float) $voucher->value;
+            }
+
+            if ($cap !== null) {
+                return round(min($shipping, $cap), 2);
             }
             return round($shipping, 2);
         }

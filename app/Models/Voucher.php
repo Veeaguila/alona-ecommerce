@@ -160,6 +160,17 @@ class Voucher extends Model
         return $expiry->isFuture() && $now->diffInHours($expiry, false) <= 48 && $now->diffInHours($expiry, false) >= 0;
     }
 
+    public function getStackCategory(): string
+    {
+        if ($this->type === 'free_shipping') {
+            return 'shipping';
+        }
+        if ($this->is_platform || $this->seller_id === null) {
+            return 'platform';
+        }
+        return 'store';
+    }
+
     public function discountFor(float $subtotal, float $shippingFee = 0): float
     {
         if ($this->min_spend && $subtotal < (float) $this->min_spend) {
@@ -168,8 +179,14 @@ class Voucher extends Model
 
         if ($this->type === 'free_shipping') {
             $shipping = max(0, (float) $shippingFee);
+            $cap = null;
             if ($this->max_discount !== null && (float) $this->max_discount > 0) {
-                return min($shipping, (float) $this->max_discount);
+                $cap = (float) $this->max_discount;
+            } elseif ($this->value !== null && (float) $this->value > 0) {
+                $cap = (float) $this->value;
+            }
+            if ($cap !== null) {
+                return min($shipping, $cap);
             }
             return $shipping;
         }

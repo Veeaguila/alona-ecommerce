@@ -31,6 +31,10 @@ class Order extends Model
         'cancellation_reason',
         'cancelled_at',
         'status',
+        'shipping_fee_before_discount',
+        'shipping_discount',
+        'delivery_fee_payer',
+        'applied_vouchers',
     ];
 
     protected $appends = [
@@ -83,6 +87,7 @@ class Order extends Model
             'total' => 'decimal:2',
             'refund_amount' => 'decimal:2',
             'cancelled_at' => 'datetime',
+            'applied_vouchers' => 'array',
         ];
     }
 
@@ -329,20 +334,7 @@ class Order extends Model
                     }
                 }
 
-                if ($order->voucher_id && $order->voucher) {
-                    if (\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'used_count') && (int) $order->voucher->used_count > 0) {
-                        $order->voucher->decrement('used_count');
-                    }
-                    if (\Illuminate\Support\Facades\Schema::hasTable('user_vouchers')) {
-                        UserVoucher::where('user_id', $order->user_id)
-                            ->where('voucher_id', $order->voucher_id)
-                            ->where('status', 'used')
-                            ->update([
-                                'status' => 'claimed',
-                                'used_at' => null,
-                            ]);
-                    }
-                }
+                $order->restoreVouchers();
 
                 if (\Illuminate\Support\Facades\Schema::hasTable('order_status_histories')) {
                     \Illuminate\Support\Facades\DB::table('order_status_histories')->insert([
@@ -359,5 +351,52 @@ class Order extends Model
         }
 
         return $cancelledCount;
+    }
+
+    /**
+     * Restore vouchers and decrement usage when order is cancelled (BUY-VOU-012).
+     */
+    public function restoreVouchers(): void
+    {
+        $voucherIds = [];
+        if (!empty($this->applied_vouchers) && is_array($this->applied_vouchers)) {
+            foreach ($this->applied_vouchers as $vItem) {
+                if (!empty($vItem['id'])) {
+                    $voucherIds[] = (int) $vItem['id'];
+                }
+            }
+        }
+        if ($this->voucher_id) {
+            $voucherIds[] = (int) $this->voucher_id;
+        }
+        $voucherIds = array_unique(array_filter($voucherIds));
+
+        foreach ($voucherIds as $vId) {
+            $voucher = Voucher::whereKey($vId)->lockForUpdate()->first();
+            if ($voucher) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'used_count') && (int) $voucher->used_count > 0) {
+                    $voucher->decrement('used_count');
+                }
+                if (\Illuminate\Support\Facades\Schema::hasTable('user_vouchers')) {
+                    $userVoucher = UserVoucher::where('user_id', $this->user_id)
+                        ->where('voucher_id', $voucher->id)
+                        ->first();
+
+                    if ($userVoucher) {
+                        $userVoucher->update([
+                            'status' => 'claimed',
+                            'used_at' => null,
+                        ]);
+                    } else {
+                        UserVoucher::create([
+                            'user_id' => $this->user_id,
+                            'voucher_id' => $voucher->id,
+                            'status' => 'claimed',
+                            'claimed_at' => now(),
+                        ]);
+                    }
+                }
+            }
+        }
     }
 }

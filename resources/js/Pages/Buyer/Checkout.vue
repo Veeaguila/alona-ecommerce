@@ -65,6 +65,7 @@ const form = useForm({
     payment_method: 'cod',
     payment_method_id: null,
     voucher_code: '',
+    voucher_codes: [],
     selected_items: [...selectedItems.value],
 })
 
@@ -82,9 +83,25 @@ watch(
 )
 
 const voucherInput = ref('')
-const appliedVoucher = ref(null)
+const appliedVouchers = ref({
+    store: null,
+    platform: null,
+    shipping: null,
+})
+const appliedVoucherList = computed(() => {
+    return Object.values(appliedVouchers.value).filter(Boolean)
+})
+const appliedVoucher = computed(() => {
+    return appliedVoucherList.value[0] || null
+})
 const voucherError = ref('')
 const voucherLoading = ref(false)
+
+const syncFormVouchers = () => {
+    const codes = appliedVoucherList.value.map(v => v.code)
+    form.voucher_codes = codes
+    form.voucher_code = codes.join(',')
+}
 
 const imageUrl = path => {
     if (!path) return null
@@ -129,17 +146,25 @@ const itemPrice = item =>
 const itemQuantity = item =>
     Number(item.quantity || 0)
 
+const activeItems = computed(() =>
+    props.items.filter(item => selectedItems.value.includes(Number(item.id)))
+)
+
 const subtotal = computed(() =>
-    props.items.reduce(
+    activeItems.value.reduce(
         (total, item) =>
             total + itemPrice(item) * itemQuantity(item),
         0
     )
 )
 
-const discount = computed(() =>
-    Number(appliedVoucher.value?.discount || 0)
-)
+const itemDiscount = computed(() => {
+    const storeDisc = Number(appliedVouchers.value.store?.discount || 0)
+    const platDisc = Number(appliedVouchers.value.platform?.discount || 0)
+    return Math.min(subtotal.value, storeDisc + platDisc)
+})
+
+const discount = computed(() => itemDiscount.value)
 
 const merchandiseTotal = computed(() =>
     Math.max(0, subtotal.value - discount.value)
@@ -165,9 +190,46 @@ const selectedShipping = computed(() =>
     )
 )
 
-const shippingFee = computed(() =>
+const rawShippingFee = computed(() =>
     selectedShipping.value ? feeFor(selectedShipping.value) : 0
 )
+
+const shippingDiscount = computed(() => {
+    const shipVoucher = appliedVouchers.value.shipping
+    if (!shipVoucher) return 0
+    let cap = rawShippingFee.value
+    if (shipVoucher.max_discount && Number(shipVoucher.max_discount) > 0) {
+        cap = Math.min(cap, Number(shipVoucher.max_discount))
+    } else if (shipVoucher.value && Number(shipVoucher.value) > 0) {
+        cap = Math.min(cap, Number(shipVoucher.value))
+    }
+    return Math.min(rawShippingFee.value, cap)
+})
+
+const shippingFee = computed(() =>
+    Math.max(0, rawShippingFee.value - shippingDiscount.value)
+)
+
+// Auto-remove vouchers if subtotal drops below min_spend (BUY-VOU-007)
+watch(subtotal, newSubtotal => {
+    for (const [cat, v] of Object.entries(appliedVouchers.value)) {
+        if (!v) continue
+        const minSpend = Number(v.min_spend || 0)
+        if (minSpend > 0) {
+            let eligibleSub = newSubtotal
+            if (cat === 'store' && v.seller_id) {
+                eligibleSub = activeItems.value
+                    .filter(i => Number(i.product?.seller_id) === Number(v.seller_id))
+                    .reduce((sum, i) => sum + itemPrice(i) * itemQuantity(i), 0)
+            }
+            if (eligibleSub < minSpend) {
+                appliedVouchers.value[cat] = null
+                syncFormVouchers()
+                voucherError.value = `Voucher ${v.code} was automatically removed because subtotal fell below the minimum spend of ${money(minSpend)}.`
+            }
+        }
+    }
+})
 
 const savedFor = type =>
     props.saved_payment_methods.filter(method => method.type === type)
@@ -177,14 +239,14 @@ const total = computed(() =>
 )
 
 const totalQuantity = computed(() =>
-    props.items.reduce(
+    activeItems.value.reduce(
         (total, item) => total + itemQuantity(item),
         0
     )
 )
 
 const hasItems = computed(() =>
-    props.items.length > 0
+    activeItems.value.length > 0
 )
 
 const selectAddress = address => {
@@ -235,6 +297,8 @@ const applyVoucher = async () => {
                 body: JSON.stringify({
                     voucher_code: code,
                     selected_items: selectedItems.value,
+                    applied_codes: appliedVoucherList.value.map(v => v.code),
+                    shipping_method: form.shipping_method,
                 }),
             }
         )
@@ -242,14 +306,13 @@ const applyVoucher = async () => {
         const data = await response.json()
 
         if (response.ok && data.valid) {
-            appliedVoucher.value = data.voucher
-            form.voucher_code = data.voucher.code
+            const cat = data.voucher.category || (data.voucher.type === 'free_shipping' ? 'shipping' : (data.voucher.is_platform ? 'platform' : 'store'))
+            appliedVouchers.value[cat] = data.voucher
+            syncFormVouchers()
+            voucherInput.value = ''
             voucherError.value = ''
             return
         }
-
-        appliedVoucher.value = null
-        form.voucher_code = ''
 
         voucherError.value =
             data.message ||
@@ -260,9 +323,6 @@ const applyVoucher = async () => {
             error
         )
 
-        appliedVoucher.value = null
-        form.voucher_code = ''
-
         voucherError.value =
             'Failed to validate voucher. Please try again.'
     } finally {
@@ -270,11 +330,23 @@ const applyVoucher = async () => {
     }
 }
 
-const removeVoucher = () => {
-    appliedVoucher.value = null
-    voucherInput.value = ''
-    form.voucher_code = ''
+const removeVoucher = category => {
+    if (category) {
+        appliedVouchers.value[category] = null
+    } else {
+        appliedVouchers.value = {
+            store: null,
+            platform: null,
+            shipping: null,
+        }
+    }
+    syncFormVouchers()
     voucherError.value = ''
+}
+
+const removeItemFromCheckout = itemId => {
+    selectedItems.value = selectedItems.value.filter(id => id !== Number(itemId))
+    form.selected_items = [...selectedItems.value]
 }
 
 const submit = () => {
@@ -389,14 +461,14 @@ const submit = () => {
                                 </div>
 
                                 <span class="shrink-0 rounded-full bg-[#E8F7F6] px-2.5 py-1 text-[10px] font-bold text-[#087F8C]">
-                                    {{ items.length }}
-                                    {{ items.length === 1 ? 'item' : 'items' }}
+                                    {{ activeItems.length }}
+                                    {{ activeItems.length === 1 ? 'item' : 'items' }}
                                 </span>
                             </div>
 
                             <div class="divide-y divide-[#EEF1F2] px-4 sm:px-5">
                                 <div
-                                    v-for="item in items"
+                                    v-for="item in activeItems"
                                     :key="item.id"
                                     class="flex min-w-0 gap-3 py-4 first:pt-4 last:pb-5 sm:gap-4"
                                 >
@@ -443,6 +515,15 @@ const submit = () => {
                                         <p class="mt-1 break-words text-xs font-extrabold text-[#1F2937] sm:text-sm">
                                             {{ money(itemPrice(item) * itemQuantity(item)) }}
                                         </p>
+
+                                        <button
+                                            v-if="selectedItems.length > 1"
+                                            type="button"
+                                            @click="removeItemFromCheckout(item.id)"
+                                            class="mt-1 text-[10px] font-semibold text-rose-500 hover:text-rose-700 transition"
+                                        >
+                                            Remove
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -742,7 +823,7 @@ const submit = () => {
 
                             <div class="mt-5 space-y-3">
                                 <div
-                                    v-for="item in items"
+                                    v-for="item in activeItems"
                                     :key="`summary-${item.id}`"
                                     class="flex min-w-0 items-start justify-between gap-3 text-xs"
                                 >
@@ -778,18 +859,26 @@ const submit = () => {
                                 </div>
 
                                 <div
-                                    v-if="discount > 0"
+                                    v-if="appliedVouchers.store"
                                     class="flex items-center justify-between gap-3 text-xs"
                                 >
                                     <span class="min-w-0 truncate text-[#22A06B]">
-                                        Discount
-                                        <span v-if="appliedVoucher?.code">
-                                            ({{ appliedVoucher.code }})
-                                        </span>
+                                        Store Discount ({{ appliedVouchers.store.code }})
                                     </span>
-
                                     <span class="shrink-0 font-bold text-[#22A06B]">
-                                        -{{ money(discount) }}
+                                        -{{ money(appliedVouchers.store.discount) }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    v-if="appliedVouchers.platform"
+                                    class="flex items-center justify-between gap-3 text-xs"
+                                >
+                                    <span class="min-w-0 truncate text-[#22A06B]">
+                                        Platform Discount ({{ appliedVouchers.platform.code }})
+                                    </span>
+                                    <span class="shrink-0 font-bold text-[#22A06B]">
+                                        -{{ money(appliedVouchers.platform.discount) }}
                                     </span>
                                 </div>
 
@@ -801,12 +890,26 @@ const submit = () => {
                                         </span>
                                     </span>
 
-                                    <span
-                                        class="text-right font-bold"
-                                        :class="shippingFee === 0 ? 'text-[#22A06B]' : 'text-[#1F2937]'"
-                                    >
-                                        {{ shippingFee === 0 ? 'Free' : money(shippingFee) }}
-                                    </span>
+                                    <div class="text-right">
+                                        <span
+                                            v-if="shippingDiscount > 0"
+                                            class="mr-1.5 text-[10px] text-[#94A3B8] line-through"
+                                        >
+                                            {{ money(rawShippingFee) }}
+                                        </span>
+                                        <span
+                                            class="font-bold"
+                                            :class="shippingFee === 0 ? 'text-[#22A06B]' : 'text-[#1F2937]'"
+                                        >
+                                            {{ shippingFee === 0 ? 'Free' : money(shippingFee) }}
+                                        </span>
+                                        <span
+                                            v-if="appliedVouchers.shipping"
+                                            class="block text-[10px] font-medium text-[#22A06B]"
+                                        >
+                                            Free Shipping ({{ appliedVouchers.shipping.code }})
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -871,58 +974,55 @@ const submit = () => {
                             </h3>
 
                             <p class="mt-1 text-xs leading-5 text-[#64748B]">
-                                Apply a voucher to save on your selected items.
+                                Apply up to 3 vouchers (1 Store + 1 Platform + 1 Free Shipping).
                             </p>
 
-                            <div
-                                v-if="appliedVoucher"
-                                class="mt-4 rounded-xl border border-[#D6F0E2] bg-[#EAF8F1] p-3.5"
-                            >
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="truncate text-xs font-extrabold text-[#1F2937]">
-                                            {{ appliedVoucher.code }}
-                                        </p>
-
-                                        <p class="mt-1 text-[10px] font-medium text-[#22A06B]">
-                                            {{
-                                                appliedVoucher.type === 'percentage' ||
-                                                appliedVoucher.type === 'percent' ||
-                                                appliedVoucher.type === '%'
-                                                    ? `${Number(appliedVoucher.value)}% off`
-                                                    : `${money(appliedVoucher.value)} off`
-                                            }}
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        @click="removeVoucher"
-                                        class="shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-[#188154] transition hover:bg-white"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-
+                            <!-- Applied Vouchers List -->
+                            <div v-if="appliedVoucherList.length > 0" class="mt-3 space-y-2">
                                 <div
-                                    v-if="appliedVoucher.eligible_subtotal !== undefined"
-                                    class="mt-3 border-t border-[#D6F0E2] pt-3 text-[10px] text-[#188154]"
+                                    v-for="v in appliedVoucherList"
+                                    :key="v.code"
+                                    class="rounded-xl border border-[#D6F0E2] bg-[#EAF8F1] p-3"
                                 >
-                                    Eligible subtotal:
-                                    {{ money(appliedVoucher.eligible_subtotal) }}
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="rounded bg-[#22A06B] px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                                                    {{ v.category || (v.type === 'free_shipping' ? 'shipping' : (v.is_platform ? 'platform' : 'store')) }}
+                                                </span>
+                                                <span class="truncate text-xs font-extrabold text-[#1F2937]">
+                                                    {{ v.code }}
+                                                </span>
+                                            </div>
+                                            <p class="mt-0.5 text-[10px] font-medium text-[#22A06B]">
+                                                {{
+                                                    v.type === 'free_shipping'
+                                                        ? 'Free Shipping'
+                                                        : (v.type === 'percentage' || v.type === 'percent' || v.type === '%' ? `${Number(v.value)}% off` : `${money(v.value)} off`)
+                                                }}
+                                                <span v-if="v.discount"> (Savings: {{ money(v.discount) }})</span>
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            @click="removeVoucher(v.category || (v.type === 'free_shipping' ? 'shipping' : (v.is_platform ? 'platform' : 'store')))"
+                                            class="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#188154] hover:bg-white transition"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div
-                                v-else
-                                class="mt-4"
-                            >
+                            <!-- Input to add voucher -->
+                            <div v-if="appliedVoucherList.length < 3" class="mt-3">
                                 <div class="flex min-w-0 gap-2">
                                     <input
                                         v-model="voucherInput"
                                         type="text"
                                         autocomplete="off"
-                                        placeholder="Enter code"
+                                        placeholder="Enter voucher code"
                                         class="min-w-0 flex-1 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-xs uppercase outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
                                         @keydown.enter.prevent="applyVoucher"
                                     />
@@ -936,14 +1036,14 @@ const submit = () => {
                                         {{ voucherLoading ? 'Checking...' : 'Apply' }}
                                     </button>
                                 </div>
-
-                                <p
-                                    v-if="voucherError"
-                                    class="mt-2 rounded-lg bg-[#FFF1F1] px-3 py-2 text-[10px] font-medium leading-4 text-[#C24141]"
-                                >
-                                    {{ voucherError }}
-                                </p>
                             </div>
+
+                            <p
+                                v-if="voucherError"
+                                class="mt-2 rounded-lg bg-[#FFF1F1] px-3 py-2 text-[10px] font-medium leading-4 text-[#C24141]"
+                            >
+                                {{ voucherError }}
+                            </p>
                         </section>
 
                         <!-- COD -->
