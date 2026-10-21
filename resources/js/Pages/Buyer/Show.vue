@@ -884,6 +884,34 @@ function toggleWishlist() {
     )
 }
 
+const remindingFlashSale = ref(false)
+
+function toggleFlashReminder(flashSaleId) {
+    if (isGuestUser.value) {
+        requireLogin()
+        return
+    }
+
+    if (remindingFlashSale.value || !flashSaleId) return
+    remindingFlashSale.value = true
+
+    router.post(
+        route('buyer.flash-sales.remind', flashSaleId),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (product.value?.upcoming_flash_sale) {
+                    product.value.upcoming_flash_sale.has_reminder = !product.value.upcoming_flash_sale.has_reminder
+                }
+            },
+            onFinish: () => {
+                remindingFlashSale.value = false
+            },
+        }
+    )
+}
+
 const isFollowingStore = ref(Boolean(props.isFollowingStore))
 const storeFollowersCount = ref(Number(props.sellerStats?.followers_count ?? 0))
 const followStoreProcessing = ref(false)
@@ -1557,17 +1585,28 @@ const breadcrumbs = computed(() => {
                                 </div>
                             </div>
 
-                            <!-- UPCOMING FLASH SALE NOTICE (SEL-FLASH-001) -->
+                            <!-- UPCOMING FLASH SALE NOTICE (SEL-FLASH-001, BUY-CHAT-004) -->
                             <div
                                 v-else-if="product.upcoming_flash_sale"
-                                class="mt-3 flex items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs text-indigo-900"
+                                class="mt-3 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 sm:flex-row sm:items-center sm:justify-between"
                             >
-                                <span class="font-bold">
-                                    {{ product.upcoming_flash_sale.notice }}
-                                </span>
-                                <span class="rounded bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                                    {{ product.upcoming_flash_sale.flash_quantity }} units
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold">
+                                        {{ product.upcoming_flash_sale.notice }}
+                                    </span>
+                                    <span class="rounded bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shrink-0">
+                                        {{ product.upcoming_flash_sale.flash_quantity }} units
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold transition shrink-0 shadow-2xs"
+                                    :class="product.upcoming_flash_sale.has_reminder ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-100/60'"
+                                    :disabled="remindingFlashSale"
+                                    @click="toggleFlashReminder(product.upcoming_flash_sale.id)"
+                                >
+                                    <span>{{ product.upcoming_flash_sale.has_reminder ? '✓ Reminder Set' : '🔔 Remind Me' }}</span>
+                                </button>
                             </div>
 
                             <!-- CLAIMABLE STORE VOUCHERS (SEL-VOU-001) -->

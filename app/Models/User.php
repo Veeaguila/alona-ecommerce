@@ -177,6 +177,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(BuyerNotification::class);
     }
 
+    public function flashSaleReminders(): HasMany
+    {
+        return $this->hasMany(FlashSaleReminder::class);
+    }
+
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);

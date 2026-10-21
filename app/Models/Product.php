@@ -303,6 +303,15 @@ class Product extends Model
             return null;
         }
 
+        $userId = auth()->id();
+        $hasReminder = false;
+        if ($userId && \Illuminate\Support\Facades\Schema::hasTable('flash_sale_reminders')) {
+            $hasReminder = FlashSaleReminder::query()
+                ->where('user_id', $userId)
+                ->where('flash_sale_id', $upcoming->id)
+                ->exists();
+        }
+
         return [
             'id' => $upcoming->id,
             'flash_price' => number_format((float) $upcoming->flash_price, 2, '.', ''),
@@ -310,6 +319,7 @@ class Product extends Model
             'starts_at' => $upcoming->starts_at?->toIso8601String(),
             'ends_at' => $upcoming->ends_at?->toIso8601String(),
             'notice' => 'Upcoming flash sale: ₱' . number_format((float) $upcoming->flash_price, 2) . ' starting at ' . $upcoming->starts_at?->format('H:i'),
+            'has_reminder' => $hasReminder,
         ];
     }
 
@@ -421,6 +431,11 @@ class Product extends Model
     public function flashSales(): HasMany
     {
         return $this->hasMany(FlashSale::class);
+    }
+
+    public function flashSaleReminders(): HasMany
+    {
+        return $this->hasMany(FlashSaleReminder::class);
     }
 
     public function images(): HasMany

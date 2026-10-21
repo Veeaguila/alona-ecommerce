@@ -24,3 +24,10 @@ Artisan::command('orders:auto-complete-delivered', function () {
 })->purpose('Auto-complete orders delivered for more than 7 days');
 
 Schedule::command('orders:auto-complete-delivered')->daily();
+
+Artisan::command('flash-sales:send-reminders', function () {
+    $count = \App\Services\FlashSaleReminderService::sendDueReminders();
+    $this->info("Dispatched {$count} flash sale reminder notification(s).");
+})->purpose('Send reminder notifications before flash sale slots start');
+
+Schedule::command('flash-sales:send-reminders')->everyMinute();

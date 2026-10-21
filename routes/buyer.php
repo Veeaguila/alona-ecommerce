@@ -5,6 +5,7 @@ use App\Http\Controllers\BuyerCartController;
 use App\Http\Controllers\BuyerCategoryController;
 use App\Http\Controllers\BuyerConversationController;
 use App\Http\Controllers\BuyerDashboardController;
+use App\Http\Controllers\BuyerFlashSaleReminderController;
 use App\Http\Controllers\BuyerMessageController;
 use App\Http\Controllers\BuyerNotificationController;
 use App\Http\Controllers\BuyerOrderController;
@@ -335,6 +336,11 @@ Route::middleware([
         BuyerNotificationController::class,
         'readAll',
     ])->name('buyer.notifications.read-all');
+
+    Route::post('/buyer/flash-sales/{flashSale}/remind', [
+        BuyerFlashSaleReminderController::class,
+        'toggle',
+    ])->name('buyer.flash-sales.remind');
 
     Route::get('/buyer/messages', [
         BuyerMessageController::class,

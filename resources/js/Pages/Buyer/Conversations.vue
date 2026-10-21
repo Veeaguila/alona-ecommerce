@@ -477,6 +477,41 @@ onMounted(() => {
                                 </div>
                             </div>
 
+                            <!-- PINNED PRODUCT CARD (BUY-CHAT-001) -->
+                            <div
+                                v-if="selectedConversation.product"
+                                class="mx-3 mt-3 flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-2xs transition hover:border-[#087F8C] sm:mx-5 lg:mx-6"
+                            >
+                                <img
+                                    v-if="selectedConversation.product.image_path"
+                                    :src="selectedConversation.product.image_path.startsWith('http') ? selectedConversation.product.image_path : `/storage/${selectedConversation.product.image_path.replace(/^\/+/, '')}`"
+                                    :alt="selectedConversation.product.name"
+                                    class="h-12 w-12 shrink-0 rounded-lg border border-[#F1F5F9] object-cover"
+                                />
+                                <div
+                                    v-else
+                                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
+                                >
+                                    <Icon name="bag" class="h-5 w-5" />
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-bold text-[#1F2937]">
+                                        {{ selectedConversation.product.name }}
+                                    </p>
+                                    <p class="mt-0.5 text-xs font-extrabold text-[#087F8C]">
+                                        ₱{{ Number(selectedConversation.product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                    </p>
+                                </div>
+
+                                <Link
+                                    :href="route('buyer.product', selectedConversation.product.id)"
+                                    class="shrink-0 rounded-lg bg-[#E8F7F6] px-3 py-1.5 text-xs font-bold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
+                                >
+                                    View Product
+                                </Link>
+                            </div>
+
                             <!-- MESSAGES -->
                             <div
                                 ref="messageArea"

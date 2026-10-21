@@ -18,6 +18,8 @@ class Review extends Model
         'edit_count',
         'edited_at',
         'media',
+        'created_at',
+        'updated_at',
         'seller_reply',
         'seller_replied_at',
         'is_reported',
