@@ -78,7 +78,7 @@ class SellerReviewController extends Controller
             $query = SellerReview::query()
                 ->where('seller_id', $sellerId)
                 ->with([
-                    'user:id,name,email,profile_photo_path',
+                    'user:id,name,email,avatar',
                     'order:id,order_number,created_at,status',
                 ]);
 
@@ -116,7 +116,7 @@ class SellerReviewController extends Controller
             $query = Review::query()
                 ->whereHas('product', fn ($q) => $q->where('seller_id', $sellerId))
                 ->with([
-                    'user:id,name,email,profile_photo_path',
+                    'user:id,name,email,avatar',
                     'product:id,name,image_path,price,slug',
                     'variant:id,product_id,color,size',
                 ]);

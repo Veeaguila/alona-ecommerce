@@ -2094,6 +2094,7 @@ class BuyerOrderController extends Controller
                     $sellerId = $firstItem?->product?->seller_id ?? $firstItem?->seller_id;
                     \App\Models\RefundLedger::create([
                         'refund_reference' => 'REF-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                        'order_return_request_id' => null,
                         'order_id' => $order->id,
                         'order_item_id' => $firstItem?->id,
                         'seller_id' => $sellerId,

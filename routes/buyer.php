@@ -37,6 +37,11 @@ Route::get('/buyer/product/{product}', [
     'show',
 ])->name('buyer.product');
 
+Route::get('/buyer/products/{product}', [
+    BuyerProductController::class,
+    'show',
+])->name('buyer.product.show');
+
 Route::get('/buyer/store/{seller}', [
     BuyerStoreController::class,
     'show',

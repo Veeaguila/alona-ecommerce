@@ -317,4 +317,34 @@ class BuyerCancellationTest extends TestCase
         $this->assertEquals(20, $this->variant->fresh()->stock);
         $this->assertEquals(20, $this->product->fresh()->stock);
     }
+
+    /**
+     * Prepaid order cancellation creates a refund ledger entry without requiring an order_return_request_id.
+     */
+    public function test_prepaid_order_cancellation_creates_refund_ledger(): void
+    {
+        $order = $this->createOrder([
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'status' => 'pending',
+            'total' => 2100.00,
+        ]);
+
+        $response = $this->actingAs($this->buyer)->post(route('buyer.orders.cancel', $order->id), [
+            'reason' => 'Changed mind / No longer needed',
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertEquals('cancelled', $order->fresh()->status);
+        $this->assertEquals('refund_started', $order->fresh()->refund_status);
+
+        $this->assertDatabaseHas('refund_ledgers', [
+            'order_id' => $order->id,
+            'buyer_id' => $this->buyer->id,
+            'seller_id' => $this->seller->id,
+            'refund_type' => 'full',
+            'order_return_request_id' => null,
+            'status' => 'processing',
+        ]);
+    }
 }

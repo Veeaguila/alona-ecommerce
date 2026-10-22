@@ -63,9 +63,9 @@ return new class extends Migration
             Schema::create('refund_ledgers', function (Blueprint $table) {
                 $table->id();
                 $table->string('refund_reference', 50)->unique();
-                $table->foreignId('order_return_request_id')->constrained('order_return_requests')->cascadeOnDelete();
+                $table->foreignId('order_return_request_id')->nullable()->constrained('order_return_requests')->nullOnDelete();
                 $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-                $table->foreignId('order_item_id')->constrained('order_items')->cascadeOnDelete();
+                $table->foreignId('order_item_id')->nullable()->constrained('order_items')->nullOnDelete();
                 $table->foreignId('seller_id')->constrained('users')->cascadeOnDelete();
                 $table->foreignId('buyer_id')->constrained('users')->cascadeOnDelete();
                 $table->decimal('original_amount', 10, 2)->default(0);

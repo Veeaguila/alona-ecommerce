@@ -333,7 +333,7 @@ const submitSellerReview = () => {
 
                                     <div>
                                         <Link
-                                            :href="route('buyer.product.show', review.product?.id)"
+                                            :href="review.product?.id ? route('buyer.product', review.product.id) : '#'"
                                             class="text-sm font-extrabold text-[#1F2937] hover:text-[#087F8C]"
                                         >
                                             {{ review.product?.name || 'Product' }}

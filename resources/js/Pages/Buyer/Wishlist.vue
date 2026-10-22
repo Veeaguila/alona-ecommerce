@@ -24,10 +24,31 @@ const money = value => {
     })}`
 }
 
+const failedImages = ref({})
+const onImageError = id => {
+    failedImages.value[id] = true
+}
+
 const imageUrl = path => {
     if (!path) return null
-    if (path.startsWith('http://') || path.startsWith('https://')) return path
-    return `/${path}`
+    const value = String(path).trim()
+    if (!value) return null
+
+    if (
+        value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('/storage/') ||
+        value.startsWith('/images/') ||
+        value.startsWith('data:')
+    ) {
+        return value
+    }
+
+    if (value.startsWith('storage/')) {
+        return `/${value}`
+    }
+
+    return `/storage/${value.replace(/^\/+/, '')}`
 }
 
 const removeFromWishlist = productId => {
@@ -166,9 +187,10 @@ const addToCart = product => {
                                     class="block h-full w-full"
                                 >
                                     <img
-                                        v-if="item.product.image_path"
+                                        v-if="item.product.image_path && !failedImages[item.product.id]"
                                         :src="imageUrl(item.product.image_path)"
                                         :alt="item.product.name"
+                                        @error="onImageError(item.product.id)"
                                         class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]"
                                         :class="{ 'opacity-60 grayscale': item.product.is_sold_out || (item.product.stock !== undefined && item.product.stock <= 0) }"
                                         loading="lazy"

@@ -767,6 +767,7 @@ class SellerOrderController extends Controller
                 if (\Illuminate\Support\Facades\Schema::hasTable('refund_ledgers')) {
                     \App\Models\RefundLedger::create([
                         'refund_reference' => 'REF-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                        'order_return_request_id' => null,
                         'order_id' => $parentOrder->id,
                         'order_item_id' => $orderItem->id,
                         'seller_id' => $request->user()->id,
