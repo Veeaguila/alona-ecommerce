@@ -32,7 +32,7 @@ class SellerOrderController extends Controller
             })
             ->with([
                 'product:id,name,image_path',
-                'order:id,order_number,user_id,payment_method,shipping_method,shipping_fee,created_at',
+                'order:id,order_number,user_id,payment_method,shipping_method,shipping_fee,payment_status,created_at',
                 'order.user:id,name',
                 'variant:id,product_id,color,size,stock',
             ])
@@ -399,6 +399,11 @@ class SellerOrderController extends Controller
             $request,
             $orderItem
         );
+
+        $order = $orderItem->order;
+        if ($order && in_array(strtolower((string) $order->payment_method), ['gcash', 'maya', 'card'], true) && $order->payment_status === 'unpaid') {
+            abort(422, 'Please confirm payment received for this e-wallet/card order before marking it as packed.');
+        }
 
         abort_unless(
             $orderItem->status === 'processing',
@@ -886,6 +891,66 @@ class SellerOrderController extends Controller
         return back()->with(
             'status',
             'Order item marked as picked up by customer.'
+        );
+    }
+
+    public function confirmPayment(
+        Request $request,
+        OrderItem $orderItem
+    ): RedirectResponse {
+        $this->authorizeOwnership(
+            $request,
+            $orderItem
+        );
+
+        $order = $orderItem->order;
+        abort_unless($order, 404, 'Parent order not found.');
+
+        abort_unless(
+            in_array(strtolower((string) $order->payment_method), ['gcash', 'maya', 'card'], true),
+            422,
+            'Payment confirmation is only applicable to e-wallet and card payments.'
+        );
+
+        abort_unless(
+            $order->payment_status === 'unpaid',
+            422,
+            'This payment is already confirmed as paid.'
+        );
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $orderItem, $request): void {
+            $order = \App\Models\Order::query()->lockForUpdate()->findOrFail($order->id);
+            $order->payment_status = 'paid';
+            $order->save();
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('order_status_histories')) {
+                \Illuminate\Support\Facades\DB::table('order_status_histories')->insert([
+                    'order_id' => $order->id,
+                    'status' => 'paid',
+                    'note' => 'Seller confirmed payment received via ' . strtoupper($order->payment_method) . '.',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('buyer_notifications')) {
+                try {
+                    \App\Models\BuyerNotification::create([
+                        'user_id' => $order->user_id,
+                        'title' => "Payment confirmed for Order #{$order->order_number}",
+                        'type' => 'payment',
+                        'message' => "The seller has confirmed receipt of your payment via " . strtoupper($order->payment_method) . ". Your order is now ready for preparation.",
+                        'action_url' => route('buyer.orders.show', $order->id),
+                    ]);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+        });
+
+        return back()->with(
+            'status',
+            'Payment verified and confirmed as paid.'
         );
     }
 

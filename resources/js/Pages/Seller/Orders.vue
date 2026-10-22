@@ -118,32 +118,39 @@ const badgeClass = value => {
     )
 }
 
-const paymentLabel = value => {
-    const normalized = String(value ?? '').toLowerCase()
+const paymentLabel = (method, status) => {
+    const normalizedMethod = String(method ?? '').toLowerCase()
+    const normalizedStatus = String(status ?? '').toLowerCase()
 
     if (
-        normalized.includes('cod') ||
-        normalized.includes('cash')
+        normalizedMethod.includes('cod') ||
+        normalizedMethod.includes('cash')
     ) {
-        return 'COD'
+        return normalizedStatus === 'paid' ? 'COD (Paid)' : 'COD'
     }
 
     if (
-        normalized.includes('gcash') ||
-        normalized.includes('paymaya') ||
-        normalized.includes('card') ||
-        normalized.includes('bank')
+        normalizedMethod.includes('gcash') ||
+        normalizedMethod.includes('maya') ||
+        normalizedMethod.includes('paymaya') ||
+        normalizedMethod.includes('card') ||
+        normalizedMethod.includes('bank')
     ) {
-        return 'Paid'
+        return normalizedStatus === 'paid' ? 'Paid' : 'Awaiting Confirmation'
     }
 
-    return 'Paid'
+    return normalizedStatus === 'paid' ? 'Paid' : 'Unpaid'
 }
 
-const paymentClass = value => {
-    return paymentLabel(value) === 'Paid'
-        ? 'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A]'
-        : 'border-[#FDE68A] bg-[#FFFBEB] text-[#B77900]'
+const paymentClass = (method, status) => {
+    const label = paymentLabel(method, status)
+    if (label === 'Paid' || label === 'COD (Paid)') {
+        return 'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A]'
+    }
+    if (label === 'Awaiting Confirmation') {
+        return 'border-amber-300 bg-amber-50 text-amber-700 font-bold'
+    }
+    return 'border-[#FDE68A] bg-[#FFFBEB] text-[#B77900]'
 }
 
 const buyerName = order => {
@@ -827,15 +834,11 @@ watch(
                                         <span
                                             :class="[
                                                 'inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold',
-                                                paymentClass(
-                                                    order.order?.payment_method
-                                                ),
+                                                paymentClass(order.order?.payment_method, order.order?.payment_status),
                                             ]"
                                         >
                                             {{
-                                                paymentLabel(
-                                                    order.order?.payment_method
-                                                )
+                                                paymentLabel(order.order?.payment_method, order.order?.payment_status)
                                             }}
                                         </span>
                                     </td>
@@ -1051,15 +1054,11 @@ watch(
                                     <span
                                         :class="[
                                             'mt-1.5 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold',
-                                            paymentClass(
-                                                order.order?.payment_method
-                                            ),
+                                            paymentClass(order.order?.payment_method, order.order?.payment_status),
                                         ]"
                                     >
                                         {{
-                                            paymentLabel(
-                                                order.order?.payment_method
-                                            )
+                                            paymentLabel(order.order?.payment_method, order.order?.payment_status)
                                         }}
                                     </span>
                                 </div>

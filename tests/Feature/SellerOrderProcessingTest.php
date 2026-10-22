@@ -598,4 +598,61 @@ class SellerOrderProcessingTest extends TestCase
             ->patch(route('seller.orders.process', $seller2OrderItem->id))
             ->assertStatus(403);
     }
+
+    /**
+     * Seller must confirm e-wallet (GCash, Maya) or card payment before marking item as packed
+     */
+    public function test_seller_must_confirm_ewallet_and_card_payment_before_packing(): void
+    {
+        $order = Order::create([
+            'order_number' => 'ORD-EWALLET-001',
+            'user_id' => $this->buyer1->id,
+            'shipping_address' => self::ADDR_1,
+            'payment_method' => 'gcash',
+            'payment_status' => 'unpaid',
+            'shipping_method' => 'standard',
+            'subtotal' => 249.00,
+            'shipping_fee' => 50.00,
+            'discount' => 0.00,
+            'total' => 299.00,
+            'status' => 'pending',
+        ]);
+
+        $orderItem = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $this->p01->id,
+            'product_name' => $this->p01->name,
+            'price' => 249.00,
+            'quantity' => 1,
+            'status' => 'processing',
+        ]);
+
+        // 1. Seller attempts to pack before confirming payment -> 422
+        $response = $this->actingAs($this->seller1)
+            ->patch(route('seller.orders.pack', $orderItem->id));
+
+        $response->assertStatus(422);
+        $this->assertEquals('processing', $orderItem->fresh()->status);
+        $this->assertEquals('unpaid', $order->fresh()->payment_status);
+
+        // 2. Seller confirms payment
+        $confirmResponse = $this->actingAs($this->seller1)
+            ->patch(route('seller.orders.confirm-payment', $orderItem->id));
+
+        $confirmResponse->assertSessionHas('status', 'Payment verified and confirmed as paid.');
+        $this->assertEquals('paid', $order->fresh()->payment_status);
+
+        // Buyer received notification
+        $this->assertDatabaseHas('buyer_notifications', [
+            'user_id' => $this->buyer1->id,
+            'type' => 'payment',
+        ]);
+
+        // 3. Now packing succeeds
+        $packResponse = $this->actingAs($this->seller1)
+            ->patch(route('seller.orders.pack', $orderItem->id));
+
+        $packResponse->assertRedirect();
+        $this->assertEquals('packed', $orderItem->fresh()->status);
+    }
 }

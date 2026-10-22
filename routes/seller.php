@@ -354,6 +354,11 @@ Route::middleware([
         'completePickup',
     ])->name('seller.orders.complete-pickup');
 
+    Route::patch('/seller/orders/{orderItem}/confirm-payment', [
+        SellerOrderController::class,
+        'confirmPayment',
+    ])->name('seller.orders.confirm-payment');
+
     Route::post('/seller/orders/{orderItem}/schedule-pickup', [
         SellerOrderController::class,
         'schedulePickup',

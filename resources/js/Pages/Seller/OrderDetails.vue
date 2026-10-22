@@ -474,6 +474,38 @@ const completePickup = () => {
 
 /*
 |--------------------------------------------------------------------------
+| E-Wallet / Card Payment Confirmation
+|--------------------------------------------------------------------------
+*/
+
+const isEwalletOrCard = computed(() => {
+    const method = String(props.orderSummary?.payment_method || item.value?.order?.payment_method || '').toLowerCase()
+    return ['gcash', 'maya', 'card'].includes(method)
+})
+
+const isPaymentConfirmed = computed(() => {
+    const status = String(props.orderSummary?.payment_status || item.value?.order?.payment_status || '').toLowerCase()
+    return status === 'paid'
+})
+
+const isPaymentAwaitingConfirmation = computed(() => {
+    return isEwalletOrCard.value && !isPaymentConfirmed.value
+})
+
+const confirmPaymentForm = useForm({})
+const confirmPayment = () => {
+    if (confirm(`Confirm that you have received payment for this order via ${paymentMethod.value}? This will mark the order as Paid.`)) {
+        confirmPaymentForm.patch(
+            route('seller.orders.confirm-payment', item.value.id),
+            {
+                preserveScroll: true,
+            }
+        )
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Cancellation
 |--------------------------------------------------------------------------
 */
@@ -750,6 +782,37 @@ const formatMoney = (value) => {
                 </div>
             </div>
 
+            <!-- Payment Confirmation Alert Banner -->
+            <div
+                v-if="isPaymentAwaitingConfirmation"
+                class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm"
+            >
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                            <p class="font-bold text-base">Payment Confirmation Required</p>
+                            <p class="text-sm text-amber-800">
+                                The buyer selected <strong>{{ paymentMethod }}</strong>. Verify that the payment of <strong>₱{{ formatMoney(orderSummary?.total || lineTotal) }}</strong> has been received in your account before packing the order.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="confirmPayment"
+                        :disabled="confirmPaymentForm.processing"
+                        class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ confirmPaymentForm.processing ? 'Confirming...' : 'Confirm Payment Received' }}
+                    </button>
+                </div>
+            </div>
+
             <!-- Status -->
             <div
                 class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -782,7 +845,21 @@ const formatMoney = (value) => {
                     </div>
 
                     <!-- Workflow Actions -->
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Confirm Payment (E-Wallet / Card) -->
+                        <button
+                            v-if="isPaymentAwaitingConfirmation"
+                            type="button"
+                            @click="confirmPayment"
+                            :disabled="confirmPaymentForm.processing"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition"
+                        >
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ confirmPaymentForm.processing ? 'Confirming...' : 'Confirm Payment Received' }}
+                        </button>
+
                         <!-- Pending → Processing -->
                         <button
                             v-if="canProcess"
@@ -803,7 +880,8 @@ const formatMoney = (value) => {
                             v-if="canPack"
                             type="button"
                             @click="markPacked"
-                            :disabled="packForm.processing"
+                            :disabled="packForm.processing || isPaymentAwaitingConfirmation"
+                            :title="isPaymentAwaitingConfirmation ? 'Confirm payment received before packing' : ''"
                             class="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{
@@ -1552,42 +1630,98 @@ const formatMoney = (value) => {
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
                     >
-                        <h2
-                            class="mb-5 text-lg font-bold text-gray-900"
-                        >
-                            Payment
-                        </h2>
-
-                        <div
-                            class="flex items-center justify-between"
-                        >
-                            <span
-                                class="text-sm text-gray-500"
+                        <div class="flex items-center justify-between mb-4">
+                            <h2
+                                class="text-lg font-bold text-gray-900"
                             >
-                                Method
+                                Payment
+                            </h2>
+                            <span
+                                v-if="isPaymentConfirmed"
+                                class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700"
+                            >
+                                ✓ Paid
                             </span>
-
                             <span
-                                class="font-semibold text-gray-900"
+                                v-else-if="isPaymentAwaitingConfirmation"
+                                class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700"
                             >
-                                {{ paymentMethod }}
+                                ⏳ Needs Confirmation
+                            </span>
+                            <span
+                                v-else
+                                class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-bold text-gray-600"
+                            >
+                                Unpaid
                             </span>
                         </div>
 
-                        <div
-                            class="mt-4 flex items-center justify-between"
-                        >
-                            <span
-                                class="text-sm text-gray-500"
+                        <div class="space-y-3">
+                            <div
+                                class="flex items-center justify-between"
                             >
-                                Item Total
-                            </span>
+                                <span
+                                    class="text-sm text-gray-500"
+                                >
+                                    Method
+                                </span>
 
-                            <span
-                                class="text-lg font-bold text-gray-900"
+                                <span
+                                    class="font-semibold text-gray-900"
+                                >
+                                    {{ paymentMethod }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="flex items-center justify-between"
                             >
-                                ₱{{ formatMoney(lineTotal) }}
-                            </span>
+                                <span
+                                    class="text-sm text-gray-500"
+                                >
+                                    Status
+                                </span>
+
+                                <span
+                                    class="text-sm font-semibold"
+                                    :class="isPaymentConfirmed ? 'text-emerald-700' : (isPaymentAwaitingConfirmation ? 'text-amber-700' : 'text-gray-700')"
+                                >
+                                    {{ isPaymentConfirmed ? 'Paid (Confirmed)' : (isPaymentAwaitingConfirmation ? 'Awaiting Confirmation' : 'Unpaid') }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="isPaymentAwaitingConfirmation"
+                                class="pt-2"
+                            >
+                                <button
+                                    type="button"
+                                    @click="confirmPayment"
+                                    :disabled="confirmPaymentForm.processing"
+                                    class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition"
+                                >
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {{ confirmPaymentForm.processing ? 'Confirming...' : 'Confirm Payment Received' }}
+                                </button>
+                            </div>
+
+                            <div
+                                class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3"
+                            >
+                                <span
+                                    class="text-sm text-gray-500"
+                                >
+                                    Item Total
+                                </span>
+
+                                <span
+                                    class="text-lg font-bold text-gray-900"
+                                >
+                                    ₱{{ formatMoney(lineTotal) }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
