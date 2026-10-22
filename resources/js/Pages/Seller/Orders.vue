@@ -759,6 +759,26 @@ watch(
                                                 )
                                             }}
                                         </p>
+                                        <div class="mt-1.5 flex items-center gap-1">
+                                            <span
+                                                v-if="order.order?.shipping_method === 'express'"
+                                                class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700"
+                                            >
+                                                ⚡ Express
+                                            </span>
+                                            <span
+                                                v-else-if="order.order?.shipping_method === 'pickup'"
+                                                class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700"
+                                            >
+                                                🏪 Store Pickup
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500"
+                                            >
+                                                Standard
+                                            </span>
+                                        </div>
                                     </td>
 
                                     <!-- Buyer -->
@@ -918,6 +938,26 @@ watch(
                                             )
                                         }}
                                     </p>
+                                    <div class="mt-1 flex items-center gap-1">
+                                        <span
+                                            v-if="order.order?.shipping_method === 'express'"
+                                            class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700"
+                                        >
+                                            ⚡ Express
+                                        </span>
+                                        <span
+                                            v-else-if="order.order?.shipping_method === 'pickup'"
+                                            class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700"
+                                        >
+                                            🏪 Store Pickup
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500"
+                                        >
+                                            Standard
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <span

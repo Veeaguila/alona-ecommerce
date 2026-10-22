@@ -29,6 +29,7 @@ class ParcelMonitoringController extends Controller
             ->with([
                 'sortedArea:id,name',
                 'assignedRider:id,name',
+                'orderItem.order:id,shipping_method',
             ])
             ->inSortingCenterWorkflow($sortingCenterId)
             ->orderByDesc('updated_at');

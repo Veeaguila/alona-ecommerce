@@ -11,6 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\AccountDestination;
+use Illuminate\Http\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class BuyerDashboardController extends Controller
 {
@@ -25,8 +28,18 @@ class BuyerDashboardController extends Controller
     /**
      * Public marketplace homepage.
      */
-    public function guest(Request $request): Response
+    public function guest(Request $request): Response|RedirectResponse|SymfonyResponse
     {
+        if ($user = $request->user()) {
+            $destination = app(AccountDestination::class)->route($user);
+
+            if (str_starts_with($destination, 'sorting-center.')) {
+                return Inertia::location(route($destination));
+            }
+
+            return redirect()->route($destination);
+        }
+
         return $this->renderDashboard($request, true);
     }
 

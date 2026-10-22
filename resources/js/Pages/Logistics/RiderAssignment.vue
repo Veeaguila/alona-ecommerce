@@ -69,9 +69,14 @@
                   <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-text-muted)]">Order ID</p>
                   <h3 class="mt-1 font-mono app-section-title">{{ parcel.order_id }}</h3>
                 </div>
-                <span class="rounded-full bg-[var(--app-primary)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
-                  {{ parcel.sorted_area?.name || parcel.delivery_municipality || 'Area Assigned' }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-black uppercase tracking-wide text-white shadow-sm flex items-center gap-1">
+                    ⚡ EXPRESS
+                  </span>
+                  <span class="rounded-full bg-[var(--app-primary)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
+                    {{ parcel.sorted_area?.name || parcel.delivery_municipality || 'Area Assigned' }}
+                  </span>
+                </div>
               </div>
 
               <div class="py-4">

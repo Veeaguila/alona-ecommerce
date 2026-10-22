@@ -44,7 +44,7 @@
           <div v-else class="app-table-scroll">
             <table class="app-data-table app-data-table--cards">
               <caption class="sr-only">Pending pickup requests, page {{ pagination.current_page }} of {{ pagination.last_page }}</caption>
-              <thead><tr><th scope="col">Order item</th><th scope="col">Seller</th><th scope="col">Collection address</th><th scope="col">Delivery address</th><th scope="col">Requested</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+              <thead><tr><th scope="col">Order item</th><th scope="col">Seller</th><th scope="col">Collection address</th><th scope="col">Delivery address</th><th scope="col">Requested</th><th scope="col">Method</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
               <tbody>
                 <tr v-for="request in pickupRequests" :key="request.id">
                   <td data-label="Order"><span class="app-order-id">{{ request.parcel?.order_id ?? 'Unavailable' }}</span></td>
@@ -52,6 +52,14 @@
                   <td data-label="Collection address" class="app-address-cell">{{ request.parcel?.collection_address || 'Confirm collection address with the seller' }}</td>
                   <td data-label="Delivery address" class="app-address-cell">{{ formatAddress(request.parcel) }}</td>
                   <td data-label="Requested"><time v-if="request.requested_at" :datetime="request.requested_at">{{ formatRequested(request.requested_at) }}</time><span v-else>Unknown</span></td>
+                  <td data-label="Method">
+                    <span v-if="request.is_express || request.shipping_method === 'express'" class="rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 text-[11px] font-black inline-flex items-center gap-1">
+                      ⚡ Express
+                    </span>
+                    <span v-else class="text-xs text-gray-600 font-medium">
+                      Standard
+                    </span>
+                  </td>
                   <td data-label="Status"><span class="app-queue-badge">Awaiting approval</span></td>
                   <td data-label="Action">
                     <button type="button" class="app-button-primary app-button-compact" :aria-label="`Confirm pickup for ${request.parcel?.order_id ?? 'unavailable parcel'}`" :disabled="!request.parcel || processingId !== null || loading" @click="confirmPickup(request.id)">

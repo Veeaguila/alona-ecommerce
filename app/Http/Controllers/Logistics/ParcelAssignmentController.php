@@ -16,7 +16,7 @@ class ParcelAssignmentController extends Controller
         $sortingCenterId = $request->user()->sortingCenter->id;
 
         $parcels = Parcel::query()
-            ->with('sortedArea:id,name')
+            ->with(['sortedArea:id,name', 'orderItem.order:id,shipping_method'])
             ->where('sorting_center_id', $sortingCenterId)
             ->where('status', 'AT_SORTING_CENTER')
             ->whereNotNull('sorted_area_id')

@@ -349,6 +349,11 @@ Route::middleware([
         'readyForPickup',
     ])->name('seller.orders.ready-for-pickup');
 
+    Route::patch('/seller/orders/{orderItem}/complete-pickup', [
+        SellerOrderController::class,
+        'completePickup',
+    ])->name('seller.orders.complete-pickup');
+
     Route::post('/seller/orders/{orderItem}/schedule-pickup', [
         SellerOrderController::class,
         'schedulePickup',

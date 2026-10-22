@@ -90,7 +90,7 @@ class PartnerProfileController extends Controller
                 'company_name' => $sortingCenter?->business_name ?? $sortingCenter?->name ?? 'Logistics',
                 'sorting_center' => $sortingCenter?->only(['id', 'business_name', 'name']),
             ]) : null,
-            'parcels' => $rider?->assignedParcels()->latest()->limit(30)->get(['id', 'order_id', 'status', 'delivery_address']) ?? [],
+            'parcels' => $rider?->assignedParcels()->with('orderItem.order:id,shipping_method')->latest()->limit(30)->get() ?? [],
         ]);
     }
 }

@@ -49,7 +49,10 @@ Route::get('/policies', [
     'policies',
 ])->name('guest.policies');
 
-Route::get('/categories', function () {
+Route::get('/categories', function (\Illuminate\Http\Request $request) {
+    if ($request->user()?->usertype === 'buyer') {
+        return redirect()->route('buyer.categories');
+    }
     return Inertia::render('Guest/Categories', [
         'categories' => Category::query()
             ->where('is_active', true)

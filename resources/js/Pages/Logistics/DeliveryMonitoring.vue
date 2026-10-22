@@ -76,6 +76,7 @@
               <thead >
                 <tr>
                   <th scope="col" >Order ID</th>
+                  <th scope="col" >Method</th>
                   <th scope="col" >Status</th>
                   <th scope="col" >Delivery Destination</th>
                   <th scope="col" >Sorting Area</th>
@@ -91,6 +92,17 @@
                   class="transition hover:bg-teal-50/40"
                 >
                   <td class="whitespace-nowrap">{{ parcel.order_id }}</td>
+                  <td class="whitespace-nowrap">
+                    <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black">
+                      ⚡ Express
+                    </span>
+                    <span v-else-if="parcel.shipping_method === 'pickup'" class="rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                      Pickup
+                    </span>
+                    <span v-else class="rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[10px] font-medium">
+                      Standard
+                    </span>
+                  </td>
                   <td class="whitespace-nowrap">
                     <span :class="statusBadgeClass(parcel.status)" class="rounded-full px-3 py-1 text-xs font-bold shadow-xs">
                       {{ formatStatus(parcel.status) }}

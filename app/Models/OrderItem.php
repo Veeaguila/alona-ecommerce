@@ -262,6 +262,7 @@ class OrderItem extends Model
 
             'ready_for_pickup' => [
                 'shipped',
+                'delivered',
             ],
 
             'shipped' => [

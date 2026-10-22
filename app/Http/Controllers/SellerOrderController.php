@@ -32,7 +32,7 @@ class SellerOrderController extends Controller
             })
             ->with([
                 'product:id,name,image_path',
-                'order:id,order_number,user_id,payment_method,created_at',
+                'order:id,order_number,user_id,payment_method,shipping_method,shipping_fee,created_at',
                 'order.user:id,name',
                 'variant:id,product_id,color,size,stock',
             ])
@@ -309,6 +309,14 @@ class SellerOrderController extends Controller
             'voucher_label' => $parentOrder?->voucher_code
                 ? ($parentOrder->voucher_code . ' −₱' . number_format($discountAmount, 2))
                 : null,
+            'shipping_method' => $parentOrder?->shipping_method ?? 'standard',
+            'shipping_method_label' => match($parentOrder?->shipping_method) {
+                'express' => 'Express Delivery',
+                'pickup' => 'Store Pickup',
+                default => 'Standard Delivery',
+            },
+            'is_pickup' => ($parentOrder?->shipping_method === 'pickup'),
+            'is_express' => ($parentOrder?->shipping_method === 'express'),
             'shipping_fee' => number_format($shippingFee, 2, '.', ''),
             'total' => number_format(max(0, $sellerSubtotal - $discountAmount) + $shippingFee, 2, '.', ''),
             'buyer_note' => $parentOrder?->buyer_note,
@@ -445,20 +453,26 @@ class SellerOrderController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $pickup): void {
+                $isStorePickup = ($orderItem->order?->shipping_method === 'pickup');
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $pickup, $isStorePickup): void {
             app(\App\Services\SellerShipmentFinance::class)->assertMutable(
                 app(\App\Services\SellerShipmentFinance::class)->lockItem($orderItem->id)
             );
             $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
             $orderItem->moveTo(
                 'ready_for_pickup',
-                'Seller packed the item and marked it ready for courier pickup.'
+                $isStorePickup
+                    ? 'Seller packed the item and marked it ready for customer in-store pickup.'
+                    : 'Seller packed the item and marked it ready for courier pickup.'
             );
-            app(\App\Services\OrderItemPickup::class)->create(
-                $orderItem,
-                $pickup['collection_address'] ?? null,
-                $pickup
-            );
+            if (! $isStorePickup) {
+                app(\App\Services\OrderItemPickup::class)->create(
+                    $orderItem,
+                    $pickup['collection_address'] ?? null,
+                    $pickup
+                );
+            }
         });
 
         return back()->with(
@@ -608,6 +622,8 @@ class SellerOrderController extends Controller
             'payment_method' => strtoupper((string) ($orderItem->order?->payment_method ?? 'COD')),
             'cod_amount' => number_format($codAmount, 2, '.', ''),
             'cod_label' => $isCod ? ('COD ₱' . number_format($codAmount, 2)) : 'PREPAID (₱0.00)',
+            'shipping_method' => strtoupper((string) ($orderItem->order?->shipping_method ?? 'STANDARD')),
+            'is_express' => ($orderItem->order?->shipping_method === 'express'),
         ];
     }
 
@@ -844,6 +860,35 @@ class SellerOrderController extends Controller
      * Make sure the order item belongs to the
      * currently authenticated seller.
      */
+    public function completePickup(
+        Request $request,
+        OrderItem $orderItem
+    ): RedirectResponse {
+        $this->authorizeOwnership(
+            $request,
+            $orderItem
+        );
+
+        abort_unless(
+            $orderItem->status === 'ready_for_pickup',
+            422,
+            'Only items ready for pickup can be marked as picked up.'
+        );
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem): void {
+            $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
+            $orderItem->moveTo(
+                'delivered',
+                'Item was picked up by customer at the seller store.'
+            );
+        });
+
+        return back()->with(
+            'status',
+            'Order item marked as picked up by customer.'
+        );
+    }
+
     private function authorizeOwnership(
         Request $request,
         OrderItem $orderItem

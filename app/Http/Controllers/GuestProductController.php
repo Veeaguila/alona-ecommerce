@@ -7,11 +7,15 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class GuestProductController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
+        if ($request->user()?->usertype === 'buyer') {
+            return redirect()->route('buyer.products', $request->query());
+        }
         $search = trim((string) $request->input('search', ''));
         $category = $request->input('category', 'all');
         $maxPrice = $request->input('max_price', 5000);
@@ -90,8 +94,11 @@ class GuestProductController extends Controller
         ]);
     }
 
-    public function show(Product $product): Response
+    public function show(Request $request, Product $product): Response|RedirectResponse
     {
+        if ($request->user()?->usertype === 'buyer') {
+            return redirect()->route('buyer.product', $product);
+        }
         abort_unless(
             $product->status === 'approved',
             404

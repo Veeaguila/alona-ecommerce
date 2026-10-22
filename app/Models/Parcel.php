@@ -35,6 +35,21 @@ class Parcel extends Model
         'failure_reason',
     ];
 
+    protected $appends = [
+        'shipping_method',
+        'is_express',
+    ];
+
+    public function getShippingMethodAttribute(): string
+    {
+        return $this->orderItem?->order?->shipping_method ?? 'standard';
+    }
+
+    public function getIsExpressAttribute(): bool
+    {
+        return $this->shipping_method === 'express';
+    }
+
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class);

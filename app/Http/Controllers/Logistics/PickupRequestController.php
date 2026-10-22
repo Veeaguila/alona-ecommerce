@@ -23,6 +23,7 @@ class PickupRequestController extends Controller
         $pickupRequests = PickupRequest::query()
             ->with([
                 'parcel:id,order_id,order_item_id,seller_id,status,delivery_address,collection_address,delivery_province,delivery_municipality,delivery_barangay,delivery_street,delivery_house_number',
+                'parcel.orderItem.order:id,shipping_method',
                 'seller:id,name,email',
             ])
             ->where('status', $status)

@@ -460,6 +460,17 @@ const markReadyForPickup = () => {
         }
     )
 }
+const completePickupForm = useForm({})
+const completePickup = () => {
+    if (confirm('Confirm that this order item has been picked up by the customer?')) {
+        completePickupForm.patch(
+            route('seller.orders.complete-pickup', item.value.id),
+            {
+                preserveScroll: true,
+            }
+        )
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -820,13 +831,24 @@ const formatMoney = (value) => {
                             {{
                                 readyForPickupForm.processing
                                     ? 'Updating...'
-                                    : 'Mark as Ready for Pickup'
+                                    : (orderSummary?.is_pickup ? 'Mark Ready for Customer Pickup' : 'Mark as Ready for Pickup')
                             }}
+                        </button>
+
+                        <!-- Complete In-Store Pickup Button -->
+                        <button
+                            v-if="currentStatus === 'ready_for_pickup' && orderSummary?.is_pickup"
+                            type="button"
+                            @click="completePickup"
+                            :disabled="completePickupForm.processing"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                            {{ completePickupForm.processing ? 'Completing...' : '✓ Mark as Picked Up by Customer' }}
                         </button>
 
                         <!-- Courier Pickup Scheduling Button (SELLER-19) -->
                         <button
-                            v-if="['processing', 'packed', 'ready_for_pickup'].includes(currentStatus)"
+                            v-if="['processing', 'packed', 'ready_for_pickup'].includes(currentStatus) && !orderSummary?.is_pickup"
                             type="button"
                             @click="openPickupModal"
                             class="inline-flex items-center gap-1.5 rounded-lg border border-[#087F8C] bg-[#E8F7F6] px-4 py-2 text-sm font-bold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
@@ -1284,6 +1306,21 @@ const formatMoney = (value) => {
                                 </p>
                             </div>
 
+                            <div class="sm:col-span-2 mb-2">
+                                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Shipping Method</p>
+                                <div class="mt-1 flex items-center gap-2">
+                                    <span v-if="orderSummary?.is_express" class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700">
+                                        ⚡ Express Delivery (1-3 days Priority Courier)
+                                    </span>
+                                    <span v-else-if="orderSummary?.is_pickup" class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
+                                        🏪 In-Store Pickup (Customer collects at seller store)
+                                    </span>
+                                    <span v-else class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-700">
+                                        Standard Delivery (3-7 days Courier)
+                                    </span>
+                                </div>
+                            </div>
+
                             <div
                                 class="sm:col-span-2"
                             >
@@ -1303,7 +1340,18 @@ const formatMoney = (value) => {
 
                         <!-- Ready for Pickup -->
                         <div
-                            v-if="
+                            v-if="currentStatus === 'ready_for_pickup' && orderSummary?.is_pickup"
+                            class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4"
+                        >
+                            <p class="font-semibold text-emerald-800">
+                                Ready for Customer In-Store Pickup
+                            </p>
+                            <p class="mt-1 text-sm leading-6 text-emerald-700">
+                                Item is packed and waiting for the customer to collect at your store. When the customer receives the item, click <strong>"Mark as Picked Up by Customer"</strong> above.
+                            </p>
+                        </div>
+                        <div
+                            v-else-if="
                                 currentStatus ===
                                 'ready_for_pickup'
                             "

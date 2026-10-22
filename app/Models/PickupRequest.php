@@ -30,6 +30,21 @@ class PickupRequest extends Model
         ];
     }
 
+    protected $appends = [
+        'is_express',
+        'shipping_method',
+    ];
+
+    public function getShippingMethodAttribute(): string
+    {
+        return $this->parcel?->shipping_method ?? 'standard';
+    }
+
+    public function getIsExpressAttribute(): bool
+    {
+        return $this->shipping_method === 'express';
+    }
+
     public function parcel(): BelongsTo
     {
         return $this->belongsTo(Parcel::class);
