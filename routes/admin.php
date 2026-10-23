@@ -246,6 +246,11 @@ Route::prefix('admin')
             'updateWhyAlona',
         ])->name('admin.settings.why-alona.update');
 
+        Route::post('/settings/footer', [
+            AdminSettingsController::class,
+            'updateFooter',
+        ])->name('admin.settings.footer.update');
+
         Route::get('/settings/faqs', [
             AdminSettingsController::class,
             'faqs',

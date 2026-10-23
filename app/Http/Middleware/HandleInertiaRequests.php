@@ -35,6 +35,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'flash' => ['status' => fn () => $request->session()->get('status')],
+            'footerSettings' => fn () => \App\Services\FooterService::get(),
 
             /*
             |--------------------------------------------------------------------------

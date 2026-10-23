@@ -1,6 +1,6 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
@@ -38,6 +38,36 @@ const safeRoute = (name, fallback = '#') => {
 
 
 const policies = computed(() => props.databasePolicies || [])
+
+const resolvePolicyFromUrl = () => {
+    if (!policies.value.length) return
+    const params = new URLSearchParams(window.location.search)
+    const target = (params.get('policy') || params.get('tab') || window.location.hash.replace('#', '')).toLowerCase().trim()
+    if (!target) return
+
+    const matched = policies.value.find(p => {
+        const title = (p.title || '').toLowerCase()
+        if (title === target) return true
+        if (target.includes('privacy') && title.includes('privacy')) return true
+        if (target.includes('terms') && title.includes('terms')) return true
+        if (target.includes('shipping') && title.includes('shipping')) return true
+        if ((target.includes('return') || target.includes('refund')) && (title.includes('return') || title.includes('refund'))) return true
+        if (target.includes('payment') && title.includes('payment')) return true
+        return title.includes(target)
+    })
+
+    if (matched) {
+        activePolicyKey.value = matched.id
+    }
+}
+
+onMounted(() => {
+    resolvePolicyFromUrl()
+})
+
+watch(() => props.databasePolicies, () => {
+    resolvePolicyFromUrl()
+})
 
 const activePolicy = computed(() => {
     return policies.value.find(p => p.id === activePolicyKey.value) || policies.value[0] || null

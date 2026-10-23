@@ -75,6 +75,7 @@ class AdminSettingsController extends Controller
             'policies' => $policies,
             'faqs' => $faqs,
             'whyAlona' => $whyAlona,
+            'footer' => \App\Services\FooterService::get(),
         ]);
     }
 
@@ -157,7 +158,7 @@ class AdminSettingsController extends Controller
         return Inertia::render('Admin/Settings', [
             'title' => 'Policies',
             'eyebrow' => 'Platform Policies',
-            'description' => 'Create, edit, and manage the policies that govern the Zellora marketplace.',
+            'description' => 'Create, edit, and manage the policies that govern the Alona marketplace.',
             'active' => 'policies',
 
             'policies' => $policies,
@@ -524,6 +525,62 @@ class AdminSettingsController extends Controller
         return back()->with(
             'status',
             '"Why Alona" banner updated successfully.'
+        );
+    }
+
+    public function updateFooter(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'theme' => ['nullable', 'string', 'in:dark,light'],
+            'brand' => ['nullable', 'array'],
+            'brand.tagline' => ['nullable', 'string', 'max:500'],
+            'brand.copyright' => ['nullable', 'string', 'max:255'],
+            'brand.subtext' => ['nullable', 'string', 'max:255'],
+            'sections' => ['required', 'array', 'min:1'],
+            'sections.*.id' => ['nullable', 'string', 'max:50'],
+            'sections.*.title' => ['required', 'string', 'max:100'],
+            'sections.*.icon' => ['nullable', 'string', 'max:50'],
+            'sections.*.badge' => ['nullable', 'string', 'max:50'],
+            'sections.*.links' => ['nullable', 'array'],
+            'sections.*.links.*.label' => ['required', 'string', 'max:100'],
+            'sections.*.links.*.url' => ['required', 'string', 'max:255'],
+        ]);
+
+        $payload = [
+            'theme' => $data['theme'] ?? 'dark',
+            'brand' => [
+                'tagline' => trim($data['brand']['tagline'] ?? 'Discover products, connect with sellers, and enjoy simple shopping with Alona.'),
+                'copyright' => trim($data['brand']['copyright'] ?? ('© ' . date('Y') . ' Alona. All rights reserved.')),
+                'subtext' => trim($data['brand']['subtext'] ?? 'A marketplace made simple.'),
+            ],
+            'sections' => array_values(array_map(function ($section, $idx) {
+                return [
+                    'id' => !empty($section['id']) ? $section['id'] : 'section_' . ($idx + 1),
+                    'title' => trim($section['title']),
+                    'icon' => !empty($section['icon']) ? trim($section['icon']) : 'bag',
+                    'badge' => !empty($section['badge']) ? trim($section['badge']) : null,
+                    'links' => array_values(array_map(function ($link) {
+                        return [
+                            'label' => trim($link['label']),
+                            'url' => trim($link['url']),
+                        ];
+                    }, $section['links'] ?? [])),
+                ];
+            }, $data['sections'], array_keys($data['sections']))),
+        ];
+
+        PlatformSetting::updateOrCreate(
+            ['key' => 'marketplace.footer'],
+            [
+                'value' => json_encode($payload),
+                'description' => 'Marketplace footer sections, badges, and navigation links.',
+                'is_active' => true,
+            ]
+        );
+
+        return back()->with(
+            'status',
+            'Marketplace footer navigation updated successfully.'
         );
     }
 }

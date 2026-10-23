@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 import PartnerAuthModal from '@/Components/PartnerAuthModal.vue'
+import AppFooter from '@/Components/AppFooter.vue'
 
 const page = usePage()
 
@@ -594,112 +595,7 @@ onUnmounted(() => {
         </main>
 
         <!-- FOOTER -->
-        <footer class="border-t border-[#E5E7EB] bg-white">
-            <div
-                class="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-5 lg:px-8"
-            >
-
-                <!-- BRAND -->
-                <div class="md:col-span-2 lg:col-span-1">
-                    <Link
-                        :href="safeRoute('guest.home', '/')"
-                        class="inline-flex"
-                    >
-                        <img
-                            src="/images/alona.png"
-                            alt="Alona"
-                            class="h-10 w-auto object-contain"
-                        />
-                    </Link>
-
-                    <p
-                        class="mt-4 max-w-xs text-sm leading-6 text-[#64748B]"
-                    >
-                        Discover products, connect with sellers, and enjoy
-                        simple shopping with Alona.
-                    </p>
-                </div>
-
-                <!-- SHOP & SUPPORT -->
-                <div>
-                    <h3
-                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
-                    >
-                        Customer Support
-                    </h3>
-
-                    <div class="mt-4 space-y-3">
-                        <Link
-                            :href="safeRoute('guest.help', '/help')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Help Center & Contact
-                        </Link>
-
-                        <Link
-                            :href="safeRoute('guest.faq', '/faq')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Frequently Asked Questions
-                        </Link>
-
-                        <Link
-                            :href="safeRoute('guest.policies', '/policies')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Terms & Buyer Policies
-                        </Link>
-
-                        <Link
-                            :href="safeRoute('guest.products')"
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
-                        >
-                            Browse All Products
-                        </Link>
-                    </div>
-                </div>
-
-                <!-- PARTNER WITH ALONA -->
-                <div class="md:col-span-2 lg:col-span-3">
-                    <h3
-                        class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]"
-                    >
-                        Partner with Alona
-                    </h3>
-
-                    <div class="mt-4 grid gap-6 sm:grid-cols-3">
-                        <div class="flex flex-col items-start">
-                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Start selling your products and grow your business with Alona Marketplace.</p>
-                            <button type="button" class="mt-4 inline-flex rounded-xl bg-[#F4B942] px-4 py-2.5 text-xs font-extrabold text-[#1F2937] transition hover:-translate-y-0.5 hover:shadow-md" @click="openAuthModal('register-seller')">Become a Seller</button>
-                        </div>
-                        <div class="flex flex-col items-start">
-                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Manage deliveries and logistics services with Alona.</p>
-                            <button type="button" class="mt-4 inline-flex rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066B76]" @click="openPartnerModal('logistics')">Become a Logistics Partner</button>
-                        </div>
-                        <div class="flex flex-col items-start">
-                            <p class="flex-1 text-sm leading-6 text-[#64748B]">Join our delivery network and start accepting deliveries.</p>
-                            <button type="button" class="mt-4 inline-flex rounded-xl border border-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#E8F7F6]" @click="openPartnerModal('rider')">Become a Rider</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FOOTER BOTTOM -->
-            <div class="border-t border-[#E5E7EB]">
-                <div
-                    class="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-5 text-xs text-[#64748B] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
-                >
-                    <p>
-                        © {{ new Date().getFullYear() }} Alona.
-                        All rights reserved.
-                    </p>
-
-                    <p>
-                        A marketplace made simple.
-                    </p>
-                </div>
-            </div>
-        </footer>
+        <AppFooter />
 
         <!-- AUTH MODAL (BUYER & SELLER) -->
         <AuthModal

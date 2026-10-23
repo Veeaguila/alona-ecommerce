@@ -48,6 +48,11 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+
+    footer: {
+        type: Object,
+        default: null,
+    },
 })
 
 /*
@@ -287,6 +292,124 @@ const resetWhyAlona = () => {
     whyAlonaForm.title = defaultWhyAlona.title
     whyAlonaForm.description = defaultWhyAlona.description
     whyAlonaForm.cards = JSON.parse(JSON.stringify(defaultWhyAlona.cards))
+}
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Footer Navigation Form
+|--------------------------------------------------------------------------
+*/
+
+const defaultFooterSettings = {
+    theme: 'light',
+    brand: {
+        tagline: 'Discover products, connect with sellers, and enjoy simple shopping with Alona.',
+        copyright: `© ${new Date().getFullYear()} Alona. All rights reserved.`,
+        subtext: 'A marketplace made simple.',
+    },
+    sections: [
+        {
+            id: 'shop',
+            title: 'Shop',
+            icon: 'bag',
+            links: [
+                { label: 'All Products', url: '/products' },
+                { label: 'Categories', url: '/categories' },
+                { label: 'Cart', url: '/buyer/cart' },
+                { label: 'Track My Order', url: '/buyer/orders' },
+            ],
+        },
+        {
+            id: 'customer-support',
+            title: 'Customer Support',
+            icon: 'headphones',
+            links: [
+                { label: 'Help Center', url: '/help' },
+                { label: 'Frequently Asked Questions', url: '/faq' },
+                { label: 'Contact Us', url: '/help' },
+                { label: 'Complaints & Ticket Status', url: '/buyer/complaints' },
+                { label: 'Buyer Protection', url: '/policies' },
+            ],
+        },
+        {
+            id: 'partner-account',
+            title: 'Partner & Account',
+            icon: 'user',
+            links: [
+                { label: 'Become a Seller', url: '/register/seller' },
+                { label: 'Become a Rider', url: '/register' },
+                { label: 'Logistics Partner', url: '/register' },
+                { label: 'My Account', url: '/buyer/dashboard' },
+            ],
+        },
+        {
+            id: 'policies',
+            title: 'Policies & Information',
+            icon: 'shield',
+            links: [
+                { label: 'Privacy Policy', url: '/policies#privacy' },
+                { label: 'Terms & Conditions', url: '/policies#terms' },
+                { label: 'Shipping & Delivery Policy', url: '/policies#shipping' },
+                { label: 'Returns & Refunds Policy', url: '/policies#returns' },
+                { label: 'Payment Methods', url: '/policies?policy=payment' },
+            ],
+        },
+    ],
+}
+
+const initialFooter = props.footer && Array.isArray(props.footer.sections) && props.footer.sections.length > 0
+    ? props.footer
+    : defaultFooterSettings
+
+const footerForm = useForm({
+    theme: initialFooter.theme ?? 'dark',
+    brand: {
+        tagline: initialFooter.brand?.tagline ?? defaultFooterSettings.brand.tagline,
+        copyright: initialFooter.brand?.copyright ?? defaultFooterSettings.brand.copyright,
+        subtext: initialFooter.brand?.subtext ?? defaultFooterSettings.brand.subtext,
+    },
+    sections: JSON.parse(JSON.stringify(initialFooter.sections)),
+})
+
+const addFooterSection = () => {
+    const num = footerForm.sections.length + 1
+    footerForm.sections.push({
+        id: `section_${Date.now()}`,
+        title: `Section ${num}`,
+        icon: 'bag',
+        links: [
+            { label: 'New Link', url: '/' }
+        ]
+    })
+}
+
+const removeFooterSection = (index) => {
+    if (footerForm.sections.length > 1) {
+        footerForm.sections.splice(index, 1)
+    }
+}
+
+const addFooterLink = (sectionIndex) => {
+    footerForm.sections[sectionIndex].links.push({
+        label: 'New Link',
+        url: '/'
+    })
+}
+
+const removeFooterLink = (sectionIndex, linkIndex) => {
+    footerForm.sections[sectionIndex].links.splice(linkIndex, 1)
+}
+
+const submitFooter = () => {
+    footerForm.post(route('admin.settings.footer.update'), {
+        preserveScroll: true,
+    })
+}
+
+const resetFooter = () => {
+    footerForm.theme = defaultFooterSettings.theme
+    footerForm.brand = JSON.parse(JSON.stringify(defaultFooterSettings.brand))
+    footerForm.sections = JSON.parse(JSON.stringify(defaultFooterSettings.sections))
 }
 
 /*
@@ -2042,6 +2165,242 @@ const activeSection = computed(() => {
                             class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
                         >
                             {{ whyAlonaForm.processing ? 'Saving Changes...' : 'Save Banner Changes' }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- =========================================================
+                 MARKETPLACE FOOTER NAVIGATION SETTINGS
+            ========================================================== -->
+
+            <section
+                class="mt-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+            >
+                <!-- Section Header -->
+                <div class="border-b border-[#E5E7EB] px-5 py-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#16A6A0]"></span>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]">
+                                    Storefront Navigation
+                                </p>
+                            </div>
+                            <h2 class="mt-1 text-base font-bold text-[#1F2937]">
+                                Marketplace Footer Navigation
+                            </h2>
+                            <p class="mt-1 text-xs text-[#64748B]">
+                                Manage footer columns, links, icons, badges, and brand text displayed across Buyer and Guest pages.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                                @click="resetFooter"
+                            >
+                                Reset to Default
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="footerForm.processing"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
+                                @click="submitFooter"
+                            >
+                                {{ footerForm.processing ? 'Saving...' : 'Save Footer Changes' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form @submit.prevent="submitFooter" class="p-5 sm:p-6 space-y-6">
+                    <!-- Live Footer Preview (Matching Earlier Clean Storefront Design) -->
+                    <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs transition">
+                        <div class="mb-5 flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#087F8C]">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#087F8C]"></span>
+                                Storefront Footer Preview (Clean Design)
+                            </span>
+                            <span class="text-[10px] text-[#64748B]">
+                                Active across Buyer &amp; Guest layouts
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+                            <!-- Brand preview -->
+                            <div class="lg:col-span-1">
+                                <img
+                                    src="/images/alona.png"
+                                    alt="Alona"
+                                    class="h-8 w-auto object-contain"
+                                />
+                                <p class="mt-3 text-xs leading-5 text-[#64748B]">
+                                    {{ footerForm.brand.tagline }}
+                                </p>
+                            </div>
+
+                            <!-- Columns preview -->
+                            <div
+                                v-for="section in footerForm.sections"
+                                :key="section.id || section.title"
+                                class="space-y-3"
+                            >
+                                <h4 class="text-xs font-black uppercase tracking-[0.16em] text-[#1F2937]">
+                                    {{ section.title }}
+                                </h4>
+
+                                <div class="space-y-2.5">
+                                    <div
+                                        v-for="(link, lIdx) in section.links"
+                                        :key="lIdx"
+                                        class="text-xs text-[#64748B] hover:text-[#087F8C] truncate transition"
+                                    >
+                                        {{ link.label }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer bottom preview -->
+                        <div class="mt-8 pt-4 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#94A3B8]">
+                            <p>{{ footerForm.brand.copyright }}</p>
+                            <p>{{ footerForm.brand.subtext }}</p>
+                        </div>
+                    </div>
+
+                    <!-- General Settings: Brand Tagline & Copyright -->
+                    <div class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-[#1F2937]">Brand &amp; Copyright Text</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-[#1F2937]">Brand Tagline</label>
+                                <input
+                                    v-model="footerForm.brand.tagline"
+                                    type="text"
+                                    class="mt-1 block w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] focus:border-[#087F8C] focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[#1F2937]">Footer Subtext</label>
+                                <input
+                                    v-model="footerForm.brand.subtext"
+                                    type="text"
+                                    class="mt-1 block w-full rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#1F2937] focus:border-[#087F8C] focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Customization Cards -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-[#1F2937]">
+                                Footer Columns &amp; Links ({{ footerForm.sections.length }} Columns)
+                            </h3>
+                            <button
+                                type="button"
+                                @click="addFooterSection"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-[#E8F7F6] px-3 py-1.5 text-xs font-bold text-[#087F8C] hover:bg-[#087F8C] hover:text-white transition cursor-pointer"
+                            >
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                Add Column
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div
+                                v-for="(section, sIdx) in footerForm.sections"
+                                :key="sIdx"
+                                class="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-2xs space-y-3"
+                            >
+                                <div class="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+                                    <span class="text-xs font-extrabold text-[#087F8C]">Column {{ sIdx + 1 }}</span>
+                                    <button
+                                        type="button"
+                                        :disabled="footerForm.sections.length <= 1"
+                                        @click="removeFooterSection(sIdx)"
+                                        class="text-xs font-semibold text-red-500 hover:text-red-700 disabled:opacity-30 cursor-pointer"
+                                    >
+                                        Delete Column
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[#64748B]">Column Title</label>
+                                    <input
+                                        v-model="section.title"
+                                        type="text"
+                                        placeholder="e.g. Shop"
+                                        class="mt-1 block w-full rounded-lg border border-[#E5E7EB] px-2.5 py-1.5 text-xs text-[#1F2937] focus:border-[#087F8C] focus:outline-none"
+                                    />
+                                </div>
+
+                                <!-- Links table for this section -->
+                                <div class="mt-2 pt-2 border-t border-[#F8FAF9]">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-[11px] font-bold text-[#64748B]">Links in this Column</label>
+                                        <button
+                                            type="button"
+                                            @click="addFooterLink(sIdx)"
+                                            class="text-[11px] font-bold text-[#087F8C] hover:underline cursor-pointer"
+                                        >
+                                            + Add Link
+                                        </button>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <div
+                                            v-for="(link, lIdx) in section.links"
+                                            :key="lIdx"
+                                            class="flex items-center gap-2"
+                                        >
+                                            <input
+                                                v-model="link.label"
+                                                type="text"
+                                                placeholder="Link Label (e.g. All Products)"
+                                                class="flex-1 rounded-lg border border-[#E5E7EB] px-2.5 py-1.5 text-xs text-[#1F2937] focus:border-[#087F8C] focus:outline-none"
+                                            />
+                                            <input
+                                                v-model="link.url"
+                                                type="text"
+                                                placeholder="URL (e.g. /products or #chat)"
+                                                class="flex-1 rounded-lg border border-[#E5E7EB] px-2.5 py-1.5 text-xs text-[#1F2937] focus:border-[#087F8C] focus:outline-none font-mono"
+                                            />
+                                            <button
+                                                type="button"
+                                                @click="removeFooterLink(sIdx, lIdx)"
+                                                title="Remove link"
+                                                class="text-slate-400 hover:text-red-500 font-bold px-1.5 py-1 cursor-pointer"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex items-center justify-end gap-3 border-t border-[#E5E7EB] pt-5">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                            @click="resetFooter"
+                        >
+                            Reset to Default
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="footerForm.processing"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-[#087F8C] px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066E79] disabled:opacity-50"
+                        >
+                            {{ footerForm.processing ? 'Saving Changes...' : 'Save Footer Navigation' }}
                         </button>
                     </div>
                 </form>
