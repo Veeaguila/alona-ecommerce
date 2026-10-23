@@ -86,18 +86,21 @@ class BuyerChatAndNotificationsTest extends TestCase
         $this->assertNotNull($conversation);
         $this->assertSame($this->product->id, $conversation->product_id);
 
-        // 2. Open conversations page and verify product card is loaded
+        // 2. Visiting conversations page redirects to buyer dashboard with chat param (floating widget)
         $conversationsResponse = $this->actingAs($this->buyer)
             ->get(route('buyer.conversations', ['conversation' => $conversation->id]));
 
-        $conversationsResponse->assertOk();
-        $conversationsResponse->assertInertia(function (Assert $page) use ($conversation) {
-            $page->component('Buyer/Conversations')
-                ->where('selectedConversation.id', $conversation->id)
-                ->where('selectedConversation.product.id', $this->product->id)
-                ->where('selectedConversation.product.name', 'Handmade Rattan Tote Bag')
-                ->where('selectedConversation.seller.id', $this->seller->id);
-        });
+        $conversationsResponse->assertRedirect(route('buyer.dashboard', ['chat' => $conversation->id]));
+
+        // 3. Floating chat widget loads conversation via JSON
+        $jsonResponse = $this->actingAs($this->buyer)
+            ->getJson(route('buyer.conversations', ['conversation' => $conversation->id]));
+
+        $jsonResponse->assertOk()
+            ->assertJsonPath('selectedConversation.id', $conversation->id)
+            ->assertJsonPath('selectedConversation.product.id', $this->product->id)
+            ->assertJsonPath('selectedConversation.product.name', 'Handmade Rattan Tote Bag')
+            ->assertJsonPath('selectedConversation.seller.id', $this->seller->id);
     }
 
     /**

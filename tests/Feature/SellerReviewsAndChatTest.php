@@ -364,21 +364,22 @@ class SellerReviewsAndChatTest extends TestCase
         $this->assertNotNull($sellerMessage->attachment_path);
         Storage::disk('public')->assertExists($sellerMessage->attachment_path);
 
-        // Buyer opens conversation
+        // Buyer opens conversation (redirects to dashboard for widget, or JSON for widget data)
         $buyerChatResponse = $this->actingAs($this->buyer1)
             ->get(route('buyer.conversations', ['conversation' => $conversation->id]));
 
-        $buyerChatResponse->assertOk();
-        $buyerChatResponse->assertInertia(function ($page) use ($replyText) {
-            $messages = $page->toArray()['props']['messages'];
-            $this->assertCount(2, $messages);
+        $buyerChatResponse->assertRedirect(route('buyer.dashboard', ['chat' => $conversation->id]));
 
-            // In right chronological order
-            $this->assertStringContainsString('available in Medium?', $messages[0]['body']);
-            $this->assertSame($replyText, $messages[1]['body']);
-            $this->assertSame('review_photo.jpg', $messages[1]['attachment_name']);
-            $this->assertNotEmpty($messages[1]['created_at']);
-        });
+        $buyerJsonResponse = $this->actingAs($this->buyer1)
+            ->getJson(route('buyer.conversations', ['conversation' => $conversation->id]));
+
+        $buyerJsonResponse->assertOk();
+        $messages = $buyerJsonResponse->json('messages');
+        $this->assertCount(2, $messages);
+        $this->assertStringContainsString('available in Medium?', $messages[0]['body']);
+        $this->assertSame($replyText, $messages[1]['body']);
+        $this->assertSame('review_photo.jpg', $messages[1]['attachment_name']);
+        $this->assertNotEmpty($messages[1]['created_at']);
     }
 
     /**

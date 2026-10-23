@@ -17,7 +17,7 @@ class BuyerConversationController extends Controller
      * Display the buyer conversations and the selected conversation
      * on the same page.
      */
-    public function index(Request $request): Response|JsonResponse
+    public function index(Request $request): Response|JsonResponse|RedirectResponse
     {
         $buyer = $request->user();
 
@@ -162,12 +162,8 @@ class BuyerConversationController extends Controller
             ]);
         }
 
-        return Inertia::render('Buyer/Conversations', [
-            'conversations' => $conversations,
-            'selectedConversation' => $selectedConversation,
-            'messages' => $messages,
-            'buyerOrders' => $buyerOrders,
-        ]);
+        $convId = $request->query('conversation') ?? ($selectedConversation?->id ?? null);
+        return redirect()->route('buyer.dashboard', array_filter(['chat' => $convId]));
     }
 
 
@@ -236,12 +232,7 @@ class BuyerConversationController extends Controller
         |
         |--------------------------------------------------------------------------
         */
-        return redirect()->route(
-            'buyer.conversations',
-            [
-                'conversation' => $conversation->id,
-            ]
-        );
+        return redirect()->route('buyer.dashboard', ['chat' => $conversation->id]);
     }
 
 
@@ -446,11 +437,35 @@ class BuyerConversationController extends Controller
         | Open the conversation inside the combined page.
         |--------------------------------------------------------------------------
         */
-        return redirect()->route(
-            'buyer.conversations',
+        return redirect()->route('buyer.dashboard', ['chat' => $conversation->id]);
+    }
+
+    /**
+     * Start or find a conversation directly with a seller.
+     */
+    public function startWithSeller(
+        Request $request,
+        \App\Models\User $seller
+    ): RedirectResponse|JsonResponse {
+        abort_unless(in_array($seller->usertype, ['seller', 'both']), 404);
+        $buyer = $request->user();
+
+        $conversation = Conversation::firstOrCreate(
             [
-                'conversation' => $conversation->id,
+                'buyer_id' => $buyer->id,
+                'seller_id' => $seller->id,
+            ],
+            [
+                'last_message_at' => now(),
             ]
         );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'conversation_id' => $conversation->id,
+            ]);
+        }
+
+        return redirect()->route('buyer.dashboard', ['chat' => $conversation->id]);
     }
 }

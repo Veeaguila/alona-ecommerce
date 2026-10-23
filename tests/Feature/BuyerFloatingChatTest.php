@@ -135,4 +135,38 @@ class BuyerFloatingChatTest extends TestCase
 
         $response->assertRedirect(route('buyer.conversations'));
     }
+
+    public function test_browser_visit_to_conversations_redirects_to_dashboard_with_chat_param(): void
+    {
+        $buyer = User::factory()->create(['usertype' => 'buyer', 'status' => 'approved']);
+        $seller = User::factory()->create(['usertype' => 'seller', 'status' => 'approved']);
+
+        $conversation = Conversation::create([
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+            'last_message_at' => now(),
+        ]);
+
+        $response = $this->actingAs($buyer)
+            ->get(route('buyer.conversations', ['conversation' => $conversation->id]));
+
+        $response->assertRedirect(route('buyer.dashboard', ['chat' => $conversation->id]));
+    }
+
+    public function test_buyer_can_start_conversation_with_seller_directly(): void
+    {
+        $buyer = User::factory()->create(['usertype' => 'buyer', 'status' => 'approved']);
+        $seller = User::factory()->create(['usertype' => 'seller', 'status' => 'approved']);
+
+        $response = $this->actingAs($buyer)
+            ->postJson(route('buyer.conversations.start-seller', $seller->id));
+
+        $response->assertOk()
+            ->assertJsonStructure(['conversation_id']);
+
+        $this->assertDatabaseHas('conversations', [
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+        ]);
+    }
 }

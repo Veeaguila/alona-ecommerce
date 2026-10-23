@@ -605,6 +605,27 @@ onMounted(() => {
         'keydown',
         handleEscape
     )
+
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const chatId = params.get('chat') || params.get('conversation')
+        if (chatId) {
+            params.delete('chat')
+            params.delete('conversation')
+            const newSearch = params.toString() ? `?${params.toString()}` : ''
+            window.history.replaceState({}, '', `${window.location.pathname}${newSearch}`)
+
+            setTimeout(() => {
+                window.dispatchEvent(
+                    new CustomEvent('open-buyer-chat', {
+                        detail: {
+                            conversationId: chatId === '1' ? null : chatId,
+                        },
+                    })
+                )
+            }, 200)
+        }
+    }
 })
 
 onUnmounted(() => {
@@ -1499,6 +1520,38 @@ onUnmounted(() => {
 
 
                                         My Reviews
+
+                                    </button>
+
+                                    <!-- MESSAGES -->
+
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                        @click="openMessages"
+                                    >
+
+                                        <span
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
+                                        >
+
+                                            <svg
+                                                class="h-4 w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            >
+
+                                                <path
+                                                    d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
+                                                />
+
+                                            </svg>
+
+                                        </span>
+
+                                        Messages
 
                                     </button>
 
@@ -2467,6 +2520,38 @@ onUnmounted(() => {
 
                                 </button>
 
+                                <!-- MESSAGES -->
+
+                                <button
+                                    type="button"
+                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
+                                    @click="openMessages"
+                                >
+
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+
+                                            <path
+                                                d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
+                                            />
+
+                                        </svg>
+
+                                    </span>
+
+                                    Messages
+
+                                </button>
+
                                 <!-- HELP CENTER (BUYER-37) -->
 
                                 <button
@@ -2804,17 +2889,13 @@ onUnmounted(() => {
                             Complaints & Ticket Status
                         </Link>
 
-                        <Link
-                            :href="
-                                safeRoute(
-                                    'buyer.conversations',
-                                    '#'
-                                )
-                            "
-                            class="block text-sm text-[#64748B] transition hover:text-[#087F8C]"
+                        <button
+                            type="button"
+                            @click="openMessages"
+                            class="block text-left text-sm text-[#64748B] transition hover:text-[#087F8C]"
                         >
                             Seller Messages
-                        </Link>
+                        </button>
 
                     </div>
 
@@ -2884,7 +2965,7 @@ onUnmounted(() => {
         </footer>
 
         <!-- Floating Chat Widget (Shopee-Style Dock) -->
-        <FloatingChatWidget v-if="user && !isConversationsPage" />
+        <FloatingChatWidget v-if="user" />
 
     </div>
 

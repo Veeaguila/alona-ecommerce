@@ -378,6 +378,11 @@ Route::middleware([
         'start',
     ])->name('buyer.conversations.start');
 
+    Route::post('/buyer/conversations/start-seller/{seller}', [
+        BuyerConversationController::class,
+        'startWithSeller',
+    ])->name('buyer.conversations.start-seller');
+
     Route::post('/buyer/order-items/{orderItem}/contact-seller', [
         BuyerOrderConversationController::class,
         'start',

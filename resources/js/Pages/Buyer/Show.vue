@@ -829,16 +829,16 @@ function messageSeller() {
         return
     }
 
-    router.post(
-        safeRoute(
-            'buyer.conversations.start',
-            product.value.id
-        ),
-        {},
-        {
-            preserveScroll: true,
-        }
-    )
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+            new CustomEvent('open-buyer-chat', {
+                detail: {
+                    productId: product.value.id,
+                    sellerId: product.value.seller_id,
+                },
+            })
+        )
+    }
 }
 
 /*

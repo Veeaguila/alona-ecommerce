@@ -29,6 +29,6 @@ class BuyerOrderConversationController extends Controller
             'last_message_at' => now(),
         ]);
 
-        return redirect()->route('buyer.conversations.show', $conversation);
+        return redirect()->route('buyer.dashboard', ['chat' => $conversation->id]);
     }
 }

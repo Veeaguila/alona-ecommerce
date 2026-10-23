@@ -32,6 +32,22 @@ const showFilterDropdown = ref(false)
 const messageText = ref('')
 const messageContainer = ref(null)
 const showEmojiPicker = ref(false)
+const fileInput = ref(null)
+const selectedAttachment = ref(null)
+
+const handleFileSelect = e => {
+    const file = e.target.files?.[0]
+    if (file) {
+        selectedAttachment.value = file
+    }
+}
+
+const clearAttachment = () => {
+    selectedAttachment.value = null
+    if (fileInput.value) {
+        fileInput.value.value = ''
+    }
+}
 
 const quickReplies = [
     'Is this item available?',
@@ -114,6 +130,21 @@ const getProductImage = conv => {
         return path
     }
     return `/storage/${path.replace(/^\/+/, '')}`
+}
+
+const isImageFile = msg => {
+    if (msg?.attachment_type === 'image') return true
+    const ext = (msg?.attachment_name || msg?.attachment_path || '').split('.').pop().toLowerCase()
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)
+}
+
+const getAttachmentUrl = msg => {
+    if (msg?.attachment_url) return msg.attachment_url
+    if (!msg?.attachment_path) return ''
+    if (msg.attachment_path.startsWith('http://') || msg.attachment_path.startsWith('https://') || msg.attachment_path.startsWith('/storage/')) {
+        return msg.attachment_path
+    }
+    return `/storage/${msg.attachment_path.replace(/^\/+/, '')}`
 }
 
 // Unread counts
@@ -244,22 +275,40 @@ const refreshActiveConversation = async () => {
 // Send message
 const sendMessage = async () => {
     const text = messageText.value.trim()
-    if (!text || !selectedConversation.value || isSending.value) return
+    const file = selectedAttachment.value
+    if ((!text && !file) || !selectedConversation.value || isSending.value) return
 
     isSending.value = true
     const currentConvId = selectedConversation.value.id
 
     try {
-        const response = await fetch(`/buyer/conversations/${currentConvId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({ body: text }),
-        })
+        let response
+        if (file) {
+            const formData = new FormData()
+            if (text) formData.append('body', text)
+            formData.append('attachment', file)
+
+            response = await fetch(`/buyer/conversations/${currentConvId}`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            })
+        } else {
+            response = await fetch(`/buyer/conversations/${currentConvId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ body: text }),
+            })
+        }
 
         if (response.ok) {
             const data = await response.json()
@@ -267,6 +316,7 @@ const sendMessage = async () => {
                 messages.value.push(data.message)
             }
             messageText.value = ''
+            clearAttachment()
             showEmojiPicker.value = false
             scrollToBottom()
 
@@ -291,16 +341,6 @@ const sendQuickReply = reply => {
 const appendEmoji = emoji => {
     messageText.value += emoji
     showEmojiPicker.value = false
-}
-
-// Expand to full page
-const expandToFullPage = () => {
-    const convId = selectedConversation.value?.id
-    if (convId) {
-        router.visit(`/buyer/conversations?conversation=${convId}`)
-    } else {
-        router.visit('/buyer/conversations')
-    }
 }
 
 // Window controls
@@ -350,10 +390,34 @@ const handleGlobalChatOpen = e => {
         } else if (detail.sellerId) {
             const found = conversations.value.find(c => Number(c.seller_id) === Number(detail.sellerId))
             if (found) {
+                if (detail.productId && Number(found.product_id) !== Number(detail.productId)) {
+                    try {
+                        await fetch(`/buyer/conversations/start/${detail.productId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': getCsrfToken(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        })
+                        await fetchConversations()
+                        const updated = conversations.value.find(c => c.id === found.id)
+                        if (updated) {
+                            selectConversation(updated)
+                            return
+                        }
+                    } catch (err) {}
+                }
                 selectConversation(found)
-            } else if (detail.productId) {
+            } else {
+                // No conversation with this seller yet - start one!
                 try {
-                    const res = await fetch(`/buyer/conversations/start/${detail.productId}`, {
+                    const endpoint = detail.productId
+                        ? `/buyer/conversations/start/${detail.productId}`
+                        : `/buyer/conversations/start-seller/${detail.sellerId}`
+
+                    const res = await fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -484,18 +548,6 @@ onUnmounted(() => {
                     >
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                    </button>
-
-                    <!-- Expand to Full Page (↗) -->
-                    <button
-                        type="button"
-                        @click="expandToFullPage"
-                        title="Open full page"
-                        class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F8FAF9] hover:text-[#087F8C] transition cursor-pointer"
-                    >
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                            <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                         </svg>
                     </button>
 
@@ -807,13 +859,41 @@ onUnmounted(() => {
                                         <!-- Speech Bubble (Alona Colors: Buyer Soft Teal #E8F7F6, Seller Crisp White) -->
                                         <div
                                             :class="[
-                                                'px-3.5 py-2 rounded-2xl text-xs break-words shadow-xs whitespace-pre-wrap leading-relaxed',
+                                                'px-3.5 py-2 rounded-2xl text-xs break-words shadow-xs leading-relaxed',
                                                 Number(msg.sender_id) === Number(user?.id)
                                                     ? 'bg-[#E8F7F6] text-[#0A454C] border border-[#C5ECE8] rounded-tr-xs font-medium'
                                                     : 'bg-white text-[#1F2937] border border-[#E5E7EB] rounded-tl-xs'
                                             ]"
                                         >
-                                            {{ msg.body }}
+                                            <div v-if="msg.body" class="whitespace-pre-wrap">{{ msg.body }}</div>
+
+                                            <!-- Media Attachment -->
+                                            <div v-if="msg.attachment_path" :class="{ 'mt-1.5': msg.body }">
+                                                <a
+                                                    v-if="isImageFile(msg)"
+                                                    :href="getAttachmentUrl(msg)"
+                                                    target="_blank"
+                                                    class="block rounded-lg overflow-hidden border border-black/10 hover:opacity-90 transition max-w-xs"
+                                                >
+                                                    <img
+                                                        :src="getAttachmentUrl(msg)"
+                                                        :alt="msg.attachment_name || 'Attachment'"
+                                                        class="max-h-48 w-full object-cover rounded-lg"
+                                                    />
+                                                </a>
+                                                <a
+                                                    v-else
+                                                    :href="getAttachmentUrl(msg)"
+                                                    target="_blank"
+                                                    class="flex items-center gap-2 p-2 rounded-lg bg-black/5 hover:bg-black/10 transition text-xs font-semibold"
+                                                >
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                                    </svg>
+                                                    <span class="truncate">{{ msg.attachment_name || 'Download file' }}</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -839,6 +919,27 @@ onUnmounted(() => {
                             <!-- Quick action strip -->
                             <div class="flex items-center justify-between gap-2 px-1 relative">
                                 <div class="flex items-center gap-2">
+                                    <!-- Hidden Attachment Input -->
+                                    <input
+                                        ref="fileInput"
+                                        type="file"
+                                        class="hidden"
+                                        accept="image/*,application/pdf"
+                                        @change="handleFileSelect"
+                                    />
+
+                                    <!-- Attachment Button -->
+                                    <button
+                                        type="button"
+                                        @click="fileInput?.click()"
+                                        title="Attach file or image"
+                                        class="w-6 h-6 flex items-center justify-center text-[#64748B] hover:text-[#087F8C] transition cursor-pointer"
+                                    >
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                                        </svg>
+                                    </button>
+
                                     <!-- Emoji Button -->
                                     <button
                                         type="button"
@@ -885,6 +986,28 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
+                            <!-- Selected Attachment Preview Chip -->
+                            <div
+                                v-if="selectedAttachment"
+                                class="flex items-center justify-between bg-[#E8F7F6] border border-[#C5ECE8] rounded-xl px-3 py-1.5 text-xs text-[#087F8C] mx-1"
+                            >
+                                <div class="flex items-center gap-2 truncate">
+                                    <svg class="w-4 h-4 shrink-0 text-[#087F8C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                                    </svg>
+                                    <span class="font-bold truncate">{{ selectedAttachment.name }}</span>
+                                    <span class="text-[10px] text-[#64748B]">({{ (selectedAttachment.size / 1024).toFixed(1) }} KB)</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="clearAttachment"
+                                    title="Remove attachment"
+                                    class="text-[#64748B] hover:text-red-500 font-bold ml-2 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
                             <!-- Text Input and Send Row -->
                             <div class="flex items-end gap-2">
                                 <textarea
@@ -899,7 +1022,7 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     @click="sendMessage"
-                                    :disabled="!messageText.trim() || isSending"
+                                    :disabled="(!messageText.trim() && !selectedAttachment) || isSending"
                                     class="w-9 h-9 rounded-xl bg-[#087F8C] hover:bg-[#065A63] disabled:opacity-40 disabled:hover:bg-[#087F8C] text-white flex items-center justify-center transition shadow-xs shrink-0 cursor-pointer"
                                     title="Send Message"
                                 >
