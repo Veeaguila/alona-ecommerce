@@ -101,7 +101,7 @@ const changeCategory = category => {
         >
 
             <div
-                class="mx-auto max-w-[1536px] w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10"
+                class="mx-auto w-full w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10"
             >
 
                 <!-- ===================================================== -->

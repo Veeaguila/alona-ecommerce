@@ -41,7 +41,9 @@ class SellerReturnController extends Controller
             ->where('seller_id', $sellerId)
             ->with([
                 'order:id,order_number,created_at,payment_method,payment_status,total',
-                'orderItem:id,order_id,product_id,product_variant_id,product_name,variant_title,price,quantity,image_url,status',
+                'orderItem',
+                'orderItem.product:id,name,image_path',
+                'orderItem.variant:id,product_id,color,size,image_path',
                 'buyer:id,name,email,avatar,contact_number',
                 'refundLedger',
             ]);
@@ -110,7 +112,9 @@ class SellerReturnController extends Controller
             ->where('seller_id', $sellerId)
             ->with([
                 'order:id,order_number',
-                'orderItem:id,product_name,variant_title,price,quantity,image_url',
+                'orderItem',
+                'orderItem.product:id,name,image_path',
+                'orderItem.variant:id,product_id,color,size,image_path',
                 'buyer:id,name,email,avatar',
                 'returnRequest:id,status,type,reason',
             ]);
@@ -194,7 +198,9 @@ class SellerReturnController extends Controller
 
         $returnRequest->load([
             'order:id,order_number,created_at,payment_method,payment_status,total',
-            'orderItem:id,order_id,product_id,product_variant_id,product_name,variant_title,price,quantity,image_url,status',
+            'orderItem',
+            'orderItem.product:id,name,image_path',
+            'orderItem.variant:id,product_id,color,size,image_path',
             'buyer:id,name,email,avatar,contact_number',
             'refundLedger',
         ]);

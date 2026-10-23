@@ -296,7 +296,7 @@ const submitDeleteAccount = () => {
     <Head title="Seller Account & Security" />
 
     <SellerLayout>
-        <div class="mx-auto max-w-6xl space-y-6 pb-12">
+        <div class="w-full space-y-6 pb-12">
             <!-- ========================================================= -->
             <!-- TOP SELLER ACCOUNT BANNER -->
             <!-- ========================================================= -->
@@ -320,7 +320,11 @@ const submitDeleteAccount = () => {
                             </div>
 
                             <div>
-                                <div class="flex flex-wrap items-center gap-2.5">
+                                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-100">
+                                    <span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>
+                                    <span>My Account</span>
+                                </div>
+                                <div class="mt-1 flex flex-wrap items-center gap-2.5">
                                     <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl">
                                         {{ account.name || 'Seller Account' }}
                                     </h1>

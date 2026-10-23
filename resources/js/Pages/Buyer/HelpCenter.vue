@@ -141,7 +141,7 @@ const filteredTopics = computed(() => {
 
     <component :is="layoutComponent">
         <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
+            <div class="mx-auto w-full w-full px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
 
                 <!-- HERO SECTION -->
                 <div class="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#087F8C] via-[#066B76] to-[#044850] p-6 text-white shadow-lg sm:p-10 lg:p-12">

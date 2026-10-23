@@ -298,93 +298,27 @@ const statusClass = (status) => {
     <Head title="Seller Dashboard" />
 
     <SellerLayout>
-        <div class="mx-auto w-full max-w-[1536px] space-y-6">
+        <div class="w-full space-y-6">
 
             <!-- ========================================================
                  PAGE HEADER (Clean & Modern)
             ========================================================= -->
 
-            <div class="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2.5">
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-[#E8F7F6] px-3 py-1 text-xs font-bold text-[#087F8C]">
-                                <span class="h-2 w-2 rounded-full bg-[#16A6A0] animate-pulse"></span>
-                                Seller Center
-                            </span>
-                            <span class="text-xs text-slate-400">·</span>
-                            <span class="text-xs font-medium text-slate-500">
-                                {{ currentDateFormatted }}
-                            </span>
-                        </div>
-
-                        <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">
-                            Store Dashboard
-                        </h1>
-
-                        <p class="mt-1 max-w-2xl text-xs sm:text-sm text-[#64748B]">
-                            Monitor your store revenue, fulfill pending customer orders, and manage inventory and reviews in real time.
-                        </p>
-                    </div>
-
-                    <!-- Header Quick Navigation Buttons -->
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <Link
-                            :href="route('seller.products.create')"
-                            class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#066D78] active:translate-y-0.5"
-                        >
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            <span>Add Product</span>
-                        </Link>
-
-                        <Link
-                            :href="route('seller.orders')"
-                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#16A6A0] hover:text-[#087F8C]"
-                        >
-                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                <path d="M6 3h12l2 4v13H4V7l2-4Z" />
-                                <path d="M4 7h16" />
-                            </svg>
-                            <span>Orders</span>
-                            <span
-                                v-if="orderMetrics.pending > 0"
-                                class="rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-bold text-amber-800"
-                            >
-                                {{ orderMetrics.pending }}
-                            </span>
-                        </Link>
-
-                        <Link
-                            :href="route('seller.stock-monitoring')"
-                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#16A6A0] hover:text-[#087F8C]"
-                        >
-                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                            <span>Stock Monitor</span>
-                            <span
-                                v-if="stockMetrics.out_of_stock > 0"
-                                class="rounded-full bg-red-100 px-1.5 py-0.2 text-[10px] font-bold text-red-600"
-                            >
-                                {{ stockMetrics.out_of_stock }}
-                            </span>
-                        </Link>
-
-                        <Link
-                            :href="route('seller.store')"
-                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#16A6A0] hover:text-[#087F8C]"
-                        >
-                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                <path d="M3 10l2-6h14l2 6" />
-                                <path d="M4 10v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9" />
-                                <path d="M3 10h18" />
-                            </svg>
-                            <span>Storefront</span>
-                        </Link>
-                    </div>
+            <div class="border-b border-[#E5E7EB] pb-5">
+                <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    <span>Workspace</span>
+                    <span class="text-slate-300">·</span>
+                    <span class="font-medium normal-case text-slate-500">{{ currentDateFormatted }}</span>
                 </div>
+
+                <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                    Store Dashboard
+                </h1>
+
+                <p class="mt-0.5 text-xs text-slate-500">
+                    Monitor your store revenue, fulfill pending customer orders, and manage inventory and reviews in real time.
+                </p>
             </div>
 
             <!-- ========================================================

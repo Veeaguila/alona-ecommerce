@@ -553,19 +553,19 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
     <Head title="Promotions & Vouchers" />
 
     <SellerLayout>
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-5 lg:px-6">
+        <div class="w-full space-y-6">
                 <!-- PAGE HEADER -->
                 <div class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#087F8C]">
-                            Promotions & Marketing
-                        </p>
-                        <h1 class="mt-1 text-2xl font-bold tracking-tight text-[#1F2937] sm:text-3xl">
+                        <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                            <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                            <span>Promotions</span>
+                        </div>
+                        <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                             Vouchers & Campaigns
                         </h1>
-                        <p class="mt-1 text-sm text-[#64748B]">
-                            Create percentage discounts with caps, free shipping subsidies, product-targeted vouchers, and track real revenue attribution.
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Create discount codes, free shipping vouchers, flash sales, and track promotional campaign performance.
                         </p>
                     </div>
 
@@ -1080,7 +1080,6 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                     </div>
                 </section>
             </div>
-        </div>
 
         <!-- CREATE / EDIT MODAL -->
         <div

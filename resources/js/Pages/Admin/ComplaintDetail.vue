@@ -232,20 +232,13 @@ const setStatus = (value) => {
     <Head :title="title" />
 
     <AdminLayout :active="active">
-        <div class="mx-auto max-w-5xl">
+        <div class="w-full">
 
             <!-- PAGE HEADER -->
             <div class="pb-5">
-                <div class="flex items-center gap-2">
-                    <span
-                        class="h-1.5 w-1.5 rounded-full bg-[#087F8C]"
-                    ></span>
-
-                    <p
-                        class="text-xs font-bold uppercase tracking-[0.14em] text-[#087F8C]"
-                    >
-                        {{ eyebrow }}
-                    </p>
+                <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    <span>{{ eyebrow }}</span>
                 </div>
 
                 <div
@@ -253,14 +246,14 @@ const setStatus = (value) => {
                 >
                     <div>
                         <h1
-                            class="text-2xl font-bold tracking-tight text-[#1F2937] sm:text-3xl"
+                            class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                         >
                             {{ title }}
                         </h1>
 
                         <p
                             v-if="description"
-                            class="mt-1 max-w-3xl text-sm leading-5 text-[#64748B]"
+                            class="mt-1 max-w-3xl text-sm leading-5 text-slate-500"
                         >
                             {{ description }}
                         </p>

@@ -1036,7 +1036,7 @@ onUnmounted(() => {
                 <div class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#16A6A0]/10 blur-3xl"></div>
                 <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#F4B942]/10 blur-3xl"></div>
 
-                <div class="mx-auto max-w-[1536px] w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
+                <div class="mx-auto w-full w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
                     <div
                         class="alona-reveal hero-card relative overflow-hidden rounded-[30px] bg-[#087F8C]"
                         @mouseenter="pauseHero"
@@ -1221,7 +1221,7 @@ onUnmounted(() => {
 
             <section
                 id="categories"
-                class="alona-reveal mx-auto max-w-[1536px] w-full scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 2xl:px-10 lg:pb-12"
+                class="alona-reveal mx-auto w-full w-full scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 2xl:px-10 lg:pb-12"
             >
 
                 <div
@@ -1540,7 +1540,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
                 >
 
                     <div
@@ -1738,7 +1738,7 @@ onUnmounted(() => {
                 class="alona-reveal border-y border-gray-100 bg-[#F8FAF9]"
             >
                 <div
-                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
                 >
                     <div class="flex items-end justify-between gap-4">
                         <div>
@@ -1912,7 +1912,7 @@ onUnmounted(() => {
 
             <section
                 v-if="featuredProductsList.length"
-                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
+                class="alona-reveal mx-auto w-full w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
             >
                 <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
@@ -2052,7 +2052,7 @@ onUnmounted(() => {
 
             <section
                 v-if="recommendedProductsList.length"
-                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
+                class="alona-reveal mx-auto w-full w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
             >
                 <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
@@ -2213,7 +2213,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
                 >
 
                     <div
@@ -2404,7 +2404,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                class="alona-reveal mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
             >
 
                 <div
@@ -2472,7 +2472,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1536px] w-full px-4 py-12 sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
+                    class="mx-auto w-full w-full px-4 py-12 sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
                 >
 
                     <div
@@ -2545,7 +2545,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal mx-auto max-w-[1536px] w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                class="alona-reveal mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
             >
 
                 <div
@@ -2608,7 +2608,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="mx-auto max-w-[1536px] w-full px-4 py-12 text-center sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
+                    class="mx-auto w-full w-full px-4 py-12 text-center sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
                 >
 
                     <p

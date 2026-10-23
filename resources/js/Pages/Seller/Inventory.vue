@@ -253,52 +253,29 @@ const formatDate = (dateString) => {
     <SellerLayout>
         <Head :title="`Inventory - ${product.name}`" />
 
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9]">
+        <div class="w-full space-y-6">
 
             <!-- PAGE HEADER -->
-            <div class="border-b border-[#E5E7EB] bg-white">
-                <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+            <div class="border-b border-[#E5E7EB] pb-5">
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="min-w-0">
-                            <div class="mb-2 flex items-center gap-2 text-xs">
-                                <Link
-                                    :href="route('seller.products')"
-                                    class="font-semibold text-[#087F8C] transition hover:text-[#066B76]"
-                                >
-                                    Inventory
-                                </Link>
-
-                                <svg
-                                    class="h-3.5 w-3.5 text-[#CBD5E1]"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06l-4.24 4.24a.75.75 0 0 1-1.08 0Z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-
-                                <span
-                                    class="truncate text-[#64748B]"
-                                >
-                                    {{ product.name }}
-                                </span>
+                            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                                <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                <span>Inventory</span>
+                                <span class="text-slate-300">·</span>
+                                <span class="font-medium normal-case text-slate-500 truncate max-w-xs">{{ product.name }}</span>
                             </div>
 
                             <h1
-                                class="text-2xl font-bold tracking-tight text-[#1F2937]"
+                                class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                             >
                                 Manage Inventory
                             </h1>
 
-                            <p class="mt-1 text-sm text-[#64748B]">
-                                Update stock levels for this product
-                                and its variants.
+                            <p class="mt-0.5 text-xs text-slate-500">
+                                Update stock levels, adjustments, and movements for this product and its variants.
                             </p>
                         </div>
 
@@ -345,11 +322,10 @@ const formatDate = (dateString) => {
                             </Link>
                         </div>
                     </div>
-                </div>
             </div>
 
             <!-- MAIN CONTENT -->
-            <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+            <div class="w-full">
                 <div class="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
 
                     <!-- PRODUCT SUMMARY -->
@@ -1124,7 +1100,7 @@ const formatDate = (dateString) => {
                         </section>
                     </div>
                 </div>
-            </main>
+            </div>
 
             <!-- LOG STOCK ADJUSTMENT MODAL -->
             <div

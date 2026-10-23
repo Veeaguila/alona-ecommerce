@@ -6,8 +6,12 @@
             <!-- Header Section -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight text-[#1F2937]">Store Categories</h1>
-                    <p class="mt-1 text-sm text-[#64748B]">
+                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <span>Store Management</span>
+                    </div>
+                    <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Store Categories</h1>
+                    <p class="mt-0.5 text-xs text-slate-500">
                         Organize your products into custom categories and subcategories on your storefront.
                     </p>
                 </div>

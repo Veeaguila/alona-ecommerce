@@ -14,8 +14,12 @@
         <!-- Filter Card -->
         <div class="app-panel app-panel--padded">
           <div class="border-b border-[var(--app-border)] pb-4 mb-6">
-            <h2 class="app-section-title">Performance &amp; Analytics</h2>
-            <p class="mt-1 text-sm text-gray-600">Analyze parcel throughput, delivery status distribution, and average turnaround time.</p>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Reports</span>
+            </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Performance &amp; Analytics</h1>
+            <p class="mt-0.5 text-xs text-slate-500">Analyze parcel throughput, delivery status distribution, and turnaround times by date range.</p>
           </div>
 
           <form class="space-y-4" @submit.prevent="generateReport">

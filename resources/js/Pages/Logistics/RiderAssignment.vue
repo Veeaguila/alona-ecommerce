@@ -14,11 +14,16 @@
         <!-- Top Status & Actions Card -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 app-panel app-panel--padded app-toolbar">
           <div>
-            <p class="text-sm font-semibold text-gray-600">Sorted & Unassigned Queue</p>
-            <div class="mt-1 flex items-baseline gap-2">
-              <span class="text-3xl font-bold text-[var(--app-primary)]">{{ parcels.length }}</span>
-              <span class="text-xs text-[var(--app-text-muted)] font-medium">parcels ready for rider dispatch</span>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Fleet Dispatch</span>
             </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Rider Assignment & Dispatch
+            </h1>
+            <p class="mt-0.5 text-xs text-slate-500">
+              Assign ready-to-deliver parcels to active delivery riders. ({{ parcels.length }} unassigned)
+            </p>
           </div>
           <button
             type="button"

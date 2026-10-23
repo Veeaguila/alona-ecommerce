@@ -129,7 +129,7 @@ const onCategoryImgError = () => {
 
     <component :is="layoutComponent">
         <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-5 pb-20 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
+            <div class="mx-auto w-full w-full px-4 py-5 pb-20 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
 
                 <!-- ===================================================== -->
                 <!-- BREADCRUMBS -->

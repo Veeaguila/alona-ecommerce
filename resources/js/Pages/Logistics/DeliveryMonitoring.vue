@@ -25,11 +25,16 @@
         <!-- Filter & Search Bar -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between app-panel app-panel--padded app-toolbar">
           <div>
-            <p class="text-sm font-semibold text-gray-600">Tracked Parcels in Workflow</p>
-            <div class="mt-1 flex items-baseline gap-2">
-              <span class="text-3xl font-bold text-[var(--app-primary)]">{{ pagination.total }}</span>
-              <span class="text-xs text-[var(--app-text-muted)] font-medium">total matching filters</span>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Transit Monitoring</span>
             </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Delivery Fleet Monitoring
+            </h1>
+            <p class="mt-0.5 text-xs text-slate-500">
+              Track parcels in workflow and monitor active deliveries. ({{ pagination.total }} matching)
+            </p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2">

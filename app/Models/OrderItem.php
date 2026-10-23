@@ -12,9 +12,11 @@ class OrderItem extends Model
     {
         static::creating(function (self $item): void {
             if ($item->product_variant_id && empty($item->variant_label)) {
-                $variant = ProductVariant::find($item->product_variant_id);
-                if ($variant) {
-                    $item->variant_label = $variant->label();
+                if (\Illuminate\Support\Facades\Schema::hasColumn('order_items', 'variant_label')) {
+                    $variant = ProductVariant::find($item->product_variant_id);
+                    if ($variant) {
+                        $item->variant_label = $variant->label();
+                    }
                 }
             }
         });
@@ -91,6 +93,9 @@ class OrderItem extends Model
         'can_cancel',
         'can_edit',
         'available_actions',
+        'variant_title',
+        'variant_label',
+        'image_url',
     ];
 
     protected function casts(): array
@@ -232,6 +237,48 @@ class OrderItem extends Model
             'cancelled' => 'Cancelled',
             default => ucfirst(str_replace('_', ' ', (string) $this->status)),
         };
+    }
+
+    public function getVariantTitleAttribute(): ?string
+    {
+        if (! empty($this->attributes['variant_label'])) {
+            return $this->attributes['variant_label'];
+        }
+
+        if ($this->relationLoaded('variant') && $this->variant) {
+            return method_exists($this->variant, 'label') ? $this->variant->label() : ($this->variant->name ?? null);
+        }
+
+        if ($this->product_variant_id) {
+            $variant = ProductVariant::find($this->product_variant_id);
+            if ($variant) {
+                return method_exists($variant, 'label') ? $variant->label() : ($variant->name ?? null);
+            }
+        }
+
+        return null;
+    }
+
+    public function getVariantLabelAttribute($value = null): ?string
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        return $this->variant_title;
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        if ($this->relationLoaded('variant') && ! empty($this->variant?->image_path)) {
+            return $this->variant->image_path;
+        }
+
+        if ($this->relationLoaded('product') && ! empty($this->product?->image_path)) {
+            return $this->product->image_path;
+        }
+
+        return null;
     }
 
     /**

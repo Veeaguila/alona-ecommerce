@@ -12,8 +12,12 @@
       <template v-else>
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between app-panel app-panel--padded app-toolbar">
           <div>
-            <h2 class="app-section-title">Sorting Center Communications</h2>
-            <p class="mt-1 text-sm text-gray-600">Message approved riders connected to this sorting center.</p>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Communications</span>
+            </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Sorting Center Communications</h1>
+            <p class="mt-0.5 text-xs text-slate-500">Message approved riders and operations personnel connected to this center.</p>
           </div>
           <button
             type="button"

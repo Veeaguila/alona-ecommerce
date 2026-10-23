@@ -61,12 +61,12 @@
                     class="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4"
                 >
 
-                    <!-- Workspace -->
+                    <!-- Seller Menu -->
                     <div class="pt-5">
                         <p
                             class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-teal-100/70"
                         >
-                            Workspace
+                            Seller Menu
                         </p>
 
                         <nav class="space-y-1">
@@ -146,7 +146,7 @@
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
-                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a3 3 0 006 0M9 5h6M9 12h6m-6 4h4"
+                                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                                     />
                                 </svg>
 
@@ -163,7 +163,7 @@
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
-                                        d="M16 15v-1a4 4 0 00-4-4H4m0 0l4 4m-4-4l4-4m12 5v2a3 3 0 01-3 3H9"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                                     />
                                 </svg>
 
@@ -197,12 +197,7 @@
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
-                                        d="M20 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                                    />
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M12 7.1l1.09 2.22 2.45.36-1.77 1.73.42 2.44L12 12.7l-2.19 1.15.42-2.44-1.77-1.73 2.45-.36L12 7.1z"
+                                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
                                     />
                                 </svg>
 
@@ -246,49 +241,199 @@
                             </Link>
                         </nav>
                     </div>
+
+                    <!-- Divider -->
+                    <div class="my-4 border-t border-white/10"></div>
+
+                    <!-- Store Management -->
+                    <div>
+                        <p
+                            class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-teal-100/70"
+                        >
+                            Store Management
+                        </p>
+
+                        <nav class="space-y-1">
+                            <Link
+                                v-for="item in accountNavigation"
+                                :key="item.key"
+                                :href="item.href"
+                                class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+                                :class="
+                                    isActive(item)
+                                        ? 'bg-[#F5A711] text-[#043E44] font-bold shadow-md'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                                "
+                                @click="closeSidebar"
+                            >
+                                <!-- My Store -->
+                                <svg
+                                    v-if="item.key === 'store'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3 10l2-6h14l2 6M4 10v9a2 2 0 002 2h12a2 2 0 002-2v-9M3 10h18M8 10v3m4-3v3m4-3v3"
+                                    />
+                                </svg>
+
+                                <!-- Categories -->
+                                <svg
+                                    v-else-if="item.key === 'categories'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                    />
+                                </svg>
+
+                                <!-- My Account -->
+                                <svg
+                                    v-else-if="item.key === 'account'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <circle cx="12" cy="8" r="3.5" />
+                                    <path
+                                        d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5"
+                                        stroke-linecap="round"
+                                    />
+                                </svg>
+
+                                <!-- Settings -->
+                                <svg
+                                    v-else-if="item.key === 'settings'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M10.5 3h3l.7 2.2a7.7 7.7 0 012 1.2l2.2-.4 1.5 2.6-1.5 1.7c.1.5.2 1 .2 1.7s-.1 1.2-.2 1.7l1.5 1.7-1.5 2.6-2.2-.4a7.7 7.7 0 01-2 1.2l-.7 2.2h-3l-.7-2.2a7.7 7.7 0 01-2-1.2l-2.2.4-1.5-2.6 1.5-1.7a7 7 0 010-3.4L4.1 8.6l1.5-2.6 2.2.4a7.7 7.7 0 012-1.2L10.5 3z"
+                                    />
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="2.5"
+                                    />
+                                </svg>
+
+                                <!-- Notifications -->
+                                <svg
+                                    v-else-if="item.key === 'notifications'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 17h5l-1.4-1.8A2 2 0 0118 14V10a6 6 0 00-12 0v4a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
+                                    />
+                                </svg>
+
+                                <span class="truncate">
+                                    {{ item.label }}
+                                </span>
+                            </Link>
+                        </nav>
+                    </div>
                 </div>
 
-                <!-- Store Status -->
+                <!-- Sidebar Bottom: User Card & Logout on the side -->
                 <div class="shrink-0 border-t border-white/10 bg-black/10 p-3">
                     <div
-                        class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur-xs"
+                        class="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/10 p-2 backdrop-blur-xs transition hover:bg-white/15"
                     >
-                        <span
-                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#087F8C] shadow-xs"
+                        <!-- Profile Info (Navigates to Account Management) -->
+                        <Link
+                            :href="route('seller.account')"
+                            class="group flex min-w-0 flex-1 items-center gap-2.5 transition"
+                            title="Account Management"
+                            @click="closeSidebar"
+                        >
+                            <!-- Profile Photo / Initial -->
+                            <span
+                                class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-black text-[#087F8C] shadow-xs"
+                            >
+                                <img
+                                    v-if="profilePhoto"
+                                    :src="profilePhoto"
+                                    :alt="profileName"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>
+                                    {{ profileInitial }}
+                                </span>
+                            </span>
+
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="truncate text-xs font-bold text-white group-hover:text-teal-200"
+                                >
+                                    {{ profileName }}
+                                </p>
+                                <p class="text-[10px] text-teal-100/70">
+                                    My account
+                                </p>
+                            </div>
+                        </Link>
+
+                        <!-- Logout Button on the side -->
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200 transition hover:bg-rose-500/20 hover:text-white active:scale-95 disabled:opacity-50"
+                            :title="form.processing ? 'Logging out...' : 'Log out'"
+                            :aria-label="form.processing ? 'Logging out...' : 'Log out'"
+                            :disabled="form.processing"
+                            @click="logout"
                         >
                             <svg
-                                xmlns="http://www.w3.org/2000/svg"
                                 class="h-4 w-4"
-                                fill="none"
                                 viewBox="0 0 24 24"
+                                fill="none"
                                 stroke="currentColor"
                                 stroke-width="1.8"
                             >
                                 <path
+                                    d="M10 17l5-5-5-5"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                                <path
+                                    d="M15 12H3"
+                                    stroke-linecap="round"
+                                />
+                                <path
+                                    d="M19 4h1a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-1"
+                                    stroke-linecap="round"
                                 />
                             </svg>
-                        </span>
-
-                        <div class="min-w-0">
-                            <p class="text-xs font-semibold text-white">
-                                Store status
-                            </p>
-
-                            <div class="mt-0.5 flex items-center gap-1.5">
-                                <span
-                                    class="h-1.5 w-1.5 rounded-full bg-emerald-400"
-                                ></span>
-
-                                <span
-                                    class="truncate text-[11px] font-medium text-emerald-300"
-                                >
-                                    Active
-                                </span>
-                            </div>
-                        </div>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -371,298 +516,48 @@
                             </svg>
                         </Link>
 
-                        <!-- Seller Account Dropdown (Buyer-style) -->
+                        <!-- Store Status -->
                         <div
-                            class="relative ml-1 border-l border-[#E5E7EB] pl-2 sm:pl-3"
-                            data-seller-account-dropdown
+                            class="ml-1 flex items-center gap-2.5 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-1.5 transition sm:px-3.5 sm:py-2"
                         >
-                            <button
-                                type="button"
-                                class="flex h-10 items-center gap-2 rounded-xl border border-transparent px-2.5 text-left transition hover:border-[#E5E7EB] hover:bg-[#E8F7F6]"
-                                :class="{
-                                    'border-[#E5E7EB] bg-[#E8F7F6]': accountOpen,
-                                }"
-                                aria-label="Account"
-                                :aria-expanded="accountOpen"
-                                @click.stop="toggleAccountDropdown"
+                            <span
+                                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shadow-xs"
                             >
-                                <!-- Profile Photo / Initial -->
-                                <span
-                                    class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-xs font-black text-[#087F8C]"
-                                >
-                                    <img
-                                        v-if="profilePhoto"
-                                        :src="profilePhoto"
-                                        :alt="profileName"
-                                        class="h-full w-full object-cover"
-                                    />
-                                    <span v-else>
-                                        {{ profileInitial }}
-                                    </span>
-                                </span>
-
-                                <span class="hidden max-w-[130px] sm:block">
-                                    <span
-                                        class="block truncate text-xs font-extrabold text-[#1F2937]"
-                                    >
-                                        {{ profileName }}
-                                    </span>
-                                    <span
-                                        class="block text-[9px] text-[#64748B]"
-                                    >
-                                        My account
-                                    </span>
-                                </span>
-
                                 <svg
-                                    class="hidden h-3.5 w-3.5 text-[#64748B] transition-transform duration-200 sm:block"
-                                    :class="{
-                                        'rotate-180': accountOpen,
-                                    }"
-                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
                                     fill="none"
+                                    viewBox="0 0 24 24"
                                     stroke="currentColor"
                                     stroke-width="2"
                                 >
                                     <path
-                                        d="m6 9 6 6 6-6"
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                     />
                                 </svg>
-                            </button>
+                            </span>
 
-                            <!-- Account Dropdown Menu -->
-                            <Transition
-                                enter-active-class="transition duration-150 ease-out"
-                                enter-from-class="translate-y-1 opacity-0"
-                                enter-to-class="translate-y-0 opacity-100"
-                                leave-active-class="transition duration-100 ease-in"
-                                leave-from-class="translate-y-0 opacity-100"
-                                leave-to-class="translate-y-1 opacity-0"
-                            >
-                                <div
-                                    v-if="accountOpen"
-                                    class="absolute right-0 top-[calc(100%+10px)] z-50 w-[280px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
-                                    @click.stop
+                            <div class="min-w-0">
+                                <p
+                                    class="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]"
                                 >
-                                    <!-- Account Info Header -->
-                                    <div
-                                        class="border-b border-[#E5E7EB] bg-[#F8FAF9] px-4 py-4"
+                                    Store status
+                                </p>
+
+                                <div class="flex items-center gap-1.5">
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100"
+                                    ></span>
+
+                                    <span
+                                        class="text-xs font-bold text-emerald-700"
                                     >
-                                        <div class="flex items-center gap-3">
-                                            <span
-                                                class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-sm font-black text-[#087F8C]"
-                                            >
-                                                <img
-                                                    v-if="profilePhoto"
-                                                    :src="profilePhoto"
-                                                    :alt="profileName"
-                                                    class="h-full w-full object-cover"
-                                                />
-                                                <span v-else>
-                                                    {{ profileInitial }}
-                                                </span>
-                                            </span>
-
-                                            <div class="min-w-0">
-                                                <p
-                                                    class="truncate text-sm font-extrabold text-[#1F2937]"
-                                                >
-                                                    {{ profileName }}
-                                                </p>
-                                                <p
-                                                    v-if="profileEmail"
-                                                    class="truncate text-xs text-[#64748B]"
-                                                >
-                                                    {{ profileEmail }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Account Links -->
-                                    <div class="p-2">
-                                        <!-- Account Management / My Profile -->
-                                        <Link
-                                            :href="route('seller.account')"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                            @click="closeAccountDropdown"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="8"
-                                                        r="3.5"
-                                                    />
-                                                    <path
-                                                        d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5"
-                                                        stroke-linecap="round"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            Account Management
-                                        </Link>
-
-                                        <!-- Store Profile -->
-                                        <Link
-                                            :href="route('seller.store')"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                            @click="closeAccountDropdown"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M3 10l2-6h14l2 6M4 10v9a2 2 0 002 2h12a2 2 0 002-2v-9M3 10h18M8 10v3m4-3v3m4-3v3"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            My Store
-                                        </Link>
-
-                                        <!-- Store Categories (Module S2) -->
-                                        <Link
-                                            :href="route('seller.categories')"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                            @click="closeAccountDropdown"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            Store Categories
-                                        </Link>
-
-                                        <!-- Seller Settings -->
-                                        <Link
-                                            :href="route('seller.settings')"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                            @click="closeAccountDropdown"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M10.5 3h3l.7 2.2a7.7 7.7 0 012 1.2l2.2-.4 1.5 2.6-1.5 1.7c.1.5.2 1 .2 1.7s-.1 1.2-.2 1.7l1.5 1.7-1.5 2.6-2.2-.4a7.7 7.7 0 01-2 1.2l-.7 2.2h-3l-.7-2.2a7.7 7.7 0 01-2-1.2l-2.2.4-1.5-2.6 1.5-1.7a7 7 0 010-3.4L4.1 8.6l1.5-2.6 2.2.4a7.7 7.7 0 012-1.2L10.5 3z"
-                                                    />
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="2.5"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            Seller Settings
-                                        </Link>
-
-                                        <!-- Notifications -->
-                                        <Link
-                                            :href="route('seller.notifications')"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                            @click="closeAccountDropdown"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        d="M15 17h5l-1.4-1.8A2 2 0 0118 14V10a6 6 0 00-12 0v4a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            Notifications
-                                        </Link>
-                                    </div>
-
-                                    <!-- Logout -->
-                                    <div
-                                        class="border-t border-[#E5E7EB] p-2"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#E85D5D] transition hover:bg-[#FFF1F1] disabled:opacity-50"
-                                            :disabled="form.processing"
-                                            @click="logout"
-                                        >
-                                            <span
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFF1F1]"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                >
-                                                    <path
-                                                        d="M10 17l5-5-5-5"
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                    />
-                                                    <path
-                                                        d="M15 12H3"
-                                                        stroke-linecap="round"
-                                                    />
-                                                    <path
-                                                        d="M19 4h1a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-1"
-                                                        stroke-linecap="round"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            {{ form.processing ? 'Logging out...' : 'Log out' }}
-                                        </button>
-                                    </div>
+                                        Active
+                                    </span>
                                 </div>
-                            </Transition>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -679,11 +574,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 
 const sidebarOpen = ref(false)
-const accountOpen = ref(false)
 
 const form = useForm({})
 
@@ -727,45 +621,14 @@ const profileInitial = computed(() => {
     return profileName.value?.charAt(0)?.toUpperCase() || 'S'
 })
 
-const toggleAccountDropdown = () => {
-    accountOpen.value = !accountOpen.value
-}
-
-const closeAccountDropdown = () => {
-    accountOpen.value = false
-}
-
-const handleOutsideClick = (event) => {
-    const target = event.target
-    if (target && typeof target.closest === 'function' && !target.closest('[data-seller-account-dropdown]')) {
-        accountOpen.value = false
-    }
-}
-
-const handleEscape = (event) => {
-    if (event.key === 'Escape') {
-        accountOpen.value = false
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('click', handleOutsideClick)
-    document.addEventListener('keydown', handleEscape)
-})
-
-onUnmounted(() => {
-    document.removeEventListener('click', handleOutsideClick)
-    document.removeEventListener('keydown', handleEscape)
-})
-
 const navigation = [
     {
-        label: 'Overview',
+        label: 'Dashboard',
         href: route('seller.dashboard'),
         key: 'dashboard',
     },
     {
-        label: 'Inventory',
+        label: 'Products',
         href: route('seller.products'),
         key: 'inventory',
     },
@@ -785,24 +648,52 @@ const navigation = [
         key: 'returns',
     },
     {
-        label: 'Vouchers',
+        label: 'Discounts & Vouchers',
         href: route('seller.vouchers'),
         key: 'vouchers',
     },
     {
-        label: 'Customer Reviews',
+        label: 'Reviews',
         href: route('seller.reviews'),
         key: 'reviews',
     },
     {
-        label: 'Sales Report',
+        label: 'Sales & Reports',
         href: route('seller.reports'),
         key: 'reports',
     },
     {
-        label: 'Chat / Messaging',
+        label: 'Messages',
         href: route('seller.messages'),
         key: 'messages',
+    },
+]
+
+const accountNavigation = [
+    {
+        label: 'My Store',
+        href: route('seller.store'),
+        key: 'store',
+    },
+    {
+        label: 'Categories',
+        href: route('seller.categories'),
+        key: 'categories',
+    },
+    {
+        label: 'My Account',
+        href: route('seller.account'),
+        key: 'account',
+    },
+    {
+        label: 'Settings',
+        href: route('seller.settings'),
+        key: 'settings',
+    },
+    {
+        label: 'Notifications',
+        href: route('seller.notifications'),
+        key: 'notifications',
     },
 ]
 
@@ -859,6 +750,26 @@ const isActive = (item) => {
         return currentPath.value.startsWith('/seller/messages')
     }
 
+    if (item.key === 'account') {
+        return currentPath.value.startsWith('/seller/account')
+    }
+
+    if (item.key === 'store') {
+        return currentPath.value.startsWith('/seller/store')
+    }
+
+    if (item.key === 'categories') {
+        return currentPath.value.startsWith('/seller/categories')
+    }
+
+    if (item.key === 'settings') {
+        return currentPath.value.startsWith('/seller/settings')
+    }
+
+    if (item.key === 'notifications') {
+        return currentPath.value.startsWith('/seller/notifications')
+    }
+
     return false
 }
 
@@ -867,7 +778,6 @@ const logout = () => {
         return
     }
 
-    accountOpen.value = false
     form.post(route('logout'))
 }
 

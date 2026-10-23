@@ -13,11 +13,16 @@
           <button type="button" class="app-button-secondary"  @click="feedback.message = ''">Close</button>
         </div>
 
-        <div class="app-panel app-panel--padded app-toolbar">
+        <div class="border-b border-[#E5E7EB] pb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p class="app-eyebrow">Operations overview</p>
-            <h2 class="app-section-title">Your queue at a glance</h2>
-            <p class="app-description">Refresh to see the latest work waiting for your team.</p>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Operations Overview</span>
+            </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Your queue at a glance
+            </h1>
+            <p class="mt-0.5 text-xs text-slate-500">Refresh to see the latest work waiting for your team.</p>
           </div>
           <button type="button" :disabled="loading" class="app-button-secondary" @click="loadDashboard">
             {{ loading ? 'Refreshing...' : 'Refresh' }}

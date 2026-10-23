@@ -695,7 +695,7 @@ const formatMoney = (value) => {
 
         <div
             id="seller-order-page"
-            class="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8"
+            class="w-full space-y-6"
         >
             <div v-if="item.parcel" class="mb-4 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm">
                 <p class="font-semibold">Courier reference: {{ item.parcel.order_id }}</p>
@@ -726,37 +726,23 @@ const formatMoney = (value) => {
                 class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div>
-                    <div
-                        class="mb-2 flex items-center gap-2"
-                    >
-                        <Link
-                            :href="route('seller.orders')"
-                            class="text-sm font-medium text-gray-500 hover:text-gray-700"
-                        >
-                            Orders
-                        </Link>
-
-                        <span class="text-gray-400">
-                            /
-                        </span>
-
-                        <span
-                            class="text-sm text-gray-700"
-                        >
-                            Order #{{ orderNumber }}
-                        </span>
+                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <Link :href="route('seller.orders')" class="hover:underline">Orders</Link>
+                        <span class="text-slate-300">·</span>
+                        <span class="font-medium normal-case text-slate-500">#{{ orderNumber }}</span>
                     </div>
 
                     <h1
-                        class="text-2xl font-bold text-gray-900"
+                        class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                     >
                         Order #{{ orderNumber }}
                     </h1>
 
                     <p
-                        class="mt-1 text-sm text-gray-500"
+                        class="mt-0.5 text-xs text-slate-500"
                     >
-                        Manage this order item and fulfillment status.
+                        Manage order items, review buyer shipping details, and track fulfillment status.
                     </p>
                 </div>
 
@@ -2503,7 +2489,7 @@ const formatMoney = (value) => {
                                 :class="pickupForm.time_slot === 'morning' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
                                 class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
                             >
-                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Morning</span>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">Morning</span>
                                 <span class="mt-0.5 text-xs text-gray-600">9 AM – 1 PM</span>
                             </button>
 
@@ -2513,7 +2499,7 @@ const formatMoney = (value) => {
                                 :class="pickupForm.time_slot === 'afternoon' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
                                 class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
                             >
-                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Afternoon</span>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">Afternoon</span>
                                 <span class="mt-0.5 text-xs text-gray-600">1 PM – 5 PM</span>
                             </button>
 
@@ -2523,7 +2509,7 @@ const formatMoney = (value) => {
                                 :class="pickupForm.time_slot === 'anytime' ? 'border-[#087F8C] bg-[#E8F7F6] text-[#043E44] ring-2 ring-[#087F8C]' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
                                 class="flex flex-col items-center justify-center rounded-xl border p-3 text-center transition"
                             >
-                                <span class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Full Day</span>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">Full Day</span>
                                 <span class="mt-0.5 text-xs text-gray-600">9 AM – 6 PM</span>
                             </button>
                         </div>

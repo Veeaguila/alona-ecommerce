@@ -335,21 +335,20 @@ const reasonLabel = (val) => {
     <Head title="Customer Feedback & Reviews - Seller Center" />
 
     <SellerLayout>
-        <div class="mx-auto max-w-7xl space-y-6">
+        <div class="w-full space-y-6">
 
             <!-- PAGE HEADER & TABS -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
                 <div>
-                    <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#087F8C]">
-                        <span>Customer Management</span>
-                        <span>•</span>
-                        <span>Feedback & Reputation</span>
+                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <span>Customer Reviews</span>
                     </div>
-                    <h1 class="mt-1 text-2xl font-black text-slate-900 tracking-tight">
+                    <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                         Reviews & Ratings Center
                     </h1>
-                    <p class="mt-1 text-xs text-slate-500">
-                        Monitor buyer sentiment, reply to customer feedback, analyze star breakdown, and report policy violations.
+                    <p class="mt-0.5 text-xs text-slate-500">
+                        Monitor buyer sentiment, reply to customer feedback, analyze star breakdown, and manage reviews.
                     </p>
                 </div>
 

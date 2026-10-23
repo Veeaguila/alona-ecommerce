@@ -372,20 +372,19 @@ const hasActiveFilters = computed(() => {
     <Head title="Returns & Refunds Center - Seller Center" />
 
     <SellerLayout>
-        <div class="mx-auto max-w-7xl space-y-6">
+        <div class="w-full space-y-6">
 
             <!-- PAGE HEADER & NAVIGATION TAB SWITCHER -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
                 <div>
-                    <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#087F8C]">
-                        <span>Order Fulfillment</span>
-                        <span>•</span>
-                        <span>Customer Disputes</span>
+                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <span>Returns & Refunds</span>
                     </div>
-                    <h1 class="mt-1 text-2xl font-black text-slate-900 tracking-tight">
+                    <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                         Returns & Refunds Management
                     </h1>
-                    <p class="mt-1 text-xs text-slate-500">
+                    <p class="mt-0.5 text-xs text-slate-500">
                         Process customer return claims, track return parcel milestones, inspect returned items, and review financial refund ledgers.
                     </p>
                 </div>
@@ -510,7 +509,7 @@ const hasActiveFilters = computed(() => {
                         class="flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition border"
                         :class="selectedStatus === 'pending' ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-transparent text-slate-600 hover:bg-slate-100'"
                     >
-                        <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                         <span>Pending Decision</span>
                         <span class="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] text-amber-900">
                             {{ props.statusCounts.pending }}
@@ -692,9 +691,9 @@ const hasActiveFilters = computed(() => {
                             <div class="space-y-3 lg:col-span-5">
                                 <div class="flex items-start gap-3">
                                     <img
-                                        v-if="req.order_item?.image_url"
-                                        :src="req.order_item.image_url"
-                                        :alt="req.order_item.product_name"
+                                        v-if="req.order_item?.image_url || req.order_item?.product?.image_path"
+                                        :src="req.order_item?.image_url || req.order_item?.product?.image_path"
+                                        :alt="req.order_item?.product_name"
                                         class="h-16 w-16 shrink-0 rounded-xl border border-slate-100 object-cover"
                                     />
                                     <div v-else class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
@@ -707,8 +706,8 @@ const hasActiveFilters = computed(() => {
                                         <h4 class="text-sm font-bold text-slate-900 line-clamp-1">
                                             {{ req.order_item?.product_name || 'Product' }}
                                         </h4>
-                                        <p v-if="req.order_item?.variant_title" class="text-xs text-slate-500 font-medium">
-                                            Variation: {{ req.order_item.variant_title }}
+                                        <p v-if="req.order_item?.variant_label || req.order_item?.variant_title" class="text-xs text-slate-500 font-medium">
+                                            Variation: {{ req.order_item.variant_label || req.order_item.variant_title }}
                                         </p>
                                         <div class="mt-1 flex items-center gap-2 text-xs font-semibold text-slate-700">
                                             <span>{{ formatCurrency(req.order_item?.price) }} × {{ req.order_item?.quantity || 1 }}</span>

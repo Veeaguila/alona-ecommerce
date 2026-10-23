@@ -101,7 +101,7 @@ const filteredFaqs = computed(() => {
 
     <component :is="layoutComponent">
         <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
+            <div class="mx-auto w-full w-full px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
 
                 <!-- BREADCRUMBS -->
                 <nav class="mb-4 flex items-center gap-2 text-xs text-gray-500">

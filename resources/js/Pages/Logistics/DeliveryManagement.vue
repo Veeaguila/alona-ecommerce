@@ -12,8 +12,12 @@
 
       <template v-else>
         <form class="app-panel app-panel--padded space-y-4" @submit.prevent="saveCoverage">
-          <h2 class="app-section-title">Service area coverage</h2>
-          <p class="app-description">Declare the cities you serve so Riders can choose your Logistics Partner when applying.</p>
+          <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+            <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            <span>Delivery Operations</span>
+          </div>
+          <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Service Area Coverage & Hub Sorting</h1>
+          <p class="mt-0.5 text-xs text-slate-500">Declare the cities you serve and manage arrived parcels waiting for sorting.</p>
           <p v-if="areas.some(area => area.city_code)" class="text-sm text-gray-600">Current coverage: {{ areas.filter(area => area.city_code).map(area => area.city_name || area.name).join(', ') }}</p>
           <delivery-coverage-selector :form="coverageForm" />
           <button type="submit" :disabled="savingCoverage || !coverageForm.coverage_city_codes.length" class="app-button-primary disabled:opacity-50">{{ savingCoverage ? 'Saving…' : 'Save service areas' }}</button>

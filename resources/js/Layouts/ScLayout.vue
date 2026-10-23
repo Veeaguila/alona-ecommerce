@@ -18,7 +18,7 @@
 
     <!-- Sidebar (Matches AdminLayout styling) -->
     <aside
-      class="fixed inset-y-0 left-0 z-40 w-[252px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0"
+      class="fixed inset-y-0 left-0 z-40 w-[240px] transform border-r border-[#065A63]/30 bg-gradient-to-b from-[#087F8C] via-[#076F7B] to-[#065A63] text-white shadow-xl transition-transform duration-200 lg:translate-x-0"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <div class="flex h-full min-h-0 flex-col">
@@ -221,36 +221,69 @@
           </div>
         </div>
 
-        <!-- Center Status / Footer Card (Matches AdminLayout status card) -->
+        <!-- Sidebar Bottom: User Profile Card & Logout on the side -->
         <div class="shrink-0 border-t border-white/10 bg-black/10 p-3">
-          <div class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 backdrop-blur-xs">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#087F8C] shadow-xs">
+          <div
+            class="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/10 p-2 backdrop-blur-xs transition hover:bg-white/15"
+          >
+            <!-- Profile Info -->
+            <a
+              href="/sorting-center/dashboard"
+              class="group flex min-w-0 flex-1 items-center gap-2.5 transition"
+              title="Sorting Center Profile"
+              @click="sidebarOpen = false"
+            >
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-black text-[#087F8C] shadow-xs">
+                {{ userInitial }}
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-xs font-bold text-white group-hover:text-teal-200">
+                  {{ userName }}
+                </p>
+                <p class="text-[10px] text-teal-100/70">
+                  {{ userRole }}
+                </p>
+              </div>
+            </a>
+
+            <!-- Logout Button on the side -->
+            <button
+              type="button"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200 transition hover:bg-rose-500/20 hover:text-white active:scale-95"
+              title="Sign out"
+              aria-label="Sign out"
+              @click="logout"
+            >
               <svg
-                xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4"
-                fill="none"
                 viewBox="0 0 24 24"
+                fill="none"
                 stroke="currentColor"
                 stroke-width="1.8"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path
+                  d="M10 17l5-5-5-5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M15 12H3"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M19 4h1a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-1"
+                  stroke-linecap="round"
+                />
               </svg>
-            </span>
-
-            <div class="min-w-0">
-              <p class="truncate text-xs font-semibold text-white">Logistics Center</p>
-              <div class="mt-0.5 flex items-center gap-1.5">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                <span class="truncate text-[11px] font-medium text-emerald-300">Operational</span>
-              </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
     </aside>
 
     <!-- Main Content Area -->
-    <div class="lg:pl-[252px]">
+    <div class="lg:pl-[240px]">
       <!-- Sticky Header (Height 68px, matching AdminLayout) -->
       <header class="sticky top-0 z-20 h-[68px] border-b border-[#E5E7EB] bg-white/95 backdrop-blur">
         <div class="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
@@ -308,124 +341,55 @@
               </svg>
             </a>
 
-            <!-- Account Dropdown -->
-            <div class="relative ml-1 border-l border-[#E5E7EB] pl-2 sm:pl-3">
-              <button
-                type="button"
-                class="flex h-10 items-center gap-2 rounded-xl border border-transparent px-2.5 text-left transition hover:border-[#E5E7EB] hover:bg-[#E8F7F6]"
-                :class="{ 'border-[#E5E7EB] bg-[#E8F7F6]': accountOpen }"
-                @click.stop="accountOpen = !accountOpen"
+            <!-- Center Status -->
+            <div
+              class="ml-1 flex items-center gap-2.5 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-1.5 transition sm:px-3.5 sm:py-2"
+            >
+              <span
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shadow-xs"
               >
-                <!-- Avatar circle with initial -->
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-xs font-black text-[#087F8C]">
-                  {{ userInitial }}
-                </span>
-
-                <span class="hidden max-w-[130px] sm:block">
-                  <span class="block truncate text-xs font-extrabold text-[#1F2937]">
-                    {{ userName }}
-                  </span>
-                  <span class="block text-[9px] text-[#64748B]">
-                    {{ userRole }}
-                  </span>
-                </span>
-
                 <svg
-                  class="hidden h-3.5 w-3.5 text-[#64748B] transition-transform duration-200 sm:block"
-                  :class="{ 'rotate-180': accountOpen }"
-                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
                   fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                   stroke-width="2"
                 >
-                  <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-              </button>
+              </span>
 
-              <!-- Account Dropdown Menu Panel -->
-              <transition
-                enter-active-class="transition duration-150 ease-out"
-                enter-from-class="translate-y-1 opacity-0"
-                enter-to-class="translate-y-0 opacity-100"
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="translate-y-0 opacity-100"
-                leave-to-class="translate-y-1 opacity-0"
-              >
-                <div
-                  v-if="accountOpen"
-                  class="absolute right-0 top-[calc(100%+10px)] z-50 w-[280px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
-                  @click.stop
+              <div class="min-w-0">
+                <p
+                  class="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]"
                 >
-                  <!-- Account Info Header -->
-                  <div class="border-b border-[#E5E7EB] bg-[#F8FAF9] px-4 py-4">
-                    <div class="flex items-center gap-3">
-                      <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-sm font-black text-[#087F8C]">
-                        {{ userInitial }}
-                      </span>
-                      <div class="min-w-0">
-                        <p class="truncate text-sm font-extrabold text-[#1F2937]">
-                          {{ userName }}
-                        </p>
-                        <p class="truncate text-xs text-[#64748B]">
-                          {{ userRole }}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  Center status
+                </p>
 
-                  <!-- Account Action Links -->
-                  <div class="p-2">
-                    <a
-                      href="/sorting-center/dashboard"
-                      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                      @click="accountOpen = false"
-                    >
-                      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-4H3v4zm10-18v4h8V3h-8z" />
-                        </svg>
-                      </span>
-                      Dashboard
-                    </a>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100"
+                  ></span>
 
-                    <a
-                      href="/sorting-center/order-management"
-                      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                      @click="accountOpen = false"
-                    >
-                      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                      </span>
-                      Order Operations
-                    </a>
-                  </div>
-
-                  <!-- Logout Button -->
-                  <div class="border-t border-[#E5E7EB] p-2">
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-600 transition hover:bg-red-50 hover:text-red-700"
-                      @click="logout"
-                    >
-                      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                      </span>
-                      Sign out
-                    </button>
-                  </div>
+                  <span
+                    class="text-xs font-bold text-emerald-700"
+                  >
+                    Operational
+                  </span>
                 </div>
-              </transition>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       <!-- Main Slot Content Area -->
-      <main class="p-4 sm:p-6 lg:p-8">
+      <main class="min-h-[calc(100vh-68px)] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 print:min-h-0 print:p-0 print:m-0">
         <slot></slot>
       </main>
     </div>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <sc-layout title="Pickup Requests">
     <div class="app-page-shell">
       <section v-if="!token" class="app-panel app-empty-state">
@@ -10,9 +10,14 @@
       <template v-else>
         <section class="app-panel app-panel--padded app-toolbar">
           <div>
-            <p class="app-eyebrow">Pickup queue</p>
-            <h2 class="app-section-title">Review incoming requests</h2>
-            <p class="app-description">Approve a request to make it available for rider pickup.</p>
+            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span>Seller Pickups</span>
+            </div>
+            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Pickup Request Management
+            </h1>
+            <p class="mt-0.5 text-xs text-slate-500">Approve requests to schedule courier collection and assign riders.</p>
           </div>
           <div class="app-toolbar__actions">
             <span class="app-count-pill"><strong>{{ pagination.total }}</strong> pending</span>

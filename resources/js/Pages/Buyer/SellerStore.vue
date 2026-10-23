@@ -347,7 +347,7 @@ const formatTime = (timeStr) => {
     <component :is="layoutComponent">
         <div class="w-full min-w-0 overflow-x-hidden bg-[#F8FAF9] font-sans pb-16">
             <!-- Full width responsive container matching Products.vue and Show.vue -->
-            <div class="mx-auto w-full max-w-[1536px] min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10 space-y-6">
+            <div class="mx-auto w-full w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10 space-y-6">
 
                 <!-- ============================================================== -->
                 <!-- VACATION MODE ALERT (SELLER-65) -->

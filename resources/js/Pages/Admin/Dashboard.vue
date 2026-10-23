@@ -140,7 +140,7 @@ const formatStatus = (status) => {
     <Head title="Admin Dashboard" />
 
     <AdminLayout active="dashboard">
-        <div class="mx-auto max-w-7xl">
+        <div class="w-full">
 
             <!-- ========================================================
                  PAGE HEADER
@@ -150,29 +150,21 @@ const formatStatus = (status) => {
                 class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 lg:flex-row lg:items-end lg:justify-between"
             >
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span
-                            class="h-1.5 w-1.5 rounded-full bg-[#087F8C]"
-                        />
-
-                        <p
-                            class="text-xs font-bold uppercase tracking-[0.14em] text-[#087F8C]"
-                        >
-                            Platform overview
-                        </p>
+                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <span>Overview</span>
                     </div>
 
                     <h1
-                        class="mt-2 text-2xl font-bold tracking-tight text-[#1F2937] sm:text-3xl"
+                        class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                     >
                         Admin Dashboard
                     </h1>
 
                     <p
-                        class="mt-1.5 max-w-2xl text-sm leading-5 text-[#64748B]"
+                        class="mt-0.5 text-xs text-slate-500"
                     >
-                        Monitor marketplace performance, approvals, orders,
-                        and platform activity.
+                        Monitor marketplace performance, partner approvals, orders, and platform operations.
                     </p>
                 </div>
 

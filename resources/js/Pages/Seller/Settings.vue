@@ -26,28 +26,26 @@ const submit = () => form.patch(route('seller.settings.update'))
     <Head title="Seller Settings" />
 
     <SellerLayout>
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9] pb-20">
-            <div class="mx-auto max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+        <div class="w-full space-y-6 pb-20">
 
                 <!-- Page Header -->
                 <div
                     class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between"
                 >
                     <div>
-                        <p
-                            class="text-xs font-bold uppercase tracking-[0.16em] text-[#087F8C]"
-                        >
-                            Seller Center
-                        </p>
+                        <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                            <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                            <span>Settings</span>
+                        </div>
 
                         <h1
-                            class="mt-1 text-2xl font-bold tracking-tight text-[#1F2937] sm:text-3xl"
+                            class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                         >
                             Seller Settings
                         </h1>
 
-                        <p class="mt-1 text-sm text-[#64748B]">
-                            Manage your store preferences, payout details, and notifications.
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Manage your store preferences, operations, pickup location, and account options.
                         </p>
                     </div>
 
@@ -506,6 +504,5 @@ const submit = () => form.patch(route('seller.settings.update'))
                 <!-- Footer Clearance -->
                 <div class="h-2"></div>
             </div>
-        </div>
     </SellerLayout>
 </template>

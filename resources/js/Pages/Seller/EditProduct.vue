@@ -334,8 +334,7 @@ const submit = () => {
     <Head title="Edit Product" />
 
     <SellerLayout>
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9] pb-20">
-            <div class="mx-auto max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+        <div class="w-full space-y-6 pb-20">
 
                 <!-- ====================================================== -->
                 <!-- HEADER -->
@@ -366,21 +365,19 @@ const submit = () => {
                         </Link>
 
                         <div>
-                            <p
-                                class="text-xs font-bold uppercase tracking-[0.16em] text-[#087F8C]"
-                            >
-                                Seller Center
-                            </p>
+                            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                                <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                <span>Products</span>
+                            </div>
 
                             <h1
-                                class="mt-1 text-2xl font-bold tracking-tight text-[#1F2937] sm:text-3xl"
+                                class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
                             >
                                 Edit Product
                             </h1>
 
-                            <p class="mt-1 text-sm text-[#64748B]">
-                                Update your product information, pricing,
-                                stock, and image.
+                            <p class="mt-0.5 text-xs text-slate-500">
+                                Update your product information, pricing, stock, and variations.
                             </p>
                         </div>
                     </div>
@@ -1457,6 +1454,5 @@ const submit = () => {
                     </div>
                 </form>
             </div>
-        </div>
     </SellerLayout>
 </template>

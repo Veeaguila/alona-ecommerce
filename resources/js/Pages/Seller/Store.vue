@@ -207,14 +207,14 @@ onBeforeUnmount(() => {
     <Head title="Store Management" />
 
     <SellerLayout>
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9] pb-24 font-sans text-slate-800">
-            <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <div class="w-full space-y-6 pb-24 font-sans text-slate-800">
 
                 <!-- Page Header -->
                 <div class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-[#087F8C]">Store Center</span>
+                        <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                            <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                            <span>Store Management</span>
                             <span
                                 v-if="form.vacation_mode"
                                 class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200"
@@ -228,11 +228,11 @@ onBeforeUnmount(() => {
                             </span>
                         </div>
 
-                        <h1 class="mt-1 text-2xl font-black tracking-tight text-[#1F2937] sm:text-3xl">
-                            Store Management & Branding
+                        <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                            Store Profile & Branding
                         </h1>
 
-                        <p class="mt-1 text-sm text-[#64748B]">
+                        <p class="mt-0.5 text-xs text-slate-500">
                             Customize your brand assets, operating schedule, terms & policies, and vacation settings.
                         </p>
                     </div>
@@ -995,6 +995,5 @@ onBeforeUnmount(() => {
                 </form>
 
             </div>
-        </div>
     </SellerLayout>
 </template>

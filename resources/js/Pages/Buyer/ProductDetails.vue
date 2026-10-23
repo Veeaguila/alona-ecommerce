@@ -29,7 +29,7 @@ const selectedSize = 'Standard'
 
             <!-- Breadcrumb -->
             <div class="border-b bg-white">
-                <div class="mx-auto max-w-[1536px] w-full px-4 py-4 sm:px-6 lg:px-8 2xl:px-10">
+                <div class="mx-auto w-full w-full px-4 py-4 sm:px-6 lg:px-8 2xl:px-10">
                     <div class="flex items-center gap-2 text-sm text-gray-500">
                         <Link href="/" class="hover:text-indigo-600">
                             Home
@@ -49,7 +49,7 @@ const selectedSize = 'Standard'
             </div>
 
             <!-- Product -->
-            <main class="mx-auto max-w-[1536px] w-full px-4 py-8 sm:px-6 lg:px-8 2xl:px-10 lg:py-12">
+            <main class="mx-auto w-full w-full px-4 py-8 sm:px-6 lg:px-8 2xl:px-10 lg:py-12">
 
                 <div class="grid gap-10 lg:grid-cols-2">
 

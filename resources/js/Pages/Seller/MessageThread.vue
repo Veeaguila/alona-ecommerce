@@ -113,8 +113,7 @@ const getStatusBadgeClass = (status) => {
     <Head :title="isSupportChat ? `Support Ticket - ${conversation.subject || 'Admin Desk'}` : `Message - ${conversation.buyer?.name || 'Customer'}`" />
 
     <SellerLayout>
-        <div class="min-h-[calc(100vh-68px)] bg-[#F8FAF9] pb-20">
-            <div class="mx-auto max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
+        <div class="w-full space-y-6 pb-20">
 
                 <!-- Breadcrumb / Back Link -->
                 <div class="mb-3">
@@ -523,7 +522,6 @@ const getStatusBadgeClass = (status) => {
                     </form>
                 </section>
             </div>
-        </div>
 
         <!-- Lightbox Modal for Media Attachments (SELLER-42) -->
         <div

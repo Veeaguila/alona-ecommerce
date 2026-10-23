@@ -1091,7 +1091,7 @@ const breadcrumbs = computed(() => {
             class="min-h-screen bg-[#F8FAF9]"
         >
             <div
-                class="mx-auto max-w-[1536px] w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-10 lg:py-8"
+                class="mx-auto w-full w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-10 lg:py-8"
             >
 
                 <!-- ===================================================== -->

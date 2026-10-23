@@ -1,8 +1,13 @@
-﻿<template>
+<template>
   <sc-layout title="Delivery Proof Review">
   <div class="delivery-proof-review app-page-shell">
-    <div class="proof-header">
-      <h2 class="app-section-title">Proof of delivery</h2>
+    <div class="proof-header pb-4 mb-6 border-b border-[var(--app-border)]">
+      <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+        <span>Quality Assurance</span>
+      </div>
+      <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Proof of Delivery Review</h1>
+      <p class="mt-0.5 text-xs text-slate-500">Inspect buyer signatures and recipient photos for parcel delivery verification.</p>
       <div class="parcel-info" v-if="parcel">
         <p><strong>Order:</strong> {{ parcel.order_id }}</p>
         <p><strong>Status:</strong> <span class="badge" :class="'badge-' + (parcel.status || 'unknown').toLowerCase()">{{ parcel.status }}</span></p>
