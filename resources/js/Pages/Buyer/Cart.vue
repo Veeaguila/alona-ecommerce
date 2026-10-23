@@ -859,16 +859,18 @@ const checkoutButtonLabel = computed(() => {
                             <article
                                 v-for="item in items"
                                 :key="item.id"
-                                class="relative min-w-0 p-4 transition duration-200 sm:p-5"
-                                :class="
+                                class="relative min-w-0 p-4 transition duration-200 sm:p-5 select-none"
+                                :class="[
+                                    !itemIsUnavailable(item) ? 'cursor-pointer' : 'cursor-default',
                                     selectedItems.includes(
                                         Number(
                                             item.id
                                         )
                                     )
                                         ? 'bg-[#F3FBFA]'
-                                        : 'bg-white hover:bg-[#FCFDFC]'
-                                "
+                                        : 'bg-white hover:bg-[#F8FAF9]'
+                                ]"
+                                @click="toggleItem(item)"
                             >
 
                                 <!-- SELECTED INDICATOR -->
@@ -892,6 +894,7 @@ const checkoutButtonLabel = computed(() => {
 
                                     <div
                                         class="shrink-0 pt-1"
+                                        @click.stop
                                     >
                                         <input
                                             type="checkbox"
@@ -1003,7 +1006,7 @@ const checkoutButtonLabel = computed(() => {
                                                         v-if="item.product?.variants?.length > 1 || (item.product?.variants?.length >= 1 && !item.variant)"
                                                         type="button"
                                                         class="inline-flex items-center gap-1 rounded-md border border-[#087F8C]/20 bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-bold text-[#087F8C] transition hover:bg-[#d4f2f0]"
-                                                        @click="openVariantModal(item)"
+                                                        @click.stop="openVariantModal(item)"
                                                     >
                                                         <span>Change</span>
                                                         <svg class="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
@@ -1054,6 +1057,7 @@ const checkoutButtonLabel = computed(() => {
 
                                         <div
                                             class="mt-3 flex min-w-0 flex-wrap items-center gap-3"
+                                            @click.stop
                                         >
                                             <div
                                                 class="flex shrink-0 items-center overflow-hidden rounded-lg border border-[#DDE5E4] bg-white"

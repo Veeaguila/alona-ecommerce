@@ -1,9 +1,9 @@
-<!-- Buyer order history with status filter tabs, search, and quick actions. -->
+<!-- Buyer order history with Shopee-style layout aligned to system design (BUYER-17). -->
 <script setup>
 import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 const props = defineProps({
     orders: {
@@ -21,7 +21,9 @@ const props = defineProps({
             to_pay: 0,
             to_ship: 0,
             in_transit: 0,
+            to_receive: 0,
             delivered: 0,
+            completed: 0,
             cancelled: 0,
             returns: 0,
         }),
@@ -43,14 +45,13 @@ const searchQuery = ref(props.filters?.search || '')
 const reorderingId = ref(null)
 
 const tabs = [
-    { key: 'all', label: 'All Orders', countKey: 'all' },
+    { key: 'all', label: 'All', countKey: 'all' },
     { key: 'to_pay', label: 'To Pay', countKey: 'to_pay' },
     { key: 'to_ship', label: 'To Ship', countKey: 'to_ship' },
-    { key: 'in_transit', label: 'In Transit', countKey: 'in_transit' },
-    { key: 'delivered', label: 'Delivered', countKey: 'delivered' },
+    { key: 'to_receive', label: 'To Receive', countKey: 'to_receive' },
     { key: 'completed', label: 'Completed', countKey: 'completed' },
     { key: 'cancelled', label: 'Cancelled', countKey: 'cancelled' },
-    { key: 'returns', label: 'Returns / Refunds', countKey: 'returns' },
+    { key: 'returns', label: 'Return Refund', countKey: 'returns' },
 ]
 
 /*
@@ -58,6 +59,34 @@ const tabs = [
 | Helpers
 |--------------------------------------------------------------------------
 */
+
+const imageUrl = path => {
+    if (!path) return null
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/storage/')) return path
+    return `/storage/${path.replace(/^\/+/, '')}`
+}
+
+const itemImage = item => {
+    return imageUrl(
+        item?.variant?.image_path ||
+        item?.product?.image_path ||
+        item?.product?.images?.[0]?.image_path ||
+        item?.product?.primary_image_url ||
+        item?.product?.image_url ||
+        item?.image_path ||
+        null
+    )
+}
+
+const getOrderShopName = order => {
+    const seller = order?.items?.[0]?.product?.seller
+    return seller?.store_name || seller?.shop_name || seller?.name || 'Marketplace Seller'
+}
+
+const getItemShopName = item => {
+    const seller = item?.product?.seller
+    return seller?.store_name || seller?.shop_name || seller?.name || 'Marketplace Seller'
+}
 
 const money = value => {
     const amount = Number(value ?? 0)
@@ -98,7 +127,7 @@ const getStatusBadge = value => {
     const badges = {
         pending: {
             label: 'To Pack',
-            color: 'bg-[#FFF7E6] text-[#A66A00] ring-1 ring-[#F4B942]/30',
+            color: 'bg-[#FFF8E7] text-[#A66B00] ring-1 ring-[#F4B942]/30',
         },
         processing: {
             label: 'Processing',
@@ -220,291 +249,324 @@ const markOrderReceived = orderId => {
 </script>
 
 <template>
-    <Head title="My Orders" />
+    <Head title="My Purchase" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
+    <BuyerAccountLayout active-menu="purchase">
+        
+        <!-- STATUS TABS (SYSTEM ALIGNED) -->
+        <div class="overflow-x-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-xs scrollbar-none">
+            <div class="flex min-w-max border-b border-[#EEF1F2]">
+                <button
+                    v-for="tab in tabs"
+                    :key="tab.key"
+                    type="button"
+                    class="relative flex-1 px-5 py-3.5 text-center text-xs font-bold transition sm:text-sm"
+                    :class="[
+                        current_status === tab.key || (tab.key === 'to_receive' && current_status === 'in_transit')
+                            ? 'font-extrabold text-[#087F8C]'
+                            : 'text-[#64748B] hover:text-[#087F8C]'
+                    ]"
+                    @click="selectTab(tab.key)"
+                >
+                    <span>{{ tab.label }}</span>
+                    <span
+                        v-if="counts[tab.countKey] > 0"
+                        class="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold"
+                        :class="[
+                            current_status === tab.key || (tab.key === 'to_receive' && current_status === 'in_transit')
+                                ? 'bg-[#E8F7F6] text-[#087F8C]'
+                                : 'bg-gray-100 text-[#64748B]'
+                        ]"
+                    >
+                        {{ counts[tab.countKey] }}
+                    </span>
 
-                <!-- PAGE HEADER -->
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
-                                Order management
+                    <!-- Underline Indicator in Brand Teal -->
+                    <span
+                        v-if="current_status === tab.key || (tab.key === 'to_receive' && current_status === 'in_transit')"
+                        class="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#087F8C]"
+                    ></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SEARCH BAR (SYSTEM ALIGNED) -->
+        <div class="my-4 rounded-2xl border border-[#E5E7EB] bg-white p-2.5 shadow-xs sm:p-3">
+            <div class="relative flex items-center">
+                <span class="pl-2 text-[#087F8C]">
+                    <Icon name="search" class="h-4 w-4" />
+                </span>
+
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="You can search by Seller Name, Order ID or Product name"
+                    class="w-full border-0 bg-transparent py-1 pl-3 pr-8 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:ring-0 sm:text-sm"
+                    @keydown.enter="handleSearch"
+                />
+
+                <button
+                    v-if="searchQuery"
+                    type="button"
+                    class="rounded-lg p-1 text-xs text-[#94A3B8] hover:bg-[#F8FAF9] hover:text-[#1F2937]"
+                    @click="clearSearch"
+                >
+                    ✕
+                </button>
+            </div>
+        </div>
+
+        <!-- SUCCESS STATUS NOTIFICATION -->
+        <div
+            v-if="status"
+            class="mb-4 flex items-start gap-2.5 rounded-xl border border-[#CDE9E4] bg-[#EAF8F1] px-4 py-3 text-xs font-bold text-[#17784F]"
+        >
+            <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l4 4L19 6" />
+            </svg>
+            <span>{{ status }}</span>
+        </div>
+
+        <!-- ORDERS LIST -->
+        <div
+            v-if="orderList.length"
+            class="space-y-4"
+        >
+            <div
+                v-for="order in orderList"
+                :key="order.id"
+                class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-xs transition hover:border-[#B9E7E4]"
+            >
+                <!-- CARD HEADER: SHOP & STATUS -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3.5 sm:px-6">
+                    <div class="flex items-center gap-2.5">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
+                            </svg>
+                        </span>
+
+                        <span class="text-xs font-extrabold text-[#1F2937] sm:text-sm">
+                            {{ getOrderShopName(order) }}
+                        </span>
+
+                        <span class="rounded-md bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-extrabold text-[#087F8C]">
+                            Shop
+                        </span>
+
+                        <Link
+                            :href="route('buyer.orders.show', order.id)"
+                            class="text-xs font-semibold text-[#64748B] hover:text-[#087F8C]"
+                        >
+                            {{ order.order_number || `#${order.id}` }}
+                        </Link>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span
+                            v-if="order.return_requests?.length"
+                            class="rounded-lg bg-[#FFF8E7] px-2 py-0.5 text-[10px] font-bold text-[#A66B00] ring-1 ring-[#F4B942]/30"
+                        >
+                            Return Requested
+                        </span>
+
+                        <span
+                            class="rounded-lg px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider"
+                            :class="getStatusBadge(order.status).color"
+                        >
+                            {{ getStatusBadge(order.status).label }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- CARD BODY: PRODUCTS -->
+                <div class="divide-y divide-[#EEF1F2] px-4 py-2 sm:px-6">
+                    <Link
+                        v-for="item in order.items"
+                        :key="item.id"
+                        :href="route('buyer.orders.show', order.id)"
+                        class="flex gap-3.5 py-3.5 transition hover:bg-[#F8FAF9]/80 sm:gap-4"
+                    >
+                        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-gray-50 sm:h-20 sm:w-20">
+                            <img
+                                v-if="itemImage(item)"
+                                :src="itemImage(item)"
+                                :alt="item.product?.name || item.product_name"
+                                class="h-full w-full object-cover"
+                            />
+                            <div v-else class="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                No image
+                            </div>
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p class="line-clamp-2 text-xs font-extrabold text-[#1F2937] sm:text-sm">
+                                {{ item.product?.name || item.product_name || 'Product item' }}
+                            </p>
+                            <p v-if="item.variant || item.variant_label" class="mt-0.5 text-[11px] font-semibold text-[#64748B]">
+                                Variation: {{ item.variant?.name || item.variant?.sku || item.variant_label }}
+                            </p>
+                            <p class="mt-0.5 text-[11px] font-medium text-[#64748B]">
+                                Seller: <span class="font-bold text-[#1F2937]">{{ getItemShopName(item) }}</span>
+                            </p>
+                            <p class="mt-1 text-xs font-semibold text-[#94A3B8]">
+                                Quantity: {{ item.quantity }}
                             </p>
                         </div>
 
-                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">
-                            My Orders
-                        </h1>
-
-                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                            Track packages, manage deliveries, cancellations, and return requests.
-                        </p>
-                    </div>
-
-                    <Link
-                        :href="route('buyer.products')"
-                        class="inline-flex w-fit items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] sm:text-sm"
-                    >
-                        <span class="text-base leading-none">+</span>
-                        Shop Products
-                    </Link>
-                </div>
-
-                <!-- SUCCESS MESSAGE -->
-                <div
-                    v-if="status"
-                    class="mt-4 flex items-start gap-2.5 rounded-xl border border-[#CDE9E4] bg-[#EAF8F1] px-3.5 py-3 text-xs font-bold text-[#17784F] sm:text-sm"
-                >
-                    <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l4 4L19 6" />
-                    </svg>
-                    <span>{{ status }}</span>
-                </div>
-
-                <!-- SEARCH & FILTER BAR -->
-                <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <!-- SEARCH -->
-                    <div class="relative w-full sm:max-w-xs">
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search by order # or product..."
-                            class="w-full rounded-xl border border-[#E5E7EB] bg-white py-2 pl-9 pr-8 text-xs text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:ring-2 focus:ring-[#E8F7F6]"
-                            @keydown.enter="handleSearch"
-                        />
-                        <span class="pointer-events-none absolute left-3 top-2.5 text-[#94A3B8]"><Icon name="search" class="h-4 w-4" /></span>
-                        <button
-                            v-if="searchQuery"
-                            type="button"
-                            class="absolute right-2.5 top-2 text-xs text-[#94A3B8] hover:text-[#475569]"
-                            @click="clearSearch"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
-
-                <!-- STATUS TABS (BUYER-17) -->
-                <div class="mt-4 overflow-x-auto pb-1 scrollbar-none">
-                    <nav class="flex min-w-max gap-2 border-b border-[#E5E7EB] pb-2">
-                        <button
-                            v-for="tab in tabs"
-                            :key="tab.key"
-                            type="button"
-                            :class="[
-                                'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition',
-                                current_status === tab.key
-                                    ? 'bg-[#087F8C] text-white shadow-sm'
-                                    : 'bg-white text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1F2937]'
-                            ]"
-                            @click="selectTab(tab.key)"
-                        >
-                            <span>{{ tab.label }}</span>
-                            <span
-                                :class="[
-                                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                                    current_status === tab.key
-                                        ? 'bg-white/20 text-white'
-                                        : 'bg-[#F1F5F9] text-[#64748B]'
-                                ]"
-                            >
-                                {{ counts[tab.countKey] || 0 }}
+                        <div class="text-right">
+                            <span class="text-xs font-extrabold text-[#087F8C] sm:text-sm">
+                                {{ money(item.price) }}
                             </span>
-                        </button>
-                    </nav>
-                </div>
-
-                <!-- ORDERS LIST -->
-                <div
-                    v-if="orderList.length"
-                    class="mt-5 space-y-4"
-                >
-                    <div
-                        v-for="order in orderList"
-                        :key="order.id"
-                        class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)] transition hover:border-[#CFE5E4]"
-                    >
-                        <!-- ORDER HEADER -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3.5 sm:px-5">
-                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 3h12l2 5H4l2-5zm-2 5h16v11a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm4 4h8" />
-                                    </svg>
-                                </div>
-
-                                <div>
-                                    <Link
-                                        :href="route('buyer.orders.show', order.id)"
-                                        class="text-sm font-extrabold text-[#1F2937] hover:text-[#087F8C] sm:text-base"
-                                    >
-                                        {{ order.order_number || `Order #${order.id}` }}
-                                    </Link>
-                                    <p class="text-[10px] text-[#94A3B8] sm:text-xs">
-                                        Placed {{ formatDate(order.created_at) }}
-                                        <span class="mx-1">·</span>
-                                        {{ formatPaymentMethod(order.payment_method) }}
-                                        <span v-if="order.shipping_method" class="ml-1 text-[#087F8C] font-semibold">
-                                            ({{ order.shipping_method }})
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span
-                                    v-if="order.return_requests?.length"
-                                    class="rounded-full bg-[#FFF3E8] px-2.5 py-1 text-[9px] font-extrabold text-[#C56A20] ring-1 ring-[#F97316]/20"
-                                >
-                                    Return Requested
-                                </span>
-
-                                <span
-                                    :class="[
-                                        'rounded-full px-2.5 py-1 text-[9px] font-extrabold sm:px-3 sm:py-1.5 sm:text-[10px]',
-                                        getStatusBadge(order.status).color
-                                    ]"
-                                >
-                                    {{ getStatusBadge(order.status).label }}
-                                </span>
-                            </div>
                         </div>
-
-                        <!-- ORDER ITEMS -->
-                        <div class="divide-y divide-[#EEF1F2] px-4 sm:px-5">
-                            <div
-                                v-for="item in order.items"
-                                :key="item.id"
-                                class="flex min-w-0 items-center justify-between gap-3 py-3 sm:py-3.5"
-                            >
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-xs font-bold text-[#1F2937] sm:text-sm">
-                                        {{ item.product_name || 'Product' }}
-                                        <span
-                                            v-if="item.variant_label"
-                                            class="font-medium text-[#94A3B8]"
-                                        >
-                                            ({{ item.variant_label }})
-                                        </span>
-                                    </p>
-
-                                    <div class="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#64748B]">
-                                        <span>{{ money(item.price) }} × {{ item.quantity || 0 }}</span>
-                                        <span class="text-[#CBD5E1]">·</span>
-                                        <span :class="getStatusBadge(item.status || order.status).color" class="rounded-full px-2 py-0.5 text-[8px] font-extrabold sm:text-[9px]">
-                                            {{ getStatusBadge(item.status || order.status).label }}
-                                        </span>
-                                        <span v-if="item.tracking_number" class="text-[#087F8C] font-semibold">
-                                            {{ item.courier_name || 'Courier' }}: {{ item.tracking_number }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <p class="shrink-0 text-xs font-extrabold text-[#1F2937] sm:text-sm">
-                                    {{ money(getItemTotal(item)) }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- ORDER FOOTER / ACTIONS (BUYER-19, BUYER-20) -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3 sm:px-5">
-                            <div>
-                                <span class="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
-                                    Total:
-                                </span>
-                                <span class="ml-1 text-sm font-extrabold text-[#087F8C] sm:text-base">
-                                    {{ money(order.total) }}
-                                </span>
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button
-                                    v-if="normalizeStatus(order.status) === 'delivered'"
-                                    type="button"
-                                    :disabled="receivingOrderId === order.id"
-                                    class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76] disabled:opacity-50"
-                                    @click="markOrderReceived(order.id)"
-                                >
-                                    <span>✓</span>
-                                    {{ receivingOrderId === order.id ? 'Completing...' : 'Order Received' }}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    :disabled="reorderingId === order.id"
-                                    class="inline-flex items-center gap-1.5 rounded-xl border border-[#D5E4E3] bg-white px-3 py-1.5 text-xs font-bold text-[#087F8C] transition hover:bg-[#E8F7F6] disabled:opacity-50"
-                                    @click="reorder(order.id)"
-                                >
-                                    <span><Icon name="undo" class="h-4 w-4" /></span>
-                                    {{ reorderingId === order.id ? 'Adding...' : 'Buy Again' }}
-                                </button>
-
-                                <Link
-                                    :href="route('buyer.orders.show', order.id)"
-                                    class="inline-flex items-center gap-1 rounded-xl bg-[#087F8C] px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:bg-[#066B76]"
-                                >
-                                    <span>View & Track</span>
-                                    <span>→</span>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PAGINATION -->
-                    <div
-                        v-if="pagination.length > 3"
-                        class="mt-6 flex justify-center gap-1"
-                    >
-                        <Component
-                            :is="link.url ? Link : 'span'"
-                            v-for="(link, i) in pagination"
-                            :key="i"
-                            :href="link.url"
-                            :class="[
-                                'rounded-xl px-3 py-1.5 text-xs font-bold transition',
-                                link.active
-                                    ? 'bg-[#087F8C] text-white'
-                                    : link.url
-                                        ? 'bg-white text-[#64748B] hover:bg-[#E8F7F6] hover:text-[#087F8C]'
-                                        : 'bg-[#F1F5F9] text-[#CBD5E1]'
-                            ]"
-                            v-html="link.label"
-                        />
-                    </div>
-                </div>
-
-                <!-- EMPTY STATE -->
-                <div
-                    v-else
-                    class="mt-5 rounded-2xl border border-dashed border-[#D7E0E2] bg-white px-5 py-14 text-center shadow-[0_6px_22px_rgba(15,23,42,0.03)] sm:mt-6 sm:py-16"
-                >
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8F7F6] text-[#087F8C]">
-                        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 3h12l2 5H4l2-5zm-2 5h16v11a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm4 4h8" />
-                        </svg>
-                    </div>
-
-                    <p class="mt-4 text-sm font-extrabold text-[#1F2937]">
-                        {{ searchQuery ? 'No matching orders found.' : 'No orders in this category.' }}
-                    </p>
-
-                    <p class="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-[#64748B] sm:text-sm">
-                        {{ searchQuery ? 'Try searching with another keyword.' : 'Check back later or browse our marketplace products.' }}
-                    </p>
-
-                    <Link
-                        :href="route('buyer.products')"
-                        class="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#066B76] sm:text-sm"
-                    >
-                        Browse Products
-                        <span>→</span>
                     </Link>
+                </div>
+
+                <!-- CARD FOOTER: TOTAL & ACTIONS -->
+                <div class="flex flex-col gap-3 border-t border-[#EEF1F2] bg-[#FCFDFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div class="text-xs text-[#64748B]">
+                        Placed on {{ formatDate(order.created_at) }}
+                        <span class="mx-1">·</span>
+                        {{ formatPaymentMethod(order.payment_method) }}
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">
+                        <div class="text-right mr-1">
+                            <span class="text-xs font-medium text-[#64748B]">Order Total: </span>
+                            <span class="text-base font-black text-[#087F8C] sm:text-lg">
+                                {{ money(order.total_amount ?? order.total) }}
+                            </span>
+                        </div>
+
+                        <!-- Mark received button for delivered orders -->
+                        <button
+                            v-if="['shipped', 'out_for_delivery', 'delivered'].includes(normalizeStatus(order.status)) && !['completed', 'cancelled'].includes(normalizeStatus(order.status))"
+                            type="button"
+                            class="rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-extrabold text-white shadow-xs transition hover:bg-[#066B76]"
+                            @click="markOrderReceived(order.id)"
+                        >
+                            {{ receivingOrderId === order.id ? 'Confirming...' : 'Order Received' }}
+                        </button>
+
+                        <!-- Buy Again button -->
+                        <button
+                            v-if="['completed', 'delivered', 'cancelled'].includes(normalizeStatus(order.status))"
+                            type="button"
+                            class="rounded-xl border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-extrabold text-[#1F2937] transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            :disabled="reorderingId === order.id"
+                            @click="reorder(order.id)"
+                        >
+                            {{ reorderingId === order.id ? 'Adding...' : 'Buy Again' }}
+                        </button>
+
+                        <!-- View details link -->
+                        <Link
+                            :href="route('buyer.orders.show', order.id)"
+                            class="rounded-xl border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C] hover:bg-[#E8F7F6]"
+                        >
+                            View & Track
+                        </Link>
+                    </div>
                 </div>
             </div>
-        </main>
-    </BuyerLayout>
+
+            <!-- PAGINATION -->
+            <div
+                v-if="pagination.length > 3"
+                class="mt-6 flex justify-center gap-1.5 pb-4"
+            >
+                <Component
+                    :is="link.url ? Link : 'span'"
+                    v-for="(link, i) in pagination"
+                    :key="i"
+                    :href="link.url"
+                    class="rounded-xl px-3.5 py-2 text-xs font-extrabold transition"
+                    :class="[
+                        link.active
+                            ? 'bg-[#087F8C] text-white shadow-xs'
+                            : link.url
+                                ? 'bg-white text-[#64748B] border border-[#E5E7EB] hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C]'
+                                : 'bg-[#F8FAF9] text-[#CBD5E1]'
+                    ]"
+                    v-html="link.label"
+                />
+            </div>
+        </div>
+
+        <!-- EMPTY STATE (MATCHING SCREENSHOT + SYSTEM DESIGN) -->
+        <div
+            v-else
+            class="flex min-h-[460px] flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-8 text-center shadow-xs"
+        >
+            <!-- System-Themed Clipboard Illustration -->
+            <div class="relative mb-3 flex h-28 w-28 items-center justify-center">
+                <!-- Background decorative pastel circles -->
+                <span class="absolute -top-1 -left-2 h-3.5 w-3.5 rounded-full bg-[#F4B942]/60"></span>
+                <span class="absolute top-2 -right-1 h-2.5 w-2.5 rounded-full bg-[#087F8C]/40"></span>
+                <span class="absolute bottom-2 -left-3 h-3 w-3 rounded-full bg-[#16A6A0]/30"></span>
+
+                <!-- Circular soft badge background -->
+                <div class="flex h-20 w-20 items-center justify-center rounded-full bg-[#E8F7F6] ring-4 ring-[#E8F7F6]/50">
+                    <!-- Clipboard with checkmarks -->
+                    <svg
+                        class="h-12 w-12 text-[#087F8C]"
+                        viewBox="0 0 64 64"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <!-- Board background -->
+                        <rect x="14" y="10" width="36" height="46" rx="4" fill="#B9E7E4" stroke="#087F8C" stroke-width="2" />
+                        <!-- White paper sheet -->
+                        <rect x="18" y="16" width="28" height="36" rx="2" fill="#FFFFFF" />
+                        <!-- Top Clip -->
+                        <rect x="25" y="7" width="14" height="6" rx="2" fill="#087F8C" />
+                        <!-- Checklist lines -->
+                        <line x1="22" y1="23" x2="26" y2="23" stroke="#087F8C" stroke-width="2" stroke-linecap="round" />
+                        <line x1="29" y1="23" x2="42" y2="23" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" />
+                        <line x1="22" y1="30" x2="26" y2="30" stroke="#087F8C" stroke-width="2" stroke-linecap="round" />
+                        <line x1="29" y1="30" x2="42" y2="30" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" />
+                        <line x1="22" y1="37" x2="26" y2="37" stroke="#087F8C" stroke-width="2" stroke-linecap="round" />
+                        <line x1="29" y1="37" x2="40" y2="37" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+
+                <!-- Diagonal Pencil icon in Gold -->
+                <svg
+                    class="absolute bottom-1 right-2 h-7 w-7 text-[#F4B942] drop-shadow-sm"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                >
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+            </div>
+
+            <!-- "No orders yet" label -->
+            <p class="text-sm font-extrabold text-[#1F2937]">
+                {{ searchQuery ? 'No matching orders found' : 'No orders yet' }}
+            </p>
+
+            <p class="mt-1 text-xs text-[#64748B] max-w-sm">
+                {{ searchQuery ? 'Try adjusting your search criteria or filter to find what you are looking for.' : 'When you purchase items from our verified marketplace sellers, your orders will appear here.' }}
+            </p>
+
+            <div class="mt-4 flex items-center gap-2">
+                <Link
+                    v-if="searchQuery"
+                    :href="route('buyer.orders')"
+                    class="rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-xs font-bold text-[#64748B] transition hover:bg-[#F8FAF9]"
+                >
+                    Clear search filter
+                </Link>
+
+                <Link
+                    :href="route('buyer.products')"
+                    class="rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-extrabold text-white shadow-xs transition hover:bg-[#066B76]"
+                >
+                    Browse Products
+                </Link>
+            </div>
+        </div>
+
+    </BuyerAccountLayout>
 </template>

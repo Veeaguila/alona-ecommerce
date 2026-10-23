@@ -1,7 +1,7 @@
 <!-- Buyer saved payment methods. Only the last 4 digits are ever stored. -->
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 defineProps({
     payment_methods: {
@@ -41,31 +41,34 @@ const remove = method => {
 </script>
 
 <template>
-    <Head title="Payment Methods" />
+    <Head title="Banks & Cards" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
-                <div class="flex items-end justify-between gap-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
-                                Payment details
-                            </p>
-                        </div>
-                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">Payment Methods</h1>
-                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                            Save a payment method for faster checkout. We only keep the last 4 digits.
+    <BuyerAccountLayout active-menu="account" active-sub="banks">
+        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+            <div class="flex items-center justify-between border-b border-[#EEF1F2] pb-5">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                            Payment Details
                         </p>
                     </div>
 
-                    <Link :href="route('buyer.cart')" class="text-xs font-bold text-[#087F8C] hover:underline">
-                        ← Back to Cart
-                    </Link>
+                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937]">
+                        Banks & Cards
+                    </h1>
+
+                    <p class="mt-1 text-xs text-[#64748B]">
+                        Save a payment method for faster checkout. Card information is protected via PCI-DSS encryption.
+                    </p>
                 </div>
 
-                <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_420px]">
+                <Link :href="route('buyer.cart')" class="inline-flex items-center gap-1 text-xs font-bold text-[#087F8C] hover:underline">
+                    ← Back to Cart
+                </Link>
+            </div>
+
+            <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
                     <!-- LIST -->
                     <section class="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
                         <h2 class="text-sm font-extrabold text-[#1F2937]">Saved methods</h2>
@@ -196,7 +199,6 @@ const remove = method => {
                     </form>
                 </div>
             </div>
-        </main>
-    </BuyerLayout>
+    </BuyerAccountLayout>
 </template>
 

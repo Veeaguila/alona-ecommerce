@@ -109,19 +109,19 @@ class ProfileController extends Controller
         */
 
         $street = trim(
-            (string) ($data['street_address'] ?? '')
+            (string) ($data['street_address'] ?? $user->street_address ?? '')
         );
 
         $barangay = trim(
-            (string) ($data['barangay'] ?? '')
+            (string) ($data['barangay'] ?? $user->barangay ?? '')
         );
 
         $municipality = trim(
-            (string) ($data['municipality'] ?? '')
+            (string) ($data['municipality'] ?? $user->municipality ?? '')
         );
 
         $province = trim(
-            (string) ($data['province'] ?? '')
+            (string) ($data['province'] ?? $user->province ?? '')
         );
 
         $fullAddress = collect([
@@ -136,7 +136,11 @@ class ProfileController extends Controller
             )
             ->implode(', ');
 
-        $data['address'] = $fullAddress;
+        $data['street_address'] = $street;
+        $data['barangay'] = $barangay;
+        $data['municipality'] = $municipality;
+        $data['province'] = $province;
+        $data['address'] = $fullAddress ?: $user->address;
 
         /*
         |--------------------------------------------------------------------------

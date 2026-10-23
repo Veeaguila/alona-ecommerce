@@ -1,8 +1,8 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 const props = defineProps({
     notifications: {
@@ -12,6 +12,30 @@ const props = defineProps({
 })
 
 const activeTab = ref('all')
+const activeSub = ref('order_updates')
+
+const resolveTypeFromUrl = () => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const type = params.get('type')
+    if (type === 'order') {
+        activeTab.value = 'order'
+        activeSub.value = 'order_updates'
+    } else if (type === 'promotion' || type === 'promo') {
+        activeTab.value = 'promotion'
+        activeSub.value = 'promotions'
+    } else if (type === 'wallet') {
+        activeTab.value = 'order'
+        activeSub.value = 'wallet_updates'
+    } else if (type === 'system') {
+        activeTab.value = 'all'
+        activeSub.value = 'platform_updates'
+    }
+}
+
+onMounted(() => {
+    resolveTypeFromUrl()
+})
 
 const tabs = [
     { key: 'all', label: 'All Notifications' },
@@ -124,50 +148,48 @@ const formatDate = dateStr => {
 <template>
     <Head title="Notifications" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
-
-                <!-- HEADER -->
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
-                                Inbox & Activity Center
-                            </p>
-                        </div>
-
-                        <h1 class="mt-1 text-2xl font-black tracking-tight text-[#1F2937] sm:text-3xl">
-                            Notifications
-                        </h1>
-
-                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                            Stay up to date with order progress, messages, vouchers, and customer support responses.
+    <BuyerAccountLayout active-menu="notifications" :active-sub="activeSub">
+        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+            <!-- HEADER -->
+            <div class="flex flex-col gap-4 border-b border-[#EEF1F2] pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                            Activity Center
                         </p>
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <span
-                            v-if="unreadCount > 0"
-                            class="rounded-full bg-[#E8F7F6] px-3 py-1 text-xs font-extrabold text-[#087F8C]"
-                        >
-                            {{ unreadCount }} Unread
-                        </span>
+                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937]">
+                        Notifications
+                    </h1>
 
-                        <button
-                            v-if="unreadCount > 0"
-                            type="button"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-[#087F8C]/20 bg-white px-3.5 py-2 text-xs font-bold text-[#087F8C] shadow-xs transition hover:bg-[#E8F7F6]"
-                            @click="readAll"
-                        >
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Mark all as read
-                        </button>
-                    </div>
+                    <p class="mt-1 text-xs text-[#64748B]">
+                        Stay up to date with order progress, courier waypoints, vouchers, and platform updates.
+                    </p>
                 </div>
+
+                <div class="flex items-center gap-3">
+                    <span
+                        v-if="unreadCount > 0"
+                        class="rounded-full bg-[#E8F7F6] px-3 py-1 text-xs font-bold text-[#087F8C] ring-1 ring-[#B9E7E4]"
+                    >
+                        {{ unreadCount }} Unread
+                    </span>
+
+                    <button
+                        v-if="unreadCount > 0"
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-bold text-[#087F8C] shadow-xs transition hover:bg-[#E8F7F6]"
+                        @click="readAll"
+                    >
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Mark all as read
+                    </button>
+                </div>
+            </div>
 
                 <!-- CATEGORY TABS -->
                 <div class="mt-6 flex overflow-x-auto border-b border-gray-200 pb-px scrollbar-none">
@@ -273,7 +295,6 @@ const formatDate = dateStr => {
                         </p>
                     </div>
                 </section>
-            </div>
-        </main>
-    </BuyerLayout>
+        </div>
+    </BuyerAccountLayout>
 </template>

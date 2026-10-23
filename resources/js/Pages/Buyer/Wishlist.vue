@@ -107,24 +107,6 @@ const addToCart = product => {
                             Keep track of products you love and want to purchase later.
                         </p>
                     </div>
-
-                    <div class="flex items-center gap-2.5">
-                        <Link
-                            :href="route('buyer.products')"
-                            class="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-bold text-[#1F2937] shadow-xs transition hover:border-[#087F8C] hover:text-[#087F8C] sm:text-sm"
-                        >
-                            <span><Icon name="search" class="h-4 w-4" /></span>
-                            Browse Products
-                        </Link>
-
-                        <Link
-                            :href="route('buyer.cart')"
-                            class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#066B76] sm:text-sm"
-                        >
-                            <span><Icon name="cart" class="h-4 w-4" /></span>
-                            View Cart
-                        </Link>
-                    </div>
                 </div>
 
                 <!-- SUCCESS MESSAGE -->

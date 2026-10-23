@@ -1267,82 +1267,16 @@ onUnmounted(() => {
                                     class="p-2"
                                 >
 
-                                    <!-- DASHBOARD -->
+                                    <!-- ACCOUNT MANAGEMENT -->
 
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            goToDashboard
-                                        "
+                                        @click="openProfile"
                                     >
 
                                         <span
                                             class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <rect
-                                                    x="4"
-                                                    y="4"
-                                                    width="6"
-                                                    height="6"
-                                                    rx="1"
-                                                />
-
-                                                <rect
-                                                    x="14"
-                                                    y="4"
-                                                    width="6"
-                                                    height="6"
-                                                    rx="1"
-                                                />
-
-                                                <rect
-                                                    x="4"
-                                                    y="14"
-                                                    width="6"
-                                                    height="6"
-                                                    rx="1"
-                                                />
-
-                                                <rect
-                                                    x="14"
-                                                    y="14"
-                                                    width="6"
-                                                    height="6"
-                                                    rx="1"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-
-                                        Dashboard
-
-                                    </button>
-
-
-                                    <!-- PROFILE -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openProfile
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
                                         >
 
                                             <svg
@@ -1368,20 +1302,17 @@ onUnmounted(() => {
 
                                         </span>
 
-
-                                        My Profile
+                                        Account Management
 
                                     </button>
 
 
-                                    <!-- ORDERS -->
+                                    <!-- MY ORDERS -->
 
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openOrders
-                                        "
+                                        @click="openOrders"
                                     >
 
                                         <span
@@ -1405,235 +1336,7 @@ onUnmounted(() => {
 
                                         </span>
 
-
                                         My Orders
-
-                                    </button>
-
-                                    <!-- VOUCHERS -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openVouchers
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <path
-                                                    d="M21 12a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3Z"
-                                                    stroke-linejoin="round"
-                                                />
-
-                                                <path
-                                                    d="M9 9v6M15 9v6"
-                                                    stroke-linecap="round"
-                                                    stroke-dasharray="2 2"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-
-                                        My Vouchers
-
-                                    </button>
-
-                                    <!-- WISHLIST -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openWishlist
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <path
-                                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-                                        My Wishlist
-
-                                    </button>
-
-                                    <!-- REVIEWS -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openReviews
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <path
-                                                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                                    stroke-linejoin="round"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-
-                                        My Reviews
-
-                                    </button>
-
-                                    <!-- MESSAGES -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="openMessages"
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <path
-                                                    d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-                                        Messages
-
-                                    </button>
-
-                                    <!-- HELP CENTER (BUYER-37) -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openHelpCenter
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <circle
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="9"
-                                                />
-
-                                                <path
-                                                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                                                />
-
-                                                <line
-                                                    x1="12"
-                                                    y1="17"
-                                                    x2="12.01"
-                                                    y2="17"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-                                        Help Center
-
-                                    </button>
-
-                                    <!-- COMPLAINTS (BUYER-33) -->
-
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                                        @click="
-                                            openComplaints
-                                        "
-                                    >
-
-                                        <span
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAF9] text-[#64748B]"
-                                        >
-
-                                            <svg
-                                                class="h-4 w-4"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-
-                                                <path
-                                                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                                                />
-
-                                            </svg>
-
-                                        </span>
-
-                                        Complaints & Tickets
 
                                     </button>
 
@@ -2264,380 +1967,36 @@ onUnmounted(() => {
                                 class="border-t border-[#E5E7EB] bg-[#F8FAF9] p-2"
                             >
 
-                                <!-- DASHBOARD -->
-
+                                <!-- ACCOUNT MANAGEMENT -->
                                 <button
                                     type="button"
                                     class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        goToDashboard
-                                    "
+                                    @click="openProfile"
                                 >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#087F8C] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <rect
-                                                x="4"
-                                                y="4"
-                                                width="6"
-                                                height="6"
-                                                rx="1"
-                                            />
-
-                                            <rect
-                                                x="14"
-                                                y="4"
-                                                width="6"
-                                                height="6"
-                                                rx="1"
-                                            />
-
-                                            <rect
-                                                x="4"
-                                                y="14"
-                                                width="6"
-                                                height="6"
-                                                rx="1"
-                                            />
-
-                                            <rect
-                                                x="14"
-                                                y="14"
-                                                width="6"
-                                                height="6"
-                                                rx="1"
-                                            />
-
+                                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#087F8C] shadow-sm">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                            <circle cx="12" cy="8" r="3.5" />
+                                            <path d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5" stroke-linecap="round" />
                                         </svg>
-
                                     </span>
-
-
-                                    Dashboard
-
+                                    Account Management
                                 </button>
 
-
-                                <!-- PROFILE -->
-
+                                <!-- MY ORDERS -->
                                 <button
                                     type="button"
                                     class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openProfile
-                                    "
+                                    @click="openOrders"
                                 >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <circle
-                                                cx="12"
-                                                cy="8"
-                                                r="3.5"
-                                            />
-
-                                            <path
-                                                d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5"
-                                                stroke-linecap="round"
-                                            />
-
+                                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                            <path d="M6 3h12v18l-6-3-6 3V3Z" stroke-linejoin="round" />
                                         </svg>
-
                                     </span>
-
-
-                                    My Profile
-
-                                </button>
-
-
-                                <!-- ORDERS -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openOrders
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M6 3h12v18l-6-3-6 3V3Z"
-                                                stroke-linejoin="round"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
                                     My Orders
-
                                 </button>
 
-                                <!-- VOUCHERS -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openVouchers
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M21 12a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3Z"
-                                                stroke-linejoin="round"
-                                            />
-
-                                            <path
-                                                d="M9 9v6M15 9v6"
-                                                stroke-linecap="round"
-                                                stroke-dasharray="2 2"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
-                                    My Vouchers
-
-                                </button>
-
-                                <!-- WISHLIST -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openWishlist
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-                                    My Wishlist
-
-                                </button>
-
-                                <!-- REVIEWS -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openReviews
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                                stroke-linejoin="round"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
-                                    My Reviews
-
-                                </button>
-
-                                <!-- MESSAGES -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="openMessages"
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M12 2C6.477 2 2 6.141 2 11.25c0 2.827 1.397 5.372 3.633 7.027a.75.75 0 0 1 .28.618l-.297 2.378a.75.75 0 0 0 1.05.772l3.076-1.428a.75.75 0 0 1 .452-.054c.582.115 1.183.187 1.806.187 5.523 0 10-4.141 10-9.25S17.523 2 12 2z"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-                                    Messages
-
-                                </button>
-
-                                <!-- HELP CENTER (BUYER-37) -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openHelpCenter
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <circle
-                                                cx="12"
-                                                cy="12"
-                                                r="9"
-                                            />
-
-                                            <path
-                                                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                                            />
-
-                                            <line
-                                                x1="12"
-                                                y1="17"
-                                                x2="12.01"
-                                                y2="17"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
-                                    Help Center
-
-                                </button>
-
-                                <!-- COMPLAINTS (BUYER-33) -->
-
-                                <button
-                                    type="button"
-                                    class="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-[#1F2937] transition hover:bg-white hover:text-[#087F8C]"
-                                    @click="
-                                        openComplaints
-                                    "
-                                >
-
-                                    <span
-                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#64748B] shadow-sm"
-                                    >
-
-                                        <svg
-                                            class="h-4 w-4"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                        >
-
-                                            <path
-                                                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                                            />
-
-                                        </svg>
-
-                                    </span>
-
-
-                                    Complaints & Tickets
-
-                                </button>
-
-
-                                <!-- LOGOUT -->
+<!-- LOGOUT -->
 
                                 <button
                                     type="button"

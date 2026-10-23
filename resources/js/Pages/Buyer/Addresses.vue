@@ -2,7 +2,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 const props = defineProps({
     addresses: {
@@ -252,58 +252,56 @@ const remove = address => {
 <template>
     <Head title="My Addresses" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
-                
-                <!-- PAGE HEADER -->
-                <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
-                                Delivery Details
-                            </p>
-                        </div>
-
-                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">
-                            My Address Book
-                        </h1>
-
-                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                            Manage the shipping locations you use for orders and checkout.
+    <BuyerAccountLayout active-menu="account" active-sub="addresses">
+        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+            <!-- PAGE HEADER -->
+            <div class="mb-6 flex flex-col justify-between gap-4 border-b border-[#EEF1F2] pb-5 sm:flex-row sm:items-center">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                            Delivery Details
                         </p>
                     </div>
 
-                    <!-- 10-Address Limit Badge (BUY-ADDR-005) -->
-                    <div class="flex items-center gap-2">
+                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937]">
+                        My Addresses
+                    </h1>
+
+                    <p class="mt-1 text-xs text-[#64748B]">
+                        Manage shipping locations for deliveries and checkout orders.
+                    </p>
+                </div>
+
+                <!-- 10-Address Limit Badge (BUY-ADDR-005) -->
+                <div class="flex items-center gap-2">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold"
+                        :class="addressList.length >= 10 ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-[#B9E7E4] bg-[#E8F7F6] text-[#087F8C]'"
+                    >
                         <span
-                            class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold"
-                            :class="addressList.length >= 10 ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-[#DDE8E8] bg-white text-[#475569] shadow-sm'"
-                        >
-                            <span
-                                class="h-2 w-2 rounded-full"
-                                :class="addressList.length >= 10 ? 'bg-amber-500' : 'bg-[#087F8C]'"
-                            ></span>
-                            <span>{{ addressList.length }} / 10 Addresses Saved</span>
-                        </span>
-                    </div>
+                            class="h-2 w-2 rounded-full"
+                            :class="addressList.length >= 10 ? 'bg-amber-500' : 'bg-[#087F8C]'"
+                        ></span>
+                        <span>{{ addressList.length }} / 10 Addresses Saved</span>
+                    </span>
                 </div>
+            </div>
 
-                <!-- GLOBAL ERROR BANNER (e.g. from backend default delete guard) -->
-                <div
-                    v-if="$page.props.errors?.address || $page.props.errors?.error"
-                    class="mb-6 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-xs font-bold text-rose-800 shadow-sm"
-                >
-                    <div class="flex items-center gap-2">
-                        <svg class="h-5 w-5 shrink-0 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{{ $page.props.errors?.address || $page.props.errors?.error }}</span>
-                    </div>
+            <!-- GLOBAL ERROR BANNER -->
+            <div
+                v-if="$page.props.errors?.address || $page.props.errors?.error"
+                class="mb-6 rounded-sm border border-rose-300 bg-rose-50 p-4 text-xs font-bold text-rose-800"
+            >
+                <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 shrink-0 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ $page.props.errors?.address || $page.props.errors?.error }}</span>
                 </div>
+            </div>
 
-                <div class="grid gap-6 lg:grid-cols-[1fr_420px]">
+            <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
                     
                     <!-- SAVED ADDRESSES LIST -->
                     <section class="space-y-4">
@@ -565,9 +563,9 @@ const remove = address => {
                             </div>
                         </div>
 
-                        <!-- STREET ADDRESS & POSTAL CODE (BUY-ADDR-001) -->
-                        <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                            <label class="block sm:col-span-2">
+                        <!-- STREET ADDRESS (BUY-ADDR-001) -->
+                        <div class="mt-3">
+                            <label class="block">
                                 <span class="label">Street, Unit / House No. *</span>
                                 <input
                                     v-model="form.street_address"
@@ -578,19 +576,6 @@ const remove = address => {
                                 />
                                 <p v-if="form.errors.street_address" class="mt-1 text-[11px] font-semibold text-rose-600">
                                     {{ form.errors.street_address }}
-                                </p>
-                            </label>
-
-                            <label class="block">
-                                <span class="label">Postal Code</span>
-                                <input
-                                    v-model="form.postal_code"
-                                    maxlength="10"
-                                    class="field"
-                                    placeholder="6300"
-                                />
-                                <p v-if="form.errors.postal_code" class="mt-1 text-[11px] font-semibold text-rose-600">
-                                    {{ form.errors.postal_code }}
                                 </p>
                             </label>
                         </div>
@@ -645,8 +630,7 @@ const remove = address => {
                     </Link>
                 </div>
             </div>
-        </main>
-    </BuyerLayout>
+    </BuyerAccountLayout>
 </template>
 
 <style scoped>

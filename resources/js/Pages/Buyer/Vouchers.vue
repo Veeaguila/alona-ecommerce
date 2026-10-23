@@ -3,7 +3,7 @@
 import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 const props = defineProps({
     my_vouchers: {
@@ -117,37 +117,35 @@ const pagination = computed(() => {
 <template>
     <Head title="My Vouchers" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
-
-                <!-- PAGE HEADER -->
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
-                                Savings & Rewards
-                            </p>
-                        </div>
-
-                        <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937] sm:text-3xl">
-                            Vouchers & Discounts
-                        </h1>
-
-                        <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
-                            Browse platform vouchers, claim exclusive seller discounts, and save on checkout.
+    <BuyerAccountLayout active-menu="vouchers">
+        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+            <!-- PAGE HEADER -->
+            <div class="flex flex-col gap-3 border-b border-[#EEF1F2] pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C] sm:text-xs">
+                            Rewards & Discounts
                         </p>
                     </div>
 
-                    <Link
-                        :href="route('buyer.cart')"
-                        class="inline-flex w-fit items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] sm:text-sm"
-                    >
-                        <span><Icon name="cart" class="h-4 w-4" /></span>
-                        Go to Cart
-                    </Link>
+                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[#1F2937]">
+                        My Vouchers
+                    </h1>
+
+                    <p class="mt-1 text-xs text-[#64748B]">
+                        Browse available platform vouchers, claim shop vouchers, and save on checkout.
+                    </p>
                 </div>
+
+                <Link
+                    :href="route('buyer.cart')"
+                    class="inline-flex w-fit items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-bold text-[#087F8C] shadow-xs transition hover:bg-[#E8F7F6]"
+                >
+                    <span><Icon name="cart" class="h-4 w-4" /></span>
+                    Go to Cart
+                </Link>
+            </div>
 
                 <!-- SUCCESS MESSAGE -->
                 <div
@@ -391,7 +389,6 @@ const pagination = computed(() => {
                     </button>
                 </div>
             </div>
-        </main>
-    </BuyerLayout>
+    </BuyerAccountLayout>
 </template>
 

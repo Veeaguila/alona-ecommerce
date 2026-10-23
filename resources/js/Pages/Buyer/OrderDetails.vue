@@ -3,7 +3,7 @@
 import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
-import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
 
 const props = defineProps({
     order: {
@@ -509,14 +509,35 @@ const imageUrl = path => {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/storage/')) return path
     return `/storage/${path.replace(/^\/+/, '')}`
 }
+
+const itemImage = item => {
+    return imageUrl(
+        item?.variant?.image_path ||
+        item?.product?.image_path ||
+        item?.product?.images?.[0]?.image_path ||
+        item?.product?.primary_image_url ||
+        item?.product?.image_url ||
+        item?.image_path ||
+        null
+    )
+}
+
+const getOrderShopName = computed(() => {
+    const seller = props.order?.items?.[0]?.product?.seller
+    return seller?.store_name || seller?.shop_name || seller?.name || 'Marketplace Seller'
+})
+
+const getItemShopName = item => {
+    const seller = item?.product?.seller
+    return seller?.store_name || seller?.shop_name || seller?.name || 'Marketplace Seller'
+}
 </script>
 
 <template>
     <Head :title="`Order ${order.order_number || order.id}`" />
 
-    <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
-            <div class="mx-auto w-full max-w-[1536px] px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
+    <BuyerAccountLayout active-menu="purchase">
+        <div class="space-y-4">
 
                 <!-- TOP NAV & ACTIONS -->
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -689,8 +710,22 @@ const imageUrl = path => {
                     <!-- LEFT: ORDER ITEMS & RETURNS -->
                     <div class="space-y-4">
                         <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
-                            <div class="border-b border-[#EEF1F2] px-4 py-3.5 sm:px-5">
-                                <h3 class="text-sm font-extrabold text-[#1F2937]">
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3.5 sm:px-5">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
+                                        </svg>
+                                    </span>
+                                    <span class="text-sm font-extrabold text-[#1F2937]">
+                                        {{ getOrderShopName }}
+                                    </span>
+                                    <span class="rounded-md bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-extrabold text-[#087F8C]">
+                                        Shop
+                                    </span>
+                                </div>
+                                <h3 class="text-xs font-semibold text-[#64748B]">
                                     Order Items ({{ order.items?.length || 0 }})
                                 </h3>
                             </div>
@@ -701,35 +736,50 @@ const imageUrl = path => {
                                     :key="item.id"
                                     class="py-4"
                                 >
-                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="flex gap-3.5 sm:gap-4">
+                                        <!-- Product Image -->
+                                        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-gray-50 sm:h-20 sm:w-20">
+                                            <img
+                                                v-if="itemImage(item)"
+                                                :src="itemImage(item)"
+                                                :alt="item.product_name || item.product?.name"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <div v-else class="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                                No image
+                                            </div>
+                                        </div>
+
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <h4 class="text-sm font-extrabold text-[#1F2937]">
-                                                        {{ item.product_name || 'Product' }}
-                                                    </h4>
-                                                    <p v-if="item.variant_label" class="mt-0.5 text-xs text-[#64748B]">
-                                                        {{ item.variant_label }}
-                                                    </p>
-                                                    <p class="mt-1 text-xs text-[#64748B]">
-                                                        {{ money(item.price) }} × {{ item.quantity || 0 }}
-                                                    </p>
-                                                </div>
+                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <h4 class="text-sm font-extrabold text-[#1F2937]">
+                                                                {{ item.product_name || item.product?.name || 'Product' }}
+                                                            </h4>
+                                                            <p v-if="item.variant_label || item.variant?.name" class="mt-0.5 text-xs text-[#64748B]">
+                                                                Variation: {{ item.variant_label || item.variant?.name }}
+                                                            </p>
+                                                            <p class="mt-1 text-xs text-[#64748B]">
+                                                                {{ money(item.price) }} × {{ item.quantity || 0 }}
+                                                            </p>
+                                                        </div>
 
-                                                <p class="text-sm font-extrabold text-[#1F2937]">
-                                                    {{ money(getItemTotal(item)) }}
-                                                </p>
-                                            </div>
+                                                        <p class="text-sm font-extrabold text-[#1F2937]">
+                                                            {{ money(getItemTotal(item)) }}
+                                                        </p>
+                                                    </div>
 
-                                            <div class="mt-2 flex flex-wrap items-center gap-2">
-                                                <span :class="getStatusBadge(item.status || order.status).color" class="rounded-full px-2.5 py-0.5 text-[9px] font-extrabold">
-                                                    {{ getStatusBadge(item.status || order.status).label }}
-                                                </span>
+                                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                        <span :class="getStatusBadge(item.status || order.status).color" class="rounded-full px-2.5 py-0.5 text-[9px] font-extrabold">
+                                                            {{ getStatusBadge(item.status || order.status).label }}
+                                                        </span>
 
-                                                <span v-if="item.product?.seller?.name" class="text-[11px] text-[#94A3B8]">
-                                                    Seller: {{ item.product.seller.name }}
-                                                </span>
-                                            </div>
+                                                        <span class="text-[11px] font-semibold text-[#64748B]">
+                                                            Seller: <span class="font-bold text-[#1F2937]">{{ getItemShopName(item) }}</span>
+                                                        </span>
+                                                    </div>
 
                                             <!-- CARRIER TRACKING DETAILS (BUYER-19) -->
                                             <div
@@ -947,7 +997,9 @@ const imageUrl = path => {
                                             </div>
                                         </div>
                                     </div>
-                                </article>
+                                </div>
+                            </div>
+                        </article>
                             </div>
                         </section>
 
@@ -1062,7 +1114,6 @@ const imageUrl = path => {
                     </div>
                 </div>
             </div>
-        </main>
 
         <!-- PAY ORDER MODAL (BUY-PAY-002, BUY-PAY-003, BUY-PAY-004) -->
         <div
@@ -1395,5 +1446,5 @@ const imageUrl = path => {
                 </form>
             </div>
         </div>
-    </BuyerLayout>
+    </BuyerAccountLayout>
 </template>

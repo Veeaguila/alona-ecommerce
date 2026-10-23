@@ -82,7 +82,8 @@ class BuyerOrderController extends Controller
         $ordersQuery = $user
             ->orders()
             ->with([
-                'items.product',
+                'items.product.seller',
+                'items.product.images',
                 'items.variant',
                 'items.returnRequests',
                 'returnRequests',
@@ -419,6 +420,7 @@ class BuyerOrderController extends Controller
         $order->load([
             'items.product.category',
             'items.product.seller',
+            'items.product.images',
             'items.variant',
             'items.statusHistories',
             'items.returnRequests',
