@@ -8,7 +8,8 @@
       </section>
 
       <template v-else>
-        <section class="app-panel app-panel--padded app-toolbar">
+        <!-- Page Header -->
+        <div class="border-b border-[#E5E7EB] pb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
               <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
@@ -19,13 +20,13 @@
             </h1>
             <p class="mt-0.5 text-xs text-slate-500">Approve requests to schedule courier collection and assign riders.</p>
           </div>
-          <div class="app-toolbar__actions">
+          <div class="app-toolbar__actions flex items-center gap-3">
             <span class="app-count-pill"><strong>{{ pagination.total }}</strong> pending</span>
             <button type="button" class="app-button-secondary" :disabled="loading || processingId !== null" @click="loadData(pagination.current_page)">
               {{ loading ? 'Refreshing...' : 'Refresh' }}
             </button>
           </div>
-        </section>
+        </div>
 
         <div v-if="feedback.message" class="app-feedback" :class="feedback.type === 'error' ? 'app-feedback--error' : 'app-feedback--success'" role="status">
           <span>{{ feedback.message }}</span>

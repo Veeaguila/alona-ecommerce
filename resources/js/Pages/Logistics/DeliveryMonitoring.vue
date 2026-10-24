@@ -22,20 +22,23 @@
           <button type="button" class="ml-4 font-bold hover:opacity-75" @click="feedback.message = ''">Close</button>
         </div>
 
-        <!-- Filter & Search Bar -->
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between app-panel app-panel--padded app-toolbar">
-          <div>
-            <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
-              <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-              <span>Transit Monitoring</span>
-            </div>
-            <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Delivery Fleet Monitoring
-            </h1>
-            <p class="mt-0.5 text-xs text-slate-500">
-              Track parcels in workflow and monitor active deliveries. ({{ pagination.total }} matching)
-            </p>
+        <!-- Page Header -->
+        <div class="border-b border-[#E5E7EB] pb-5">
+          <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+            <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            <span>Transit Monitoring</span>
           </div>
+          <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            Delivery Fleet Monitoring
+          </h1>
+          <p class="mt-0.5 text-xs text-slate-500">
+            Track parcels in workflow and monitor active deliveries. ({{ pagination.total }} matching)
+          </p>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 app-panel app-panel--padded app-toolbar">
+          <p class="text-sm font-semibold text-slate-700">Filter Deliveries</p>
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2">
               <label for="status-filter" class="text-sm font-semibold text-gray-700">Status:</label>

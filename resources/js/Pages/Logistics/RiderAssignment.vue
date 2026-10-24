@@ -11,8 +11,8 @@
       </div>
 
       <template v-else>
-        <!-- Top Status & Actions Card -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 app-panel app-panel--padded app-toolbar">
+        <!-- Page Header -->
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-[#E5E7EB] pb-5">
           <div>
             <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
               <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
@@ -28,7 +28,7 @@
           <button
             type="button"
             :disabled="loading"
-            class="inline-flex items-center justify-center disabled:opacity-50 app-button-secondary"
+            class="inline-flex items-center justify-center disabled:opacity-50 app-button-secondary shrink-0"
             @click="loadParcels"
           >
             {{ loading ? 'Refreshing...' : 'Refresh' }}

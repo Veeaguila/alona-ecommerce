@@ -23,17 +23,30 @@
     >
       <div class="flex h-full min-h-0 flex-col">
         <!-- Logo / Brand Header -->
-        <div class="relative flex h-[80px] shrink-0 items-center justify-center border-b border-white/10 px-5">
+        <div class="relative flex h-[80px] shrink-0 items-center border-b border-white/10 px-4 sm:px-5">
           <a
             href="/sorting-center/dashboard"
-            class="flex items-center justify-center rounded-xl bg-white px-3.5 py-1.5 shadow-sm transition hover:bg-slate-50"
+            class="flex items-center gap-3 transition hover:opacity-95"
             @click="sidebarOpen = false"
           >
-            <img
-              :src="logoUrl"
-              alt="Alona"
-              class="block h-7 w-auto max-w-[150px] object-contain"
-            />
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm"
+            >
+              <img
+                src="/images/alona-icon.png"
+                alt="Alona"
+                class="h-full w-full object-contain"
+              />
+            </div>
+
+            <div class="flex flex-col min-w-0">
+              <span class="text-base font-semibold tracking-tight text-white leading-tight">
+                Alona
+              </span>
+              <span class="text-[10px] font-medium uppercase tracking-wider text-teal-100/90 leading-tight mt-0.5">
+                Logistics Center
+              </span>
+            </div>
           </a>
 
           <!-- Mobile Close Button -->

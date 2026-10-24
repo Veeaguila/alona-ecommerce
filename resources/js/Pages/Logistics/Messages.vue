@@ -10,7 +10,8 @@
       </div>
 
       <template v-else>
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between app-panel app-panel--padded app-toolbar">
+        <!-- Page Header -->
+        <div class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
               <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
@@ -21,7 +22,7 @@
           </div>
           <button
             type="button"
-            class="app-button-primary"
+            class="app-button-primary shrink-0"
             @click="composeMessage"
           >
             New Message

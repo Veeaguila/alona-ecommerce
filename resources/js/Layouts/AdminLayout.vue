@@ -19,18 +19,31 @@
 
                 <!-- Logo / Brand -->
                 <div
-                    class="relative flex h-[80px] shrink-0 items-center justify-center border-b border-white/10 px-5"
+                    class="relative flex h-[80px] shrink-0 items-center border-b border-white/10 px-4 sm:px-5"
                 >
                     <Link
                         :href="route('admin.dashboard')"
-                        class="flex items-center justify-center rounded-xl bg-white px-3.5 py-1.5 shadow-sm transition hover:bg-slate-50"
+                        class="flex items-center gap-3 transition hover:opacity-95"
                         @click="closeSidebar"
                     >
-                        <img
-                            src="/images/alona.png"
-                            alt="Alona"
-                            class="block h-7 w-auto max-w-[150px] object-contain"
-                        />
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm"
+                        >
+                            <img
+                                src="/images/alona-icon.png"
+                                alt="Alona"
+                                class="h-full w-full object-contain"
+                            />
+                        </div>
+
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-base font-extrabold tracking-tight text-white leading-tight">
+                                Alona
+                            </span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-teal-100/90 leading-tight mt-0.5">
+                                Admin Center
+                            </span>
+                        </div>
                     </Link>
 
                     <!-- Mobile Close -->
