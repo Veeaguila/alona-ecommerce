@@ -122,15 +122,6 @@ const timeAgo = (dateStr) => {
     return formatDate(dateStr)
 }
 
-const currentDateFormatted = computed(() => {
-    return new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    })
-})
-
 // SELLER-05: Core Financial & Store Stat Cards
 const financialStats = computed(() => [
     {
@@ -308,8 +299,6 @@ const statusClass = (status) => {
                 <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
                     <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                     <span>Workspace</span>
-                    <span class="text-slate-300">·</span>
-                    <span class="font-medium normal-case text-slate-500">{{ currentDateFormatted }}</span>
                 </div>
 
                 <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">

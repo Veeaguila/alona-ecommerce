@@ -10,6 +10,14 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    flashSales: {
+        type: Array,
+        default: () => [],
+    },
+    flashSaleEndTime: {
+        type: String,
+        default: null,
+    },
     featuredProducts: {
         type: Array,
         default: () => [],
@@ -50,6 +58,8 @@ defineProps({
     <BuyerDashboard
         :categories="categories"
         :products="products"
+        :flash-sales="flashSales"
+        :flash-sale-end-time="flashSaleEndTime"
         :featured-products="featuredProducts"
         :recommended-products="recommendedProducts"
         :top-selling-products="topSellingProducts"

@@ -662,7 +662,7 @@ onUnmounted(() => {
             <!-- ===================================================== -->
 
             <div
-                class="mx-auto flex h-[72px] max-w-[1536px] w-full items-center gap-3 px-4 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8 2xl:px-10"
+                class="mx-auto flex h-[64px] max-w-[1536px] w-full items-center gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:h-[78px] lg:gap-5 lg:px-8 2xl:px-10"
             >
 
                 <!-- ================================================= -->
@@ -676,14 +676,14 @@ onUnmounted(() => {
                             '/'
                         )
                     "
-                    class="flex shrink-0 items-center"
+                    class="flex shrink-0 items-center transition hover:opacity-90"
                     aria-label="Alona Home"
                 >
 
                     <img
                         src="/images/alona.png"
                         alt="Alona"
-                        class="h-9 w-auto object-contain sm:h-10 lg:h-11"
+                        class="h-8 w-auto object-contain sm:h-9 lg:h-10"
                     />
 
                 </Link>
@@ -694,7 +694,7 @@ onUnmounted(() => {
                 <!-- ================================================= -->
 
                 <div
-                    class="hidden min-w-0 flex-1 items-center md:flex"
+                    class="hidden min-w-0 flex-1 items-center md:flex max-w-2xl mx-auto"
                 >
 
                     <form
@@ -703,7 +703,7 @@ onUnmounted(() => {
                     >
 
                         <svg
-                            class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+                            class="pointer-events-none absolute left-3.5 sm:left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -727,8 +727,8 @@ onUnmounted(() => {
                         <input
                             v-model="searchQuery"
                             type="search"
-                            placeholder="Search products..."
-                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
+                            placeholder="Search products, brands, and categories..."
+                            class="h-10 sm:h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-10 sm:pl-11 pr-4 text-xs sm:text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
                         />
 
                     </form>
@@ -741,7 +741,7 @@ onUnmounted(() => {
                 <!-- ================================================= -->
 
                 <div
-                    class="ml-auto hidden shrink-0 items-center gap-1 md:flex"
+                    class="ml-auto hidden shrink-0 items-center gap-1 sm:gap-1.5 md:flex"
                 >
                     <template v-if="user">
 
@@ -752,7 +752,7 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
+                        class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
                         aria-label="Wishlist"
                         title="Wishlist"
                         @click="openWishlist"
@@ -778,7 +778,7 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Cart"
                         title="Cart"
                         @click="openCart"
@@ -838,7 +838,7 @@ onUnmounted(() => {
 
                         <button
                             type="button"
-                            class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                             aria-label="Notifications"
                             title="Notifications"
                             :aria-expanded="
@@ -898,7 +898,7 @@ onUnmounted(() => {
 
                             <div
                                 v-if="notificationsOpen"
-                                class="absolute right-0 top-[calc(100%+10px)] z-50 w-[360px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
+                                class="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(380px,calc(100vw-24px))] max-h-[min(540px,calc(100vh-90px))] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
                                 @click.stop
                             >
 
@@ -1101,7 +1101,7 @@ onUnmounted(() => {
 
                         <button
                             type="button"
-                            class="flex h-10 items-center gap-2 rounded-xl border border-transparent px-2.5 text-left transition hover:border-[#E5E7EB] hover:bg-[#E8F7F6]"
+                            class="flex h-9 sm:h-10 items-center gap-2 rounded-xl border border-transparent px-2 sm:px-2.5 text-left transition hover:border-[#E5E7EB] hover:bg-[#E8F7F6]"
                             :class="{
                                 'border-[#E5E7EB] bg-[#E8F7F6]':
                                     accountOpen
@@ -1116,7 +1116,7 @@ onUnmounted(() => {
                             <!-- PROFILE PHOTO -->
 
                             <span
-                                class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-xs font-black text-[#087F8C]"
+                                class="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F7F6] text-xs font-black text-[#087F8C]"
                             >
 
                                 <img
@@ -1142,7 +1142,7 @@ onUnmounted(() => {
 
 
                             <span
-                                class="hidden max-w-[100px] lg:block"
+                                class="hidden max-w-[100px] xl:block"
                             >
 
                                 <span
@@ -1162,7 +1162,7 @@ onUnmounted(() => {
 
 
                             <svg
-                                class="hidden h-3.5 w-3.5 text-[#64748B] transition-transform duration-200 lg:block"
+                                class="hidden h-3.5 w-3.5 text-[#64748B] transition-transform duration-200 xl:block"
                                 :class="{
                                     'rotate-180':
                                         accountOpen
@@ -1197,7 +1197,7 @@ onUnmounted(() => {
 
                             <div
                                 v-if="accountOpen"
-                                class="absolute right-0 top-[calc(100%+10px)] z-50 w-[280px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
+                                class="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(280px,calc(100vw-24px))] max-h-[min(540px,calc(100vh-90px))] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
                                 @click.stop
                             >
 
@@ -1425,24 +1425,21 @@ onUnmounted(() => {
                 <!-- ================================================= -->
 
                 <div
-                    class="ml-auto flex items-center gap-1 md:hidden"
+                    class="ml-auto flex items-center gap-0.5 xs:gap-1 sm:gap-1.5 md:hidden"
                 >
-
-
-
 
                     <!-- MOBILE WISHLIST -->
 
                     <button
                         v-if="user"
                         type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
+                        class="relative flex h-9 w-9 xs:h-10 xs:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-rose-500"
                         aria-label="Wishlist"
                         title="Wishlist"
                         @click="openWishlist"
                     >
                         <svg
-                            class="h-5 w-5"
+                            class="h-4 w-4 xs:h-5 xs:w-5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -1460,14 +1457,14 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="relative flex h-9 w-9 xs:h-10 xs:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Cart"
                         title="Cart"
                         @click="openCart"
                     >
 
                         <svg
-                            class="h-5 w-5"
+                            class="h-4 w-4 xs:h-5 xs:w-5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -1518,7 +1515,7 @@ onUnmounted(() => {
 
                         <button
                             type="button"
-                            class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            class="relative flex h-9 w-9 xs:h-10 xs:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                             aria-label="Notifications"
                             title="Notifications"
                             :aria-expanded="
@@ -1530,7 +1527,7 @@ onUnmounted(() => {
                         >
 
                             <svg
-                                class="h-5 w-5"
+                                class="h-4 w-4 xs:h-5 xs:w-5"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -1580,7 +1577,7 @@ onUnmounted(() => {
                                 v-if="
                                     mobileNotificationsOpen
                                 "
-                                class="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(360px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
+                                class="fixed inset-x-3 top-[68px] sm:absolute sm:inset-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[360px] z-50 max-h-[calc(100vh-80px)] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10"
                                 @click.stop
                             >
 
@@ -1749,7 +1746,7 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="flex h-9 w-9 xs:h-10 xs:w-10 items-center justify-center rounded-xl text-[#1F2937] transition hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
                         aria-label="Open menu"
                         :aria-expanded="mobileOpen"
                         @click="toggleMobileMenu"
@@ -1810,11 +1807,11 @@ onUnmounted(() => {
 
                 <div
                     v-if="mobileOpen"
-                    class="border-t border-[#E5E7EB] bg-white md:hidden"
+                    class="border-t border-[#E5E7EB] bg-white shadow-xl md:hidden"
                 >
 
                     <div
-                        class="mx-auto max-h-[calc(100vh-78px)] max-w-[1536px] w-full overflow-y-auto px-4 py-4 sm:px-6 2xl:px-10"
+                        class="mx-auto max-h-[calc(100vh-68px)] sm:max-h-[calc(100vh-76px)] max-w-[1536px] w-full overflow-y-auto px-4 py-4 sm:px-6 2xl:px-10"
                     >
 
                         <!-- ================================================= -->

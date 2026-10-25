@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\FlashSale;
 use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\RecentlyViewedProduct;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Services\AccountDestination;
@@ -385,10 +387,90 @@ if ($topSellingIds->isNotEmpty()) {
                 ],
             ];
 
+        /*
+        |--------------------------------------------------------------------------
+        | Flash Sales
+        |--------------------------------------------------------------------------
+        */
+        $flashSales = collect();
+        $flashSaleEndTime = null;
+
+        if (Schema::hasTable('flash_sales')) {
+            $now = now();
+            $activeSales = FlashSale::query()
+                ->with([
+                    'product' => function ($q) {
+                        $q->where('status', 'approved')
+                            ->with(['category:id,name,slug', 'images', 'seller:id,name']);
+                    },
+                ])
+                ->whereHas('product', fn ($q) => $q->where('status', 'approved'))
+                ->whereNull('ended_at')
+                ->where('starts_at', '<=', $now)
+                ->where('ends_at', '>', $now)
+                ->whereRaw('flash_quantity > COALESCE(sold_quantity, 0)')
+                ->orderBy('ends_at')
+                ->take(12)
+                ->get();
+
+            if ($activeSales->isNotEmpty()) {
+                $minEnd = $activeSales->min('ends_at');
+                $flashSaleEndTime = $minEnd ? $minEnd->toIso8601String() : null;
+
+                $flashSales = $activeSales->map(function ($fs) {
+                    $product = $fs->product;
+                    $origPrice = (float) $product->price;
+                    $flashPrice = (float) $fs->flash_price;
+                    $discountPct = $origPrice > $flashPrice && $origPrice > 0
+                        ? round((($origPrice - $flashPrice) / $origPrice) * 100)
+                        : 0;
+
+                    $totalQty = (int) $fs->flash_quantity;
+                    $soldQty = (int) ($fs->sold_quantity ?? 0);
+                    $percentSold = $totalQty > 0 ? min(100, round(($soldQty / $totalQty) * 100)) : 0;
+
+                    return [
+                        'id' => $fs->id,
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'slug' => $product->slug,
+                        'image' => $product->image_path
+                            ? (str_starts_with($product->image_path, 'http') ? $product->image_path : '/storage/' . ltrim($product->image_path, '/'))
+                            : null,
+                        'original_price' => $origPrice,
+                        'flash_price' => $flashPrice,
+                        'discount_percentage' => $discountPct,
+                        'flash_quantity' => $totalQty,
+                        'sold_quantity' => $soldQty,
+                        'percent_sold' => $percentSold,
+                        'remaining' => max(0, $totalQty - $soldQty),
+                        'ends_at' => $fs->ends_at?->toIso8601String(),
+                        'category_name' => $product->category?->name,
+                    ];
+                })->values();
+            } else {
+                // Check if upcoming flash sale to give the timer a real target countdown
+                $upcoming = FlashSale::query()
+                    ->whereHas('product', fn ($q) => $q->where('status', 'approved'))
+                    ->whereNull('ended_at')
+                    ->where('starts_at', '>', $now)
+                    ->orderBy('starts_at')
+                    ->first();
+
+                if ($upcoming) {
+                    $flashSaleEndTime = $upcoming->starts_at?->toIso8601String();
+                }
+            }
+        }
+
         return Inertia::render($guest ? 'Guest/Home' : 'Buyer/Dashboard', [
             'categories' => $categories,
 
             'products' => $products,
+
+            'flashSales' => $flashSales,
+
+            'flashSaleEndTime' => $flashSaleEndTime,
 
             'featuredProducts' => $featuredProducts,
 

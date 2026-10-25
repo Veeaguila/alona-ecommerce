@@ -352,23 +352,6 @@
                                     />
                                 </svg>
 
-                                <!-- Notifications -->
-                                <svg
-                                    v-else-if="item.key === 'notifications'"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-[18px] w-[18px] shrink-0"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M15 17h5l-1.4-1.8A2 2 0 0118 14V10a6 6 0 00-12 0v4a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
-                                    />
-                                </svg>
-
                                 <span class="truncate">
                                     {{ item.label }}
                                 </span>
@@ -491,12 +474,6 @@
 
                         <div class="min-w-0">
                             <p
-                                class="truncate text-xs font-medium text-slate-400"
-                            >
-                                Seller Center
-                            </p>
-
-                            <p
                                 class="truncate text-sm font-semibold text-slate-700 sm:text-base"
                             >
                                 {{ currentDateLabel }}
@@ -510,8 +487,14 @@
                         <!-- Notifications -->
                         <Link
                             :href="route('seller.notifications')"
-                            class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:border-[#16A6A0] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            class="relative flex h-10 w-10 items-center justify-center rounded-xl border transition"
+                            :class="
+                                isNotificationsActive
+                                    ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C]'
+                                    : 'border-[#E5E7EB] bg-white text-slate-600 hover:border-[#16A6A0] hover:bg-[#E8F7F6] hover:text-[#087F8C]'
+                            "
                             title="Notifications"
+                            aria-label="Notifications"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -527,6 +510,14 @@
                                     d="M15 17h5l-1.4-1.8A2 2 0 0118 14V10a6 6 0 00-12 0v4a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
                                 />
                             </svg>
+
+                            <!-- Notification Count Badge -->
+                            <span
+                                v-if="unreadNotificationsCount > 0"
+                                class="absolute -right-1 -top-1 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white"
+                            >
+                                {{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}
+                            </span>
                         </Link>
 
                         <!-- Store Status -->
@@ -703,12 +694,15 @@ const accountNavigation = [
         href: route('seller.settings'),
         key: 'settings',
     },
-    {
-        label: 'Notifications',
-        href: route('seller.notifications'),
-        key: 'notifications',
-    },
 ]
+
+const unreadNotificationsCount = computed(() => {
+    return Number(page.props.sellerCounts?.notifications ?? page.props.unreadNotificationsCount ?? 0)
+})
+
+const isNotificationsActive = computed(() => {
+    return currentPath.value.startsWith('/seller/notifications')
+})
 
 const currentDateLabel = computed(() => {
     return new Date().toLocaleDateString(undefined, {
@@ -779,10 +773,6 @@ const isActive = (item) => {
         return currentPath.value.startsWith('/seller/settings')
     }
 
-    if (item.key === 'notifications') {
-        return currentPath.value.startsWith('/seller/notifications')
-    }
-
     return false
 }
 
@@ -800,6 +790,34 @@ const closeSidebar = () => {
 </script>
 
 <style scoped>
+.sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.2s ease;

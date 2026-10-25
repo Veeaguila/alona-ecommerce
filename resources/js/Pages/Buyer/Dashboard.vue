@@ -16,6 +16,16 @@ const props = defineProps({
         default: () => [],
     },
 
+    flashSales: {
+        type: Array,
+        default: () => [],
+    },
+
+    flashSaleEndTime: {
+        type: String,
+        default: null,
+    },
+
     featuredProducts: {
         type: Array,
         default: () => [],
@@ -969,6 +979,42 @@ const whyAlonaData = computed(() => {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Flash Sale Countdown Timer
+|--------------------------------------------------------------------------
+*/
+const flashSaleCountdown = ref({
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+})
+let flashTimerInterval = null
+
+const tickFlashCountdown = () => {
+    const now = new Date().getTime()
+    let targetTime
+
+    if (props.flashSaleEndTime) {
+        targetTime = new Date(props.flashSaleEndTime).getTime()
+    } else {
+        const endOfDay = new Date()
+        endOfDay.setHours(23, 59, 59, 999)
+        targetTime = endOfDay.getTime()
+    }
+
+    const diff = Math.max(0, Math.floor((targetTime - now) / 1000))
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    const s = diff % 60
+
+    flashSaleCountdown.value = {
+        hours: String(h).padStart(2, '0'),
+        minutes: String(m).padStart(2, '0'),
+        seconds: String(s).padStart(2, '0'),
+    }
+}
+
 let observer = null
 
 onMounted(() => {
@@ -1014,12 +1060,18 @@ onMounted(() => {
         })
 
     startHeroTimer()
+    tickFlashCountdown()
+    flashTimerInterval = setInterval(tickFlashCountdown, 1000)
 })
 
 onUnmounted(() => {
     observer?.disconnect()
     observer = null
     clearHeroTimer()
+    if (flashTimerInterval) {
+        clearInterval(flashTimerInterval)
+        flashTimerInterval = null
+    }
 })
 </script>
 
@@ -1529,6 +1581,176 @@ onUnmounted(() => {
 
                 </div>
 
+            </section>
+
+            <!-- =====================================================
+                 FLASH SALES (LIMITED TIME OFFER WITH LIVE COUNTDOWN)
+            ====================================================== -->
+
+            <section
+                class="alona-reveal bg-[#FFFDF9] border-y border-amber-100/80"
+            >
+                <div
+                    class="mx-auto w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                >
+                    <div
+                        class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+                    >
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]">
+                                    Limited Time
+                                </p>
+                            </div>
+
+                            <div class="mt-2 flex flex-wrap items-center gap-3 sm:gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl sm:text-2xl">⚡</span>
+                                    <h2 class="text-2xl font-black tracking-tight text-gray-900 sm:text-3xl">
+                                        Flash Sales
+                                    </h2>
+                                </div>
+
+                                <!-- Live Countdown Timer -->
+                                <div class="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-white shadow-sm">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Ends in</span>
+                                    <div class="flex items-center gap-1 font-mono text-xs font-black">
+                                        <span class="rounded bg-white/10 px-1.5 py-0.5 text-white">{{ flashSaleCountdown.hours }}</span>
+                                        <span class="text-amber-400 font-bold">:</span>
+                                        <span class="rounded bg-white/10 px-1.5 py-0.5 text-white">{{ flashSaleCountdown.minutes }}</span>
+                                        <span class="text-amber-400 font-bold">:</span>
+                                        <span class="rounded bg-white/10 px-1.5 py-0.5 text-white">{{ flashSaleCountdown.seconds }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="mt-1 text-xs text-[#64748B] sm:text-sm">
+                                Grab hot discounts before the timer expires. Limited quantities available!
+                            </p>
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:text-[#066B76] sm:flex"
+                        >
+                            See all deals →
+                        </Link>
+                    </div>
+
+                    <!-- Flash Sales Active Grid -->
+                    <div
+                        v-if="flashSales && flashSales.length"
+                        class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    >
+                        <Link
+                            v-for="item in flashSales"
+                            :key="item.id"
+                            :href="safeRoute('buyer.product', '#', item.product_id)"
+                            class="product-card group relative flex flex-col overflow-hidden rounded-[22px] border border-amber-200/60 bg-white p-3 shadow-xs transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                        >
+                            <!-- Image & Discount Badge -->
+                            <div class="relative aspect-square w-full overflow-hidden rounded-[18px] bg-[#F4F7F6]">
+                                <img
+                                    v-if="item.image"
+                                    :src="item.image"
+                                    :alt="item.name"
+                                    class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                />
+                                <div v-else class="flex h-full items-center justify-center text-slate-300">
+                                    <Icon name="bag" class="h-8 w-8 text-[#087F8C]/40" />
+                                </div>
+
+                                <!-- Discount Badge -->
+                                <span
+                                    v-if="item.discount_percentage > 0"
+                                    class="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-2 py-0.5 text-[10px] font-black text-white shadow-sm"
+                                >
+                                    <span>⚡</span>
+                                    <span>-{{ item.discount_percentage }}%</span>
+                                </span>
+
+                                <!-- Stock status badge -->
+                                <span
+                                    v-if="item.remaining <= 5 && item.remaining > 0"
+                                    class="absolute right-2.5 top-2.5 rounded-full bg-slate-900/80 px-2 py-0.5 text-[9px] font-bold text-amber-300 backdrop-blur-xs"
+                                >
+                                    Only {{ item.remaining }} left
+                                </span>
+                            </div>
+
+                            <!-- Product Details -->
+                            <div class="mt-3 flex flex-1 flex-col justify-between">
+                                <div>
+                                    <p class="line-clamp-2 text-xs font-bold text-gray-900 group-hover:text-[#087F8C] transition">
+                                        {{ item.name }}
+                                    </p>
+                                </div>
+
+                                <div class="mt-2.5 space-y-2">
+                                    <!-- Prices -->
+                                    <div class="flex items-baseline gap-1.5 flex-wrap">
+                                        <span class="text-sm sm:text-base font-black text-[#087F8C]">
+                                            ₱{{ Number(item.flash_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                        </span>
+                                        <span
+                                            v-if="item.original_price > item.flash_price"
+                                            class="text-[11px] text-gray-400 line-through"
+                                        >
+                                            ₱{{ Number(item.original_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Stock Progress Bar -->
+                                    <div>
+                                        <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                                            <div
+                                                class="h-full rounded-full bg-gradient-to-r from-amber-400 to-[#087F8C] transition-all duration-500"
+                                                :style="{ width: `${Math.max(12, item.percent_sold)}%` }"
+                                            ></div>
+                                        </div>
+                                        <div class="mt-1 flex items-center justify-between text-[10px] text-gray-500">
+                                            <span class="font-semibold text-amber-600">🔥 {{ item.sold_quantity }} sold</span>
+                                            <span>{{ item.remaining }} left</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
+
+                    <!-- Flash Sales Empty State -->
+                    <div
+                        v-else
+                        class="mt-7 rounded-[24px] border border-dashed border-amber-200/80 bg-white p-12 text-center"
+                    >
+                        <div
+                            class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF8E7] text-2xl text-amber-500"
+                        >
+                            <svg class="h-7 w-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+
+                        <h3 class="mt-4 text-sm font-extrabold text-gray-900">
+                            No active flash sales right now
+                        </h3>
+
+                        <p class="mx-auto mt-1 max-w-sm text-xs leading-5 text-gray-500">
+                            Check back soon for new limited-time flash deals and countdown specials from Alona sellers.
+                        </p>
+
+                        <div class="mt-5">
+                            <Link
+                                :href="safeRoute('buyer.products')"
+                                class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76]"
+                            >
+                                Browse products →
+                            </Link>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- =====================================================

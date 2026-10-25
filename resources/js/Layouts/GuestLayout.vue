@@ -237,32 +237,32 @@ onUnmounted(() => {
 
             <!-- MAIN HEADER -->
             <div
-                class="mx-auto flex h-[72px] max-w-[1440px] items-center gap-2 px-3 sm:h-[78px] sm:px-6 lg:gap-5 lg:px-8"
+                class="mx-auto flex h-[64px] max-w-[1440px] items-center gap-2 px-3 sm:h-[72px] sm:px-6 lg:h-[78px] lg:gap-5 lg:px-8"
             >
 
                 <!-- LOGO -->
                 <Link
                     :href="safeRoute('guest.home', '/')"
-                    class="flex shrink-0 items-center"
+                    class="flex shrink-0 items-center transition hover:opacity-90"
                     aria-label="Alona Home"
                 >
                     <img
                         src="/images/alona.png"
                         alt="Alona"
-                        class="h-9 w-auto object-contain sm:h-10 lg:h-11"
+                        class="h-8 w-auto object-contain sm:h-9 lg:h-10"
                     />
                 </Link>
 
                 <!-- DESKTOP SEARCH -->
                 <div
-                    class="hidden min-w-0 flex-1 items-center md:flex"
+                    class="hidden min-w-0 flex-1 items-center md:flex max-w-2xl mx-auto"
                 >
                     <form
                         class="relative min-w-0 w-full"
                         @submit.prevent="searchProducts"
                     >
                         <svg
-                            class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+                            class="pointer-events-none absolute left-3.5 sm:left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -283,21 +283,21 @@ onUnmounted(() => {
                         <input
                             v-model="searchQuery"
                             type="search"
-                            placeholder="Search products..."
-                            class="h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-11 pr-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
+                            placeholder="Search products, brands, and categories..."
+                            class="h-10 sm:h-11 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-10 sm:pl-11 pr-4 text-xs sm:text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
                         />
                     </form>
                 </div>
 
                 <!-- DESKTOP ACTIONS -->
                 <div
-                    class="ml-auto hidden shrink-0 items-center gap-1 md:flex"
+                    class="ml-auto hidden shrink-0 items-center gap-1.5 md:flex"
                 >
 
                     <!-- CART -->
                     <button
                         type="button"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Cart"
                         title="Cart"
                         @click="openCart"
@@ -340,7 +340,7 @@ onUnmounted(() => {
                     <template v-if="isLoggedIn">
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
+                            class="inline-flex h-9 sm:h-10 items-center rounded-xl bg-[#087F8C] px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold text-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="goToDashboard"
                         >
                             Dashboard
@@ -351,7 +351,7 @@ onUnmounted(() => {
                     <template v-else>
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
+                            class="inline-flex h-9 sm:h-10 items-center rounded-xl px-3 sm:px-3.5 text-xs sm:text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
                             @click="openAuthModal('login')"
                         >
                             Log in
@@ -359,7 +359,7 @@ onUnmounted(() => {
 
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
+                            class="inline-flex h-9 sm:h-10 items-center rounded-xl bg-[#087F8C] px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold text-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="openAuthModal('register')"
                         >
                             Sign Up
@@ -369,17 +369,17 @@ onUnmounted(() => {
 
                 <!-- MOBILE ACTIONS -->
                 <div
-                    class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1 md:hidden"
+                    class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-1.5 md:hidden"
                 >
 
                     <!-- MOBILE SEARCH -->
                     <form
-                        class="min-w-0 flex-1"
+                        class="min-w-0 flex-1 max-w-[280px] sm:max-w-sm"
                         @submit.prevent="searchProducts"
                     >
                         <div class="relative">
                             <svg
-                                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]"
+                                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#64748B]"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -401,7 +401,7 @@ onUnmounted(() => {
                                 v-model="searchQuery"
                                 type="search"
                                 placeholder="Search..."
-                                class="h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-9 pr-2 text-xs text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
+                                class="h-9 sm:h-10 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] pl-8 sm:pl-9 pr-2.5 text-xs text-[#1F2937] outline-none transition duration-200 placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-2 focus:ring-[#16A6A0]/10"
                             />
                         </div>
                     </form>
@@ -409,7 +409,7 @@ onUnmounted(() => {
                     <!-- MOBILE CART -->
                     <button
                         type="button"
-                        class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                        class="relative flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                         aria-label="Cart"
                         title="Cart"
                         @click="openCart"
@@ -452,7 +452,7 @@ onUnmounted(() => {
                     <button
                         type="button"
                         data-mobile-menu-button
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
+                        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
                         :aria-expanded="mobileOpen"
                         aria-controls="mobile-menu"
                         aria-label="Toggle menu"
@@ -505,47 +505,21 @@ onUnmounted(() => {
             <Transition
                 enter-active-class="transition-all duration-200 ease-out"
                 enter-from-class="max-h-0 opacity-0"
-                enter-to-class="max-h-[220px] opacity-100"
+                enter-to-class="max-h-[360px] opacity-100"
                 leave-active-class="transition-all duration-150 ease-in"
-                leave-from-class="max-h-[220px] opacity-100"
+                leave-from-class="max-h-[360px] opacity-100"
                 leave-to-class="max-h-0 opacity-0"
             >
                 <div
                     v-if="mobileOpen"
                     id="mobile-menu"
                     data-mobile-menu
-                    class="overflow-hidden border-t border-[#E5E7EB] bg-white md:hidden"
+                    class="overflow-hidden border-t border-[#E5E7EB] bg-white shadow-xl md:hidden"
                     @click.stop
                 >
                     <div
-                        class="mx-auto max-w-[1440px] px-4 py-4 sm:px-6"
+                        class="mx-auto max-h-[calc(100vh-68px)] max-w-[1440px] overflow-y-auto px-4 py-4 sm:px-6 space-y-3"
                     >
-
-                        <!-- MENU TITLE -->
-                        <div class="mb-3 flex items-center gap-2">
-                            <span
-                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
-                            >
-                                <svg
-                                    class="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        d="M4 6H20M4 12H20M4 18H20"
-                                        stroke-linecap="round"
-                                    />
-                                </svg>
-                            </span>
-
-                            <span
-                                class="text-sm font-extrabold text-[#1F2937]"
-                            >
-                                Menu
-                            </span>
-                        </div>
 
                         <!-- MENU OPTIONS -->
                         <div class="grid gap-2">
@@ -557,7 +531,7 @@ onUnmounted(() => {
                                     class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
                                     @click="goToDashboard"
                                 >
-                                    Dashboard
+                                    Go to Dashboard
                                 </button>
                             </template>
 
@@ -583,6 +557,42 @@ onUnmounted(() => {
 
                                 </div>
                             </template>
+                        </div>
+
+                        <!-- NAVIGATION LINKS -->
+                        <div class="border-t border-[#E5E7EB] pt-3 space-y-1">
+                            <Link
+                                :href="safeRoute('guest.products', '/products')"
+                                class="flex h-10 items-center gap-3 rounded-xl px-3 text-xs font-bold text-slate-700 transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                @click="closeMobileMenu"
+                            >
+                                <svg class="h-4 w-4 text-[#087F8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                                <span>All Products</span>
+                            </Link>
+
+                            <button
+                                type="button"
+                                class="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold text-slate-700 transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                @click="openPartnerModal('logistics', 'signup')"
+                            >
+                                <svg class="h-4 w-4 text-[#087F8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                                <span>Become a Logistics Partner</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold text-slate-700 transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                @click="openPartnerModal('rider', 'signup')"
+                            >
+                                <svg class="h-4 w-4 text-[#087F8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span>Drive / Deliver with Us</span>
+                            </button>
                         </div>
                     </div>
                 </div>
