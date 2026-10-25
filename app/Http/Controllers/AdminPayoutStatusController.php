@@ -17,16 +17,55 @@ class AdminPayoutStatusController extends Controller
     public function index(Request $request): Response
     {
         $status = $request->input('status', 'all');
+        $search = $request->input('search');
 
-        $query = SellerPayoutRequest::with(['seller', 'processedBy'])->latest();
+        $query = SellerPayoutRequest::with([
+            'seller:id,name,store_name,email,contact_no,avatar,store_logo_path,status',
+            'processedBy:id,name'
+        ])->latest();
 
         if ($status !== 'all' && in_array($status, ['pending', 'processing', 'approved', 'completed', 'rejected'])) {
-            $query->where('status', $status);
+            if ($status === 'approved') {
+                $query->whereIn('status', ['approved', 'completed']);
+            } else {
+                $query->where('status', $status);
+            }
         }
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('payout_reference', 'like', "%{$search}%")
+                    ->orWhere('account_name', 'like', "%{$search}%")
+                    ->orWhere('account_number', 'like', "%{$search}%")
+                    ->orWhere('bank_name', 'like', "%{$search}%")
+                    ->orWhereHas('seller', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                            ->orWhere('store_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('contact_no', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $stats = [
+            'total_disbursed' => (float) SellerPayoutRequest::whereIn('status', ['approved', 'completed'])->sum('amount'),
+            'pending_amount' => (float) SellerPayoutRequest::where('status', 'pending')->sum('amount'),
+            'processing_amount' => (float) SellerPayoutRequest::where('status', 'processing')->sum('amount'),
+            'pending_count' => SellerPayoutRequest::where('status', 'pending')->count(),
+            'processing_count' => SellerPayoutRequest::where('status', 'processing')->count(),
+            'approved_count' => SellerPayoutRequest::whereIn('status', ['approved', 'completed'])->count(),
+            'rejected_count' => SellerPayoutRequest::where('status', 'rejected')->count(),
+            'total_count' => SellerPayoutRequest::count(),
+        ];
 
         return Inertia::render('Admin/PayoutRequests', [
             'payouts' => $query->paginate(20)->withQueryString(),
             'currentStatus' => $status,
+            'filters' => [
+                'status' => $status,
+                'search' => $search ?? '',
+            ],
+            'stats' => $stats,
             'counts' => [
                 'all' => SellerPayoutRequest::count(),
                 'pending' => SellerPayoutRequest::where('status', 'pending')->count(),
