@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -55,22 +56,52 @@ class AdminDashboardController extends Controller
                 'created_at',
             ]);
 
-        $notifications = [
-            [
+        $pendingAiReviewsCount = Product::where('status', 'pending')
+            ->whereIn('ai_verification_status', ['failed', 'uncertain', 'unclear_image', 'service_error'])
+            ->count();
+
+        $unreadAdminAlerts = AdminNotification::query()
+            ->whereNull('read_at')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $notifications = [];
+
+        foreach ($unreadAdminAlerts as $alert) {
+            $notifications[] = [
+                'title' => $alert->title,
+                'message' => $alert->message,
+                'link' => $alert->action_url ?: route('admin.compliance', ['status' => 'pending']),
+            ];
+        }
+
+        if ($pendingAiReviewsCount > 0 && count($notifications) === 0) {
+            $notifications[] = [
+                'title' => 'AI Verification Review Required',
+                'message' => "{$pendingAiReviewsCount} product(s) require manual review after AI verification.",
+                'link' => route('admin.compliance', ['status' => 'pending']),
+            ];
+        }
+
+        if ($stats['pending_registrations'] > 0) {
+            $notifications[] = [
                 'title' => 'Seller applications',
                 'message' => $stats['pending_registrations'] . ' application(s) awaiting review',
                 'link' => route('admin.seller-applications'),
-            ],
-            [
-                'title' => 'Product compliance',
-                'message' => 'Review product listings and seller category fit',
-                'link' => route('admin.compliance'),
-            ],
-            [
-                'title' => 'Complaints and disputes',
-                'message' => 'Resolve buyer, seller, and rider issues pending review',
-                'link' => route('admin.complaints'),
-            ],
+            ];
+        }
+
+        $notifications[] = [
+            'title' => 'Product compliance',
+            'message' => 'Review marketplace listings and seller compliance',
+            'link' => route('admin.compliance'),
+        ];
+
+        $notifications[] = [
+            'title' => 'Complaints and disputes',
+            'message' => 'Resolve buyer, seller, and rider issues pending review',
+            'link' => route('admin.complaints'),
         ];
 
         return Inertia::render('Admin/Dashboard', [

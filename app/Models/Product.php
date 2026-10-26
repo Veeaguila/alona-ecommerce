@@ -36,6 +36,13 @@ class Product extends Model
         'brand',
         'condition',
         'variation_types',
+        'ai_verification_status',
+        'ai_verification_explanation',
+        'ai_confidence_score',
+        'ai_verified_at',
+        'approval_method',
+        'rejection_reason',
+        'ai_raw_response',
     ];
 
     protected $appends = [
@@ -86,6 +93,9 @@ class Product extends Model
             'low_stock_threshold' => 'integer',
             'low_stock_alerted' => 'boolean',
             'variation_types' => 'array',
+            'ai_confidence_score' => 'float',
+            'ai_verified_at' => 'datetime',
+            'ai_raw_response' => 'array',
         ];
     }
 
@@ -442,6 +452,11 @@ class Product extends Model
     {
         return $this->hasMany(ProductImage::class)
             ->orderBy('sort_order');
+    }
+
+    public function adminNotifications(): HasMany
+    {
+        return $this->hasMany(AdminNotification::class);
     }
 
     public function orderItems(): HasMany

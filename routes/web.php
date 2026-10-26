@@ -53,19 +53,35 @@ Route::get('/categories', function (\Illuminate\Http\Request $request) {
     if ($request->user()?->usertype === 'buyer') {
         return redirect()->route('buyer.categories');
     }
+    $categories = Category::query()
+        ->whereNull('parent_id')
+        ->where('is_active', true)
+        ->with([
+            'activeSubcategories' => function ($q) {
+                $q->select(['id', 'parent_id', 'name', 'slug', 'image_path'])
+                  ->withCount(['products' => fn ($query) => $query->where('status', 'approved')])
+                  ->orderBy('name');
+            },
+        ])
+        ->withCount([
+            'products' => fn ($query) =>
+                $query->where('status', 'approved'),
+        ])
+        ->orderBy('name')
+        ->get([
+            'id',
+            'name',
+            'slug',
+            'image_path',
+        ]);
+
+    $categories->each(function ($cat) {
+        $subProductsTotal = $cat->activeSubcategories->sum('products_count');
+        $cat->total_products_count = (int) $cat->products_count + (int) $subProductsTotal;
+    });
+
     return Inertia::render('Guest/Categories', [
-        'categories' => Category::query()
-            ->where('is_active', true)
-            ->withCount([
-                'products' => fn ($query) =>
-                    $query->where('status', 'approved'),
-            ])
-            ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'slug',
-            ]),
+        'categories' => $categories,
     ]);
 })->name('guest.categories');
 

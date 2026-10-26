@@ -16,6 +16,20 @@ const props = defineProps({
     },
 })
 
+const groupedCategories = computed(() => {
+    const roots = props.categories.filter(c => !c.parent_id)
+    if (roots.length > 0) {
+        return roots.map(root => {
+            const subs = props.categories.filter(c => c.parent_id === root.id)
+            return {
+                ...root,
+                subcategories: subs.length > 0 ? subs : (root.active_subcategories || root.activeSubcategories || []),
+            }
+        })
+    }
+    return props.categories.map(c => ({ ...c, subcategories: [] }))
+})
+
 const form = useForm({
     name: props.product.name || '',
     category_id: props.product.category_id ?? props.categories[0]?.id ?? '',
@@ -23,6 +37,7 @@ const form = useForm({
     // Pricing
     price: props.product.price ?? '',
     old_price: props.product.old_price ?? '',
+    weight: props.product.weight ?? 0.5,
 
     stock: props.product.stock ?? 0,
     description: props.product.description ?? '',
@@ -189,14 +204,18 @@ const pricingError = computed(() => {
         return 'Selling price must be greater than ₱0.00.'
     }
 
-    if (form.old_price !== '') {
-        if (oldPrice <= 0) {
-            return 'Original price must be greater than ₱0.00.'
-        }
+    if (form.old_price !== '' && oldPrice <= 0) {
+        return 'Original price must be greater than ₱0.00.'
+    }
 
-        if (oldPrice <= price) {
-            return 'Original price must be greater than the selling price.'
-        }
+    if (
+        form.old_price !== '' &&
+        form.price !== '' &&
+        oldPrice > 0 &&
+        price > 0 &&
+        oldPrice < price
+    ) {
+        return 'Original price cannot be lower than the selling price.'
     }
 
     return ''
@@ -306,11 +325,12 @@ const submit = () => {
     }
 
     /*
-     * An equal old price and selling price is not a discount.
+     * An equal or lower old price and selling price is not a discount.
      */
     if (
         form.old_price !== '' &&
-        Number(form.old_price) === Number(form.price)
+        form.price !== '' &&
+        Number(form.old_price) <= Number(form.price)
     ) {
         form.old_price = ''
     }
@@ -636,13 +656,23 @@ const submit = () => {
                                         v-model="form.category_id"
                                         class="block w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-10 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     >
-                                        <option
-                                            v-for="category in categories"
-                                            :key="category.id"
-                                            :value="category.id"
-                                        >
-                                            {{ category.name }}
-                                        </option>
+                                        <template v-for="category in groupedCategories" :key="category.id">
+                                            <optgroup v-if="category.subcategories && category.subcategories.length > 0" :label="category.name">
+                                                <option :value="category.id">
+                                                    {{ category.name }} (General)
+                                                </option>
+                                                <option
+                                                    v-for="sub in category.subcategories"
+                                                    :key="sub.id"
+                                                    :value="sub.id"
+                                                >
+                                                    ↳ {{ sub.name }}
+                                                </option>
+                                            </optgroup>
+                                            <option v-else :value="category.id">
+                                                {{ category.name }}
+                                            </option>
+                                        </template>
                                     </select>
 
                                     <svg
@@ -1450,6 +1480,40 @@ const submit = () => {
                                         : 'Save Changes'
                                 }}
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- GENERAL ERROR BANNER -->
+                    <div
+                        v-if="form.errors && Object.keys(form.errors).length"
+                        class="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3"
+                    >
+                        <div class="flex items-start gap-3">
+                            <svg
+                                class="mt-0.5 h-4 w-4 shrink-0 text-[#E85D5D]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <circle cx="12" cy="12" r="9" />
+                                <path
+                                    d="M12 8v4M12 16h.01"
+                                    stroke-linecap="round"
+                                />
+                            </svg>
+
+                            <div class="space-y-1">
+                                <p class="text-xs font-bold text-[#DC2626]">
+                                    Please check and correct the following errors:
+                                </p>
+
+                                <ul class="list-disc pl-4 text-[11px] text-[#E85D5D] space-y-0.5">
+                                    <li v-for="(err, key) in form.errors" :key="key">
+                                        {{ err }}
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </form>

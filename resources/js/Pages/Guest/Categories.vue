@@ -18,8 +18,8 @@ const props = defineProps({
 const categoryStyles = {
     electronics: {
         icon: 'M4 5h16v10H4zM9 19h6M12 15v4',
-        bg: 'bg-blue-50',
-        text: 'text-blue-600',
+        bg: 'bg-[#E8F7F6]',
+        text: 'text-[#087F8C]',
     },
 
     fashion: {
@@ -41,7 +41,7 @@ const categoryStyles = {
     },
 
     sports: {
-        icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18',
+        icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5-2.5-2.5 15.5 0 18',
         bg: 'bg-orange-50',
         text: 'text-orange-500',
     },
@@ -81,65 +81,117 @@ const getStyle = slug => categoryStyles[slug] ?? defaultStyle
 
     <GuestLayout>
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-
             <!-- HEADER -->
             <div class="text-center">
                 <p class="text-xs font-semibold text-[#087F8C]">
                     Alona marketplace
                 </p>
 
-                <h1
-                    class="mt-1.5 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl"
-                >
+                <h1 class="mt-1.5 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                     Shop by Category
                 </h1>
 
                 <p class="mx-auto mt-2 max-w-2xl text-xs text-gray-500">
-                    Explore products from trusted sellers by category.
+                    Explore products and curated subcategories from trusted sellers by category.
                 </p>
             </div>
 
-            <!-- CATEGORIES -->
+            <!-- CATEGORIES WITH SUBCATEGORIES -->
             <div
                 v-if="categories.length"
-                class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+                class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             >
-                <Link
+                <div
                     v-for="category in categories"
                     :key="category.id"
-                    :href="`${route('guest.products')}?category=${category.slug}`"
-                    class="group rounded-xl border border-gray-100 bg-white p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#BFE7E5] hover:shadow-md"
+                    class="group flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                 >
-                    <!-- ICON -->
-                    <span
-                        class="flex h-11 w-11 items-center justify-center rounded-lg transition duration-200 group-hover:scale-105"
-                        :class="[
-                            getStyle(category.slug).bg,
-                            getStyle(category.slug).text,
-                        ]"
-                    >
-                        <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
+                    <div>
+                        <!-- Header: Icon + Category Link -->
+                        <Link
+                            :href="`${route('guest.products')}?category=${category.slug}`"
+                            class="flex items-start gap-3.5"
                         >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                :d="getStyle(category.slug).icon"
-                            />
-                        </svg>
-                    </span>
+                            <span
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition duration-200 group-hover:scale-105"
+                                :class="[
+                                    getStyle(category.slug).bg,
+                                    getStyle(category.slug).text,
+                                ]"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        :d="getStyle(category.slug).icon"
+                                    />
+                                </svg>
+                            </span>
 
-                    <!-- NAME ONLY -->
-                    <h2
-                        class="mt-4 text-sm font-semibold text-gray-900 transition group-hover:text-[#087F8C]"
-                    >
-                        {{ category.name }}
-                    </h2>
-                </Link>
+                            <div class="min-w-0 flex-1">
+                                <h2 class="truncate text-sm font-bold text-gray-900 transition group-hover:text-[#087F8C]">
+                                    {{ category.name }}
+                                </h2>
+                                <p class="mt-0.5 text-xs font-semibold text-[#087F8C]">
+                                    {{ category.total_products_count ?? category.products_count ?? 0 }}
+                                    {{ Number(category.total_products_count ?? category.products_count ?? 0) === 1 ? 'product' : 'products' }}
+                                </p>
+                            </div>
+                        </Link>
+
+                        <!-- Subcategories Chips -->
+                        <div
+                            v-if="(category.active_subcategories || category.activeSubcategories || []).length"
+                            class="mt-4 border-t border-gray-100 pt-3"
+                        >
+                            <div class="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                <span>Subcategories</span>
+                                <span class="rounded-full bg-gray-100 px-1.5 py-0.2 text-[9px] text-gray-600">
+                                    {{ (category.active_subcategories || category.activeSubcategories).length }}
+                                </span>
+                            </div>
+
+                            <div class="flex flex-wrap gap-1.5">
+                                <Link
+                                    v-for="sub in (category.active_subcategories || category.activeSubcategories).slice(0, 5)"
+                                    :key="sub.id"
+                                    :href="`${route('guest.products')}?category=${sub.slug}`"
+                                    class="inline-flex items-center rounded-lg bg-[#F8FAF9] px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                >
+                                    <span>{{ sub.name }}</span>
+                                    <span v-if="sub.products_count !== undefined" class="ml-1 text-[10px] text-gray-400">
+                                        ({{ sub.products_count }})
+                                    </span>
+                                </Link>
+
+                                <Link
+                                    v-if="(category.active_subcategories || category.activeSubcategories).length > 5"
+                                    :href="`${route('guest.products')}?category=${category.slug}`"
+                                    class="inline-flex items-center rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-[#087F8C] transition hover:bg-teal-100"
+                                >
+                                    +{{ (category.active_subcategories || category.activeSubcategories).length - 5 }} more
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer link -->
+                    <div class="mt-4 border-t border-gray-50 pt-3">
+                        <Link
+                            :href="`${route('guest.products')}?category=${category.slug}`"
+                            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#087F8C] hover:underline"
+                        >
+                            <span>Browse all {{ category.name }}</span>
+                            <span>→</span>
+                        </Link>
+                    </div>
+                </div>
             </div>
 
             <!-- EMPTY STATE -->
@@ -180,7 +232,6 @@ const getStyle = slug => categoryStyles[slug] ?? defaultStyle
                     Browse Products
                 </Link>
             </div>
-
         </main>
     </GuestLayout>
 </template>

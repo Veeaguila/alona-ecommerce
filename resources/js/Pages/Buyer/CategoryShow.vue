@@ -10,6 +10,14 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    subcategories: {
+        type: Array,
+        default: () => [],
+    },
+    selectedSubcategory: {
+        type: String,
+        default: '',
+    },
     stores: {
         type: Array,
         default: () => [],
@@ -33,6 +41,7 @@ const props = defineProps({
         default: () => ({
             sort: 'popular',
             search: '',
+            subcategory: '',
         }),
     },
 })
@@ -44,7 +53,23 @@ const layoutComponent = computed(() => isGuest.value ? GuestLayout : BuyerLayout
 
 const currentSort = ref(props.filters.sort || 'popular')
 const searchQuery = ref(props.filters.search || '')
+const currentSubcategory = ref(props.filters.subcategory || props.selectedSubcategory || '')
 const storeScrollRef = ref(null)
+
+const currentParentId = computed(() => props.category.parent ? props.category.parent.id : props.category.id)
+const expandedCategories = ref({
+    [currentParentId.value]: true,
+})
+
+const toggleExpand = catId => {
+    expandedCategories.value[catId] = !expandedCategories.value[catId]
+}
+
+const currentSubcategoryName = computed(() => {
+    if (!currentSubcategory.value) return ''
+    const match = props.subcategories.find(s => s.slug === currentSubcategory.value)
+    return match ? match.name : currentSubcategory.value
+})
 
 const scrollStores = direction => {
     if (!storeScrollRef.value) return
@@ -60,6 +85,11 @@ const sortTabs = [
 
 const changeSort = sortKey => {
     currentSort.value = sortKey
+    applyFilters()
+}
+
+const filterSubcategory = subSlug => {
+    currentSubcategory.value = subSlug
     applyFilters()
 }
 
@@ -86,6 +116,7 @@ const applyFilters = () => {
         {
             sort: currentSort.value,
             search: searchQuery.value ? searchQuery.value : undefined,
+            subcategory: currentSubcategory.value ? currentSubcategory.value : undefined,
         },
         {
             preserveState: true,
@@ -139,7 +170,29 @@ const onCategoryImgError = () => {
                     <span>/</span>
                     <Link :href="route('buyer.categories')" class="transition hover:text-[#087F8C]">Categories</Link>
                     <span>/</span>
-                    <span class="font-extrabold text-gray-900">{{ category.name }}</span>
+
+                    <!-- Subcategory view: Parent > Subcategory -->
+                    <template v-if="category.parent">
+                        <Link :href="route('buyer.category.show', category.parent.slug)" class="transition hover:text-[#087F8C]">
+                            {{ category.parent.name }}
+                        </Link>
+                        <span>/</span>
+                        <span class="font-extrabold text-gray-900">{{ category.name }}</span>
+                    </template>
+
+                    <!-- Root category with subcategory pill filter selected -->
+                    <template v-else-if="currentSubcategory">
+                        <button type="button" @click="filterSubcategory('')" class="transition hover:text-[#087F8C]">
+                            {{ category.name }}
+                        </button>
+                        <span>/</span>
+                        <span class="font-extrabold text-gray-900">{{ currentSubcategoryName }}</span>
+                    </template>
+
+                    <!-- Root category default view -->
+                    <template v-else>
+                        <span class="font-extrabold text-gray-900">{{ category.name }}</span>
+                    </template>
                 </nav>
 
                 <!-- ===================================================== -->
@@ -249,29 +302,129 @@ const onCategoryImgError = () => {
                             <span>All Categories</span>
                         </div>
 
-                        <ul class="mt-3 space-y-1 text-xs">
-                            <li
+                        <div class="mt-3 space-y-1 text-xs">
+                            <div
                                 v-for="cat in allCategories"
                                 :key="cat.id"
+                                class="rounded-xl transition"
                             >
-                                <Link
-                                    :href="route('buyer.category.show', cat.slug)"
-                                    class="flex items-center justify-between rounded-lg px-2.5 py-2 font-semibold transition"
+                                <div
+                                    class="group flex items-center justify-between rounded-lg px-2.5 py-2 font-semibold transition"
                                     :class="
-                                        cat.id === category.id
-                                            ? 'bg-[#E8F7F6] font-black text-[#087F8C]'
-                                            : 'text-gray-600 hover:bg-gray-50 hover:text-[#087F8C]'
+                                        (cat.id === category.id || (category.parent && cat.id === category.parent.id))
+                                            ? 'bg-[#E8F7F6] font-bold text-[#087F8C]'
+                                            : 'text-gray-700 hover:bg-gray-50 hover:text-[#087F8C]'
                                     "
                                 >
-                                    <span class="truncate">{{ cat.name }}</span>
-                                    <span v-if="cat.id === category.id" class="text-sm">›</span>
-                                </Link>
-                            </li>
-                        </ul>
+                                    <Link
+                                        :href="route('buyer.category.show', cat.slug)"
+                                        class="flex-1 truncate"
+                                        :title="cat.name"
+                                    >
+                                        {{ cat.name }}
+                                    </Link>
+
+                                    <!-- Accordion toggle button if category has subcategories -->
+                                    <button
+                                        v-if="(cat.active_subcategories || cat.activeSubcategories || []).length"
+                                        type="button"
+                                        class="ml-1 rounded p-0.5 text-gray-400 hover:bg-white hover:text-gray-700"
+                                        :title="expandedCategories[cat.id] ? 'Collapse subcategories' : 'Expand subcategories'"
+                                        @click.prevent.stop="toggleExpand(cat.id)"
+                                    >
+                                        <svg
+                                            class="h-3.5 w-3.5 transition-transform duration-200"
+                                            :class="expandedCategories[cat.id] ? 'rotate-90' : ''"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2.5"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- Indented Subcategories List -->
+                                <ul
+                                    v-if="expandedCategories[cat.id] && (cat.active_subcategories || cat.activeSubcategories || []).length"
+                                    class="ml-3 mt-1 space-y-0.5 border-l-2 border-[#E8F7F6] pl-2 text-[11px]"
+                                >
+                                    <li
+                                        v-for="sub in (cat.active_subcategories || cat.activeSubcategories)"
+                                        :key="sub.id"
+                                    >
+                                        <Link
+                                            :href="route('buyer.category.show', sub.slug)"
+                                            class="flex items-center justify-between rounded-md px-2 py-1.5 transition"
+                                            :class="
+                                                sub.id === category.id
+                                                    ? 'bg-[#087F8C] font-bold text-white shadow-xs'
+                                                    : 'text-gray-600 hover:bg-gray-100 hover:text-[#087F8C]'
+                                            "
+                                        >
+                                            <span class="truncate">{{ sub.name }}</span>
+                                            <span
+                                                v-if="sub.products_count !== undefined"
+                                                class="ml-1 text-[10px]"
+                                                :class="sub.id === category.id ? 'text-teal-100' : 'text-gray-400'"
+                                            >
+                                                {{ sub.products_count }}
+                                            </span>
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </aside>
 
                     <!-- RIGHT MAIN COLUMN: SORTING TOOLBAR & PRODUCTS -->
                     <section class="min-w-0">
+
+                        <!-- SUBCATEGORY FILTER PILLS -->
+                        <div
+                            v-if="subcategories && subcategories.length > 0"
+                            class="mb-3.5 flex items-center gap-2 overflow-x-auto rounded-xl border border-gray-100 bg-white p-2.5 shadow-xs sm:px-3.5 no-scrollbar"
+                        >
+                            <span class="shrink-0 text-xs font-bold text-gray-500">Subcategories:</span>
+
+                            <!-- All in Category Pill -->
+                            <button
+                                type="button"
+                                class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition"
+                                :class="
+                                    !currentSubcategory
+                                        ? 'bg-[#087F8C] text-white shadow-xs'
+                                        : 'bg-[#F8FAF9] text-gray-700 hover:bg-gray-100'
+                                "
+                                @click="filterSubcategory('')"
+                            >
+                                All {{ category.name }}
+                            </button>
+
+                            <!-- Individual Subcategory Pills -->
+                            <button
+                                v-for="sub in subcategories"
+                                :key="sub.id"
+                                type="button"
+                                class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition"
+                                :class="
+                                    currentSubcategory === sub.slug
+                                        ? 'bg-[#087F8C] text-white shadow-xs'
+                                        : 'bg-[#F8FAF9] text-gray-700 hover:bg-gray-100 hover:text-[#087F8C]'
+                                "
+                                @click="filterSubcategory(sub.slug)"
+                            >
+                                {{ sub.name }}
+                                <span
+                                    v-if="sub.products_count !== undefined"
+                                    class="ml-1 text-[10px]"
+                                    :class="currentSubcategory === sub.slug ? 'text-teal-100' : 'text-gray-400'"
+                                >
+                                    ({{ sub.products_count }})
+                                </span>
+                            </button>
+                        </div>
 
                         <!-- SHOPEE STYLE SORT BAR -->
                         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200/90 bg-white p-3 shadow-sm sm:px-4">

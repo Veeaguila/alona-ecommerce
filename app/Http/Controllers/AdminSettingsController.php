@@ -38,6 +38,79 @@ class AdminSettingsController extends Controller
             ->orderBy('id')
             ->get();
 
+        $heroBannersSetting = PlatformSetting::where('key', 'home.hero_banners')->first();
+        $heroBanners = null;
+        if ($heroBannersSetting && $heroBannersSetting->value) {
+            $heroBanners = json_decode($heroBannersSetting->value, true);
+        }
+
+        if (empty($heroBanners) || !is_array($heroBanners)) {
+            $heroBannerSetting = PlatformSetting::where('key', 'home.hero_banner')->first();
+            if ($heroBannerSetting && $heroBannerSetting->value) {
+                $single = json_decode($heroBannerSetting->value, true);
+                if (is_array($single)) {
+                    $heroBanners = [$single];
+                }
+            }
+        }
+
+        if (empty($heroBanners) || !is_array($heroBanners)) {
+            $heroBanners = [
+                [
+                    'id' => 'banner_1',
+                    'is_active' => true,
+                    'theme' => 'teal',
+                    'badge_text' => '',
+                    'title' => 'Welcome to',
+                    'title_highlight' => 'Alona.',
+                    'description' => 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.',
+                    'primary_button_text' => 'Shop Now',
+                    'primary_button_url' => '/products',
+                    'secondary_button_text' => 'Explore Categories',
+                    'secondary_button_url' => '#categories',
+                    'image_path' => '/images/Alogo.png',
+                    'show_floating_cards' => true,
+                    'card_1_title' => 'Products',
+                    'card_1_subtitle' => 'available',
+                    'card_2_title' => 'CATEGORIES',
+                    'card_2_subtitle' => 'to explore',
+                ],
+            ];
+        }
+
+        foreach ($heroBanners as $idx => &$bannerItem) {
+            if (empty($bannerItem['id'])) {
+                $bannerItem['id'] = 'banner_' . ($idx + 1);
+            }
+            if (!isset($bannerItem['is_active'])) {
+                $bannerItem['is_active'] = true;
+            }
+            if (empty($bannerItem['layout_type'])) {
+                $bannerItem['layout_type'] = 'split';
+            }
+            if (!isset($bannerItem['overlay_text'])) {
+                $bannerItem['overlay_text'] = false;
+            }
+            if (!isset($bannerItem['show_primary_button'])) {
+                $bannerItem['show_primary_button'] = !empty($bannerItem['primary_button_text']);
+            }
+            if (!isset($bannerItem['show_primary_button_arrow'])) {
+                $bannerItem['show_primary_button_arrow'] = true;
+            }
+            if (!isset($bannerItem['show_secondary_button'])) {
+                $bannerItem['show_secondary_button'] = !empty($bannerItem['secondary_button_text']);
+            }
+            if (!isset($bannerItem['show_image'])) {
+                $bannerItem['show_image'] = true;
+            }
+            if (empty($bannerItem['theme'])) {
+                $bannerItem['theme'] = 'teal';
+            }
+        }
+        unset($bannerItem);
+
+        $heroBanner = $heroBanners[0] ?? null;
+
         $whyAlonaSetting = PlatformSetting::where('key', 'home.why_alona')->first();
         $whyAlona = $whyAlonaSetting && $whyAlonaSetting->value
             ? json_decode($whyAlonaSetting->value, true)
@@ -74,6 +147,8 @@ class AdminSettingsController extends Controller
             'announcements' => $announcements,
             'policies' => $policies,
             'faqs' => $faqs,
+            'heroBanners' => $heroBanners,
+            'heroBanner' => $heroBanner,
             'whyAlona' => $whyAlona,
             'footer' => \App\Services\FooterService::get(),
         ]);
@@ -483,6 +558,119 @@ class AdminSettingsController extends Controller
         return back()->with(
             'status',
             'FAQ deleted successfully.'
+        );
+    }
+
+    public function updateHeroBanner(Request $request): RedirectResponse
+    {
+        $rawBanners = null;
+        if ($request->filled('banners_data')) {
+            $decoded = json_decode($request->input('banners_data'), true);
+            if (is_array($decoded)) {
+                $rawBanners = $decoded;
+            }
+        }
+
+        if ($rawBanners === null && $request->has('banners') && is_array($request->input('banners'))) {
+            $rawBanners = $request->input('banners');
+        }
+
+        if ($rawBanners === null) {
+            $all = $request->all();
+            if (!empty($all['banners_data'])) {
+                $decoded = json_decode($all['banners_data'], true);
+                if (is_array($decoded)) {
+                    $rawBanners = $decoded;
+                }
+            }
+        }
+
+        if ($rawBanners === null || empty($rawBanners)) {
+            $all = $request->all();
+            if (!empty($all)) {
+                $rawBanners = [$all];
+            } else {
+                $rawBanners = [];
+            }
+        }
+
+        $processedBanners = [];
+        foreach ($rawBanners as $index => $banner) {
+            $id = !empty($banner['id']) ? (string) $banner['id'] : 'banner_' . ($index + 1);
+            $imagePath = !empty($banner['image_path']) ? $banner['image_path'] : '/images/Alogo.png';
+
+            // Check for file uploads: banner_image_{id}, banner_image_{index}, or legacy image
+            if ($request->hasFile("banner_image_{$id}")) {
+                $uploaded = $request->file("banner_image_{$id}")->store('banners', 'public');
+                $imagePath = '/storage/' . $uploaded;
+            } elseif ($request->hasFile("banner_image_{$index}")) {
+                $uploaded = $request->file("banner_image_{$index}")->store('banners', 'public');
+                $imagePath = '/storage/' . $uploaded;
+            } elseif ($request->hasFile('image') && count($rawBanners) === 1) {
+                $uploaded = $request->file('image')->store('banners', 'public');
+                $imagePath = '/storage/' . $uploaded;
+            }
+
+            $processedBanners[] = [
+                'id' => $id,
+                'is_active' => isset($banner['is_active']) ? (bool) $banner['is_active'] : true,
+                'layout_type' => !empty($banner['layout_type']) && in_array($banner['layout_type'], ['split', 'full']) ? $banner['layout_type'] : 'split',
+                'overlay_text' => isset($banner['overlay_text']) ? (bool) $banner['overlay_text'] : false,
+                'theme' => !empty($banner['theme']) ? trim($banner['theme']) : 'teal',
+                'badge_text' => trim((string) ($banner['badge_text'] ?? '')),
+                'title' => trim((string) ($banner['title'] ?? 'Welcome to')),
+                'title_highlight' => trim((string) ($banner['title_highlight'] ?? '')),
+                'description' => trim((string) ($banner['description'] ?? '')),
+                
+                // Primary Button (can be renamed or removed)
+                'show_primary_button' => isset($banner['show_primary_button']) ? (bool) $banner['show_primary_button'] : (!empty($banner['primary_button_text'])),
+                'primary_button_text' => !empty($banner['primary_button_text']) ? trim((string) $banner['primary_button_text']) : 'Shop Now',
+                'primary_button_url' => trim((string) ($banner['primary_button_url'] ?? '/products')),
+                'show_primary_button_arrow' => isset($banner['show_primary_button_arrow']) ? (bool) $banner['show_primary_button_arrow'] : true,
+
+                // Secondary Button (can be renamed or removed)
+                'show_secondary_button' => isset($banner['show_secondary_button']) ? (bool) $banner['show_secondary_button'] : (!empty($banner['secondary_button_text'])),
+                'secondary_button_text' => trim((string) ($banner['secondary_button_text'] ?? '')),
+                'secondary_button_url' => trim((string) ($banner['secondary_button_url'] ?? '')),
+
+                // Illustration Image (can be replaced or removed)
+                'show_image' => isset($banner['show_image']) ? (bool) $banner['show_image'] : true,
+                'image_path' => $imagePath,
+
+                'show_floating_cards' => isset($banner['show_floating_cards']) ? (bool) $banner['show_floating_cards'] : true,
+                'card_1_title' => trim((string) ($banner['card_1_title'] ?? 'Products')),
+                'card_1_subtitle' => trim((string) ($banner['card_1_subtitle'] ?? 'available')),
+                'card_2_title' => trim((string) ($banner['card_2_title'] ?? 'CATEGORIES')),
+                'card_2_subtitle' => trim((string) ($banner['card_2_subtitle'] ?? 'to explore')),
+            ];
+        }
+
+        if (empty($processedBanners)) {
+            return back()->withErrors(['banners' => 'At least one hero banner is required.']);
+        }
+
+        PlatformSetting::updateOrCreate(
+            ['key' => 'home.hero_banners'],
+            [
+                'value' => json_encode($processedBanners),
+                'description' => 'Marketplace Hero Banners configuration (multi-slide).',
+                'is_active' => true,
+            ]
+        );
+
+        // Also update legacy single-banner setting with the first banner
+        PlatformSetting::updateOrCreate(
+            ['key' => 'home.hero_banner'],
+            [
+                'value' => json_encode($processedBanners[0]),
+                'description' => 'Marketplace Hero Banner configuration.',
+                'is_active' => true,
+            ]
+        );
+
+        return back()->with(
+            'status',
+            'Hero Banners updated successfully.'
         );
     }
 

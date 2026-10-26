@@ -10,12 +10,27 @@ const props = defineProps({
     },
 })
 
+const groupedCategories = computed(() => {
+    const roots = props.categories.filter(c => !c.parent_id)
+    if (roots.length > 0) {
+        return roots.map(root => {
+            const subs = props.categories.filter(c => c.parent_id === root.id)
+            return {
+                ...root,
+                subcategories: subs.length > 0 ? subs : (root.active_subcategories || root.activeSubcategories || []),
+            }
+        })
+    }
+    return props.categories.map(c => ({ ...c, subcategories: [] }))
+})
+
 const form = useForm({
     name: '',
     category_id: '',
     price: '',
     old_price: '',
     stock: '',
+    weight: 0.5,
     description: '',
     status: 'pending',
     images: [],
@@ -100,14 +115,18 @@ const pricingError = computed(() => {
         return 'Selling price must be greater than ₱0.00.'
     }
 
-    if (form.old_price !== '') {
-        if (oldPrice <= 0) {
-            return 'Original price must be greater than ₱0.00.'
-        }
+    if (form.old_price !== '' && oldPrice <= 0) {
+        return 'Original price must be greater than ₱0.00.'
+    }
 
-        if (oldPrice <= price) {
-            return 'Original price must be greater than the selling price.'
-        }
+    if (
+        form.old_price !== '' &&
+        form.price !== '' &&
+        oldPrice > 0 &&
+        price > 0 &&
+        oldPrice < price
+    ) {
+        return 'Original price cannot be lower than the selling price.'
     }
 
     return ''
@@ -210,6 +229,17 @@ const submit = (status = form.status) => {
 
     if (pricingError.value) {
         return
+    }
+
+    /*
+     * An equal old price and selling price is not a discount.
+     */
+    if (
+        form.old_price !== '' &&
+        form.price !== '' &&
+        Number(form.old_price) <= Number(form.price)
+    ) {
+        form.old_price = ''
     }
 
     if (form.variants.length > 0) {
@@ -376,13 +406,23 @@ onBeforeUnmount(() => {
                                         Select category
                                     </option>
 
-                                    <option
-                                        v-for="category in props.categories"
-                                        :key="category.id"
-                                        :value="category.id"
-                                    >
-                                        {{ category.name }}
-                                    </option>
+                                    <template v-for="category in groupedCategories" :key="category.id">
+                                        <optgroup v-if="category.subcategories && category.subcategories.length > 0" :label="category.name">
+                                            <option :value="category.id">
+                                                {{ category.name }} (General)
+                                            </option>
+                                            <option
+                                                v-for="sub in category.subcategories"
+                                                :key="sub.id"
+                                                :value="sub.id"
+                                            >
+                                                ↳ {{ sub.name }}
+                                            </option>
+                                        </optgroup>
+                                        <option v-else :value="category.id">
+                                            {{ category.name }}
+                                        </option>
+                                    </template>
                                 </select>
 
                                 <p
@@ -446,7 +486,14 @@ onBeforeUnmount(() => {
                                         </div>
 
                                         <p class="mt-1.5 text-[11px] text-[#94A3B8]">
-                                            Use this when the product is discounted.
+                                            Leave blank if not on sale. If discounted, must be higher than selling price.
+                                        </p>
+
+                                        <p
+                                            v-if="form.old_price && form.price && Number(form.old_price) === Number(form.price)"
+                                            class="mt-1 text-[11px] font-medium text-slate-500"
+                                        >
+                                            Matches selling price (no discount applied).
                                         </p>
 
                                         <p
@@ -1551,14 +1598,16 @@ onBeforeUnmount(() => {
                                 />
                             </svg>
 
-                            <div>
+                            <div class="space-y-1">
                                 <p class="text-xs font-bold text-[#DC2626]">
-                                    Please check the highlighted fields.
+                                    Please check and correct the following errors:
                                 </p>
 
-                                <p class="mt-0.5 text-[11px] text-[#E85D5D]">
-                                    Correct the errors above and try again.
-                                </p>
+                                <ul class="list-disc pl-4 text-[11px] text-[#E85D5D] space-y-0.5">
+                                    <li v-for="(err, key) in form.errors" :key="key">
+                                        {{ err }}
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>

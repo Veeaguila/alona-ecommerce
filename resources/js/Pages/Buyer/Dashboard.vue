@@ -70,6 +70,16 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+
+    heroBanners: {
+        type: Array,
+        default: () => [],
+    },
+
+    heroBanner: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const pageLayout = computed(() =>
@@ -492,16 +502,87 @@ const topSellingCarouselProducts = computed(() => {
         .sort((a, b) => b.soldCount - a.soldCount)
 })
 
+const defaultHeroBanner = {
+    id: 'banner_default',
+    is_active: true,
+    layout_type: 'split',
+    overlay_text: false,
+    theme: 'teal',
+    badge_text: '',
+    title: 'Welcome to',
+    title_highlight: 'Alona.',
+    description: 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.',
+    show_primary_button: true,
+    primary_button_text: 'Shop Now',
+    primary_button_url: '/products',
+    show_primary_button_arrow: true,
+    show_secondary_button: true,
+    secondary_button_text: 'Explore Categories',
+    secondary_button_url: '#categories',
+    show_image: true,
+    image_path: '/images/Alogo.png',
+    show_floating_cards: true,
+    card_1_title: 'Products',
+    card_1_subtitle: 'available',
+    card_2_title: 'CATEGORIES',
+    card_2_subtitle: 'to explore',
+}
+
+const activeBanners = computed(() => {
+    let list = []
+    if (Array.isArray(props.heroBanners) && props.heroBanners.length > 0) {
+        list = props.heroBanners.filter(b => b && b.is_active !== false)
+    } else if (props.heroBanner && Object.keys(props.heroBanner).length > 0) {
+        list = [props.heroBanner]
+    }
+    if (list.length === 0) {
+        list = [defaultHeroBanner]
+    }
+    return list.map(b => ({
+        ...defaultHeroBanner,
+        ...b,
+        layout_type: b.layout_type || 'split',
+        overlay_text: b.overlay_text ?? false,
+        show_primary_button: b.show_primary_button !== false && !!b.primary_button_text,
+        show_primary_button_arrow: b.show_primary_button_arrow !== false,
+        show_secondary_button: b.show_secondary_button !== false && !!b.secondary_button_text,
+        show_image: b.show_image !== false,
+    }))
+})
+
 const heroSlide = ref(0)
 const heroTimer = ref(null)
 const heroPaused = ref(false)
 
-const heroSlideCount = computed(() => 1 + topSellingCarouselProducts.value.length)
+const heroSlideCount = computed(() => activeBanners.value.length)
 
-const currentHeroProduct = computed(() => {
-    if (heroSlide.value <= 0) return null
-    return topSellingCarouselProducts.value[heroSlide.value - 1] ?? null
+const isBannerSlide = computed(() => true)
+
+const currentBanner = computed(() => {
+    return activeBanners.value[heroSlide.value] || activeBanners.value[0] || defaultHeroBanner
 })
+
+const getThemeClass = (theme) => {
+    switch (theme) {
+        case 'emerald':
+            return 'bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#059669]'
+        case 'indigo':
+            return 'bg-gradient-to-br from-[#0F172A] via-[#1E1B4B] to-[#312E81]'
+        case 'navy':
+            return 'bg-gradient-to-br from-[#0A1128] via-[#001F54] to-[#034078]'
+        case 'purple':
+            return 'bg-gradient-to-br from-[#3B0764] via-[#581C87] to-[#7E22CE]'
+        case 'rose':
+            return 'bg-gradient-to-br from-[#881337] via-[#BE123C] to-[#E11D48]'
+        case 'amber':
+            return 'bg-gradient-to-br from-[#78350F] via-[#9A3412] to-[#B45309]'
+        case 'dark':
+            return 'bg-gradient-to-br from-[#111827] via-[#18181B] to-[#27272A]'
+        case 'teal':
+        default:
+            return 'bg-[#087F8C]'
+    }
+}
 
 const goToHeroSlide = slide => {
     const total = heroSlideCount.value
@@ -1090,7 +1171,8 @@ onUnmounted(() => {
 
                 <div class="mx-auto w-full w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
                     <div
-                        class="alona-reveal hero-card relative overflow-hidden rounded-[30px] bg-[#087F8C]"
+                        class="alona-reveal hero-card relative overflow-hidden rounded-[30px] transition-colors duration-700"
+                        :class="currentBanner ? getThemeClass(currentBanner.theme) : 'bg-[#087F8C]'"
                         @mouseenter="pauseHero"
                         @mouseleave="resumeHero"
                     >
@@ -1098,151 +1180,157 @@ onUnmounted(() => {
                         <div class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"></div>
 
                         <Transition name="hero-slide" mode="out-in">
-                            <!-- SLIDE 1: YOUR ORIGINAL HERO -->
+                            <!-- 1. FULL IMAGE BANNER (NO OVERLAY TEXT - PURE GRAPHIC BANNER) -->
                             <div
-                                v-if="heroSlide === 0"
-                                key="discover"
-                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.05fr_.95fr]"
+                                v-if="isBannerSlide && currentBanner && currentBanner.layout_type === 'full' && !currentBanner.overlay_text"
+                                :key="`banner-full-${currentBanner.id || heroSlide}`"
+                                class="relative w-full overflow-hidden"
                             >
+                                <Link
+                                    :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                    class="group relative block w-full focus:outline-none"
+                                >
+                                    <img
+                                        :src="currentBanner.image_path || '/images/Alogo.png'"
+                                        :alt="currentBanner.title || 'Promotional Banner'"
+                                        class="h-[280px] sm:h-[350px] md:h-[390px] lg:h-[430px] w-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+                                        loading="eager"
+                                    />
+                                </Link>
+                            </div>
+
+                            <!-- 2. FULL IMAGE BANNER (WITH OVERLAY TEXT & BUTTONS) -->
+                            <div
+                                v-else-if="isBannerSlide && currentBanner && currentBanner.layout_type === 'full' && currentBanner.overlay_text"
+                                :key="`banner-full-overlay-${currentBanner.id || heroSlide}`"
+                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.1fr_.9fr] overflow-hidden"
+                            >
+                                <!-- Background Image Cover -->
+                                <img
+                                    :src="currentBanner.image_path || '/images/Alogo.png'"
+                                    :alt="currentBanner.title || 'Hero Banner'"
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                    loading="eager"
+                                />
+                                <!-- Dark Gradient Scrim -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20"></div>
+
+                                <!-- Content Over Image -->
                                 <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
-                                    <div class="hero-item mb-5 flex items-center gap-3">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"><Icon name="store" class="h-4 w-4" /></span>
-                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">{{ totalProductsCount.toLocaleString() }} products • {{ totalCategoriesCount.toLocaleString() }} categories</span>
+                                    <div v-if="currentBanner.badge_text" class="hero-item mb-5 flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C] shadow-sm"><Icon name="store" class="h-4 w-4" /></span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-white">
+                                            {{ currentBanner.badge_text }}
+                                        </span>
                                     </div>
 
-                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
-                                        Welcome to
-                                        <span class="text-[#F4B942]">Alona.</span>
+                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl drop-shadow-md">
+                                        {{ currentBanner.title || 'Welcome to' }}
+                                        <span class="text-[#F4B942]">{{ currentBanner.title_highlight || 'Alona.' }}</span>
                                     </h1>
 
-                                    <p class="hero-item mt-5 max-w-xl text-sm leading-6 text-teal-50 sm:text-base sm:leading-7">
-                                        Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.
+                                    <p v-if="currentBanner.description" class="hero-item mt-5 max-w-xl text-sm leading-6 text-white/90 sm:text-base sm:leading-7 drop-shadow-sm">
+                                        {{ currentBanner.description }}
                                     </p>
 
-                                    <div class="hero-item mt-7 flex flex-wrap gap-3">
+                                    <div
+                                        v-if="(currentBanner.show_primary_button && currentBanner.primary_button_text) || (currentBanner.show_secondary_button && currentBanner.secondary_button_text)"
+                                        class="hero-item mt-7 flex flex-wrap gap-3"
+                                    >
                                         <Link
-                                            :href="safeRoute('buyer.products')"
-                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
+                                            v-if="currentBanner.show_primary_button && currentBanner.primary_button_text"
+                                            :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
                                         >
-                                            Shop Now
-                                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                            {{ currentBanner.primary_button_text }}
+                                            <span v-if="currentBanner.show_primary_button_arrow !== false" class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
                                         </Link>
 
                                         <a
-                                            href="#categories"
-                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/50 px-5 py-3.5 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
+                                            v-if="currentBanner.show_secondary_button && currentBanner.secondary_button_text"
+                                            :href="currentBanner.secondary_button_url || '#categories'"
+                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/60 bg-black/20 px-5 py-3.5 text-sm font-extrabold text-white backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
                                         >
-                                            Explore Categories
+                                            {{ currentBanner.secondary_button_text }}
                                         </a>
-                                    </div>
-                                </div>
-
-                                <div class="hero-visual relative flex min-h-[260px] items-center justify-center lg:min-h-0">
-                                    <div class="absolute h-[250px] w-[250px] rounded-full bg-white/[0.08] sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"></div>
-                                    <div class="absolute h-[210px] w-[210px] rounded-full border border-white/10 sm:h-[300px] sm:w-[300px]"></div>
-                                    <img src="/images/Alogo.png" alt="Alona" class="alona-floating relative z-10 w-[230px] max-w-[75%] object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)] sm:w-[310px] lg:w-[390px]" />
-
-                                    <div class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"><Icon name="package" class="h-5 w-5" /></div>
-                                            <div>
-                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Products</p>
-                                                <p class="text-xs font-extrabold text-gray-900">{{ totalProductsCount.toLocaleString() }} available</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"><Icon name="grid" class="h-4 w-4" /></div>
-                                            <div>
-                                                <p class="text-[9px] font-bold text-gray-400">CATEGORIES</p>
-                                                <p class="text-xs font-extrabold text-gray-900">{{ totalCategoriesCount.toLocaleString() }} to explore</p>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- SLIDES 2+: ONLY PRODUCTS WITH ACTUAL SALES -->
+                            <!-- 3. SPLIT BANNER (TEXT LEFT + ILLUSTRATION RIGHT - DEFAULT) -->
                             <div
-                                v-else-if="currentHeroProduct"
-                                :key="`top-selling-${currentHeroProduct.id}`"
-                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.05fr_.95fr]"
+                                v-else-if="isBannerSlide && currentBanner"
+                                :key="`banner-${currentBanner.id || heroSlide}`"
+                                class="relative grid min-h-[390px] grid-cols-1"
+                                :class="currentBanner.show_image ? 'lg:grid-cols-[1.05fr_.95fr]' : 'lg:grid-cols-1'"
                             >
-                                <div class="relative z-10 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
-                                    <div class="flex items-center gap-3">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C]"><Icon name="flame" class="h-4 w-4" /></span>
-                                        <span class="text-xs font-black uppercase tracking-[0.2em] text-teal-50">Top Selling</span>
-                                    </div>
-
-                                    <p class="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
-                                        Customer favorite #{{ heroSlide }}
-                                    </p>
-
-                                    <h2 class="mt-2 max-w-xl text-3xl font-black leading-tight tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
-                                        {{ currentHeroProduct.name }}
-                                    </h2>
-
-                                    <p class="mt-3 max-w-xl text-sm leading-6 text-teal-50 sm:text-base">
-                                        {{ currentHeroProduct.description || 'A customer favorite from one of our Alona sellers.' }}
-                                    </p>
-
-                                    <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                        <span class="rounded-full bg-white/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white">{{ currentHeroProduct.category }}</span>
-                                        <span class="flex items-center gap-1 text-xs text-white/80">
-                                            <span class="text-[#F4B942]">★</span>
-                                            <strong class="text-white">{{ currentHeroProduct.rating > 0 ? currentHeroProduct.rating.toFixed(1) : 'New' }}</strong>
-                                            <span v-if="currentHeroProduct.reviews > 0">({{ currentHeroProduct.reviews }})</span>
+                                <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+                                    <div class="hero-item mb-5 flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C] shadow-sm"><Icon name="store" class="h-4 w-4" /></span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">
+                                            {{ currentBanner.badge_text || `${totalProductsCount.toLocaleString()} products • ${totalCategoriesCount.toLocaleString()} categories` }}
                                         </span>
-                                        <span class="text-xs font-bold text-[#F4B942]">{{ currentHeroProduct.soldCount.toLocaleString() }} sold</span>
                                     </div>
 
-                                    <div class="mt-5 flex items-end gap-3">
-                                        <span class="text-2xl font-black text-white">{{ currentHeroProduct.price }}</span>
-                                        <span v-if="currentHeroProduct.oldPrice" class="pb-0.5 text-xs text-white/50 line-through">{{ currentHeroProduct.oldPrice }}</span>
-                                    </div>
+                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                                        {{ currentBanner.title || 'Welcome to' }}
+                                        <span class="text-[#F4B942]">{{ currentBanner.title_highlight || 'Alona.' }}</span>
+                                    </h1>
 
-                                    <div class="mt-6 flex flex-wrap gap-3">
+                                    <p class="hero-item mt-5 max-w-xl text-sm leading-6 text-teal-50 sm:text-base sm:leading-7">
+                                        {{ currentBanner.description || 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.' }}
+                                    </p>
+
+                                    <div
+                                        v-if="(currentBanner.show_primary_button && currentBanner.primary_button_text) || (currentBanner.show_secondary_button && currentBanner.secondary_button_text)"
+                                        class="hero-item mt-7 flex flex-wrap gap-3"
+                                    >
                                         <Link
-                                            :href="safeRoute('buyer.product', '#', currentHeroProduct.id)"
-                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-xs font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1"
+                                            v-if="currentBanner.show_primary_button && currentBanner.primary_button_text"
+                                            :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
                                         >
-                                            View Product
-                                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                            {{ currentBanner.primary_button_text }}
+                                            <span v-if="currentBanner.show_primary_button_arrow !== false" class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
                                         </Link>
-                                        <Link
-                                            :href="safeRoute('buyer.products')"
-                                            class="inline-flex items-center gap-2 rounded-2xl border border-white/50 px-5 py-3.5 text-xs font-extrabold text-white transition hover:bg-white hover:text-[#087F8C]"
+
+                                        <a
+                                            v-if="currentBanner.show_secondary_button && currentBanner.secondary_button_text"
+                                            :href="currentBanner.secondary_button_url || '#categories'"
+                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/50 px-5 py-3.5 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
                                         >
-                                            Shop more
-                                        </Link>
+                                            {{ currentBanner.secondary_button_text }}
+                                        </a>
                                     </div>
                                 </div>
 
-                                <div class="relative flex min-h-[260px] items-center justify-center p-6 lg:min-h-0 lg:p-10">
-                                    <div class="absolute h-[245px] w-[245px] rounded-full bg-white/[0.08] sm:h-[330px] sm:w-[330px] lg:h-[390px] lg:w-[390px]"></div>
-                                    <div class="absolute h-[205px] w-[205px] rounded-full border border-white/10 sm:h-[275px] sm:w-[275px] lg:h-[330px] lg:w-[330px]"></div>
+                                <div
+                                    v-if="currentBanner.show_image"
+                                    class="hero-visual relative flex min-h-[260px] items-center justify-center lg:min-h-0"
+                                >
+                                    <div class="absolute h-[250px] w-[250px] rounded-full bg-white/[0.08] sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"></div>
+                                    <div class="absolute h-[210px] w-[210px] rounded-full border border-white/10 sm:h-[300px] sm:w-[300px]"></div>
+                                    <img :src="currentBanner.image_path || '/images/Alogo.png'" alt="Alona" class="alona-floating relative z-10 w-[230px] max-w-[75%] object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)] sm:w-[310px] lg:w-[390px]" />
 
-                                    <Link
-                                        :href="safeRoute('buyer.product', '#', currentHeroProduct.id)"
-                                        class="relative z-10 block h-[220px] w-[220px] overflow-hidden rounded-[28px] bg-white p-2 shadow-2xl shadow-black/20 transition duration-500 hover:scale-[1.02] sm:h-[270px] sm:w-[270px] lg:h-[320px] lg:w-[320px]"
-                                    >
-                                        <img
-                                            v-if="currentHeroProduct.image"
-                                            :src="currentHeroProduct.image"
-                                            :alt="currentHeroProduct.name"
-                                            class="h-full w-full rounded-[22px] object-cover"
-                                            loading="eager"
-                                        />
-                                        <div v-else class="flex h-full w-full items-center justify-center rounded-[22px] bg-[#F4F7F6] text-6xl"><Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" /></div>
-                                    </Link>
+                                    <div v-if="currentBanner.show_floating_cards !== false" class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"><Icon name="package" class="h-5 w-5" /></div>
+                                            <div>
+                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">{{ currentBanner.card_1_title || 'Products' }}</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalProductsCount.toLocaleString() }} {{ currentBanner.card_1_subtitle || 'available' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                    <span class="absolute left-[7%] top-[14%] z-20 rounded-full bg-[#F4B942] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C] shadow-lg">
-                                        #{{ heroSlide }} Top Seller
-                                    </span>
-
-                                    <span v-if="currentHeroProduct.isSale" class="absolute bottom-[12%] right-[8%] z-20 rounded-full bg-[#E85D5D] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">SALE</span>
+                                    <div v-if="currentBanner.show_floating_cards !== false" class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"><Icon name="grid" class="h-4 w-4" /></div>
+                                            <div>
+                                                <p class="text-[9px] font-bold text-gray-400">{{ currentBanner.card_2_title || 'CATEGORIES' }}</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalCategoriesCount.toLocaleString() }} {{ currentBanner.card_2_subtitle || 'to explore' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </Transition>

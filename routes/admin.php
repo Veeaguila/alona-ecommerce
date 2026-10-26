@@ -140,6 +140,11 @@ Route::prefix('admin')
             'unsuspend',
         ])->name('admin.compliance.unsuspend');
 
+        Route::post('/compliance/{product}/verify-ai', [
+            AdminComplianceController::class,
+            'retryAiVerification',
+        ])->name('admin.compliance.verify-ai');
+
 
         /*
         |--------------------------------------------------------------------------
@@ -240,6 +245,11 @@ Route::prefix('admin')
             AdminSettingsController::class,
             'destroyPlatformSetting',
         ])->name('admin.platform-settings.destroy');
+
+        Route::post('/settings/hero-banner', [
+            AdminSettingsController::class,
+            'updateHeroBanner',
+        ])->name('admin.settings.hero-banner.update');
 
         Route::post('/settings/why-alona', [
             AdminSettingsController::class,

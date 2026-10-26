@@ -40,6 +40,7 @@ class GuestProductController extends Controller
                     'category',
                     fn ($categoryQuery) =>
                         $categoryQuery->where('slug', $category)
+                            ->orWhereHas('parent', fn ($pq) => $pq->where('slug', $category))
                 )
             )
 

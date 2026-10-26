@@ -62,10 +62,9 @@ class BuyerProductController extends Controller
                 $category !== 'all',
                 fn ($query) => $query->whereHas(
                     'category',
-                    fn ($categoryQuery) => $categoryQuery->where(
-                        'slug',
-                        $category
-                    )
+                    fn ($categoryQuery) => $categoryQuery
+                        ->where('slug', $category)
+                        ->orWhereHas('parent', fn ($pq) => $pq->where('slug', $category))
                 )
             )
 

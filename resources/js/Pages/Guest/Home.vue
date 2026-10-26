@@ -51,6 +51,14 @@ defineProps({
         type: Object,
         default: null,
     },
+    heroBanners: {
+        type: Array,
+        default: () => [],
+    },
+    heroBanner: {
+        type: Object,
+        default: () => ({}),
+    },
 })
 </script>
 
@@ -67,6 +75,8 @@ defineProps({
         :recently-viewed-products="recentlyViewedProducts"
         :marketplace-stats="marketplaceStats"
         :why-alona="whyAlona"
+        :hero-banners="heroBanners"
+        :hero-banner="heroBanner"
         is-guest
     />
 </template>

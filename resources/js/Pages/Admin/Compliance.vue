@@ -6,12 +6,12 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 const props = defineProps({
     title: {
         type: String,
-        default: 'Seller compliance',
+        default: 'Seller Compliance & AI Verification',
     },
 
     eyebrow: {
         type: String,
-        default: 'Compliance',
+        default: 'Catalog Quality Assurance',
     },
 
     description: {
@@ -33,11 +33,24 @@ const props = defineProps({
         }),
     },
 
+    metrics: {
+        type: Object,
+        default: () => ({
+            total: 0,
+            auto_approved: 0,
+            pending_review: 0,
+            ai_failed: 0,
+            flagged: 0,
+        }),
+    },
+
     filters: {
         type: Object,
         default: () => ({
             search: '',
             status: 'all',
+            approval_method: 'all',
+            ai_status: 'all',
         }),
     },
 })
@@ -50,11 +63,14 @@ const props = defineProps({
 
 const search = ref(props.filters?.search ?? '')
 const status = ref(props.filters?.status ?? 'all')
+const approvalMethod = ref(props.filters?.approval_method ?? 'all')
+const aiStatus = ref(props.filters?.ai_status ?? 'all')
 
 const selectedProduct = ref(null)
-const selectedAction = ref('')
+const selectedAction = ref('approve')
 const note = ref('')
 const processing = ref(false)
+const isReverifying = ref(false)
 
 const showReviewModal = ref(false)
 const showHistoryModal = ref(false)
@@ -71,6 +87,7 @@ const rows = computed(() => {
 
 const requiresNote = computed(() => {
     return (
+        selectedAction.value === 'reject' ||
         selectedAction.value === 'flag' ||
         selectedAction.value === 'suspend'
     )
@@ -108,15 +125,10 @@ const statusClasses = {
         'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
 }
 
-/*
-|--------------------------------------------------------------------------
-| Seller Status Classes
-|--------------------------------------------------------------------------
-*/
-
 const sellerStatusClasses = (value) => {
     switch (value) {
         case 'approved':
+        case 'active':
             return 'bg-emerald-50 text-[#16865A] ring-1 ring-emerald-200'
 
         case 'suspended':
@@ -129,12 +141,6 @@ const sellerStatusClasses = (value) => {
             return 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
     }
 }
-
-/*
-|--------------------------------------------------------------------------
-| Status Dot
-|--------------------------------------------------------------------------
-*/
 
 const statusDot = (value) => {
     switch (value) {
@@ -160,25 +166,86 @@ const statusDot = (value) => {
 
 /*
 |--------------------------------------------------------------------------
-| Action Labels
+| AI Verification Helpers
 |--------------------------------------------------------------------------
 */
 
+const getAiBadge = (product) => {
+    const aiStatusVal = product?.ai_verification_status || 'pending'
+    const confidence = product?.ai_confidence_score ? `${Math.round(product.ai_confidence_score * 100)}%` : null
+
+    switch (aiStatusVal) {
+        case 'passed':
+            return {
+                label: confidence ? `AI Passed (${confidence})` : 'AI Passed',
+                class: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300',
+                dot: 'bg-emerald-500',
+            }
+
+        case 'failed':
+            return {
+                label: confidence ? `Mismatch (${confidence})` : 'AI Mismatch',
+                class: 'bg-rose-50 text-rose-700 ring-1 ring-rose-300',
+                dot: 'bg-rose-500',
+            }
+
+        case 'uncertain':
+            return {
+                label: confidence ? `Low Conf. (${confidence})` : 'Low Confidence',
+                class: 'bg-amber-50 text-amber-700 ring-1 ring-amber-300',
+                dot: 'bg-amber-500',
+            }
+
+        case 'unclear_image':
+            return {
+                label: 'Unclear Image',
+                class: 'bg-orange-50 text-orange-700 ring-1 ring-orange-300',
+                dot: 'bg-orange-500',
+            }
+
+        case 'policy_violation':
+            return {
+                label: 'Policy Violation',
+                class: 'bg-red-50 text-red-700 ring-1 ring-red-300',
+                dot: 'bg-red-500',
+            }
+
+        case 'service_error':
+            return {
+                label: 'AI Unavailable',
+                class: 'bg-slate-100 text-slate-700 ring-1 ring-slate-300',
+                dot: 'bg-slate-400',
+            }
+
+        case 'seller_ineligible':
+            return {
+                label: 'Seller Ineligible',
+                class: 'bg-amber-50 text-amber-700 ring-1 ring-amber-300',
+                dot: 'bg-amber-500',
+            }
+
+        default:
+            return {
+                label: 'Pending Verification',
+                class: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
+                dot: 'bg-slate-400',
+            }
+    }
+}
+
 const actionLabels = {
     approve: 'Approve product',
+    reject: 'Reject product listing',
     flag: 'Flag product',
     suspend: 'Suspend seller',
 }
 
-/*
-|--------------------------------------------------------------------------
-| Review Action Classes
-|--------------------------------------------------------------------------
-*/
-
 const reviewActionClasses = {
     approved:
         'bg-emerald-50 text-[#16865A] ring-1 ring-emerald-200',
+
+    rejected:
+        'bg-red-50 text-[#C94B4B] ring-1 ring-red-200',
 
     flagged:
         'bg-[#FFF8E7] text-[#B7791F] ring-1 ring-[#F4B942]/30',
@@ -192,7 +259,7 @@ const reviewActionClasses = {
 
 /*
 |--------------------------------------------------------------------------
-| Apply Filters
+| Filter Controls
 |--------------------------------------------------------------------------
 */
 
@@ -202,6 +269,8 @@ const applyFilters = () => {
         {
             search: search.value.trim(),
             status: status.value,
+            approval_method: approvalMethod.value,
+            ai_status: aiStatus.value,
         },
         {
             preserveState: true,
@@ -211,15 +280,11 @@ const applyFilters = () => {
     )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Clear Filters
-|--------------------------------------------------------------------------
-*/
-
 const clearFilters = () => {
     search.value = ''
     status.value = 'all'
+    approvalMethod.value = 'all'
+    aiStatus.value = 'all'
 
     router.get(
         route('admin.compliance'),
@@ -234,39 +299,27 @@ const clearFilters = () => {
 
 /*
 |--------------------------------------------------------------------------
-| Open Review Modal
+| Modal Handlers
 |--------------------------------------------------------------------------
 */
 
-const openReview = (product, action) => {
+const openReview = (product, defaultAction = 'approve') => {
     selectedProduct.value = product
-    selectedAction.value = action
-    note.value = ''
+    selectedAction.value = defaultAction
+    note.value = product.rejection_reason || ''
     showReviewModal.value = true
 }
 
-/*
-|--------------------------------------------------------------------------
-| Close Review Modal
-|--------------------------------------------------------------------------
-*/
-
 const closeReview = () => {
-    if (processing.value) {
+    if (processing.value || isReverifying.value) {
         return
     }
 
     showReviewModal.value = false
     selectedProduct.value = null
-    selectedAction.value = ''
+    selectedAction.value = 'approve'
     note.value = ''
 }
-
-/*
-|--------------------------------------------------------------------------
-| Submit Compliance Review
-|--------------------------------------------------------------------------
-*/
 
 const submitReview = () => {
     if (!canSubmitReview.value) {
@@ -276,10 +329,7 @@ const submitReview = () => {
     processing.value = true
 
     router.patch(
-        route(
-            'admin.compliance.status',
-            selectedProduct.value.id
-        ),
+        route('admin.compliance.status', selectedProduct.value.id),
         {
             action: selectedAction.value,
             note: note.value.trim() || null,
@@ -291,21 +341,8 @@ const submitReview = () => {
             onSuccess: () => {
                 showReviewModal.value = false
                 selectedProduct.value = null
-                selectedAction.value = ''
+                selectedAction.value = 'approve'
                 note.value = ''
-
-                router.get(
-                    route('admin.compliance'),
-                    {
-                        search: props.filters?.search ?? '',
-                        status: props.filters?.status ?? 'all',
-                    },
-                    {
-                        preserveState: false,
-                        preserveScroll: true,
-                        replace: true,
-                    }
-                )
             },
 
             onError: () => {
@@ -319,11 +356,27 @@ const submitReview = () => {
     )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Unsuspend Seller
-|--------------------------------------------------------------------------
-*/
+const rerunAiVerification = (product) => {
+    if (!product?.id || isReverifying.value) {
+        return
+    }
+
+    isReverifying.value = true
+
+    router.post(
+        route('admin.compliance.verify-ai', product.id),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: true,
+
+            onFinish: () => {
+                isReverifying.value = false
+                showReviewModal.value = false
+            },
+        }
+    )
+}
 
 const unsuspendSeller = (product) => {
     if (!product?.id) {
@@ -343,29 +396,11 @@ const unsuspendSeller = (product) => {
     processing.value = true
 
     router.patch(
-        route(
-            'admin.compliance.unsuspend',
-            product.id
-        ),
+        route('admin.compliance.unsuspend', product.id),
         {},
         {
             preserveState: false,
             preserveScroll: true,
-
-            onSuccess: () => {
-                router.get(
-                    route('admin.compliance'),
-                    {
-                        search: props.filters?.search ?? '',
-                        status: props.filters?.status ?? 'all',
-                    },
-                    {
-                        preserveState: false,
-                        preserveScroll: true,
-                        replace: true,
-                    }
-                )
-            },
 
             onError: () => {
                 processing.value = false
@@ -378,33 +413,15 @@ const unsuspendSeller = (product) => {
     )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Open History
-|--------------------------------------------------------------------------
-*/
-
 const openHistory = (product) => {
     selectedProduct.value = product
     showHistoryModal.value = true
 }
 
-/*
-|--------------------------------------------------------------------------
-| Close History
-|--------------------------------------------------------------------------
-*/
-
 const closeHistory = () => {
     showHistoryModal.value = false
     selectedProduct.value = null
 }
-
-/*
-|--------------------------------------------------------------------------
-| Format Date
-|--------------------------------------------------------------------------
-*/
 
 const formatDate = (value) => {
     if (!value) {
@@ -420,26 +437,15 @@ const formatDate = (value) => {
     return date.toLocaleString()
 }
 
-/*
-|--------------------------------------------------------------------------
-| Format Action
-|--------------------------------------------------------------------------
-*/
-
 const formatAction = (action) => {
     return {
         approved: 'Approved',
+        rejected: 'Rejected',
         flagged: 'Flagged',
         seller_suspended: 'Seller suspended',
         seller_unsuspended: 'Seller unsuspended',
     }[action] ?? action
 }
-
-/*
-|--------------------------------------------------------------------------
-| Seller Name
-|--------------------------------------------------------------------------
-*/
 
 const sellerName = (product) => {
     return (
@@ -449,14 +455,11 @@ const sellerName = (product) => {
     )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Seller Status
-|--------------------------------------------------------------------------
-*/
-
-const sellerStatus = (product) => {
-    return product?.seller?.status ?? 'unknown'
+const formatPrice = (val) => {
+    return Number(val || 0).toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })
 }
 </script>
 
@@ -475,171 +478,199 @@ const sellerStatus = (product) => {
             >
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
-                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-teal-500"></span>
                         <span>{{ eyebrow }}</span>
                     </div>
 
-                    <h1
-                        class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
-                    >
+                    <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                         {{ title }}
                     </h1>
 
-                    <p
-                        v-if="description"
-                        class="mt-0.5 text-xs text-slate-500"
-                    >
+                    <p v-if="description" class="mt-0.5 text-xs text-slate-500">
                         {{ description }}
                     </p>
                 </div>
 
                 <Link
                     :href="route('admin.dashboard')"
-                    class="inline-flex w-fit shrink-0 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-semibold text-[#64748B] shadow-sm transition hover:border-[#087F8C]/30 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                    class="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-semibold text-[#64748B] shadow-sm transition hover:border-[#087F8C]/30 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
                 >
-                    <svg
-                        class="h-3.5 w-3.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            d="M10.707 2.293a1 1 0 010 1.414L4.414 10l6.293 6.293a.75.75 0 01-1.06 1.06l-7-7a.75.75 0 010-1.06l7-7a.75.75 0 011.06 0z"
-                            clip-rule="evenodd"
-                        />
-                        <path
-                            fill-rule="evenodd"
-                            d="M4 9.25a.75.75 0 000 1.5h12a.75.75 0 000-1.5H4z"
-                            clip-rule="evenodd"
-                        />
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.707 2.293a1 1 0 010 1.414L4.414 10l6.293 6.293a.75.75 0 01-1.06 1.06l-7-7a.75.75 0 010-1.06l7-7a.75.75 0 011.06 0z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M4 9.25a.75.75 0 000 1.5h12a.75.75 0 000-1.5H4z" clip-rule="evenodd" />
                     </svg>
-
                     Dashboard
                 </Link>
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- AI METRICS STRIP -->
+            <!-- ===================================================== -->
+
+            <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+                <!-- Total Listings -->
+                <div class="group relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#64748B]">Total Listings</span>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                            </svg>
+                        </span>
+                    </div>
+                    <p class="mt-2 truncate text-xl font-bold tracking-tight text-[#1F2937] sm:text-2xl">{{ metrics.total }}</p>
+                    <p class="mt-1 truncate text-[11px] font-medium text-[#94A3B8]">Across all categories</p>
+                    <div class="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-200 group-hover:scale-x-100 bg-slate-500" />
+                </div>
+
+                <!-- Auto-Approved (AI) -->
+                <div class="group relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#64748B]">Auto-Approved (AI)</span>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                            </svg>
+                        </span>
+                    </div>
+                    <p class="mt-2 truncate text-xl font-bold tracking-tight text-[#087F8C] sm:text-2xl">{{ metrics.auto_approved }}</p>
+                    <p class="mt-1 truncate text-[11px] font-medium text-[#087F8C]/80">Passed vision verification</p>
+                    <div class="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-200 group-hover:scale-x-100 bg-[#087F8C]" />
+                </div>
+
+                <!-- Pending Review -->
+                <div class="group relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#64748B]">Pending Review</span>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </span>
+                    </div>
+                    <p class="mt-2 truncate text-xl font-bold tracking-tight text-amber-600 sm:text-2xl">{{ metrics.pending_review }}</p>
+                    <p class="mt-1 truncate text-[11px] font-medium text-amber-600/80">{{ metrics.ai_failed }} flagged by AI</p>
+                    <div class="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-200 group-hover:scale-x-100 bg-amber-500" />
+                </div>
+
+                <!-- Flagged / Inactive -->
+                <div class="group relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#64748B]">Flagged / Inactive</span>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.002A11.959 11.959 0 0 1 12 2.714Zm0 14.286h.008v.008H12v-.008Z" />
+                            </svg>
+                        </span>
+                    </div>
+                    <p class="mt-2 truncate text-xl font-bold tracking-tight text-rose-600 sm:text-2xl">{{ metrics.flagged }}</p>
+                    <p class="mt-1 truncate text-[11px] font-medium text-rose-600/80">Hidden from storefront</p>
+                    <div class="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-200 group-hover:scale-x-100 bg-rose-500" />
+                </div>
             </div>
 
             <!-- ===================================================== -->
             <!-- FILTER CARD -->
             <!-- ===================================================== -->
 
-            <div
-                class="mt-5 rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
-            >
+            <div class="mt-5 rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
                 <div class="border-b border-[#E5E7EB] px-5 py-4">
                     <div class="flex items-center gap-2">
-                        <div
-                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
-                        >
-                            <svg
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M3 4.75A1.75 1.75 0 014.75 3h10.5A1.75 1.75 0 0117 4.75v.5a1.75 1.75 0 01-.513 1.237L12 10.72v4.53a1.75 1.75 0 01-.768 1.45l-1.5 1A1.75 1.75 0 017 16.25v-5.53L2.513 6.487A1.75 1.75 0 012 5.25v-.5A1.75 1.75 0 013.75 3H3zm.5 1.25l4.28 4.28a.75.75 0 01.22.53v5.44l1-.667v-4.773a.75.75 0 01.22-.53L13.5 6H3.5z"
-                                    clip-rule="evenodd"
-                                />
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 4.75A1.75 1.75 0 014.75 3h10.5A1.75 1.75 0 0117 4.75v.5a1.75 1.75 0 01-.513 1.237L12 10.72v4.53a1.75 1.75 0 01-.768 1.45l-1.5 1A1.75 1.75 0 017 16.25v-5.53L2.513 6.487A1.75 1.75 0 012 5.25v-.5A1.75 1.75 0 013.75 3H3zm.5 1.25l4.28 4.28a.75.75 0 01.22.53v5.44l1-.667v-4.773a.75.75 0 01.22-.53L13.5 6H3.5z" clip-rule="evenodd" />
                             </svg>
                         </div>
 
                         <div>
-                            <h2 class="text-base font-bold text-[#1F2937]">
-                                Compliance filters
-                            </h2>
-
-                            <p class="mt-1 text-xs text-[#94A3B8]">
-                                Narrow listings by product name, seller, category, or status.
-                            </p>
+                            <h2 class="text-base font-bold text-[#1F2937]">Compliance & AI Verification Filters</h2>
+                            <p class="mt-0.5 text-xs text-[#94A3B8]">Filter by search term, status, AI outcome, or approval method.</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="p-4">
-                    <div class="grid gap-3 lg:grid-cols-[1fr_210px_auto] lg:items-end">
-
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_160px_160px_180px_auto] lg:items-end">
                         <!-- SEARCH -->
-
                         <div>
-                            <label
-                                class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                            >
+                            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                 Search
                             </label>
-
-                            <div class="relative">
-                                <svg
-                                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M9 3a6 6 0 104.472 10.003l2.262 2.262a.75.75 0 101.06-1.06l-2.262-2.262A6 6 0 009 3zm-4.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-
-                                <input
-                                    v-model="search"
-                                    type="text"
-                                    placeholder="Search product, seller, email, or category..."
-                                    class="w-full rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] py-2.5 pl-9 pr-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#087F8C]/10"
-                                    @keyup.enter="applyFilters"
-                                />
-                            </div>
+                            <input
+                                v-model="search"
+                                type="text"
+                                placeholder="Search product, seller, category, or AI finding..."
+                                class="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
+                                @keyup.enter="applyFilters"
+                            />
                         </div>
 
                         <!-- STATUS -->
-
                         <div>
-                            <label
-                                class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                            >
+                            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                                 Product status
                             </label>
-
                             <select
                                 v-model="status"
-                                class="w-full rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#087F8C]/10"
+                                class="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
                                 @change="applyFilters"
                             >
-                                <option value="all">
-                                    All statuses
-                                </option>
+                                <option value="all">All statuses</option>
+                                <option value="pending">Pending review</option>
+                                <option value="approved">Approved</option>
+                                <option value="inactive">Flagged / Inactive</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </div>
 
-                                <option value="pending">
-                                    Pending review
-                                </option>
+                        <!-- APPROVAL METHOD -->
+                        <div>
+                            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+                                Approval method
+                            </label>
+                            <select
+                                v-model="approvalMethod"
+                                class="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                                @change="applyFilters"
+                            >
+                                <option value="all">All methods</option>
+                                <option value="automatic">Automatic (AI)</option>
+                                <option value="manual">Manual Admin</option>
+                            </select>
+                        </div>
 
-                                <option value="approved">
-                                    Approved
-                                </option>
-
-                                <option value="inactive">
-                                    Flagged / inactive
-                                </option>
-
-                                <option value="draft">
-                                    Draft
-                                </option>
+                        <!-- AI VERIFICATION STATUS -->
+                        <div>
+                            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+                                AI Verification
+                            </label>
+                            <select
+                                v-model="aiStatus"
+                                class="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                                @change="applyFilters"
+                            >
+                                <option value="all">All AI outcomes</option>
+                                <option value="passed">AI Passed</option>
+                                <option value="failed">Mismatch Detected</option>
+                                <option value="uncertain">Low Confidence</option>
+                                <option value="unclear_image">Unclear Image</option>
+                                <option value="service_error">Service Error</option>
+                                <option value="pending">Pending AI</option>
                             </select>
                         </div>
 
                         <!-- BUTTONS -->
-
                         <div class="flex gap-2">
                             <button
                                 type="button"
-                                class="rounded-lg bg-[#087F8C] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066D78]"
+                                class="rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#066D78]"
                                 @click="applyFilters"
                             >
-                                Search
+                                Filter
                             </button>
-
                             <button
                                 type="button"
-                                class="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2.5 text-xs font-semibold text-[#64748B] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                class="rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-slate-50"
                                 @click="clearFilters"
                             >
                                 Clear
@@ -650,251 +681,159 @@ const sellerStatus = (product) => {
             </div>
 
             <!-- ===================================================== -->
-            <!-- PRODUCT COMPLIANCE CARD -->
+            <!-- PRODUCTS COMPLIANCE TABLE -->
             <!-- ===================================================== -->
 
-            <div
-                class="mt-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
-            >
-                <!-- HEADER -->
-
-                <div
-                    class="flex flex-col gap-3 border-b border-[#E5E7EB] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]"
-                            >
-                                <svg
-                                    class="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M4 3.5A1.5 1.5 0 015.5 2h9A1.5 1.5 0 0116 3.5v13a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 014 16.5v-13zM6 5.25A.75.75 0 016.75 4.5h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 016 5.25zm0 3.5A.75.75 0 016.75 8h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 016 8.75zm0 3.5a.75.75 0 01.75-.75h4a.75.75 0 010 1.5h-4a.75.75 0 01-.75-.75z"
-                                    />
-                                </svg>
-                            </div>
-
-                            <div>
-                                <h2 class="text-base font-bold text-[#1F2937]">
-                                    Product compliance
-                                </h2>
-
-                                <p class="mt-1 text-xs text-[#94A3B8]">
-                                    Review marketplace listings and seller compliance.
-                                </p>
-                            </div>
+            <div class="mt-6 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M4 3.5A1.5 1.5 0 015.5 2h9A1.5 1.5 0 0116 3.5v13a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 014 16.5v-13zM6 5.25A.75.75 0 016.75 4.5h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 016 5.25zm0 3.5A.75.75 0 016.75 8h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 016 8.75zm0 3.5a.75.75 0 01.75-.75h4a.75.75 0 010 1.5h-4a.75.75 0 01-.75-.75z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-[#1F2937]">Product Listings & Approvals</h2>
+                            <p class="text-[11px] text-[#94A3B8]">Automated and manual compliance decisions</p>
                         </div>
                     </div>
 
-                    <div
-                        class="inline-flex w-fit items-center gap-2 rounded-full bg-[#E8F7F6] px-3 py-1.5 text-[10px] font-bold text-[#087F8C]"
-                    >
-                        <span class="h-1.5 w-1.5 rounded-full bg-[#16A6A0]"></span>
-
-                        {{ rows.length }}
-                        listing{{ rows.length === 1 ? '' : 's' }}
-                    </div>
+                    <span class="rounded-full bg-[#E8F7F6] px-3 py-1 text-xs font-bold text-[#087F8C]">
+                        {{ rows.length }} listing{{ rows.length === 1 ? '' : 's' }}
+                    </span>
                 </div>
 
-                <!-- TABLE -->
-
-                <div
-                    v-if="rows.length"
-                    class="overflow-x-auto"
-                >
-                    <table
-                        class="w-full min-w-[1120px] text-left text-[13px] text-[#64748B]"
-                    >
-                        <thead
-                            class="border-b border-[#E5E7EB] bg-[#F8FAF9] text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
-                        >
+                <div v-if="rows.length" class="overflow-x-auto">
+                    <table class="w-full min-w-[1050px] text-left text-xs">
+                        <thead class="border-b border-[#E5E7EB] bg-[#F8FAF9] text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
                             <tr>
-                                <th class="px-5 py-3.5">
-                                    Product
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Seller
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Category
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Product status
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Seller status
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Actions
-                                </th>
+                                <th class="px-5 py-3.5">Product</th>
+                                <th class="px-5 py-3.5">Seller</th>
+                                <th class="px-5 py-3.5">Category</th>
+                                <th class="px-5 py-3.5 text-center">Approval Mode</th>
+                                <th class="px-5 py-3.5">AI Verification</th>
+                                <th class="px-5 py-3.5 text-center">Status</th>
+                                <th class="px-5 py-3.5 text-right">Actions</th>
                             </tr>
                         </thead>
 
                         <tbody class="divide-y divide-[#E5E7EB]">
-                            <tr
-                                v-for="row in rows"
-                                :key="row.id"
-                                class="group transition hover:bg-[#F8FAF9]"
-                            >
+                            <tr v-for="row in rows" :key="row.id" class="transition hover:bg-[#F8FAF9]/70">
                                 <!-- PRODUCT -->
-
                                 <td class="px-5 py-4">
                                     <div class="flex items-center gap-3">
-                                        <div
-                                            class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F8FAF9] ring-1 ring-[#E5E7EB]"
-                                        >
+                                        <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
                                             <img
                                                 v-if="row.image_path"
-                                                :src="row.image_path"
+                                                :src="row.image_path.startsWith('http') ? row.image_path : `/storage/${row.image_path}`"
                                                 :alt="row.name"
                                                 class="h-full w-full object-cover"
                                             />
-
-                                            <svg
-                                                v-else
-                                                class="h-4 w-4 text-[#94A3B8]"
-                                                viewBox="0 0 20 20"
-                                                fill="currentColor"
-                                            >
-                                                <path
-                                                    d="M3 4.5A1.5 1.5 0 014.5 3h11A1.5 1.5 0 0117 4.5v11a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 15.5v-11zM5 5a1 1 0 00-1 1v7.086l2.293-2.293a1 1 0 011.414 0L10 13.086l2.793-2.793a1 1 0 011.414 0L16 12.086V6a1 1 0 00-1-1H5zm0 2a1 1 0 110 2 1 1 0 010-2z"
-                                                />
-                                            </svg>
+                                            <span v-else class="text-slate-300">No img</span>
                                         </div>
 
-                                        <div class="min-w-0">
-                                            <p
-                                                class="max-w-[220px] truncate text-xs font-semibold text-[#1F2937]"
-                                                :title="row.name"
-                                            >
+                                        <div class="min-w-0 max-w-[220px]">
+                                            <p class="truncate font-bold text-[#1F2937]" :title="row.name">
                                                 {{ row.name }}
                                             </p>
-
-                                            <p
-                                                class="mt-1 text-[10px] text-[#94A3B8]"
-                                            >
-                                                Product #{{ row.id }}
+                                            <p class="mt-0.5 text-[11px] font-semibold text-[#087F8C]">
+                                                ₱{{ formatPrice(row.price) }}
                                             </p>
+                                            <p class="text-[10px] text-[#94A3B8]">ID: #{{ row.id }}</p>
                                         </div>
                                     </div>
                                 </td>
 
                                 <!-- SELLER -->
-
                                 <td class="px-5 py-4">
-                                    <p class="text-xs font-semibold text-[#1F2937]">
-                                        {{ sellerName(row) }}
-                                    </p>
-
-                                    <p
-                                        class="mt-1 max-w-[180px] truncate text-[10px] text-[#94A3B8]"
-                                    >
-                                        {{ row.seller?.email ?? 'No email' }}
-                                    </p>
+                                    <div class="min-w-0">
+                                        <p class="truncate font-bold text-[#1F2937]">{{ sellerName(row) }}</p>
+                                        <p class="mt-0.5 truncate text-[11px] text-[#64748B]">{{ row.seller?.email || '—' }}</p>
+                                        <span
+                                            class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.2 text-[9px] font-bold"
+                                            :class="sellerStatusClasses(row.seller?.status)"
+                                        >
+                                            {{ row.seller?.status || 'Unknown' }}
+                                        </span>
+                                    </div>
                                 </td>
 
                                 <!-- CATEGORY -->
-
-                                <td class="px-5 py-4 text-xs text-[#64748B]">
-                                    {{ row.category?.name ?? 'Unassigned' }}
+                                <td class="px-5 py-4 font-medium text-[#475569]">
+                                    {{ row.category?.name || 'Unassigned' }}
                                 </td>
 
-                                <!-- PRODUCT STATUS -->
-
-                                <td class="px-5 py-4">
+                                <!-- APPROVAL METHOD -->
+                                <td class="px-5 py-4 text-center">
                                     <span
-                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide"
-                                        :class="
-                                            statusClasses[row.status] ??
-                                            'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
-                                        "
+                                        v-if="row.approval_method === 'automatic'"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-[#E8F7F6] px-2.5 py-1 text-[11px] font-bold text-[#087F8C] ring-1 ring-[#087F8C]/20"
+                                        title="Approved automatically by AI vision verification"
                                     >
-                                        <span
-                                            :class="[
-                                                'h-1.5 w-1.5 rounded-full',
-                                                statusDot(row.status)
-                                            ]"
-                                        ></span>
-
-                                        {{ row.status ?? 'unknown' }}
+                                        <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                                        </svg>
+                                        Automatic
                                     </span>
+                                    <span
+                                        v-else-if="row.status === 'approved'"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
+                                    >
+                                        <svg class="h-3 w-3 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                        </svg>
+                                        Manual
+                                    </span>
+                                    <span v-else class="text-slate-400 text-[11px]">—</span>
                                 </td>
 
-                                <!-- SELLER STATUS -->
-
+                                <!-- AI VERIFICATION -->
                                 <td class="px-5 py-4">
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide"
-                                        :class="
-                                            sellerStatusClasses(
-                                                sellerStatus(row)
-                                            )
-                                        "
-                                    >
+                                    <div class="min-w-[150px]">
                                         <span
-                                            :class="[
-                                                'h-1.5 w-1.5 rounded-full',
-                                                statusDot(
-                                                    sellerStatus(row)
-                                                )
-                                            ]"
-                                        ></span>
+                                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                                            :class="getAiBadge(row).class"
+                                        >
+                                            <span class="h-1.5 w-1.5 rounded-full" :class="getAiBadge(row).dot"></span>
+                                            {{ getAiBadge(row).label }}
+                                        </span>
 
-                                        {{ sellerStatus(row) }}
+                                        <p
+                                            v-if="row.ai_verification_explanation"
+                                            class="mt-1 line-clamp-1 max-w-[200px] text-[10px] text-[#64748B]"
+                                            :title="row.ai_verification_explanation"
+                                        >
+                                            {{ row.ai_verification_explanation }}
+                                        </p>
+                                    </div>
+                                </td>
+
+                                <!-- STATUS -->
+                                <td class="px-5 py-4 text-center">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                                        :class="statusClasses[row.status] || 'bg-slate-100 text-slate-600'"
+                                    >
+                                        <span class="h-1.5 w-1.5 rounded-full" :class="statusDot(row.status)"></span>
+                                        {{ row.status }}
                                     </span>
                                 </td>
 
                                 <!-- ACTIONS -->
-
-                                <td class="px-5 py-4">
-                                    <div class="flex flex-wrap items-center gap-1.5">
-
+                                <td class="px-5 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <!-- Open Review & AI Details Modal -->
                                         <button
                                             type="button"
-                                            class="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold text-[#16865A] transition hover:bg-emerald-100"
-                                            @click="openReview(row, 'approve')"
+                                            class="rounded-lg bg-[#087F8C] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#066D78]"
+                                            @click="openReview(row, row.status === 'approved' ? 'flag' : 'approve')"
                                         >
-                                            Approve
+                                            Review
                                         </button>
 
                                         <button
                                             type="button"
-                                            class="rounded-lg border border-[#F4B942]/30 bg-[#FFF8E7] px-2.5 py-1.5 text-[10px] font-semibold text-[#B7791F] transition hover:bg-[#FFF1C9]"
-                                            @click="openReview(row, 'flag')"
-                                        >
-                                            Flag
-                                        </button>
-
-                                        <button
-                                            v-if="sellerStatus(row) !== 'suspended'"
-                                            type="button"
-                                            class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-semibold text-[#C94B4B] transition hover:bg-red-100"
-                                            @click="openReview(row, 'suspend')"
-                                        >
-                                            Suspend
-                                        </button>
-
-                                        <button
-                                            v-else
-                                            type="button"
-                                            class="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold text-[#16865A] transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="processing"
-                                            @click="unsuspendSeller(row)"
-                                        >
-                                            Unsuspend
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            class="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#64748B] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                                            class="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#64748B] transition hover:bg-slate-50"
                                             @click="openHistory(row)"
                                         >
                                             History
@@ -906,353 +845,258 @@ const sellerStatus = (product) => {
                     </table>
                 </div>
 
-                <!-- EMPTY -->
-
-                <div
-                    v-else
-                    class="px-6 py-14 text-center"
-                >
-                    <div
-                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                    >
-                        <svg
-                            class="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.172 7.707 8.879a.75.75 0 10-1.414 1.414l2 2a.75.75 0 001.06 0l3.414-3.414z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                    </div>
-
-                    <h3 class="mt-3 text-base font-bold text-[#1F2937]">
-                        No products found
-                    </h3>
-
-                    <p
-                        class="mx-auto mt-1.5 max-w-md text-xs leading-5 text-[#94A3B8]"
-                    >
-                        No product listings match the current search or status filter.
-                    </p>
-
+                <!-- EMPTY STATE -->
+                <div v-else class="py-12 text-center">
+                    <p class="text-sm font-bold text-slate-700">No products match the selected criteria.</p>
                     <button
-                        v-if="search || status !== 'all'"
                         type="button"
-                        class="mt-3 text-xs font-semibold text-[#087F8C] transition hover:text-[#066D78]"
+                        class="mt-2 text-xs font-bold text-[#087F8C] hover:underline"
                         @click="clearFilters"
                     >
-                        Clear filters
+                        Reset filters
                     </button>
                 </div>
 
                 <!-- PAGINATION -->
-
-                <div
-                    v-if="products?.links?.length > 3"
-                    class="flex flex-wrap items-center justify-center gap-1 border-t border-[#E5E7EB] bg-[#F8FAF9] p-4"
-                >
-                    <template
-                        v-for="(link, index) in products.links"
-                        :key="index"
-                    >
+                <div v-if="products.links && products.links.length > 3" class="flex items-center justify-center gap-1 border-t border-[#E5E7EB] p-4">
+                    <template v-for="(link, i) in products.links" :key="i">
                         <Link
                             v-if="link.url"
                             :href="link.url"
-                            class="rounded-lg px-3 py-1.5 text-[11px] font-semibold transition"
-                            :class="
-                                link.active
-                                    ? 'bg-[#087F8C] text-white shadow-sm'
-                                    : 'text-[#64748B] hover:bg-white hover:text-[#087F8C]'
-                            "
-                            preserve-scroll
+                            class="rounded-lg px-3 py-1 text-xs font-bold transition"
+                            :class="link.active ? 'bg-[#087F8C] text-white' : 'text-slate-600 hover:bg-slate-100'"
                             v-html="link.label"
                         />
-
-                        <span
-                            v-else
-                            class="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[#CBD5E1]"
-                            v-html="link.label"
-                        />
+                        <span v-else class="px-2 text-xs text-slate-300" v-html="link.label"></span>
                     </template>
                 </div>
             </div>
         </div>
 
         <!-- ========================================================= -->
-        <!-- REVIEW MODAL -->
+        <!-- COMPLIANCE & AI REVIEW MODAL -->
         <!-- ========================================================= -->
 
         <div
             v-if="showReviewModal && selectedProduct"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs"
             @click.self="closeReview"
         >
-            <div
-                class="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl"
-            >
+            <div class="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl">
                 <!-- HEADER -->
-
-                <div
-                    class="flex items-start justify-between gap-4 border-b border-[#E5E7EB] px-5 py-4 sm:px-6"
-                >
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
                     <div>
-                        <p
-                            class="text-xs font-bold uppercase tracking-[0.14em] text-[#087F8C]"
-                        >
-                            Compliance review
-                        </p>
-
-                        <h2 class="mt-1 text-lg font-bold text-[#1F2937]">
-                            {{ actionLabels[selectedAction] }}
-                        </h2>
-
-                        <p class="mt-1 text-[11px] text-[#94A3B8]">
-                            Confirm the compliance action before applying it.
-                        </p>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[#087F8C]">Listing Compliance Audit</span>
+                        <h2 class="text-base font-bold text-[#1F2937]">Review Product: {{ selectedProduct.name }}</h2>
                     </div>
-
-                    <button
-                        type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-lg text-[#94A3B8] transition hover:bg-[#E8F7F6] hover:text-[#087F8C] disabled:opacity-50"
-                        :disabled="processing"
-                        @click="closeReview"
-                    >
-                        <svg
-                            class="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-                            />
-                        </svg>
-                    </button>
+                    <button type="button" class="text-slate-400 hover:text-slate-600 text-lg" @click="closeReview">✕</button>
                 </div>
 
-                <!-- BODY -->
-
-                <div class="px-5 py-5 sm:px-6">
-
-                    <!-- PRODUCT SUMMARY -->
-
-                    <div
-                        class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4"
-                    >
-                        <div
-                            class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-[#E5E7EB]"
-                        >
+                <div class="p-6 space-y-5">
+                    <!-- PRODUCT HERO -->
+                    <div class="flex items-start gap-4 rounded-xl border border-slate-100 bg-[#F8FAF9] p-4">
+                        <div class="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
                             <img
                                 v-if="selectedProduct.image_path"
-                                :src="selectedProduct.image_path"
+                                :src="selectedProduct.image_path.startsWith('http') ? selectedProduct.image_path : `/storage/${selectedProduct.image_path}`"
                                 :alt="selectedProduct.name"
                                 class="h-full w-full object-cover"
                             />
-
-                            <svg
-                                v-else
-                                class="h-4 w-4 text-[#94A3B8]"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M3 4.5A1.5 1.5 0 014.5 3h11A1.5 1.5 0 0117 4.5v11a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 15.5v-11zM5 5a1 1 0 00-1 1v7.086l2.293-2.293a1 1 0 011.414 0L10 13.086l2.793-2.793a1 1 0 011.414 0L16 12.086V6a1 1 0 00-1-1H5zm0 2a1 1 0 110 2 1 1 0 010-2z"
-                                />
-                            </svg>
+                            <div v-else class="flex h-full w-full items-center justify-center text-xs text-slate-400">No Image</div>
                         </div>
 
-                        <div class="min-w-0">
-                            <p
-                                class="truncate text-sm font-bold text-[#1F2937]"
-                            >
-                                {{ selectedProduct.name }}
+                        <div class="min-w-0 flex-1 text-xs">
+                            <h3 class="text-sm font-bold text-[#1F2937]">{{ selectedProduct.name }}</h3>
+                            <p class="mt-1 font-semibold text-[#087F8C]">₱{{ formatPrice(selectedProduct.price) }}</p>
+                            <p class="mt-1 text-slate-500">
+                                Seller: <span class="font-bold text-slate-700">{{ sellerName(selectedProduct) }}</span>
+                                · Category: <span class="font-semibold">{{ selectedProduct.category?.name || 'Unassigned' }}</span>
                             </p>
-
-                            <p
-                                class="mt-1 truncate text-[11px] text-[#64748B]"
-                            >
-                                {{ sellerName(selectedProduct) }}
-                            </p>
-
-                            <p
-                                class="mt-1 text-[10px] text-[#94A3B8]"
-                            >
-                                {{ selectedProduct.category?.name ?? 'Unassigned' }}
-                                ·
-                                {{ selectedProduct.status ?? 'unknown' }}
+                            <p v-if="selectedProduct.description" class="mt-2 line-clamp-2 text-slate-600 italic">
+                                "{{ selectedProduct.description }}"
                             </p>
                         </div>
                     </div>
 
-                    <!-- ACTION INFORMATION -->
-
-                    <div
-                        class="mt-4 rounded-xl border p-4"
-                        :class="
-                            selectedAction === 'approve'
-                                ? 'border-emerald-200 bg-emerald-50'
-                                : selectedAction === 'flag'
-                                    ? 'border-[#F4B942]/30 bg-[#FFF8E7]'
-                                    : 'border-red-200 bg-red-50'
-                        "
-                    >
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/80"
-                            >
-                                <svg
-                                    v-if="selectedAction === 'approve'"
-                                    class="h-4 w-4 text-[#22A06B]"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.415.005l-3.25-3.15a1 1 0 111.402-1.43l2.543 2.465 6.548-6.56a1 1 0 011.422 0z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-
-                                <svg
-                                    v-else-if="selectedAction === 'flag'"
-                                    class="h-4 w-4 text-[#B7791F]"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M4.25 2a.75.75 0 01.75.75V4h7.75a.75.75 0 01.61.314l2.5 3.5a.75.75 0 010 .872l-2.5 3.5a.75.75 0 01-.61.314H5v4.75a.75.75 0 01-1.5 0v-15A.75.75 0 014.25 2z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-
-                                <svg
-                                    v-else
-                                    class="h-4 w-4 text-[#E85D5D]"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M8.485 2.34a2 2 0 013.03 0l6.145 7.167a2 2 0 01-1.516 3.293H3.856a2 2 0 01-1.516-3.293L8.485 2.34zM10 7a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0v-2.5A1 1 0 0110 7zm0 5.25a.875.875 0 100 1.75.875.875 0 000-1.75z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </div>
-
-                            <div>
-                                <p
-                                    class="text-xs font-bold"
-                                    :class="
-                                        selectedAction === 'approve'
-                                            ? 'text-emerald-800'
-                                            : selectedAction === 'flag'
-                                                ? 'text-[#8A6418]'
-                                                : 'text-red-800'
-                                    "
-                                >
-                                    {{
-                                        selectedAction === 'approve'
-                                            ? 'Approve this listing'
-                                            : selectedAction === 'flag'
-                                                ? 'Flag this listing'
-                                                : 'Suspend this seller'
-                                    }}
-                                </p>
-
-                                <p
-                                    class="mt-1 text-[11px] leading-5"
-                                    :class="
-                                        selectedAction === 'approve'
-                                            ? 'text-emerald-700'
-                                            : selectedAction === 'flag'
-                                                ? 'text-[#9A731F]'
-                                                : 'text-red-700'
-                                    "
-                                >
-                                    {{
-                                        selectedAction === 'approve'
-                                            ? 'The product will be marked approved and can be restored to the marketplace.'
-                                            : selectedAction === 'flag'
-                                                ? 'The product will be hidden from buyers and marked inactive.'
-                                                : 'The seller account will be suspended and this product will be hidden from buyers.'
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- NOTE -->
-
-                    <div class="mt-5">
-                        <div class="mb-1.5 flex items-center justify-between">
-                            <label class="text-xs font-semibold text-[#1F2937]">
-                                Review note
-
-                                <span
-                                    v-if="requiresNote"
-                                    class="text-[#E85D5D]"
-                                >
-                                    *
+                    <!-- AI VERIFICATION DIAGNOSTICS SECTION -->
+                    <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                                    </svg>
                                 </span>
-                            </label>
+                                <h4 class="text-xs font-bold text-[#087F8C] uppercase tracking-wider">
+                                    AI Vision Verification Diagnostics
+                                </h4>
+                            </div>
 
-                            <span class="text-[10px] text-[#94A3B8]">
-                                {{ note.length }}/1000
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                                :class="getAiBadge(selectedProduct).class"
+                            >
+                                {{ getAiBadge(selectedProduct).label }}
                             </span>
                         </div>
 
-                        <textarea
-                            v-model="note"
-                            rows="4"
-                            maxlength="1000"
-                            placeholder="Enter the reason or compliance notes..."
-                            class="w-full resize-none rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#087F8C]/10"
-                        />
+                        <!-- Confidence Bar -->
+                        <div v-if="selectedProduct.ai_confidence_score" class="mt-3">
+                            <div class="flex justify-between text-[11px] font-semibold text-slate-600">
+                                <span>Verification Confidence:</span>
+                                <span>{{ Math.round(selectedProduct.ai_confidence_score * 100) }}%</span>
+                            </div>
+                            <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                    class="h-full transition-all duration-300"
+                                    :class="
+                                        selectedProduct.ai_confidence_score >= 0.85
+                                            ? 'bg-emerald-500'
+                                            : (selectedProduct.ai_confidence_score >= 0.6 ? 'bg-amber-500' : 'bg-rose-500')
+                                    "
+                                    :style="{ width: `${Math.round(selectedProduct.ai_confidence_score * 100)}%` }"
+                                ></div>
+                            </div>
+                        </div>
 
-                        <p
-                            v-if="requiresNote && !note.trim()"
-                            class="mt-1.5 text-[10px] text-[#E85D5D]"
-                        >
-                            A reason is required for this action.
-                        </p>
+                        <!-- AI Explanation -->
+                        <div class="mt-3 rounded-lg border border-slate-200/80 bg-white p-3 text-xs">
+                            <p class="font-bold text-slate-700">Detailed AI Analysis:</p>
+                            <p class="mt-1 leading-relaxed text-slate-600">
+                                {{ selectedProduct.ai_verification_explanation || 'No verification diagnostic recorded yet.' }}
+                            </p>
+
+                            <div v-if="selectedProduct.ai_verified_at" class="mt-2 text-[10px] text-slate-400">
+                                Evaluated at: {{ formatDate(selectedProduct.ai_verified_at) }}
+                            </div>
+                        </div>
+
+                        <!-- Re-run AI Button -->
+                        <div class="mt-3 flex justify-end">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-lg border border-[#087F8C]/40 bg-white px-3.5 py-1.5 text-xs font-bold text-[#087F8C] shadow-2xs transition hover:bg-[#E8F7F6] disabled:opacity-50"
+                                :disabled="isReverifying"
+                                @click="rerunAiVerification(selectedProduct)"
+                            >
+                                <svg
+                                    v-if="isReverifying"
+                                    class="h-3.5 w-3.5 animate-spin text-[#087F8C]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                >
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <svg
+                                    v-else
+                                    class="h-3.5 w-3.5 text-[#087F8C]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                <span>{{ isReverifying ? 'Running AI Vision...' : 'Re-run AI Verification' }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ADMIN ACTION FORM -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-800">Choose Admin Action *</label>
+                        <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center text-xs font-bold transition"
+                                :class="selectedAction === 'approve' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                                @click="selectedAction = 'approve'"
+                            >
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                Approve
+                            </button>
+
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center text-xs font-bold transition"
+                                :class="selectedAction === 'reject' ? 'border-rose-500 bg-rose-50 text-rose-800 ring-1 ring-rose-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                                @click="selectedAction = 'reject'"
+                            >
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                            </button>
+
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center text-xs font-bold transition"
+                                :class="selectedAction === 'flag' ? 'border-amber-500 bg-amber-50 text-amber-800 ring-1 ring-amber-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                                @click="selectedAction = 'flag'"
+                            >
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" />
+                                </svg>
+                                Flag Inactive
+                            </button>
+
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center text-xs font-bold transition"
+                                :class="selectedAction === 'suspend' ? 'border-red-600 bg-red-50 text-red-800 ring-1 ring-red-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                                @click="selectedAction = 'suspend'"
+                            >
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                                Suspend Seller
+                            </button>
+                        </div>
+
+                        <!-- Review Note / Rejection Reason -->
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                <span>Reason / Note <span v-if="requiresNote" class="text-rose-500">*</span></span>
+                                <span class="text-[10px] text-slate-400">{{ note.length }}/1000</span>
+                            </div>
+                            <textarea
+                                v-model="note"
+                                rows="3"
+                                maxlength="1000"
+                                :placeholder="selectedAction === 'reject' ? 'Explain why this product listing is rejected (sent to seller)...' : 'Add compliance review note...'"
+                                class="mt-1 w-full rounded-xl border border-slate-200 bg-[#F8FAF9] p-3 text-xs text-slate-800 outline-none focus:border-[#087F8C] focus:bg-white"
+                            ></textarea>
+                            <p v-if="requiresNote && !note.trim()" class="mt-1 text-[11px] text-rose-500">
+                                A reason is required when rejecting, flagging, or suspending.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- FOOTER -->
-
-                <div
-                    class="flex justify-end gap-2 border-t border-[#E5E7EB] bg-[#F8FAF9] px-5 py-4 sm:px-6"
-                >
+                <div class="flex justify-end gap-2 border-t border-[#E5E7EB] bg-[#F8FAF9] px-6 py-4">
                     <button
                         type="button"
-                        class="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-xs font-semibold text-[#64748B] transition hover:bg-slate-50 disabled:opacity-50"
-                        :disabled="processing"
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                         @click="closeReview"
                     >
                         Cancel
                     </button>
-
                     <button
                         type="button"
-                        class="rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded-xl px-5 py-2 text-xs font-bold text-white transition disabled:opacity-50"
                         :class="
                             selectedAction === 'approve'
-                                ? 'bg-[#22A06B] hover:bg-[#16865A]'
-                                : selectedAction === 'flag'
-                                    ? 'bg-[#C89220] hover:bg-[#B17C18]'
-                                    : 'bg-[#E85D5D] hover:bg-[#D94D4D]'
+                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                : (selectedAction === 'reject' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#087F8C] hover:bg-[#066D78]')
                         "
                         :disabled="!canSubmitReview"
                         @click="submitReview"
                     >
-                        {{
-                            processing
-                                ? 'Processing...'
-                                : actionLabels[selectedAction]
-                        }}
+                        {{ processing ? 'Processing...' : `Confirm ${actionLabels[selectedAction]}` }}
                     </button>
                 </div>
             </div>
@@ -1264,158 +1108,46 @@ const sellerStatus = (product) => {
 
         <div
             v-if="showHistoryModal && selectedProduct"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs"
             @click.self="closeHistory"
         >
-            <div
-                class="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl"
-            >
-                <!-- HEADER -->
-
-                <div
-                    class="flex items-start justify-between gap-4 border-b border-[#E5E7EB] px-5 py-4 sm:px-6"
-                >
-                    <div class="min-w-0">
-                        <p
-                            class="text-xs font-bold uppercase tracking-[0.14em] text-[#087F8C]"
-                        >
-                            Compliance history
-                        </p>
-
-                        <h2
-                            class="mt-1 truncate text-lg font-bold text-[#1F2937]"
-                        >
-                            {{ selectedProduct.name }}
-                        </h2>
-
-                        <p class="mt-1 truncate text-[11px] text-[#94A3B8]">
-                            {{ sellerName(selectedProduct) }}
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#94A3B8] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                        @click="closeHistory"
-                    >
-                        <svg
-                            class="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-                            />
-                        </svg>
-                    </button>
+            <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
+                    <h3 class="text-sm font-bold text-slate-800">Compliance History: {{ selectedProduct.name }}</h3>
+                    <button type="button" class="text-slate-400 hover:text-slate-600" @click="closeHistory">✕</button>
                 </div>
 
-                <!-- HISTORY -->
-
-                <div
-                    class="max-h-[60vh] overflow-y-auto px-5 py-5 sm:px-6"
-                >
-                    <div
-                        v-if="selectedProduct.complianceReviews?.length"
-                        class="space-y-3"
-                    >
+                <div class="max-h-96 overflow-y-auto p-6">
+                    <div v-if="selectedProduct.compliance_reviews?.length" class="space-y-3">
                         <div
-                            v-for="review in selectedProduct.complianceReviews"
-                            :key="review.id"
-                            class="rounded-xl border border-[#E5E7EB] bg-white p-4 transition hover:border-[#087F8C]/30 hover:bg-[#F8FAF9]"
+                            v-for="rev in selectedProduct.compliance_reviews"
+                            :key="rev.id"
+                            class="rounded-xl border border-slate-100 bg-[#F8FAF9] p-3 text-xs"
                         >
-                            <div
-                                class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-                            >
-                                <div>
-                                    <span
-                                        class="inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide"
-                                        :class="
-                                            reviewActionClasses[
-                                                review.action
-                                            ] ??
-                                            'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
-                                        "
-                                    >
-                                        {{ formatAction(review.action) }}
-                                    </span>
-
-                                    <p class="mt-2 text-[11px] text-[#94A3B8]">
-                                        Reviewed by
-
-                                        <span class="font-semibold text-[#64748B]">
-                                            {{ review.admin?.name ?? 'Administrator' }}
-                                        </span>
-                                    </p>
-                                </div>
-
-                                <p class="text-[10px] text-[#94A3B8]">
-                                    {{ formatDate(review.reviewed_at) }}
-                                </p>
-                            </div>
-
-                            <div
-                                v-if="review.note"
-                                class="mt-3 rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] p-3"
-                            >
-                                <p
-                                    class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
+                            <div class="flex items-center justify-between">
+                                <span
+                                    class="rounded-md px-2 py-0.5 text-[10px] font-bold"
+                                    :class="reviewActionClasses[rev.action] || 'bg-slate-100 text-slate-700'"
                                 >
-                                    Review note
-                                </p>
-
-                                <p
-                                    class="mt-1 whitespace-pre-wrap text-xs leading-5 text-[#64748B]"
-                                >
-                                    {{ review.note }}
-                                </p>
+                                    {{ formatAction(rev.action) }}
+                                </span>
+                                <span class="text-[10px] text-slate-400">{{ formatDate(rev.reviewed_at) }}</span>
                             </div>
+                            <p v-if="rev.note" class="mt-2 text-slate-700">{{ rev.note }}</p>
+                            <p class="mt-1 text-[10px] text-slate-400">
+                                Reviewer: {{ rev.admin?.name || 'Automated AI System' }}
+                            </p>
                         </div>
                     </div>
-
-                    <!-- EMPTY HISTORY -->
-
-                    <div
-                        v-else
-                        class="py-12 text-center"
-                    >
-                        <div
-                            class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
-                        >
-                            <svg
-                                class="h-5 w-5"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-11a.75.75 0 01.75.75v2.75a.75.75 0 01-.75.75H7.25a.75.75 0 010-1.5h2V7.75A.75.75 0 0110 7zm0 6a1 1 0 100-2 1 1 0 000 2z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
-                        </div>
-
-                        <h3 class="mt-3 text-sm font-bold text-[#1F2937]">
-                            No compliance history
-                        </h3>
-
-                        <p
-                            class="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-[#94A3B8]"
-                        >
-                            No administrator review actions have been recorded
-                            for this product yet.
-                        </p>
+                    <div v-else class="py-8 text-center text-xs text-slate-400">
+                        No previous compliance records for this product.
                     </div>
                 </div>
 
-                <!-- FOOTER -->
-
-                <div
-                    class="flex justify-end border-t border-[#E5E7EB] bg-[#F8FAF9] px-5 py-4 sm:px-6"
-                >
+                <div class="border-t border-[#E5E7EB] bg-[#F8FAF9] px-6 py-3 text-right">
                     <button
                         type="button"
-                        class="rounded-lg bg-[#087F8C] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#066D78]"
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                         @click="closeHistory"
                     >
                         Close
@@ -1423,5 +1155,6 @@ const sellerStatus = (product) => {
                 </div>
             </div>
         </div>
+
     </AdminLayout>
 </template>

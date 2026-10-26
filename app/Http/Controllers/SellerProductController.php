@@ -355,32 +355,35 @@ class SellerProductController extends Controller
             return redirect()->route('seller.products')->with('status', 'Product created successfully.');
         }
 
+        $newProduct = null;
+
         try {
             DB::transaction(function () use (
                 $validated,
                 $variants,
                 $imagePaths,
                 $request,
-                $idempotencyKey
+                $idempotencyKey,
+                &$newProduct
             ) {
-                $product = Product::create($validated);
-                \Illuminate\Support\Facades\Cache::put($idempotencyKey, $product->id, now()->addSeconds(3));
+                $newProduct = Product::create($validated);
+                \Illuminate\Support\Facades\Cache::put($idempotencyKey, $newProduct->id, now()->addSeconds(3));
 
                 if ($request->has('store_category_ids') && is_array($request->store_category_ids)) {
-                    $product->storeCategories()->sync($request->store_category_ids);
+                    $newProduct->storeCategories()->sync($request->store_category_ids);
                 } elseif ($request->filled('store_category_id')) {
-                    $product->storeCategories()->sync([$request->input('store_category_id')]);
+                    $newProduct->storeCategories()->sync([$request->input('store_category_id')]);
                 }
 
                 foreach ($imagePaths as $index => $imagePath) {
-                    $product->images()->create([
+                    $newProduct->images()->create([
                         'image_path' => $imagePath,
                         'sort_order' => $index,
                     ]);
                 }
 
                 foreach ($variants as $variantData) {
-                    $product->variants()->create([
+                    $newProduct->variants()->create([
                         'color' => $variantData['color'] ?? null,
                         'size' => $variantData['size'] ?? null,
                         'price' => $variantData['price'] ?? ($validated['price'] ?? 0),
@@ -414,6 +417,20 @@ class SellerProductController extends Controller
                     'status',
                     'Product saved as inactive.'
                 );
+        }
+
+        // Run AI-powered automatic product verification & approval workflow
+        if ($newProduct && $validated['status'] === 'pending') {
+            $verification = app(\App\Services\AiProductVerificationService::class)->verifyAndProcess($newProduct);
+
+            if ($verification['approved'] ?? false) {
+                return redirect()
+                    ->route('seller.products')
+                    ->with(
+                        'status',
+                        "Product '{$newProduct->name}' was verified by AI and automatically published to the marketplace!"
+                    );
+            }
         }
 
         return redirect()
@@ -594,6 +611,11 @@ class SellerProductController extends Controller
         }
 
         $freshProduct = $product->fresh();
+
+        if ($freshProduct && $freshProduct->status === 'pending') {
+            app(\App\Services\AiProductVerificationService::class)->verifyAndProcess($freshProduct);
+        }
+
         if ($freshProduct && $freshProduct->isLowStock()) {
             \App\Services\SellerNotificationService::sendLowStockAlert($freshProduct);
         }
@@ -819,6 +841,11 @@ class SellerProductController extends Controller
         });
 
         $freshProduct = $product->fresh();
+
+        if ($freshProduct && $freshProduct->status === 'pending') {
+            app(\App\Services\AiProductVerificationService::class)->verifyAndProcess($freshProduct);
+        }
+
         if ($freshProduct && $freshProduct->isLowStock()) {
             \App\Services\SellerNotificationService::sendLowStockAlert($freshProduct);
         }
@@ -1602,6 +1629,18 @@ class SellerProductController extends Controller
         $hasVariants = (is_array($request->input('variants')) && count($request->input('variants')) > 0)
             || (is_array($request->input('variation_types')) && count($request->input('variation_types')) > 0);
 
+        // Auto-normalize old_price: if old_price is equal to or less than price, it is not a discount
+        if ($request->filled('old_price') && $request->filled('price')) {
+            if ((float) $request->input('old_price') <= (float) $request->input('price')) {
+                $request->merge(['old_price' => null]);
+            }
+        }
+
+        // If weight wasn't supplied in the request (e.g. form did not present a weight field), default to standard 0.5 kg
+        if (! $request->exists('weight')) {
+            $request->merge(['weight' => 0.5]);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
@@ -1788,9 +1827,10 @@ class SellerProductController extends Controller
     {
         return Category::query()
             ->where('is_active', true)
-            ->orderBy('name')
+            ->orderByRaw('COALESCE(parent_id, id), parent_id IS NOT NULL, name')
             ->get([
                 'id',
+                'parent_id',
                 'name',
                 'slug',
             ]);

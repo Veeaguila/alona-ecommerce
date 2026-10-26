@@ -51,4 +51,32 @@ return [
         'ca_bundle' => env('GOOGLE_CA_BUNDLE', storage_path('certs/cacert.pem')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI Product Verification (Google Gemini & OpenAI)
+    |--------------------------------------------------------------------------
+    */
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'gemini'),
+        'confidence_threshold' => (float) env('AI_PRODUCT_APPROVAL_THRESHOLD', 0.85),
+        'enabled' => env('AI_PRODUCT_APPROVAL_ENABLED', true),
+        'timeout' => (int) env('AI_TIMEOUT', 30),
+    ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash'),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 30),
+        'confidence_threshold' => (float) env('AI_PRODUCT_APPROVAL_THRESHOLD', 0.85),
+        'enabled' => env('AI_PRODUCT_APPROVAL_ENABLED', true),
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'confidence_threshold' => (float) env('AI_PRODUCT_APPROVAL_THRESHOLD', 0.85),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 25),
+        'enabled' => env('AI_PRODUCT_APPROVAL_ENABLED', true),
+    ],
+
 ];

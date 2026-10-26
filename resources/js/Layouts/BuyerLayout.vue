@@ -1402,6 +1402,31 @@ onUnmounted(() => {
                     </template>
 
                     <template v-else>
+                        <!-- GUEST CART -->
+                        <button
+                            type="button"
+                            class="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[#1F2937] transition duration-200 hover:bg-[#E8F7F6] hover:text-[#087F8C]"
+                            aria-label="Cart"
+                            title="Cart"
+                            @click="openCart"
+                        >
+                            <svg
+                                class="h-5 w-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <path
+                                    d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                                <circle cx="9" cy="20" r="1" />
+                                <circle cx="18" cy="20" r="1" />
+                            </svg>
+                        </button>
+
                         <Link
                             :href="safeRoute('login')"
                             class="inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"

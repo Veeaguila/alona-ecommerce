@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Buyer\BuyerAccountApiController;
+use App\Http\Controllers\Api\Buyer\BuyerAuthController;
+use App\Http\Controllers\Api\Buyer\BuyerCartApiController;
+use App\Http\Controllers\Api\Buyer\BuyerCatalogController;
+use App\Http\Controllers\Api\Buyer\BuyerOrderApiController;
+use App\Http\Controllers\Api\Buyer\BuyerVoucherApiController;
 use App\Http\Controllers\DeliveryCoverageController;
 use App\Http\Controllers\Logistics\DashboardController;
 use App\Http\Controllers\Logistics\DeliveryProofController;
@@ -114,3 +120,79 @@ Route::post('/logistics/logout', function (Request $request) {
 
 // Payment Webhook (BUY-PAY-005)
 Route::post('/webhooks/payment', [\App\Http\Controllers\BuyerOrderController::class, 'paymentWebhook'])->name('payment.webhook');
+
+/*
+|--------------------------------------------------------------------------
+| BUYER MOBILE API ROUTES
+|--------------------------------------------------------------------------
+*/
+
+// Marketplace Catalog (Public / Guest)
+Route::prefix('marketplace')->group(function () {
+    Route::get('/home', [BuyerCatalogController::class, 'home']);
+    Route::get('/products', [BuyerCatalogController::class, 'products']);
+    Route::get('/products/{id}', [BuyerCatalogController::class, 'show']);
+    Route::get('/categories', [BuyerCatalogController::class, 'categories']);
+});
+
+// Buyer Public Auth
+Route::prefix('buyer')->group(function () {
+    Route::post('/login', [BuyerAuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/register', [BuyerAuthController::class, 'register'])->middleware('throttle:6,1');
+    Route::post('/verify-otp', [BuyerAuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+    Route::post('/resend-otp', [BuyerAuthController::class, 'resendOtp'])->middleware('throttle:5,1');
+    Route::post('/google-login', [BuyerAuthController::class, 'googleLogin'])->middleware('throttle:10,1');
+    Route::post('/forgot-password', [BuyerAuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+});
+
+// Buyer Protected Endpoints (auth:sanctum)
+Route::middleware(['auth:sanctum'])->prefix('buyer')->group(function () {
+    // Auth & Profile
+    Route::get('/me', [BuyerAuthController::class, 'me']);
+    Route::post('/profile', [BuyerAuthController::class, 'updateProfile']);
+    Route::post('/change-password', [BuyerAuthController::class, 'changePassword']);
+    Route::post('/logout', [BuyerAuthController::class, 'logout']);
+
+    // Cart
+    Route::get('/cart', [BuyerCartApiController::class, 'index']);
+    Route::post('/cart', [BuyerCartApiController::class, 'store']);
+    Route::patch('/cart/{id}', [BuyerCartApiController::class, 'update']);
+    Route::delete('/cart/{id}', [BuyerCartApiController::class, 'destroy']);
+
+    // Wishlist
+    Route::get('/wishlist', [BuyerCartApiController::class, 'wishlist']);
+    Route::post('/wishlist/{productId}/toggle', [BuyerCartApiController::class, 'toggleWishlist']);
+
+    // Vouchers
+    Route::get('/vouchers', [BuyerVoucherApiController::class, 'index']);
+    Route::post('/vouchers/{id}/claim', [BuyerVoucherApiController::class, 'claim']);
+    Route::post('/vouchers/validate', [BuyerVoucherApiController::class, 'validateCode']);
+
+    // Checkout & Orders
+    Route::post('/checkout/preview', [BuyerOrderApiController::class, 'checkoutPreview']);
+    Route::post('/orders', [BuyerOrderApiController::class, 'store']);
+    Route::get('/orders', [BuyerOrderApiController::class, 'index']);
+    Route::get('/orders/{id}', [BuyerOrderApiController::class, 'show']);
+    Route::post('/orders/{id}/cancel', [BuyerOrderApiController::class, 'cancel']);
+    Route::post('/orders/{id}/receive', [BuyerOrderApiController::class, 'receive']);
+    Route::post('/orders/{id}/reorder', [BuyerOrderApiController::class, 'reorder']);
+
+    // Addresses
+    Route::get('/addresses', [BuyerAccountApiController::class, 'addresses']);
+    Route::post('/addresses', [BuyerAccountApiController::class, 'storeAddress']);
+    Route::patch('/addresses/{id}', [BuyerAccountApiController::class, 'updateAddress']);
+    Route::patch('/addresses/{id}/default', [BuyerAccountApiController::class, 'setDefaultAddress']);
+    Route::delete('/addresses/{id}', [BuyerAccountApiController::class, 'deleteAddress']);
+
+    // Notifications
+    Route::get('/notifications', [BuyerAccountApiController::class, 'notifications']);
+    Route::patch('/notifications/{id}/read', [BuyerAccountApiController::class, 'readNotification']);
+    Route::post('/notifications/read-all', [BuyerAccountApiController::class, 'readAllNotifications']);
+
+    // Reviews
+    Route::get('/reviews', [BuyerAccountApiController::class, 'reviews']);
+    Route::post('/products/{id}/reviews', [BuyerAccountApiController::class, 'storeReview']);
+
+    // Store Follow
+    Route::post('/store/{sellerId}/toggle-follow', [BuyerAccountApiController::class, 'toggleFollowStore']);
+});

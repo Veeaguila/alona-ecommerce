@@ -1,6 +1,6 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 
 const props = defineProps({
@@ -10,6 +10,21 @@ const props = defineProps({
             data: [],
             links: [],
             total: 0,
+        }),
+    },
+
+    categories: {
+        type: Array,
+        default: () => [],
+    },
+
+    filters: {
+        type: Object,
+        default: () => ({
+            search: '',
+            category: 'all',
+            max_price: 5000,
+            sort: 'featured',
         }),
     },
 })
@@ -48,6 +63,28 @@ const formatPrice = price => {
         maximumFractionDigits: 2,
     })
 }
+
+/*
+|--------------------------------------------------------------------------
+| CATEGORY FILTER
+|--------------------------------------------------------------------------
+*/
+
+const changeCategory = category => {
+    router.get(
+        route('guest.products'),
+        {
+            search: props.filters.search || undefined,
+            category: category || 'all',
+            max_price: props.filters.max_price ?? 5000,
+            sort: props.filters.sort || 'featured',
+        },
+        {
+            preserveState: true,
+            preserveScroll: false,
+        }
+    )
+}
 </script>
 
 <template>
@@ -62,8 +99,46 @@ const formatPrice = price => {
             class="w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]"
         >
             <div
-                class="w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
+                class="mx-auto w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10"
             >
+                <!-- ===================================================== -->
+                <!-- CATEGORY FILTER -->
+                <!-- ===================================================== -->
+
+                <div
+                    class="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1"
+                >
+                    <!-- ALL -->
+                    <button
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-2 text-[10px] font-semibold transition sm:text-[11px]"
+                        :class="
+                            (props.filters.category || 'all') === 'all'
+                                ? 'border-[#087F8C] bg-[#087F8C] text-white'
+                                : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
+                        "
+                        @click="changeCategory('all')"
+                    >
+                        All
+                    </button>
+
+                    <!-- DATABASE CATEGORIES -->
+                    <button
+                        v-for="category in props.categories"
+                        :key="category.slug"
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-2 text-[10px] font-semibold transition sm:text-[11px]"
+                        :class="
+                            props.filters.category === category.slug
+                                ? 'border-[#087F8C] bg-[#087F8C] text-white'
+                                : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
+                        "
+                        @click="changeCategory(category.slug)"
+                    >
+                        {{ category.name }}
+                    </button>
+                </div>
+
                 <!-- ===================================================== -->
                 <!-- PRODUCTS -->
                 <!-- ===================================================== -->
@@ -97,6 +172,13 @@ const formatPrice = price => {
                                 v-else
                                 class="text-3xl sm:text-4xl"
                             ><Icon name="bag" class="h-4 w-4" /></span>
+
+                            <span
+                                v-if="product.discount_badge"
+                                class="absolute right-2 top-2 rounded-full bg-[#FFF1F1] px-2 py-0.5 text-[10px] font-bold text-[#E85D5D] shadow-xs"
+                            >
+                                {{ product.discount_badge }}
+                            </span>
                         </div>
 
                         <!-- ================================================= -->
@@ -105,7 +187,6 @@ const formatPrice = price => {
 
                         <div class="min-w-0 p-3 sm:p-3.5">
                             <!-- CATEGORY -->
-
                             <p
                                 class="truncate text-[9px] font-semibold uppercase tracking-wide text-[#64748B] sm:text-[10px]"
                             >
@@ -113,7 +194,6 @@ const formatPrice = price => {
                             </p>
 
                             <!-- PRODUCT NAME -->
-
                             <h2
                                 class="mt-1 truncate text-[12px] font-semibold text-[#1F2937] sm:text-[13px]"
                                 :title="product.name"
@@ -122,7 +202,6 @@ const formatPrice = price => {
                             </h2>
 
                             <!-- RATING -->
-
                             <div
                                 class="mt-1.5 flex min-w-0 items-center gap-1"
                             >
@@ -155,7 +234,6 @@ const formatPrice = price => {
                             </div>
 
                             <!-- PRICE -->
-
                             <div
                                 class="mt-3 flex min-w-0 items-center justify-between gap-2"
                             >
@@ -163,7 +241,7 @@ const formatPrice = price => {
                                     <span
                                         class="block truncate text-[12px] font-bold text-[#1F2937] sm:text-sm"
                                     >
-                                        ₱{{ formatPrice(product.price) }}
+                                        {{ product.price_range || `₱${formatPrice(product.price)}` }}
                                     </span>
 
                                     <span
@@ -175,7 +253,6 @@ const formatPrice = price => {
                                 </div>
 
                                 <!-- VIEW BUTTON -->
-
                                 <span
                                     class="flex shrink-0 items-center justify-center rounded-lg bg-[#087F8C] px-2 py-1.5 text-[9px] font-semibold text-white transition group-hover:bg-[#16A6A0] sm:px-2.5 sm:text-[10px]"
                                 >
