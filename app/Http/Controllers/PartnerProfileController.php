@@ -21,6 +21,11 @@ class PartnerProfileController extends Controller
             'destination' => $destinations->route($user) === 'application.status' ? null : route($destinations->route($user)),
             'profile' => $user->partnerApplication?->only(['details', 'address'])];
         $data['usesOtp'] = ($user->partnerApplication?->details['registration_version'] ?? null) === 2;
+        if (app(\App\Services\HubAccess::class)->membership($user)) {
+            $context = app(\App\Services\HubAccess::class)->context($user);
+            $data['approvalStatus'] = $context['center']->approval_status;
+            $data['operator'] = app(\App\Services\HubAccess::class)->identity($user);
+        }
 
         if ($user->usertype === 'rider') {
             $data['is_active'] = $profile?->is_active ?? false;
@@ -77,7 +82,7 @@ class PartnerProfileController extends Controller
             : (($path && Storage::disk('public')->exists($path)) ? 'public' : null);
         abort_unless($path && $disk, 404);
 
-        return response()->file(Storage::disk($disk)->path($path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return response()->file(Storage::disk($disk)->path($path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'])->setPrivate();
     }
 
     public function rider(Request $request)

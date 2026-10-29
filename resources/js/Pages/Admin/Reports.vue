@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import CodDiscrepancyPanel from '@/Components/Logistics/CodDiscrepancyPanel.vue'
+import LogisticsClaimPanel from '@/Components/Logistics/LogisticsClaimPanel.vue'
 
 const props = defineProps({
     title: {
@@ -1266,5 +1268,7 @@ const statusLabel = (status) => {
                 </template>
             </template>
         </div>
+        <CodDiscrepancyPanel v-if="isCommissionReport" />
+        <LogisticsClaimPanel v-if="isCommissionReport" />
     </AdminLayout>
 </template>

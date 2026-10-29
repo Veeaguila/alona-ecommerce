@@ -57,6 +57,9 @@ class RiderNotificationObserver
         if ($model instanceof Parcel) {
             foreach (['pickup_rider_id' => 'pickups', 'assigned_rider_id' => 'deliveries'] as $field => $screen) {
                 if (!$model->$field || !($created || $model->wasChanged($field))) { continue; }
+                // Manual dispatch writes its durable, UUID-keyed notice inside the audited transaction.
+                if ($screen === 'pickups' && \Illuminate\Support\Facades\Schema::hasTable('pickup_offers')
+                    && \App\Models\PickupOffer::where('parcel_id', $id)->where('rider_id', $model->$field)->where('status', 'assigned')->exists()) continue;
                 $riderId = $model->$field;
                 $title = $screen === 'pickups' ? 'Pickup accepted' : ($model->status === 'AT_SORTING_CENTER' ? 'Delivery assigned — ready for collection' : 'Delivery assigned');
                 $this->later(fn () => $this->rider($riderId, "parcel:$id:$field:$riderId:$stamp", 'assignment', $title,
@@ -82,9 +85,16 @@ class RiderNotificationObserver
                 $user = User::with('rider')->find($userId);
                 if (!$user?->rider) { return; }
                 $state = [$user->status, $user->rider->approval_status, (bool) $user->rider->is_active, (bool) $user->email_verified_at];
+                $body = 'Account: '.$user->status.'. Rider approval: '.$user->rider->approval_status.'.';
+                $data = ['screen' => 'account'];
+                if ($user->status === 'rejected' && is_string($user->rejection_reason) && $user->rejection_reason !== '') {
+                    $state[] = $user->rejection_reason;
+                    $body .= ' Rejection reason: '.$user->rejection_reason;
+                    $data['rejection_reason'] = $user->rejection_reason;
+                }
                 $key = 'account:'.$userId.':'.json_encode($state).':'.max((string) $user->updated_at, (string) $user->rider->updated_at);
                 $this->record($userId, $key, 'account', 'Account status updated',
-                    'Account: '.$user->status.'. Rider approval: '.$user->rider->approval_status.'. Open My account for details.', ['screen' => 'account']);
+                    $body.' Open My account for details.', $data);
             });
         }
         if ($model instanceof SortingCenterMessage && $created && $model->conversation_id && $model->recipient_id) {

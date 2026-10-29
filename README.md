@@ -7,6 +7,14 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## ALONA teammate update
+
+For an existing installation, start with [TEAMMATE_AI_HANDOFF.md](TEAMMATE_AI_HANDOFF.md).
+The [copyable AI prompt](docs/TEAMMATE_AI_PROMPT.md) covers source setup and a bounded
+local database upgrade. The [migration manifest](docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json)
+indexes the reviewed changes; preserve your existing data and compare your actual schema.
+Flutter Rider source is included at [`mobile/rider`](mobile/rider).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

@@ -32,7 +32,9 @@ class RiderDeliveryController extends Controller
         $parcels->load(['deliveryProofs' => fn ($query) => $query->where('rider_id', $riderId)->where('type', 'PHOTO')
             ->select(['id', 'parcel_id', 'rider_id', 'type', 'file_path'])]);
         foreach ($parcels as $parcel) {
-            $parcel->setAttribute('has_valid_photo_proof', $parcel->deliveryProofs->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto()));
+            $parcel->setAttribute('has_valid_photo_proof', $parcel->deliveryProofs->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto()
+                && app(\App\Services\DeliveryAttempts::class)->proofAllowed($parcel, $proof)));
+            foreach (app(\App\Services\DeliveryAttempts::class)->state($parcel) as $field => $value) $parcel->setAttribute($field, $value);
             $parcel->unsetRelation('deliveryProofs');
         }
     }
@@ -65,7 +67,7 @@ class RiderDeliveryController extends Controller
         }
 
         $deliveries = $this->deliveryQuery((int) $riderId)
-            ->whereIn('status', ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY'])
+            ->whereIn('status', ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY', 'LOST', 'DAMAGED'])
             ->orderByDesc('assigned_at')
             ->get();
 
@@ -120,6 +122,7 @@ class RiderDeliveryController extends Controller
                 'status' => 'OUT_FOR_DELIVERY',
                 'assigned_at' => now(),
             ]);
+            app(\App\Services\DeliveryOtp::class)->ensure($parcel);
 
             return $parcel->fresh();
         });
@@ -138,18 +141,23 @@ class RiderDeliveryController extends Controller
     public function fail(Request $request, int $parcelId): JsonResponse
     {
         $validated = $request->validate([
-            'reason' => ['required', 'string'],
+            'reason' => ['required', 'string', \Illuminate\Validation\Rule::in(\App\Services\DeliveryAttempts::REASONS)],
         ]);
 
-        return $this->transition($request, $parcelId, 'FAILED_RETURNED', 'Delivery marked as failed and returned.', [
-            'failure_reason' => $validated['reason'],
-        ]);
+        return response()->json(['message' => 'Failed attempt recorded. Physical return requires Logistics initiation and separate custody confirmations.',
+            'data' => app(\App\Services\DeliveryAttempts::class)->fail($request->user(), $parcelId, $validated['reason'])]);
+    }
+
+    public function retry(Request $request, int $parcelId): JsonResponse
+    {
+        return response()->json(['message' => 'Next delivery attempt started. A current photo and Buyer OTP are still required for delivery.',
+            'data' => app(\App\Services\DeliveryAttempts::class)->retry($request->user(), $parcelId)]);
     }
 
     private function transition(Request $request, int $parcelId, string $status, string $message, array $attributes = []): JsonResponse
     {
         $riderId = $request->user()->rider?->id;
-        $parcel = DB::transaction(function () use ($parcelId, $riderId, $status, $attributes): Parcel {
+        $parcel = DB::transaction(function () use ($request, $parcelId, $riderId, $status, $attributes): Parcel {
             $finance = app(\App\Services\SellerShipmentFinance::class);
             $shipment = $finance->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
@@ -167,13 +175,19 @@ class RiderDeliveryController extends Controller
             }
 
             if ($status === 'DELIVERED' && ! $parcel->deliveryProofs()->where('rider_id', $riderId)->where('type', 'PHOTO')
-                ->lockForUpdate()->get()->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto())) {
+                ->lockForUpdate()->get()->contains(fn (DeliveryProof $proof) => $proof->isValidPhoto()
+                    && app(\App\Services\DeliveryAttempts::class)->proofAllowed($parcel, $proof))) {
                 abort(response()->json([
                     'message' => 'Upload an accessible delivery PHOTO before marking this parcel as delivered.',
                     'code' => 'valid_photo_required',
                 ], 422));
             }
 
+            if ($status === 'DELIVERED') {
+                app(\App\Services\DeliveryAttempts::class)->assertCanComplete($parcel);
+                $otp = $request->validate(['otp' => ['required', 'string', 'regex:/\A[0-9]{6}\z/']])['otp'];
+                app(\App\Services\DeliveryOtp::class)->verify($parcel, $otp);
+            }
             $parcel->update(array_merge([
                 'status' => $status,
                 'delivered_at' => $status === 'DELIVERED' ? now() : null,
@@ -185,6 +199,14 @@ class RiderDeliveryController extends Controller
             }
             return $parcel->fresh();
         });
+
+        if ($status === 'DELIVERED') {
+            try { app(\App\Services\DeliveryOtp::class)->consume($parcel); }
+            catch (\Throwable) {
+                // The committed DELIVERED status already prevents replay. Do not report a failed delivery after commit.
+                \Illuminate\Support\Facades\Log::warning('Delivery OTP cleanup pending.', ['parcel_id' => $parcel->id]);
+            }
+        }
 
         return response()->json([
             'message' => $message,
@@ -207,6 +229,7 @@ class RiderDeliveryController extends Controller
                 abort_unless($parcel, 404, 'Delivery not found.');
                 abort_unless((int) $parcel->assigned_rider_id === (int) $riderId, 403, 'This delivery is not assigned to you.');
                 abort_unless($parcel->status === 'OUT_FOR_DELIVERY', 422, 'This delivery is no longer out for delivery.');
+                app(\App\Services\DeliveryAttempts::class)->assertCanComplete($parcel);
                 // Retried requests with the same photo reuse the existing proof under the parcel lock.
                 $type = $validated['type'] ?? 'PHOTO';
                 $uploadHash = hash_file('sha256', $request->file('file')->getRealPath());
@@ -214,6 +237,8 @@ class RiderDeliveryController extends Controller
                     $existingPath = $existing->privateFilePath();
                     $existingHash = $existingPath ? @hash_file('sha256', $existingPath) : false;
                     if (is_string($uploadHash) && is_string($existingHash) && hash_equals($uploadHash, $existingHash)) {
+                        abort_unless(app(\App\Services\DeliveryAttempts::class)->proofAllowed($parcel, $existing), 422,
+                            'This photo belongs to an earlier failed attempt. Capture a current delivery photo.');
                         $existing->update(['notes' => $validated['notes'] ?? null]);
                         return $existing;
                     }

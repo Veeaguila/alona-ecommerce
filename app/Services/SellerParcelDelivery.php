@@ -49,6 +49,8 @@ class SellerParcelDelivery
             ? $parcel->deliveryProofs()->where('type', 'PHOTO')->where('rider_id', $parcel->assigned_rider_id)->latest('captured_at')->get()
             : collect();
         return ['reference' => $parcel->order_id, 'status' => $parcel->status, 'delivered_at' => $parcel->delivered_at,
+            'return_to_seller' => \Illuminate\Support\Facades\Schema::hasTable('parcel_returns') ? $parcel->returnToSeller : null,
+            'logistics_review' => in_array($parcel->status, ['LOST', 'FAILED_RETURNED'], true) ? app(LogisticsRefundReview::class)->details($parcel) : null,
             'proofs' => $proofs->map(fn (DeliveryProof $proof) => [
                 'id' => $proof->id, 'type' => $proof->type, 'notes' => $proof->notes, 'recorded_at' => $proof->captured_at,
                 'available' => $proof->isValidPhoto(),

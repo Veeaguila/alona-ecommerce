@@ -23,6 +23,12 @@ class OrderItemPickup
             $timeSlot = $scheduling['time_slot'] ?? $item->pickup_time_slot ?? 'morning';
             $carrierPartner = $scheduling['carrier_partner'] ?? $item->preferred_carrier ?? 'Alona Express';
             $notes = $scheduling['notes'] ?? $item->pickup_notes ?? null;
+            $hubPlan = $item->hub_route_plan;
+            if ($hubPlan) {
+                $carrierPartner = $hubPlan['company_name'];
+                if ($collectionAddress) abort_unless(app(HubNetwork::class)->cityCode($collectionAddress) === $hubPlan['origin_city_code'],
+                    422, 'The pickup city differs from the booked hub route. Ask Logistics to review the booking.');
+            }
 
             if ($existing) {
                 // Update existing pickup request if present
@@ -66,6 +72,7 @@ class OrderItemPickup
 
             PickupRequest::create([
                 'parcel_id' => $parcel->id,
+                ...($hubPlan ? ['sorting_center_id' => $hubPlan['sorting_center_id']] : []),
                 'seller_id' => $seller->id,
                 'status' => 'pending',
                 'scheduled_date' => $scheduledDate,
@@ -73,6 +80,11 @@ class OrderItemPickup
                 'carrier_partner' => $carrierPartner,
                 'notes' => $notes,
             ]);
+
+            if ($hubPlan) {
+                app(HubNetwork::class)->attach($parcel, $hubPlan);
+                $parcel->update(['sorting_center_id' => $hubPlan['sorting_center_id']]);
+            }
 
             $item->update([
                 'tracking_number' => $parcel->order_id,

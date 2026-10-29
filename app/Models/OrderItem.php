@@ -22,6 +22,9 @@ class OrderItem extends Model
         });
 
         static::updating(function (self $item): void {
+            if ($item->isDirty('hub_route_plan') && $item->getOriginal('hub_route_plan')) {
+                throw new \LogicException('The booked hub route snapshot is immutable.');
+            }
             if ($item->isDirty('seller_shipment_id') && $item->getOriginal('seller_shipment_id')) {
                 throw new \LogicException('Shipment membership is immutable.');
             }
@@ -64,6 +67,7 @@ class OrderItem extends Model
     ];
 
     protected $fillable = [
+        'hub_route_plan',
         'seller_shipment_id',
         'order_id',
         'product_id',
@@ -102,6 +106,7 @@ class OrderItem extends Model
     {
         return [
             'price' => 'decimal:2',
+            'hub_route_plan' => 'array',
             'quantity' => 'integer',
             'scheduled_pickup_date' => 'date',
             'accepted_at' => 'datetime',
@@ -176,6 +181,7 @@ class OrderItem extends Model
         }
 
         $pickedUpStatuses = [
+            'IN_HUB_TRANSIT',
             'PICKED_UP',
             'IN_TRANSIT',
             'AT_HUB',

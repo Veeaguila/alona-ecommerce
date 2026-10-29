@@ -25,7 +25,7 @@
         <!-- Logo / Brand Header -->
         <div class="relative flex h-[80px] shrink-0 items-center border-b border-white/10 px-4 sm:px-5">
           <a
-            href="/sorting-center/dashboard"
+            :href="isHubStaff ? '/sorting-center/hub-workspace' : '/sorting-center/dashboard'"
             class="flex items-center gap-3 transition hover:opacity-95"
             @click="sidebarOpen = false"
           >
@@ -161,7 +161,7 @@
 
                   <!-- Rider Assignment -->
                   <svg
-                    v-else-if="item.key === 'riders'"
+                    v-else-if="['riders', 'rider-management'].includes(item.key)"
                     xmlns="http://www.w3.org/2000/svg"
                     class="h-[18px] w-[18px]"
                     fill="none"
@@ -434,16 +434,24 @@ export default {
       { path: '/sorting-center/delivery-monitoring', label: 'Delivery Monitoring', key: 'monitoring' },
       { path: '/sorting-center/delivery-reports', label: 'Delivery Reports', key: 'reports' },
       { path: '/sorting-center/messages', label: 'Messages', key: 'messages' },
+      { path: '/sorting-center/rider-management', label: 'Rider Management', key: 'rider-management' },
+      { path: '/sorting-center/delivery-rates', label: 'Zones & Rates', key: 'delivery-rates' },
+      { path: '/sorting-center/hubs', label: 'Hubs & Routes', key: 'hubs' },
     ];
 
-    const navGroups = [
+    const isHubStaff = window.logisticsSession?.operator?.role === 'hub_staff';
+    const hubWorkspace = { path: '/sorting-center/hub-workspace', label: 'Hub workspace', key: 'orders' };
+    const navGroups = isHubStaff ? [
+      { label: 'Operations', items: [hubWorkspace] },
+    ] : [
       { label: 'Overview', items: [navItems[0]] },
-      { label: 'Operations', items: [navItems[1], navItems[2], navItems[3], navItems[4], navItems[5], navItems[6]] },
+      { label: 'Operations', items: [hubWorkspace, navItems[1], navItems[2], navItems[3], navItems[8], navItems[9], navItems[10], navItems[4], navItems[5], navItems[6]] },
+      { label: 'Staff access', items: [{ path: '/sorting-center/hub-staff', label: 'Hub staff', key: 'rider-management' }] },
       { label: 'Communication', items: [navItems[7]] },
     ];
 
     const userName = ref('Sorting Center');
-    const userRole = ref('Logistics Center');
+    const userRole = ref(isHubStaff ? 'Hub Staff' : 'Logistics Center');
     const userInitial = computed(() => userName.value.charAt(0).toUpperCase());
     const pageTitle = computed(() => props.title);
     const logoUrl = '/images/alona.png';
@@ -474,30 +482,32 @@ export default {
           const token = localStorage.getItem('logistics_auth_token');
           if (window.logisticsSession) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            await fetch('/logout', {
+            const response = await fetch('/logout', {
               method: 'POST',
               headers: {
                 'X-CSRF-TOKEN': csrfToken || '',
                 'Accept': 'application/json',
               },
             });
+            if (!response.ok) throw new Error('Unable to end your session. Please try again.');
           } else if (token) {
-            await fetch('/api/logistics/logout', {
+            const response = await fetch('/api/logistics/logout', {
               method: 'POST',
               headers: {
                 Accept: 'application/json',
                 Authorization: 'Bearer ' + token,
               },
             });
+            if (!response.ok && response.status !== 401) throw new Error('Unable to sign out. Please try again.');
           }
-        } catch (error) {
-          console.error('Logout error:', error);
-        } finally {
           localStorage.removeItem('logistics_auth_token');
           localStorage.removeItem('logistics_auth_session');
           localStorage.removeItem('sortingCenterId');
           localStorage.removeItem('sortingCenterName');
           window.location.href = '/sorting-center/login';
+        } catch (error) {
+          console.error('Logout error:', error);
+          window.alert('Unable to sign out. Please try again.');
         }
       }
     };
@@ -531,6 +541,7 @@ export default {
     });
 
     return {
+      isHubStaff,
       navItems,
       navGroups,
       sidebarOpen,

@@ -6,23 +6,26 @@ use App\Http\Controllers\PartnerRegistrationController;
 use App\Http\Controllers\PhilippineAddressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Sanctum\PersonalAccessToken;
 
 Route::redirect('/sorting-center/login', '/?auth=login')->name('sorting-center.login');
 Route::redirect('/sorting-center/register', '/register/logistics')->name('sorting-center.register');
 
+Route::get('/sorting-center/hub-workspace', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'page'])
+    ->middleware(['auth', 'hub.operator'])->name('sorting-center.hub-workspace');
+
 // These views contain only the UI shell; every data endpoint requires an approved account.
 Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])->group(function () {
-    foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests'] as $page) {
+    foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'rider-management', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests', 'hubs', 'delivery-rates', 'hub-staff'] as $page) {
         Route::get($page, function (Request $request) use ($page) {
             if ($request->header('X-Inertia')) {
                 return \Inertia\Inertia::location($request->fullUrl());
             }
 
             $token = $request->session()->get('logistics.web_token');
-            $accessToken = $token ? PersonalAccessToken::findToken($token) : null;
-            if (! $accessToken || $accessToken->tokenable_id !== $request->user()->id || $accessToken->expires_at?->isPast()) {
-                if ($accessToken?->tokenable_id === $request->user()->id) {
+            $lifetime = app(\App\Services\LogisticsSessionLifetime::class);
+            $accessToken = $lifetime->ownedWebToken($request->user(), $token);
+            if (! $accessToken || !$lifetime->validToken($accessToken)) {
+                if ($accessToken) {
                     $accessToken->delete();
                 }
                 $token = $request->user()->createToken('logistics-web', ['*'], now()->addHours(2))->plainTextToken;
@@ -32,6 +35,7 @@ Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])
             return view('sorting-center.'.$page, ['logisticsSession' => [
                 'token' => $token, 'user' => $request->user()->only(['id', 'name', 'email']),
                 'sorting_center' => $request->user()->sortingCenter->only(['id', 'business_name']),
+                'hub_routes_required' => app(\App\Services\HubNetwork::class)->enforced(),
             ]]);
         })->name('sorting-center.'.$page);
     }

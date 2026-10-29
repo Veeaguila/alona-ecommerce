@@ -41,7 +41,7 @@ class SellerFulfillmentWaybillAndPickupTest extends TestCase
             'contact_no' => '09189876543',
         ]);
 
-        $category = Category::create([
+        $category = Category::firstOrCreate(['slug' => 'electronics'], [
             'name' => 'Electronics',
             'slug' => 'electronics',
             'is_active' => true,

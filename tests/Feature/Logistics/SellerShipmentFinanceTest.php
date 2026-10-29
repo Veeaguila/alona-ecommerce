@@ -74,7 +74,7 @@ class SellerShipmentFinanceTest extends TestCase
     {
         $this->start($f);
         foreach ($f['parcels'] as $parcel) {
-            $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver')->assertOk();
+            $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => $this->deliveryOtp($parcel->id)])->assertOk();
         }
     }
 
@@ -82,9 +82,9 @@ class SellerShipmentFinanceTest extends TestCase
     {
         $f = $this->fixture();
         $this->start($f);
-        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][0]->id)])->assertOk();
         $this->assertDatabaseCount('seller_delivery_charges', 0);
-        $this->postJson('/api/rider/deliveries/'.$f['parcels'][1]->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$f['parcels'][1]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][1]->id)])->assertOk();
         $this->assertDatabaseHas('seller_delivery_charges', ['seller_shipment_id' => $f['shipment']->id,
             'amount' => 50, 'logistics_amount' => 10, 'rider_amount' => 40, 'collection_status' => 'uncollected']);
         $this->assertDatabaseHas('rider_delivery_earnings', ['rider_id' => $f['rider']->id, 'amount' => 40, 'payout_status' => 'unpaid']);
@@ -92,7 +92,7 @@ class SellerShipmentFinanceTest extends TestCase
         DB::transaction(fn () => app(SellerShipmentFinance::class)->recognize(app(SellerShipmentFinance::class)->lockParcel($f['parcels'][1]->id)));
         $this->assertDatabaseCount('seller_delivery_charges', 1);
         $this->assertDatabaseCount('rider_delivery_earnings', 1);
-        $this->assertSame('completed', $f['order']->fresh()->status);
+        $this->assertSame('delivered', $f['order']->fresh()->status);
     }
 
     public function test_missing_late_member_blocks_dispatch_and_cancelled_members_are_excluded(): void
@@ -123,8 +123,8 @@ class SellerShipmentFinanceTest extends TestCase
         $this->start($f);
         DeliveryProof::where('parcel_id', $f['parcels'][1]->id)->delete();
         $this->postJson('/api/rider/deliveries/'.$f['parcels'][1]->id.'/deliver')->assertUnprocessable();
-        $this->postJson('/api/rider/deliveries/'.$f['parcels'][1]->id.'/fail', ['reason' => 'Unavailable'])->assertOk();
-        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$f['parcels'][1]->id.'/fail', ['reason' => 'Buyer not home'])->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][0]->id)])->assertOk();
         $this->assertDatabaseCount('seller_delivery_charges', 0);
     }
 
@@ -138,6 +138,25 @@ class SellerShipmentFinanceTest extends TestCase
         Sanctum::actingAs($f['center']->user);
         $this->postJson('/api/sorting-center/parcels/'.$f['parcels'][1]->id.'/assign', ['rider_id' => $other->id])->assertUnprocessable();
         $this->postJson('/api/sorting-center/parcels/'.$f['parcels'][1]->id.'/assign', ['rider_id' => $f['rider']->id])->assertOk();
+    }
+
+    // Batch 1 ALONA compatibility, related LOG-DISP-002 subset: no item-based job cap.
+    public function test_four_item_shipment_can_be_assigned_whole_to_one_rider_without_financial_mutation(): void
+    {
+        $f = $this->fixture(4);
+        $f['shipment']->update(['assigned_rider_id' => null]);
+        foreach ($f['parcels'] as $parcel) $parcel->update(['assigned_rider_id' => null]);
+        Sanctum::actingAs($f['center']->user);
+        foreach ($f['parcels'] as $parcel) {
+            $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/assign', ['rider_id' => $f['rider']->id])
+                ->assertOk()->assertJsonPath('data.status', 'AT_SORTING_CENTER');
+        }
+        $this->assertSame($f['rider']->id, $f['shipment']->fresh()->assigned_rider_id);
+        foreach ($f['parcels'] as $parcel) $this->assertSame($f['rider']->id, $parcel->fresh()->assigned_rider_id);
+        $this->assertDatabaseCount('seller_delivery_charges', 0);
+        $this->assertDatabaseCount('rider_delivery_earnings', 0);
+        $this->start($f);
+        $this->assertNotNull($f['shipment']->fresh()->dispatched_at);
     }
 
     public function test_different_collection_location_blocks_package_dispatch(): void
@@ -156,7 +175,7 @@ class SellerShipmentFinanceTest extends TestCase
         Event::listen($event, fn () => throw new \RuntimeException('Simulated earning failure'));
         $this->withoutExceptionHandling();
         try {
-            $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver');
+            $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][0]->id)]);
             $this->fail('Expected simulated persistence failure.');
         } catch (\RuntimeException $error) {
             $this->assertSame('Simulated earning failure', $error->getMessage());
@@ -198,7 +217,7 @@ class SellerShipmentFinanceTest extends TestCase
             ->assertJsonPath('charges.summary.logistics_earned', '10.00');
     }
 
-    public function test_checkout_groups_seller_items_and_keeps_express_metadata_without_buyer_fees_or_voucher_erosion(): void
+    public function test_buyer_paid_checkout_splits_stores_without_duplicate_seller_charges_or_voucher_erosion(): void
     {
         $buyer = $this->user('buyer');
         $seller = $this->user('seller');
@@ -206,6 +225,7 @@ class SellerShipmentFinanceTest extends TestCase
         $legacy = Order::create(['user_id' => $buyer->id, 'order_number' => Str::uuid(), 'total' => 220, 'shipping_fee' => 120,
             'shipping_address' => 'Historical', 'payment_method' => 'cod', 'shipping_method' => 'express', 'status' => 'pending']);
         foreach (['express', 'standard'] as $method) {
+            $beforeId = Order::max('id');
             foreach ([$seller, $seller, $otherSeller] as $owner) {
                 $product = $this->product($owner);
                 CartItem::create(['user_id' => $buyer->id, 'product_id' => $product->id, 'quantity' => 1]);
@@ -214,19 +234,26 @@ class SellerShipmentFinanceTest extends TestCase
             $response = $this->actingAs($buyer, 'web')->post(route('buyer.orders.store'), ['shipping_address' => 'Destination', 'payment_method' => 'cod',
                 'shipping_method' => $method, 'voucher_code' => $voucher->code,
                 'selected_items' => $buyer->cartItems()->pluck('id')->all()]);
-            $order = Order::latest('id')->firstOrFail();
-            $response->assertRedirect(route('buyer.orders.show', $order));
-            $this->assertNotSame($legacy->id, $order->id);
-            $this->assertSame('seller', $order->delivery_fee_payer);
-            $this->assertSame('0.00', $order->shipping_fee);
-            $this->assertSame('0.00', $order->shipping_discount);
-            $this->assertSame('50.00', $order->discount);
-            $this->assertSame('250.00', $order->total);
-            $this->assertSame($method, $order->shipping_method);
-            $this->assertSame(2, SellerShipment::where('order_id', $order->id)->count());
-            $this->assertSame(2, $order->items()->distinct()->count('seller_shipment_id'));
-            DB::transaction(fn () => app(SellerShipmentFinance::class)->createMembership($order));
-            $this->assertSame(2, SellerShipment::where('order_id', $order->id)->count());
+            $orders = Order::where('user_id', $buyer->id)->where('id', '>', $beforeId)->orderBy('id')->get();
+            $response->assertSessionHasNoErrors()->assertRedirect(route('buyer.orders.show', $orders->firstOrFail()));
+            $this->assertCount(2, $orders);
+            $this->assertEquals(300, $orders->sum('subtotal'));
+            $this->assertEquals(50, $orders->sum('discount'));
+            $this->assertEquals($method === 'express' ? 490 : 350, $orders->sum('total'));
+            foreach ($orders as $order) {
+                $this->assertNotSame($legacy->id, $order->id);
+                $this->assertSame('buyer', $order->delivery_fee_payer);
+                $this->assertSame($method === 'express' ? '120.00' : '50.00', $order->shipping_fee);
+                $this->assertSame($order->shipping_fee, $order->shipping_fee_before_discount);
+                $this->assertSame('0.00', $order->shipping_discount);
+                $this->assertSame($method, $order->shipping_method);
+                $this->assertSame(1, $order->items()->with('product')->get()->pluck('product.seller_id')->unique()->count());
+                $this->assertSame(0, $order->items()->whereNotNull('seller_shipment_id')->count());
+                DB::transaction(fn () => app(SellerShipmentFinance::class)->createMembership($order));
+                $this->assertSame(0, SellerShipment::where('order_id', $order->id)->count());
+            }
+            $this->assertSame(0, SellerDeliveryCharge::count());
+            $this->assertSame(0, RiderDeliveryEarning::count());
         }
         $this->assertSame('220.00', $legacy->fresh()->total);
         $this->assertSame('120.00', $legacy->fresh()->shipping_fee);
@@ -320,7 +347,11 @@ class SellerShipmentFinanceTest extends TestCase
         $f = $this->fixture(1);
         $this->complete($f);
         $item = $f['order']->items()->firstOrFail();
-        $this->actingAs($f['buyer'], 'web')->post('/buyer/order-items/'.$item->id.'/return', ['type' => 'refund_only', 'reason' => 'Changed mind'])->assertRedirect();
+        $this->actingAs($f['buyer'], 'web')->post('/buyer/order-items/'.$item->id.'/return', [
+            'type' => 'refund_only', 'reason' => 'Changed mind',
+            'reason_details' => 'Synthetic return request after courier delivery.',
+            'evidence_images' => [\Illuminate\Http\UploadedFile::fake()->image('return-evidence.png')],
+        ])->assertSessionHasNoErrors()->assertRedirect();
         $this->assertDatabaseCount('order_return_requests', 1);
         $this->assertDatabaseCount('seller_delivery_charges', 1);
         $this->assertDatabaseCount('rider_delivery_earnings', 1);

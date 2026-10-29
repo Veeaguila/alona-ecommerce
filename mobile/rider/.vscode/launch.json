@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rider (Android Emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "emulator-5554",
+      "args": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:8000/api"
+      ]
+    },
+    {
+      "name": "Rider (Android Emulator - LIVE shopalona.online)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "emulator-5554",
+      "args": [
+        "--dart-define=API_BASE_URL=https://shopalona.online/api"
+      ]
+    },
+    {
+      "name": "Rider (Android Emulator - LIVE shopalona.online)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "emulator-5554",
+      "args": [
+        "--dart-define=API_BASE_URL=https://shopalona.online/api"
+      ]
+    },
+    {
+      "name": "Rider (Web / Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "args": [
+        "--dart-define=API_BASE_URL=http://localhost:8000/api"
+      ]
+    }
+  ]
+}

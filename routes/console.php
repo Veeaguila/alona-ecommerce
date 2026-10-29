@@ -31,3 +31,11 @@ Artisan::command('flash-sales:send-reminders', function () {
 })->purpose('Send reminder notifications before flash sale slots start');
 
 Schedule::command('flash-sales:send-reminders')->everyMinute();
+
+Artisan::command('logistics:advance-pickup-offers', function () {
+    if (!\Illuminate\Support\Facades\Schema::hasTable('pickup_offers')) return;
+    $ids = \App\Models\PickupOffer::where('kind', 'nearest')->where('status', 'offered')->distinct()->pluck('sorting_center_id');
+    foreach ($ids as $id) app(\App\Services\NearestPickupOffer::class)->advanceForCenter((int) $id);
+    $this->info('Nearest pickup offers checked.');
+})->purpose('Advance expired nearest pickup offers to the next eligible Rider, up to three Riders');
+Schedule::command('logistics:advance-pickup-offers')->everyMinute()->withoutOverlapping();

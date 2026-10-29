@@ -1,0 +1,413 @@
+# Integration changelog
+
+Checkpoint: 2026-10-29T12:03:58.758Z
+
+- 2026-10-14T20:16:28.225Z: Initialized durable recovery from verified existing Phases 1-3; prior interrupted turn started no tool operations. No commit or push.
+- 2026-10-14T20:17:41.756Z: Initialized durable recovery from verified existing Phases 1-3; prior interrupted turn started no tool operations. No commit or push.
+- 2026-10-14T20:17:43.322Z: rider: node --test scripts/integration_checkpoint.test.cjs passed
+- 2026-10-14T20:19:56.857Z: Started Phase 4 after verifying existing Phase 3 and crash recovery
+- 2026-10-14T20:22:01.486Z: Saved Phase 4 registration edit batch atomically; source baseline preserved in .recovery
+- 2026-10-14T20:23:17.847Z: Saved Phase 4 multipart and directory regression tests
+- 2026-10-14T20:23:20.183Z: rider: dart format lib/pages/registration_page.dart lib/services/registration_api.dart lib/services/api_error.dart test/registration_api_test.dart passed
+- 2026-10-14T20:23:34.938Z: rider: flutter test --no-pub test/registration_api_test.dart test/widget_test.dart passed
+- 2026-10-14T20:25:14.831Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/PartnerOnboardingTest.php tests/Feature/PhilippineAddressTest.php tests/Feature/DeliveryCoverageTest.php passed
+- 2026-10-14T20:25:25.589Z: rider: flutter analyze --no-pub --no-fatal-infos lib/pages/registration_page.dart lib/services/registration_api.dart lib/services/api_error.dart test/registration_api_test.dart passed
+- 2026-10-14T20:25:26.828Z: rider: node --test scripts/integration_checkpoint.test.cjs passed
+- 2026-10-15T00:05:24.169Z: Resumed verified recovery; Rider now Git-tracked on master at 99d7363; no automatic commit
+- 2026-10-15T00:05:25.981Z: rider: node --test scripts/integration_checkpoint.test.cjs passed
+- 2026-10-15T00:06:43.993Z: Phase 4 completed from verified existing source and retained passing test evidence; no repeated implementation or commit
+- 2026-10-15T00:06:44.757Z: Started Phase 5; pickup backend routes/ownership/state transitions already exist and will be reused
+- 2026-10-15T00:07:27.408Z: Saved complete pickup edit batch; repaired local edit-script interpolation failure without changing backend data
+- 2026-10-15T00:08:04.362Z: Saved pickup acceptance/completion and conflict/duplicate-tap regression tests
+- 2026-10-15T00:08:07.490Z: rider: dart format lib/pages/pickup_dashboard_page.dart lib/services/rider_session.dart test/pickup_workflow_test.dart passed
+- 2026-10-15T00:08:59.217Z: rider: flutter test --no-pub test/pickup_workflow_test.dart test/rider_session_test.dart failed/unknown
+- 2026-10-15T00:09:44.375Z: rider: flutter test --no-pub test/pickup_workflow_test.dart passed
+- 2026-10-15T00:11:00.412Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/PickupRequestApprovalTest.php passed
+- 2026-10-15T00:11:54.990Z: rider: flutter analyze --no-pub --no-fatal-infos lib/pages/pickup_dashboard_page.dart lib/services/rider_session.dart test/pickup_workflow_test.dart passed
+- 2026-10-15T00:12:43.294Z: Phase 5 completed; retained Phase 3 tests pass, pickup widget and Laravel workflow checks pass
+- 2026-10-15T00:12:43.978Z: Started Phase 6 before cross-project proof/delivery changes
+- 2026-10-15T00:13:23.055Z: Saved byte-based proof upload and proof-required completion guards; existing delivery list now returns rider-owned proof state
+- 2026-10-15T00:13:23.855Z: Saved delivery start/completion, proof gating, failure reason and multipart regression tests
+- 2026-10-15T00:13:26.660Z: rider: dart format lib/pages/delivery_dashboard_page.dart lib/pages/proof_capture_page.dart lib/services/rider_session.dart test/delivery_workflow_test.dart passed
+- 2026-10-15T00:13:40.031Z: rider: flutter test --no-pub test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T00:14:55.941Z: rider: flutter test --no-pub test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T00:16:21.768Z: rider: flutter test --no-pub test/delivery_workflow_test.dart passed
+- 2026-10-15T00:16:27.807Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderDeliveryCompletionTest.php passed
+- 2026-10-15T00:16:35.745Z: rider: flutter analyze --no-pub --no-fatal-infos lib/pages/delivery_dashboard_page.dart lib/pages/proof_capture_page.dart lib/services/rider_session.dart test/delivery_workflow_test.dart passed
+- 2026-10-15T00:18:02.303Z: Phase 6 completed after scoped Flutter/Laravel verification; hardware camera/device checks remain manual
+- 2026-10-15T00:18:03.103Z: Started Phase 7; no rider profit or payout data/rules were found in the existing Rider/Logistics boundary
+- 2026-10-15T00:18:04.354Z: Saved Phase 7 delivery-history extension on existing deliveries endpoint; no earnings amounts or payment logic invented
+- 2026-10-15T00:18:40.832Z: Saved history pagination and cross-rider isolation tests; active-delivery response remains compatible
+- 2026-10-15T00:18:43.295Z: rider: dart format lib/pages/delivery_history_page.dart lib/pages/delivery_dashboard_page.dart test/delivery_history_test.dart passed
+- 2026-10-15T00:18:54.624Z: rider: flutter test --no-pub test/delivery_history_test.dart passed
+- 2026-10-15T00:18:59.664Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderDeliveryCompletionTest.php passed
+- 2026-10-15T00:21:51.264Z: History widget and 11 Laravel delivery/history tests passed; Phase 7 remains BLOCKED only for unspecified earnings
+- 2026-10-15T00:21:51.991Z: Started Phase 8; notifications will use existing unread conversations and active tasks, without claiming device push delivery
+- 2026-10-15T00:21:58.240Z: Saved Phase 8 client tools; no new backend routes/tables; existing membership and recipient eligibility tightened
+- 2026-10-15T00:22:54.950Z: Saved chat, pending-account contact, unread updates and session-expiry regression tests
+- 2026-10-15T00:22:58.071Z: rider: dart format lib/pages/rider_portal_page.dart lib/services/rider_portal_api.dart lib/services/rider_session_guard.dart lib/pages/login_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart test/rider_portal_test.dart passed
+- 2026-10-15T00:23:11.153Z: rider: flutter test --no-pub test/rider_portal_test.dart test/widget_test.dart passed
+- 2026-10-15T00:25:12.538Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/ConversationMessagingTest.php tests/Feature/PartnerOnboardingTest.php passed
+- 2026-10-15T00:25:20.536Z: rider: flutter analyze --no-pub --no-fatal-infos lib/pages/rider_portal_page.dart lib/services/rider_portal_api.dart lib/services/rider_session_guard.dart test/rider_portal_test.dart passed
+- 2026-10-15T00:29:10.952Z: Phase 8 completed: 5 Flutter checks and 21 isolated Laravel messaging/onboarding tests passed
+- 2026-10-15T00:29:11.774Z: Started Phase 9 risk checkpoint before changing proof persistence; prior source backed up and no database records modified
+- 2026-10-15T00:30:47.998Z: Saved complete Phase 9 sources; private proof persistence now locked and rolls back uploaded files on record failure; old source backups verified
+- 2026-10-15T00:30:50.876Z: rider: dart format lib/pages/proof_capture_page.dart lib/pages/login_page.dart lib/pages/rider_portal_page.dart lib/services/rider_session_guard.dart test/api_errors_test.dart passed
+- 2026-10-15T00:31:08.802Z: rider: flutter test --no-pub test/api_errors_test.dart test/rider_portal_test.dart test/delivery_workflow_test.dart passed
+- 2026-10-15T00:31:13.686Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/Logistics/ConversationMessagingTest.php passed
+- 2026-10-15T00:33:53.539Z: rider: dart fix --apply --code=curly_braces_in_flow_control_structures passed
+- 2026-10-15T00:34:03.420Z: rider: flutter analyze --no-pub passed
+- 2026-10-15T00:36:23.098Z: Phase 9 completed: 10 focused Flutter tests and 19 Laravel tests passed; full Flutter static analysis has no issues
+- 2026-10-15T00:36:23.773Z: Started Phase 10; review identified repeated nested iOS permission keys and an existing registration field not being persisted
+- 2026-10-15T00:37:51.803Z: Saved final review corrections: root-only iOS permission keys, existing optional sex-field persistence, and verified previous-bundle recovery without touching source/Git/database
+- 2026-10-15T00:37:57.345Z: rider: node --test scripts/integration_checkpoint.test.cjs passed
+- 2026-10-15T00:37:59.869Z: rider: dart format lib/pages/registration_page.dart passed
+- 2026-10-15T00:38:32.726Z: rider: flutter test --no-pub passed
+- 2026-10-15T00:41:31.429Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics tests/Unit/Logistics tests/Feature/PartnerOnboardingTest.php tests/Feature/PhilippineAddressTest.php tests/Feature/DeliveryCoverageTest.php passed
+- 2026-10-15T00:41:38.817Z: rider: flutter analyze --no-pub failed/unknown
+- 2026-10-15T00:43:42.644Z: rider: node --test scripts/integration_checkpoint.test.cjs passed
+- 2026-10-15T00:43:50.299Z: rider: dart fix --apply --code=use_null_aware_elements passed
+- 2026-10-15T00:43:58.002Z: rider: flutter analyze --no-pub passed
+- 2026-10-15T00:44:10.758Z: rider: flutter test --no-pub test/registration_api_test.dart test/widget_test.dart passed
+- 2026-10-15T00:45:57.670Z: rider: flutter build web --no-pub --dart-define=API_BASE_URL=https://alona.example/api passed
+- 2026-10-15T00:47:33.995Z: Release JavaScript web build passed; final review found canonical registration casing was not matched by case-sensitive rider login lookups
+- 2026-10-15T00:48:06.200Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics tests/Unit/Logistics tests/Feature/PartnerOnboardingTest.php tests/Feature/PhilippineAddressTest.php tests/Feature/DeliveryCoverageTest.php passed
+- 2026-10-15T00:50:05.634Z: Saved final verified handoff: Phases 4-6/8-9 complete; history complete with earnings blocked; Phase 10 automated checks pass and manual verification explicitly pending
+- 2026-10-15T00:52:27.491Z: Saved concise current architecture/deployment notes and complete integration endpoint list; final review adds a safe HTTP 413 upload-limit message
+- 2026-10-15T00:52:30.699Z: rider: dart format lib/services/api_error.dart passed
+- 2026-10-15T00:52:46.514Z: rider: flutter test --no-pub test/api_errors_test.dart passed
+- 2026-10-15T00:52:56.797Z: rider: flutter analyze --no-pub passed
+- 2026-10-15T00:56:41.581Z: rider: flutter build web --no-pub --dart-define=API_BASE_URL=https://alona.example/api passed
+- 2026-10-15T00:59:11.032Z: Final current-source web build passed; source/Git/checkpoint verification follows. Phase 7 earnings BLOCKED and Phase 10 manual verification remain explicit.
+- 2026-10-15T01:42:28.430Z: Token-saving checkpoint: retained prior successful test evidence, refreshed both Git repositories, marked manual Phase 10 checks PENDING and Phase 7 profit BLOCKED; no commits or source edits
+- 2026-10-15T09:25:09.412Z: Resumed targeted final review after successful checkpoint verification
+- 2026-10-15T09:33:37.879Z: Completed scoped code/secrets/commit-boundary review and financial evidence inspection; before documentation batch
+- 2026-10-15T09:34:05.731Z: Completed final scoped review and financial inspection; saved commit boundaries, manual acceptance plan and affected project memory
+- 2026-10-15T09:39:08.369Z: Approved seller-funded earnings rules received; begin proposal-only Phase 7 analysis
+- 2026-10-15T09:41:36.053Z: Phase 7 investigation complete; before proposal/memory documentation batch
+- 2026-10-15T09:44:32.377Z: Phase 7 seller-funded earnings proposal completed and verified; implementation approval gate remains closed
+- 2026-10-15T09:51:22.540Z: User approved Phase 7 with package-level billing; start required pre-migration shipment identity audit
+- 2026-10-15T09:52:36.365Z: Pre-migration audit confirms missing reliable seller shipment identifier; documentation-only proposal batch begins
+- 2026-10-15T09:55:36.093Z: Completed required shipment identity audit and express review; missing identifier proposal checkpoint saved at user approval gate
+- 2026-10-15T09:58:35.684Z: Shipment design explicitly approved; Phase 7 implementation begins
+- 2026-10-15T10:00:37.185Z: Phase 7 schema/service batch written; no application database commands executed
+- 2026-10-15T10:03:39.762Z: Phase 7 checkout/workflow batch saved before finance API changes; no production database operations
+- 2026-10-15T10:04:03.466Z: Phase 7 API batch checkpoint before tests
+- 2026-10-15T10:05:55.144Z: Saved focused finance tests before first isolated PHPUnit run
+- 2026-10-15T10:07:07.636Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php failed/unknown
+- 2026-10-15T10:07:46.853Z: Before focused fix batch after first test run; no production data touched
+- 2026-10-15T10:11:29.355Z: Phase 7 focused fixes and fresh-read concurrency safeguards saved before rerun
+- 2026-10-15T10:11:35.373Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php failed/unknown
+- 2026-10-15T10:12:16.262Z: Before second focused test correction/coverage batch
+- 2026-10-15T10:12:22.711Z: Before second focused test correction/coverage batch
+- 2026-10-15T10:12:28.107Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php failed/unknown
+- 2026-10-15T10:13:26.504Z: Before final finance review/test refinement batch
+- 2026-10-15T10:13:33.855Z: Before final finance review/test refinement batch
+- 2026-10-15T10:13:39.346Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-15T10:14:12.305Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics failed/unknown
+- 2026-10-15T10:14:50.185Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics passed
+- 2026-10-15T10:16:07.817Z: Before final policy-alignment fix and focused verification
+- 2026-10-15T10:16:14.897Z: Before final policy-alignment fix and focused verification
+- 2026-10-15T10:16:20.342Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-15T10:17:29.478Z: Final finance suite passed; checkpoint before architecture/documentation batch
+- 2026-10-15T10:19:47.787Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics passed
+- 2026-10-15T10:22:06.584Z: Phase 7 backend implementation completed, final automated checks passed and both project memories updated; crash-safe handoff saved
+- 2026-10-15T10:26:02.203Z: User explicitly authorized saving Rider to GitHub; verified empty destination and reviewed source/checkpoint file scope
+- 2026-10-15T10:27:57.636Z: Rider source commit successfully saved to GitHub and independently verified; publication receipt/checkpoint updated
+- 2026-10-15T11:51:44.772Z: Resume Phase 7 final Rider earnings integration with verified checkpoints; latest user prohibits automatic publication/migrations
+- 2026-10-15T11:52:55.080Z: Rider earnings UI batch saved before focused tests
+- 2026-10-15T11:53:41.274Z: Focused earnings/widget contract tests saved before formatting/checks
+- 2026-10-15T11:55:28.576Z: Recorded interrupted format attempt as UNKNOWN; no app tests started during it
+- 2026-10-15T11:55:33.677Z: rider: dart format lib/services/rider_earnings_api.dart lib/pages/profit_dashboard_page.dart lib/pages/rider_portal_page.dart lib/pages/delivery_history_page.dart test/rider_earnings_test.dart test/delivery_history_test.dart passed
+- 2026-10-15T11:56:17.251Z: rider: flutter test --no-pub test/rider_earnings_test.dart test/delivery_history_test.dart test/rider_portal_test.dart failed/unknown
+- 2026-10-15T11:56:51.582Z: Checkpoint before focused earnings test corrections
+- 2026-10-15T11:56:57.097Z: Checkpoint before focused earnings test corrections
+- 2026-10-15T11:57:14.045Z: rider: flutter test --no-pub test/rider_earnings_test.dart test/delivery_history_test.dart test/rider_portal_test.dart failed/unknown
+- 2026-10-15T11:57:34.413Z: Before lifecycle test scheduling correction; application money/data code unchanged
+- 2026-10-15T11:57:41.858Z: Before lifecycle test scheduling correction; application money/data code unchanged
+- 2026-10-15T11:57:58.277Z: rider: flutter test --no-pub test/rider_earnings_test.dart test/delivery_history_test.dart test/rider_portal_test.dart passed
+- 2026-10-15T11:58:19.331Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-15T11:59:13.545Z: rider: flutter analyze --no-pub lib/pages/profit_dashboard_page.dart lib/services/rider_earnings_api.dart lib/pages/delivery_history_page.dart lib/pages/rider_portal_page.dart test/rider_earnings_test.dart test/delivery_history_test.dart passed
+- 2026-10-15T11:59:47.325Z: Focused integration checks passed; checkpoint before current release compile
+- 2026-10-15T12:01:06.645Z: rider: flutter build web --no-pub --no-wasm-dry-run --dart-define=API_BASE_URL=https://alona.example/api passed
+- 2026-10-15T12:02:47.100Z: Current earnings release build passed; checkpoint before final documentation/memory batch
+- 2026-10-15T12:05:17.050Z: Phase 7 Rider earnings integration complete locally; current focused tests, analysis and web build passed; deployment/concurrency requirements and Phase 10 pending status recorded
+- 2026-10-15T12:23:04.000Z: Final release readiness resumed; verified coherent recovery and preserved both Git worktrees. Local DB_CONNECTION sqlite; MySQL 8.0.46 installed, intended production engine/isolation unknown.
+- 2026-10-15T12:27:00.634Z: User confirmed production MySQL 8.0/InnoDB. Prepared ignored disposable-only harness with datadir guards, randomized loopback port, migration history preservation and two-process lock barriers. No shared database access.
+- 2026-10-15T12:27:30.736Z: rider: node .recovery/mysql-release.cjs failed/unknown
+- 2026-10-15T12:28:13.009Z: rider: node .recovery/mysql-release.cjs failed/unknown
+- 2026-10-15T12:29:37.055Z: Clarification preserved: one shared ALONA runtime database; disposable MySQL instances are test fixtures only and are shut down. Clean baseline MySQL replay exposed pre-existing order_items/product_variants dependency order; no application migration edited.
+- 2026-10-15T12:32:03.339Z: rider: node .recovery/mysql-release.cjs passed
+- 2026-10-15T12:33:12.035Z: Saved completed disposable MySQL evidence and clarification. No shared runtime database created/changed; all disposable instances shut down. Detected Herd nginx, not Laragon in standard paths.
+- 2026-10-15T12:35:37.861Z: Read-only project/environment discovery complete: ALONA local SQLite database/database.sqlite, no cached config, 51 applied migrations and Phase 7 only pending. Standard Laragon locations absent; Herd linked old Logistics project, not verified populated ALONA. No configurations switched or actual records modified.
+- 2026-10-15T17:45:38.304Z: User reconfirmed ALONA project root; SQLite may not be populated website database. Latest instruction: do not create, switch, migrate or modify any database; inspect configuration/connection sources only.
+- 2026-10-15T17:47:19.028Z: Read-only follow-up: .env:23 sqlite; MySQL host/port/database only commented examples; no process/user/machine DB override, DB URL or config cache detected. MySQL80 running localhost:3306 InnoDB via service my.ini; Workbench profile has no saved schema. OS denies MySQL data-directory listing; no permission changes attempted.
+- 2026-10-15T17:47:41.349Z: Final release/configuration investigation saved. Actual ALONA MySQL identity missing; no configuration/database changes. Scoped review passed, manual checklist and approval-gated existing-database upgrade procedure recorded.
+- 2026-10-15T17:50:58.095Z: User requests an account only to view all pages without affecting database. Implement separate preview entrypoint, in-memory token/client/sample fixtures, persistent preview label and page selector; normal app/API authentication remains intact.
+- 2026-10-15T17:53:52.787Z: rider: dart format lib/app.dart lib/pages/login_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/rider_portal_page.dart lib/preview/main_preview.dart lib/preview/preview_backend.dart test/preview_test.dart passed
+- 2026-10-15T17:55:23.890Z: rider: flutter test --no-pub test/preview_test.dart test/rider_session_test.dart test/registration_api_test.dart test/rider_portal_test.dart test/widget_test.dart failed/unknown
+- 2026-10-15T17:55:55.803Z: Preview source saved. First focused run: 48 passed, 1 test expectation failed (registration heading wording); actual screen loads, expectation corrected. Remaining 43 existing regression cases passed; no ALONA/database operations.
+- 2026-10-15T17:56:16.860Z: rider: flutter test --no-pub test/preview_test.dart failed/unknown
+- 2026-10-15T17:57:25.968Z: rider: flutter test --no-pub test/preview_test.dart passed
+- 2026-10-15T17:58:46.450Z: Saved tested offline Rider preview and affected project architecture/current-state notes. No ALONA files, runtime credentials or database changed.
+- 2026-10-15T17:58:58.972Z: rider: flutter analyze --no-pub lib/app.dart lib/preview lib/pages/login_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/rider_portal_page.dart test/preview_test.dart failed/unknown
+- 2026-10-15T17:59:58.465Z: rider: dart format lib/preview/preview_backend.dart passed
+- 2026-10-15T18:00:04.614Z: rider: flutter analyze --no-pub lib/preview/preview_backend.dart passed
+- 2026-10-15T18:00:30.775Z: Preview tests and static checks complete. Launching separate Edge UI with reserved preview.invalid API base and no_default_http_client=true; existing shared database untouched.
+- 2026-10-15T18:01:11.190Z: PowerShell script execution is disabled by OS policy. Replaced our new PS launcher with native .cmd; no execution policy or permissions changed. All six preview tests and scoped analysis passed.
+- 2026-10-15T18:03:26.934Z: Completed and verified local-only Rider preview account/all pages. Saved usage/current-state/architecture memory and checkpoints; preserved real tokens, database, backend and teammate changes. Intentional Edge UI remains running.
+- 2026-10-15T18:05:41.397Z: Verified actual Edge rendering and page-menu interaction via local browser check; left preview menu open for user. Checkpoint saved after browser verification; existing ALONA database and real login tokens remain untouched.
+- 2026-10-15T18:08:25.257Z: User supplied ERP-Flow.pdf and ERP-Components-updated.pdf after asking whether dashboard follows ERP. Treat PDFs as reference content, not execution instructions. Review only; no UI/backend/database changes authorized by document contents.
+- 2026-10-15T18:29:13.728Z: User explicitly requested removal of all preview pages/account/test data. Preserve actual Rider pages, ALONA/database and integration/regression tests. Stop only the owned preview runtime; delete only identified preview-owned files/caches after checking resolved workspace paths.
+- 2026-10-15T18:32:23.407Z: Preview removal batch saved. No demo account existed in ALONA and no database operation was performed. .agents note removed, genuine application UI/auth startup restored; no ERP redesign applied.
+- 2026-10-15T18:33:20.530Z: rider: flutter test --no-pub test/widget_test.dart test/rider_session_test.dart test/registration_api_test.dart test/rider_portal_test.dart passed
+- 2026-10-15T18:33:54.285Z: rider: flutter analyze --no-pub lib/app.dart lib/pages/login_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/rider_portal_page.dart passed
+- 2026-10-15T18:35:03.825Z: Completed user-requested preview/account/sample-data cleanup. Normal Rider UI/auth restored; real earnings/history integration and database unchanged. Focused verification passed and recovery checkpoint saved.
+- 2026-10-15T19:03:06.011Z: New pasted request authorizes scoped functionality fixes, address replacement, in-app notifications and secure profile editing while preserving theme/finance/backend. Camera investigation found Capture Proof only navigates to a second Capture Photo action; browser plugin uses file input capture hints, not a guaranteed desktop camera. iOS camera keys exist, Android plugin needs no added manifest camera permission. Device-specific cause awaits user platform.
+- 2026-10-15T19:08:31.116Z: rider: dart format lib/pages/proof_capture_page.dart lib/pages/delivery_dashboard_page.dart test/proof_capture_test.dart passed
+- 2026-10-15T19:09:09.582Z: rider: flutter test --no-pub test/proof_capture_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T19:10:23.846Z: rider: flutter test --no-pub test/proof_capture_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T19:12:14.568Z: rider: flutter test --no-pub test/proof_capture_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T19:13:35.979Z: rider: flutter test --no-pub test/proof_capture_test.dart test/delivery_workflow_test.dart passed
+- 2026-10-15T19:14:33.100Z: Camera batch completed/checkpointed. Starting Address Details: remove Maps UI/launchers and add safe additive backend DTO from existing owned parcel/party fields. No address parsing/guesses, no migrations.
+- 2026-10-15T19:16:54.612Z: rider: dart format lib/widgets/address_details.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart test/address_details_test.dart test/proof_capture_test.dart passed
+- 2026-10-15T19:17:13.103Z: rider: flutter test --no-pub test/address_details_test.dart test/pickup_workflow_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T19:19:50.456Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderAddressDetailsTest.php tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php passed
+- 2026-10-15T19:22:26.161Z: rider: flutter test --no-pub test/address_details_test.dart test/pickup_workflow_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-15T19:23:16.336Z: rider: flutter test --no-pub test/address_details_test.dart test/pickup_workflow_test.dart test/delivery_workflow_test.dart passed
+- 2026-10-15T19:24:21.106Z: Address batch passed; starting additive Rider notifications migration, API and in-app feed. No actual database migration.
+- 2026-10-15T19:27:02.291Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderNotificationTest.php failed/unknown
+- 2026-10-15T19:27:17.635Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderNotificationTest.php failed/unknown
+- 2026-10-15T19:27:54.049Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderNotificationTest.php passed
+- 2026-10-15T19:28:37.148Z: rider: flutter test --no-pub test/rider_notifications_test.dart test/rider_portal_test.dart passed
+- 2026-10-15T19:28:53.739Z: Notification batch tests passed; starting My Account actual fields, private photo upload and reviewed address editing.
+- 2026-10-15T19:33:27.915Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderProfileTest.php tests/Feature/PartnerOnboardingTest.php failed/unknown
+- 2026-10-15T19:33:35.388Z: rider: dart format lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_notifications_page.dart lib/pages/rider_portal_page.dart lib/pages/pickup_dashboard_page.dart lib/widgets/address_details.dart test/address_details_test.dart test/proof_capture_test.dart test/rider_portal_test.dart test/rider_notifications_test.dart test/pickup_workflow_test.dart passed
+- 2026-10-15T19:33:58.049Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderProfileTest.php failed/unknown
+- 2026-10-15T19:34:28.268Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderProfileTest.php passed
+- 2026-10-15T19:34:52.377Z: rider: flutter analyze --no-pub --no-fatal-infos lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_notifications_page.dart lib/pages/rider_portal_page.dart lib/widgets/address_details.dart passed
+- 2026-10-15T19:36:11.932Z: Profile backend implemented and verified in memory; Flutter profile checks and scoped lint fixes next.
+- 2026-10-15T19:36:38.354Z: rider: dart fix --apply lib/pages/rider_account_page.dart passed
+- 2026-10-15T19:37:04.943Z: rider: dart fix --apply lib/pages/rider_address_edit_page.dart passed
+- 2026-10-15T19:37:12.158Z: rider: dart fix --apply lib/pages/rider_notifications_page.dart passed
+- 2026-10-15T19:37:59.591Z: rider: flutter test --no-pub test/rider_account_test.dart test/rider_portal_test.dart test/rider_notifications_test.dart failed/unknown
+- 2026-10-15T19:38:49.677Z: rider: flutter test --no-pub test/rider_account_test.dart test/rider_portal_test.dart test/rider_notifications_test.dart passed
+- 2026-10-15T19:39:32.078Z: rider: dart format lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_notifications_page.dart test/rider_account_test.dart test/rider_portal_test.dart passed
+- 2026-10-15T19:39:41.816Z: rider: flutter analyze --no-pub lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_notifications_page.dart lib/pages/rider_portal_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/proof_capture_page.dart lib/widgets/address_details.dart test/rider_account_test.dart test/rider_notifications_test.dart test/rider_portal_test.dart test/address_details_test.dart test/proof_capture_test.dart test/pickup_workflow_test.dart failed/unknown
+- 2026-10-15T19:40:47.038Z: rider: dart fix --apply test/rider_account_test.dart passed
+- 2026-10-15T19:41:13.099Z: Feature batches implemented; final review caught and fixed Google sign-in overwriting Rider-uploaded avatars. Focused regressions and documentation next.
+- 2026-10-15T19:41:27.519Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderNotificationTest.php tests/Feature/Logistics/RiderProfileTest.php tests/Feature/Auth/GoogleOnboardingTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/ConversationMessagingTest.php tests/Feature/Logistics/ParcelAssignmentTest.php passed
+- 2026-10-15T19:43:00.140Z: rider: flutter test --no-pub test/proof_capture_test.dart test/address_details_test.dart test/pickup_workflow_test.dart test/delivery_workflow_test.dart test/rider_account_test.dart test/rider_notifications_test.dart test/rider_portal_test.dart test/delivery_history_test.dart test/rider_earnings_test.dart test/rider_session_test.dart passed
+- 2026-10-15T19:43:24.745Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderNotificationTest.php tests/Feature/Logistics/RiderProfileTest.php tests/Feature/Auth/GoogleOnboardingTest.php tests/Feature/Logistics/RiderAddressDetailsTest.php tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/PartnerOnboardingTest.php passed
+- 2026-10-15T19:46:28.909Z: rider: flutter analyze --no-pub lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_notifications_page.dart lib/pages/rider_portal_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/proof_capture_page.dart lib/widgets/address_details.dart test/rider_account_test.dart test/rider_notifications_test.dart test/rider_portal_test.dart test/address_details_test.dart test/proof_capture_test.dart test/pickup_workflow_test.dart passed
+- 2026-10-15T19:47:49.006Z: All focused feature/regression/static checks pass. Saving scoped architecture/audit and reviewing changed-file security/whitespace before final checkpoint.
+- 2026-10-15T19:49:13.078Z: Functionality audit completed locally: camera/proof, Address Details, persistent Rider in-app notifications and permitted real profile editing verified; final scoped security/whitespace checks pass. No actual database/configuration/migration/commit/push; manual and deployment blockers documented.
+- 2026-10-16T00:06:13.403Z: User confirms Capture Proof issue occurred on laptop Microsoft Edge; recording the browser camera limitation. Documentation-only follow-up; source/tests unchanged.
+- 2026-10-16T00:06:20.434Z: Confirmed camera report platform saved: laptop Edge uses actual photo selection; live browser webcam capture not implemented. Audit/current state updated; no runtime source change or repeated tests.
+- 2026-10-16T01:05:04.939Z: Starting read-only parcel workflow audit; no application code or database changes authorized. Inspect scan capability, assigned-parcel lookup, proof validation/storage, cross-role statuses and seller notification/proof access.
+- 2026-10-16T01:09:15.177Z: Read-only parcel workflow audit complete: seven capability statuses, source evidence and minimum reuse-based changes recorded. Only recovery documents updated; source/database unchanged and no tests/migrations executed.
+- 2026-10-16T01:27:58.818Z: User authorized implementation from parcel audit. Plan: additive owned lookup, scanner/manual entry, PHOTO/private-file completion checks, existing SellerNotification and secure seller proof UI; no schema/financial changes. Scanner dependency mobile_scanner 7.4.2 approval requested; do not install before response.
+- 2026-10-16T01:29:58.260Z: User explicitly approved mobile_scanner 7.4.2. Owned lookup implemented; finishing its focused tests before approved dependency resolution. No schema change.
+- 2026-10-16T01:30:42.412Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderParcelLookupTest.php tests/Feature/Logistics/RiderAddressDetailsTest.php passed
+- 2026-10-16T01:31:30.115Z: Checkpoint before exact approved dependency installation; test wrapper intentionally supports test/analyze/build only, so dependency command is separately logged without changing helper.
+- 2026-10-16T01:33:15.117Z: Exact approved mobile_scanner 7.4.2 installed successfully; resuming scanner interface. No migrations/schema changes.
+- 2026-10-16T01:35:49.418Z: rider: dart format lib/services/rider_parcel_api.dart lib/pages/parcel_scanner_page.dart lib/pages/delivery_dashboard_page.dart test/parcel_scanner_test.dart passed
+- 2026-10-16T01:36:19.115Z: rider: flutter test --no-pub test/parcel_scanner_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-16T01:37:30.719Z: rider: flutter test --no-pub test/parcel_scanner_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-16T01:38:48.353Z: rider: flutter test --no-pub test/parcel_scanner_test.dart failed/unknown
+- 2026-10-16T01:39:36.179Z: rider: flutter test --no-pub test/parcel_scanner_test.dart passed
+- 2026-10-16T01:40:41.174Z: Scanner batch verified. Starting PHOTO/file-integrity completion guard, idempotent proof-upload retry and explicit capture/confirmation flow. Keep existing proof API, historical completed deliveries and finance calculations unchanged.
+- 2026-10-16T01:41:58.620Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-16T01:44:31.391Z: rider: dart format lib/pages/delivery_dashboard_page.dart lib/pages/proof_capture_page.dart lib/pages/delivery_success_page.dart lib/pages/parcel_scanner_page.dart lib/services/api_error.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart test/parcel_scanner_test.dart passed
+- 2026-10-16T01:45:00.326Z: rider: flutter test --no-pub test/delivery_confirmation_test.dart test/delivery_workflow_test.dart test/proof_capture_test.dart test/parcel_scanner_test.dart passed
+- 2026-10-16T01:47:51.059Z: Photo/confirmation batch verified. Starting existing SellerNotification integration and owned private proof viewing. No schema changes, financial formula changes or historical backfill.
+- 2026-10-16T01:59:56.926Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/SellerDeliveryNotificationTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-16T02:01:38.762Z: Seller batch passed; final review/verification begins. Retry UX will invalidate stale PHOTO eligibility and keep delivery errors visible. Verify native dependency/platform limits and changed Vue sources; no actual migration/data change.
+- 2026-10-16T02:03:09.395Z: rider: flutter analyze --no-pub lib/services/rider_parcel_api.dart lib/services/api_error.dart lib/pages/parcel_scanner_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/delivery_success_page.dart lib/pages/proof_capture_page.dart test/parcel_scanner_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-16T02:04:04.933Z: rider: dart fix --apply lib/pages/delivery_dashboard_page.dart passed
+- 2026-10-16T02:04:12.391Z: rider: dart fix --apply lib/pages/parcel_scanner_page.dart passed
+- 2026-10-16T02:04:21.795Z: rider: dart fix --apply test/delivery_confirmation_test.dart passed
+- 2026-10-16T02:04:28.444Z: rider: dart fix --apply test/parcel_scanner_test.dart passed
+- 2026-10-16T02:04:31.243Z: rider: dart format lib/services/rider_parcel_api.dart lib/pages/parcel_scanner_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/delivery_success_page.dart lib/pages/proof_capture_page.dart lib/services/api_error.dart test/parcel_scanner_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart passed
+- 2026-10-16T02:10:08.064Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderParcelLookupTest.php tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php tests/Feature/Logistics/SellerDeliveryNotificationTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php tests/Feature/Logistics/RiderNotificationTest.php passed
+- 2026-10-16T02:12:08.589Z: rider: node .recovery/check-seller-vue.cjs passed
+- 2026-10-16T02:12:13.512Z: rider: flutter build apk --debug --no-pub failed/unknown
+- 2026-10-16T02:18:49.931Z: Scoped Seller Vue script/template compilation PASS. Android debug build attempted and BLOCKED: No Android SDK found; no toolchain/configuration installed or changed. Final review tightened camera current-route lifecycle and avoided verification relation serialization; focused checks follow.
+- 2026-10-16T02:19:46.756Z: rider: flutter test --no-pub test/parcel_scanner_test.dart test/delivery_confirmation_test.dart test/proof_capture_test.dart test/address_details_test.dart test/pickup_workflow_test.dart test/delivery_workflow_test.dart test/rider_account_test.dart test/rider_notifications_test.dart test/rider_portal_test.dart test/delivery_history_test.dart test/rider_earnings_test.dart test/rider_session_test.dart test/api_errors_test.dart passed
+- 2026-10-16T02:21:00.015Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderParcelLookupTest.php tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php tests/Feature/Logistics/SellerDeliveryNotificationTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php tests/Feature/Logistics/RiderNotificationTest.php passed
+- 2026-10-16T02:21:11.671Z: rider: flutter analyze --no-pub lib/services/rider_parcel_api.dart lib/services/api_error.dart lib/pages/parcel_scanner_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/delivery_success_page.dart lib/pages/proof_capture_page.dart test/parcel_scanner_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart failed/unknown
+- 2026-10-16T02:22:20.717Z: rider: dart fix --apply lib/pages/delivery_dashboard_page.dart passed
+- 2026-10-16T02:22:28.206Z: rider: dart fix --apply test/delivery_confirmation_test.dart passed
+- 2026-10-16T02:22:40.195Z: rider: flutter analyze --no-pub lib/services/rider_parcel_api.dart lib/services/api_error.dart lib/pages/parcel_scanner_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/delivery_success_page.dart lib/pages/proof_capture_page.dart test/parcel_scanner_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart passed
+- 2026-10-16T02:25:30.372Z: rider: flutter build web --no-pub --no-wasm-dry-run --dart-define=API_BASE_URL=https://alona.example/api passed
+- 2026-10-16T02:25:44.707Z: 72 focused Flutter tests PASS; 59 Laravel tests/537 assertions PASS; affected Dart analysis clean and changed Seller Vue compilation PASS. Web compile still running/UNKNOWN until its confirmed completion. Saving documentation and architecture notes next.
+- 2026-10-16T02:31:15.328Z: Final documentation and architecture maps saved; web compile PASS. Beginning final changed-file credential/whitespace/index review. No actual database/configuration/commit/push changes.
+- 2026-10-16T02:31:20.703Z: rider: node .recovery/final-review.cjs passed
+- 2026-10-16T02:31:55.468Z: Parcel workflow final review complete. Crash-safe source/checkpoint verification next. Android SDK, native/live acceptance and actual database identity remain blockers/pending; no actual DB changes, commits or pushes.
+- 2026-10-16T06:42:51.203Z: Resumed integration at user request using Edge; both project roots and recovery bundle verified. ALONA HEAD now a71cb07 with pre-existing staged edits; 12 recorded source hashes differ from prior checkpoint and remain pending focused review. Rider main.dart launches the real RiderApp; an untracked lib/preview/preview_backend.dart exists and is preserved. Current local ALONA .env selects SQLite; bootstrap config cache absent. Requested working ALONA website URL/database identity. No runtime, credentials, database/configuration, application code or Git state changed; prior test results are historical.
+- 2026-10-16T06:54:39.514Z: Started user-approved UI implementation using frontend-design skill. Palette values retained: teal 008b8b, orange ffa500, background f5f5f5, white ffffff, input outline d7e2e2; existing text and status colors retained. Scope is Flutter presentation and web title; no backend/authentication/financial contract change.
+- 2026-10-16T06:56:07.852Z: Login/registration/theme/title edit batch saved: unchanged palette, no RIDER numbering, compact typography, unboxed sign-in inputs, password visibility/autofill/keyboard support, separate registration account section and expanded dropdowns. Backend and API adapters untouched.
+- 2026-10-16T06:58:49.638Z: rider: dart format lib/app.dart lib/widgets/rider_content.dart lib/pages/login_page.dart lib/pages/registration_page.dart lib/pages/pickup_dashboard_page.dart lib/pages/delivery_dashboard_page.dart lib/pages/rider_account_page.dart lib/pages/rider_address_edit_page.dart lib/pages/rider_portal_page.dart lib/pages/delivery_history_page.dart lib/pages/rider_notifications_page.dart lib/pages/profit_dashboard_page.dart lib/pages/parcel_scanner_page.dart lib/pages/proof_capture_page.dart passed
+- 2026-10-16T06:59:34.755Z: rider: dart format test/ui_layout_test.dart passed
+- 2026-10-16T06:59:54.224Z: rider: flutter analyze --no-pub lib/app.dart lib/widgets/rider_content.dart lib/pages test/ui_layout_test.dart passed
+- 2026-10-16T07:01:20.990Z: rider: flutter test --no-pub failed/unknown
+- 2026-10-16T07:02:15.717Z: Full Flutter suite: 92 passed, one new registration responsive check failed with a RenderFlex overflow at 320px/150 percent text. Static analysis PASS. No backend/database operations.
+- 2026-10-16T07:02:35.147Z: rider: flutter test --no-pub test/ui_layout_test.dart --plain-name registration failed/unknown
+- 2026-10-16T07:03:06.647Z: rider: flutter test --no-pub test/ui_layout_test.dart test/registration_api_test.dart passed
+- 2026-10-16T07:04:41.908Z: rider: flutter build web --no-pub --no-wasm-dry-run --no-web-resources-cdn --dart-define=API_BASE_URL=https://alona.example/api passed
+- 2026-10-16T07:05:30.956Z: rider: node .recovery/ui-browser-check.cjs passed
+- 2026-10-16T07:07:04.970Z: rider: flutter test --no-pub passed
+- 2026-10-16T07:09:12.886Z: rider: flutter analyze --no-pub lib/app.dart lib/widgets/rider_content.dart lib/pages test/ui_layout_test.dart passed
+- 2026-10-16T07:09:54.320Z: UI phase complete: 93/93 Flutter tests PASS, final analysis clean, web build PASS, six Edge screenshots reviewed with no JS exceptions; temporary browser/server closed. Registration 320px/150 percent text overflow fixed and retested. Snapshot comparison confirms no added color literals and unchanged non-presentation page logic. Only Rider UI/web metadata/design/current-state docs changed; ALONA source, Git staging, API rules, database/configuration and real accounts untouched.
+- 2026-10-16T07:21:50.130Z: User explicitly authorized saving Rider to Rider GitHub. Verified origin https://github.com/aldriannoriel/rider.git; local master and remote master both 9668e823b100abf9af324047bb6ef73757135ebe before publication. Prior 93-test/static/web/UI evidence remains valid; no application source changes since those checks. Unused local preview file and ignored recovery/generated files will remain uncommitted.
+- 2026-10-16T07:31:48.908Z: Verified GitHub master equals Rider source/UI commit e427b66ef90f793d6238cdaa87d64c325cc2e002 after a normal push. Sixty staged files passed whitespace/path/credential-pattern checks; 93-test/analysis/web/Edge results retained. Publication receipt and current state updated. No ALONA source/staging/database changes; unused local preview preserved.
+- 2026-10-16T08:44:19.934Z: Latest user explicitly requests a disposable test Rider account, superseding prior no-test-account restriction for this local account only. Read-only PDO inspection confirms ALONA .env APP_ENV=local/DB_CONNECTION=sqlite, no cached config, existing database/database.sqlite has 0 users/Riders/centers/areas/parcels and 51 migrations. Finance and notification tables absent; no server on port 8000. Scope: local synthetic Rider plus minimum center/area linkage, backed up first; no schema/config switches or teammate data.
+- 2026-10-16T08:46:51.853Z: Temporary Rider creation confirmed with receipt and backup; initial local SQLite had zero users/Riders/centers/areas/parcels. User explicitly authorized this test account and later deletion. No database schema changes or connection switches; no real or teammate data touched.
+- 2026-10-16T08:48:09.017Z: rider: node .recovery/verify-temporary-rider.cjs passed
+- 2026-10-16T08:50:26.943Z: User changed their mind and explicitly requests undo of the temporary Rider account/setup. Creation and verification had completed before interruption: Rider user 2, Rider 1, support user/center/area 1 and partner application 1; local API PID 15712. Undo is limited to these synthetic records, their tokens and the task-owned API process; existing app source, UI, Git commits and database schema must be preserved.
+- 2026-10-16T08:52:51.044Z: User-requested undo complete: exact temporary record identities and all FK dependents checked before transactional deletion; seven fixture records removed, no operational history existed, no tokens remain, API PID 15712 stopped. Ignored credential receipt is redacted and marked undone; original empty-database backup and recovery audit retained. No schema/configuration/MySQL/source/Git reset, commit or push.
+- 2026-10-16T09:12:54.759Z: User authorized implementing all 44 Logistics workbook cases. Targeted audit confirms gaps in validation, identifiers, region coverage, separate documents, OTP and resubmission.
+- 2026-10-16T09:18:33.809Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php --filter test_tc_log_0 failed/unknown
+- 2026-10-16T09:20:36.026Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php failed/unknown
+- 2026-10-16T09:20:56.380Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php --filter test_tc_log_003 failed/unknown
+- 2026-10-16T09:21:50.403Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php passed
+- 2026-10-16T09:22:54.845Z: 43 backend workbook cases passed; isolated frontend, negative security checks and shared regressions in progress.
+- 2026-10-16T09:23:59.389Z: alona: node scripts/check-logistics-assets.cjs passed
+- 2026-10-16T09:25:13.009Z: alona: node scripts/check-logistics-ui.cjs failed/unknown
+- 2026-10-16T09:28:39.202Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php tests/Feature/PartnerOnboardingTest.php tests/Feature/Auth/GoogleOnboardingTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/Auth/RegistrationAddressTest.php tests/Feature/Logistics/RiderProfileTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php failed/unknown
+- 2026-10-16T12:05:54.754Z: Checkpoint and source hashes verified after shutdown. Interrupted browser result UNKNOWN; prior 43-case backend pass and 19 frontend tests/build evidence retained.
+- 2026-10-16T12:06:47.935Z: User explicitly paused logistics workbook implementation for upstream pull. Handoff, full task-file inventory and SHA-256 pause hashes saved. No commit, push, stash, reset or existing database operation.
+- 2026-10-16T12:09:55.254Z: User authorized safe integration of origin/main into feature/sorting-center, preserving staged/unstaged/untracked work. Initial checkpoint hashes verified; current origin/main descends from HEAD by eight commits.
+- 2026-10-16T12:11:15.397Z: Safe integration preparation complete; automatic approval review rejected proposed new stash. Backup verified and remote refs fetched. No commit, push, reset, stash drop, env change or database migration.
+- 2026-10-16T12:13:25.141Z: Explicit user stash approval received. New stash verified: all 348 untracked files and exact original staged index preserved; old stash b2bde4e retained; working tree clean and HEAD ancestor of origin/main.
+- 2026-10-16T12:16:06.185Z: Approved origin/main integration restored and conflict-free; no commits/pushes/resets/cleans or stash drops. Backups, original staging and untracked work retained.
+- 2026-10-16T12:17:57.296Z: alona: node .local/merge-main/run-focused.cjs buyer failed/unknown
+- 2026-10-16T12:19:05.172Z: First integrated Buyer run: 34/35 passed. One failure is RiderNotificationObserver formatting updated_at while Laravel logout temporarily disables timestamp casts. Review also confirms Buyer OTP endpoints can target non-Buyer accounts; preserve independent Logistics challenge by adding Buyer role scope.
+- 2026-10-16T12:19:39.194Z: alona: node .local/merge-main/run-focused.cjs buyer passed
+- 2026-10-16T12:20:48.691Z: alona: node .local/merge-main/run-focused.cjs logistics failed/unknown
+- 2026-10-16T12:22:15.168Z: alona: node .local/merge-main/run-focused.cjs logistics passed
+- 2026-10-16T12:23:07.813Z: alona: node .local/merge-main/run-focused.cjs partners failed/unknown
+- 2026-10-16T12:24:06.198Z: alona: node .local/merge-main/run-focused.cjs partners passed
+- 2026-10-16T12:24:29.342Z: alona: node .local/merge-main/run-focused.cjs notifications passed
+- 2026-10-16T12:25:08.683Z: alona: node .local/merge-main/run-assets.cjs passed
+- 2026-10-16T12:32:58.674Z: Approved origin/main integration finished. Buyer 37, Logistics 54, Partner/Google 22, notifications 5, frontend 19 and production build pass. Preservation and Git checks pass; no commit, push, reset, clean, stash drop, environment change or existing-database migration.
+- 2026-10-16T12:37:28.267Z: Latest a52966b source/checkpoint hashes and Git state verified. Prior completed integration/regression evidence retained; both preservation stashes intact. Continuing unfinished browser acceptance and matrix only.
+- 2026-10-16T12:37:49.767Z: alona: node scripts/check-logistics-ui.cjs passed
+- 2026-10-16T12:39:30.052Z: alona: node scripts/check-logistics-ui.cjs failed/unknown
+- 2026-10-16T12:40:13.949Z: Isolated browser proved selected file is immediately cleared by the shared PartnerField value binding (0 files after selection). Existing backend evidence remains valid; fixing UI behavior for workbook cases 003/029 before final matrix.
+- 2026-10-16T12:40:35.033Z: alona: node scripts/check-logistics-ui.cjs passed
+- 2026-10-16T12:40:49.986Z: alona: node .local/merge-main/run-assets.cjs passed
+- 2026-10-16T12:42:27.463Z: Browser 7 checks/9 screenshots pass after native-upload fix; 19 frontend tests and production build pass. Final review identified a possible validation-race retry path that needs focused evidence before the 44-case matrix is finalized.
+- 2026-10-16T12:42:39.920Z: alona: node .local/merge-main/run-focused.cjs logistics test_tc_log_020 failed/unknown
+- 2026-10-16T12:43:34.234Z: alona: node .local/merge-main/run-focused.cjs logistics test_tc_log_020 passed
+- 2026-10-16T12:45:48.346Z: Native uploads/browser7 checks/frontend19/build pass. Case020 sequential and two interleaved retry tests pass (3/33). Review found the dedicated web form omitted the prior Google signup option; restore compatibility without changing Buyer/Rider contracts or adding dependencies.
+- 2026-10-16T12:46:16.918Z: alona: node .local/merge-main/run-focused.cjs logistics test_google passed
+- 2026-10-16T12:47:55.165Z: alona: node .local/merge-main/run-focused.cjs logistics test_tc_log_001 passed
+- 2026-10-16T12:48:12.862Z: alona: node scripts/check-logistics-ui.cjs passed
+- 2026-10-16T12:48:32.505Z: alona: node .local/merge-main/run-assets.cjs passed
+- 2026-10-16T12:51:59.054Z: Remaining safe Logistics work finished and 44-case automated matrix saved. Prepared migration unapplied; real deployment/SMTP/uploads/locking pending approval. No existing database/config changes; backups and retained stashes intact.
+- 2026-10-16T14:53:00.411Z: New submission failure investigation started; preserve original work and backups. Browser transport reproduction pending; prior automated evidence is not live acceptance.
+- 2026-10-16T14:54:18.866Z: alona: node scripts/check-logistics-submission.cjs failed/unknown
+- 2026-10-16T14:54:50.029Z: alona: node scripts/check-logistics-submission.cjs passed
+- 2026-10-16T14:56:40.278Z: Pre-edit checkpoint: confirmed legacy popup/new controller contract mismatch and absent transport error feedback. Full-page actual HTTP submission succeeds in fixture; exact user browser stall still unconfirmed.
+- 2026-10-16T14:58:39.188Z: alona: node scripts/check-logistics-submission.cjs failed/unknown
+- 2026-10-16T14:59:44.487Z: alona: node scripts/check-logistics-submission.cjs passed
+- 2026-10-16T15:00:18.203Z: alona: node .local/merge-main/run-focused.cjs logistics test_browser_ failed/unknown
+- 2026-10-16T15:00:49.511Z: alona: node .local/merge-main/run-focused.cjs logistics test_browser_ failed/unknown
+- 2026-10-16T15:01:12.274Z: alona: node .local/merge-main/run-focused.cjs logistics test_browser_ passed
+- 2026-10-16T15:01:29.406Z: alona: node .local/merge-main/run-assets.cjs passed
+- 2026-10-16T15:02:41.550Z: Full-page error recovery and ancillary popup contract fix implemented; browser10/backend2/frontend21 PASS. Add request watchdog to prevent indefinite loading on a pending transport.
+- 2026-10-16T15:02:59.311Z: alona: node scripts/check-logistics-submission.cjs passed
+- 2026-10-16T15:04:28.520Z: alona: node .local/merge-main/run-focused.cjs buyer passed
+- 2026-10-16T15:04:31.244Z: alona: node .local/merge-main/run-focused.cjs logistics passed
+- 2026-10-16T15:05:39.790Z: Regression outcomes consolidated from actual logs; preserved tests and source hashes for new transport harness. Final asset/UI verification pending.
+- 2026-10-16T15:06:00.497Z: alona: node .local/merge-main/run-assets.cjs passed
+- 2026-10-16T15:06:53.843Z: alona: node scripts/check-logistics-ui.cjs passed
+- 2026-10-16T15:09:53.144Z: Submission recovery complete and scoped review/tests passed. Original full-page live trigger remains unconfirmed, explicitly documented. No existing-DB writes, migrations, .env changes, commits, pushes or stash mutations.
+- 2026-10-16T15:54:26.314Z: User explicitly authorized all ALONA application/integration changes to be committed and pushed for teammates. New retained filesystem/index snapshot saved; both existing stashes retained.
+- 2026-10-16T15:55:36.276Z: alona: node .local/publish-alona/verify.cjs passed
+- 2026-10-16T15:56:13.525Z: Explicit user authorization to commit/push all ALONA application and integration changes. Pre-commit recovery checkpoint saved.
+- 2026-10-16T15:56:35.021Z: Authorized commit completed; pre-push checkpoint saved before normal non-force publication.
+- 2026-10-16T15:57:22.869Z: GitHub publication SUCCESS under explicit user authorization: 463f884, feature/sorting-center. Remote verified, no force push, no environment/DB/backup changes.
+- 2026-10-16T15:57:39.262Z: GitHub publication SUCCESS under explicit user authorization: 463f884, feature/sorting-center. Remote verified, no force push, no environment/DB/backup changes.
+- 2026-10-16T18:35:43.973Z: Batch 1 approved: begin inbound reproduction and access tests
+- 2026-10-16T18:42:42.896Z: alona: node --test tests/frontend/data-flow.test.mjs failed/unknown
+- 2026-10-16T18:43:08.086Z: B1-01 reproduction: six inbound regressions fail, existing five frontend checks pass
+- 2026-10-16T18:44:07.625Z: alona: node --test tests/frontend/data-flow.test.mjs passed
+- 2026-10-16T18:46:09.306Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/BatchOneAccessTest.php tests/Feature/Logistics/IncomingParcelTest.php tests/Feature/Logistics/DashboardTest.php tests/Feature/Logistics/ParcelAssignmentTest.php failed/unknown
+- 2026-10-16T18:46:30.512Z: B1-02 tests found private-file cache header overridden by BinaryFileResponse public default
+- 2026-10-16T18:46:43.420Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/BatchOneAccessTest.php tests/Feature/Logistics/IncomingParcelTest.php tests/Feature/Logistics/DashboardTest.php tests/Feature/Logistics/ParcelAssignmentTest.php passed
+- 2026-10-16T18:47:50.537Z: B1-01 inbound tests 11/11; B1-02 access/readiness tests 38/38, 266 assertions
+- 2026-10-16T18:48:55.637Z: alona: node --test tests/frontend/data-flow.test.mjs failed/unknown
+- 2026-10-16T18:49:12.123Z: alona: node --test tests/frontend/data-flow.test.mjs passed
+- 2026-10-16T18:49:22.577Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/BatchOneAccessTest.php tests/Feature/Logistics/RiderManagementScopeTest.php passed
+- 2026-10-16T18:50:11.352Z: B1-03 read-only Rider frontend 17/17 and access/list/shell backend 18/18, 161 assertions pass
+- 2026-10-16T18:50:24.149Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php failed/unknown
+- 2026-10-16T18:50:54.225Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php failed/unknown
+- 2026-10-16T18:51:13.932Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php passed
+- 2026-10-16T18:52:29.798Z: alona: node node_modules/vite/bin/vite.js build --outDir .local/logistics-batch1-implementation/build passed
+- 2026-10-16T18:53:42.147Z: alona: node .local/logistics-batch1-implementation/browser.cjs passed
+- 2026-10-16T18:55:53.344Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/BatchOneAccessTest.php tests/Feature/Logistics/IncomingParcelTest.php tests/Feature/Logistics/DashboardTest.php tests/Feature/Logistics/ParcelAssignmentTest.php tests/Feature/Logistics/ParcelSortingTest.php tests/Feature/Logistics/RiderManagementScopeTest.php tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/PartnerOnboardingTest.php failed/unknown
+- 2026-10-16T18:56:38.355Z: Combined Batch 1 backend: 123/124 pass; unchanged HEAD carrier default Alona Express conflicts with stale test expectation
+- 2026-10-16T18:57:10.949Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/BatchOneAccessTest.php tests/Feature/Logistics/IncomingParcelTest.php tests/Feature/Logistics/DashboardTest.php tests/Feature/Logistics/ParcelAssignmentTest.php tests/Feature/Logistics/ParcelSortingTest.php tests/Feature/Logistics/RiderManagementScopeTest.php tests/Feature/Logistics/RiderPickupFlowTest.php tests/Feature/Logistics/SellerShipmentFinanceTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php tests/Feature/Logistics/RiderDeliveryCompletionTest.php tests/Feature/PartnerOnboardingTest.php passed
+- 2026-10-16T18:57:53.830Z: alona: node --test tests/frontend/data-flow.test.mjs tests/frontend/onboarding.test.mjs passed
+- 2026-10-16T18:58:11.498Z: alona: node node_modules/vite/bin/vite.js build --outDir .local/logistics-batch1-implementation/build-final passed
+- 2026-10-16T18:59:23.703Z: alona: node .local/logistics-batch1-implementation/browser-final.cjs passed
+- 2026-10-16T18:59:59.834Z: alona: node .local/logistics-batch1-implementation/refresh-assets.cjs passed
+- 2026-10-16T19:04:05.619Z: Completed approved ALONA Logistics Batch 1 and focused verification; recovery baselines/builds/stashes retained.
+- 2026-10-20T04:08:22.339Z: User authorized creation and approval of one Rider account; unspecified profile fields remain blank and no center or coverage will be assigned. Existing unrelated source changes are preserved and not revalidated.
+- 2026-10-20T04:09:06.995Z: Single approved local Rider account creation confirmed in existing alona_development. Current-state memory updated; no source changes, migrations, configuration changes, deployment or existing-account modification.
+- 2026-10-20T04:17:36.525Z: Rider sign-in request fails because configured localhost:8000 API has no listener. Starting existing backend without migrations or configuration changes.
+- 2026-10-20T04:19:32.382Z: Local login request failure resolved by starting stopped ALONA API; live sign-in/profile, readiness and CORS verified. Missing center blocks pickups separately; no source/configuration changes.
+- 2026-10-20T04:20:22.023Z: API JSON login/profile pass; HTML health exposes sandbox denial of normal Laravel runtime log writes. Relaunch existing local API with runtime access; no source/configuration changes.
+- 2026-10-20T04:21:44.582Z: Local API restart completed with normal runtime access and one listener. Final live health, CORS, login and profile checks pass; diagnostic token revoked. No source/configuration changes.
+- 2026-10-20T04:22:53.181Z: User authorized sorting center assignment. Public directory returns exactly one enrollment-eligible center. Preserve account approval and other operational records; no delivery areas guessed.
+- 2026-10-20T04:23:21.998Z: User-authorized Rider center assignment committed and read back; both pickup feeds now HTTP 200. Updated current-state notes, no source/configuration changes or migrations.
+- 2026-10-20T04:41:43.205Z: User requested pulling teammate changes; verified both projects and checkpoint; fetching origin before choosing safe integration
+- 2026-10-20T04:42:34.341Z: Fetch succeeded; origin/main is 15 commits ahead and contains current HEAD. Verified local-file backup in .local/team-pull/before before fast-forward pull.
+- 2026-10-20T04:42:58.522Z: Pull confirmed successful; local-edit restoration conflicts limited to controller imports and adjacent rider route additions
+- 2026-10-20T04:44:51.485Z: alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result tests/Feature/Logistics/RiderBlackBoxTest.php tests/Feature/Logistics/RiderDecisionAuditTest.php tests/Feature/Logistics/RiderRejectionTest.php tests/Feature/Logistics/RiderProfileTest.php tests/Feature/Logistics/EcommerceSortingIntegrationTest.php passed
+- 2026-10-20T04:45:05.848Z: alona: node --test tests/frontend/data-flow.test.mjs tests/frontend/onboarding.test.mjs passed
+- 2026-10-20T04:45:33.717Z: alona: node node_modules/vite/bin/vite.js build passed
+- 2026-10-20T04:45:44.283Z: User-requested teammate pull completed: 15 origin/main commits integrated into feature/sorting-center with existing local work preserved. 68 PHP tests, 56 frontend tests and production build passed.
+- 2026-10-20T14:55:41.925Z: User explicitly authorized Rider-only commit and push to master. Verified branch/remote and coherent checkpoint bundle; changed Rider files inspected. ALONA read-only; no cross-project edits or tests.
+- 2026-10-20T14:57:03.819Z: rider: flutter test --no-pub --dart-define=API_BASE_URL=http://localhost:8000/api test/api_config_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart test/pickup_workflow_test.dart test/proof_capture_test.dart test/pickup_transit_test.dart test/rider_cod_test.dart test/rider_handovers_test.dart test/rider_pickup_location_test.dart test/rider_presence_test.dart test/rider_rts_test.dart test/rider_account_test.dart test/rider_session_test.dart test/ui_layout_test.dart failed/unknown
+- 2026-10-20T14:58:12.479Z: rider: flutter test --no-pub --dart-define=API_BASE_URL=http://localhost:8000/api test/api_config_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart test/pickup_workflow_test.dart test/proof_capture_test.dart test/pickup_transit_test.dart test/rider_cod_test.dart test/rider_handovers_test.dart test/rider_pickup_location_test.dart test/rider_presence_test.dart test/rider_rts_test.dart test/rider_account_test.dart test/rider_session_test.dart test/ui_layout_test.dart failed/unknown
+- 2026-10-20T14:58:29.263Z: Pre-documentation checkpoint: publish only completed Flutter changes and concise runtime/workflow notes. Keep integration checkpoints, previous backups, preview fixture and temporary files local.
+- 2026-10-20T15:04:04.769Z: Focused batch completed: 68 passed, 3 failed. Failures point to account/dashboard widgets below lazy-list viewport after new controls; inspect fixtures and scroll assertions before changing source.
+- 2026-10-20T15:06:07.567Z: rider: flutter test --no-pub --dart-define=API_BASE_URL=http://localhost:8000/api test/api_config_test.dart test/delivery_confirmation_test.dart test/delivery_workflow_test.dart test/pickup_workflow_test.dart test/proof_capture_test.dart test/pickup_transit_test.dart test/rider_cod_test.dart test/rider_handovers_test.dart test/rider_pickup_location_test.dart test/rider_presence_test.dart test/rider_rts_test.dart test/rider_account_test.dart test/rider_session_test.dart test/ui_layout_test.dart failed/unknown
+- 2026-10-29T10:42:20.885Z: Initialized relocated mobile/rider checkpoint from verified current ALONA state; upstream223 paths imported at0ea8018 and backend path adapted. Old upstream notes are historical; no application database or Git publication.
+- 2026-10-29T10:42:37.143Z: alona: node .local/rider-flow-review/checks.cjs pub passed
+- 2026-10-29T10:47:52.354Z: alona: node .local/rider-flow-review/checks.cjs rider-test failed/unknown
+- 2026-10-29T10:50:20.102Z: alona: node .local/rider-flow-review/checks.cjs rider-test failed/unknown
+- 2026-10-29T10:52:59.087Z: Before meaningful compatibility batch: imported baseline completed102 PASS/4 FAIL after required test API define; four failures expose stale selectors/feedback/back semantics. Static/source evidence confirms fabricated pickup card/count/earnings and snackbar-only decline, hardcoded Buyer names/COD fallback, and free-text failure body incompatible with current backend. Interrupted no-define baseline retained as FAIL/UNKNOWN; no application DB writes.
+- 2026-10-29T11:03:48.402Z: alona: node .local/rider-flow-review/checks.cjs journey failed/unknown
+- 2026-10-29T11:05:08.437Z: alona: node .local/rider-flow-review/checks.cjs rider-test failed/unknown
+- 2026-10-29T11:07:17.844Z: alona: node .local/rider-flow-review/checks.cjs rider-test failed/unknown
+- 2026-10-29T11:09:48.557Z: alona: node .local/rider-flow-review/checks.cjs rider-test failed/unknown
+- 2026-10-29T11:11:13.238Z: rider: flutter test --no-pub --dart-define=API_BASE_URL=http://localhost:8000/api test/pickup_workflow_test.dart passed
+- 2026-10-29T11:13:37.156Z: alona: node .local/rider-flow-review/checks.cjs rider-web passed
+- 2026-10-29T11:15:51.977Z: alona: node .local/rider-flow-review/checks.cjs rider-test passed
+- 2026-10-29T11:16:56.113Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:18:30.123Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:19:48.974Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:21:32.489Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:23:37.318Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:25:07.786Z: Before meaningful edit batch: browser showed Deliveries IndexedStack page retained pre-assignment empty result; no explicit Refresh action survived upstream redesign. Fix activation and accessible refresh without discarding other tab state. Android debug build attempted but local NDK28.2.13676358 lacks source.properties; no SDK deletion or version workaround. No real DB records changed.
+- 2026-10-29T11:28:00.705Z: alona: node .local/rider-flow-review/checks.cjs system-retry passed
+- 2026-10-29T11:28:45.180Z: alona: node .local/rider-flow-review/checks.cjs journey passed
+- 2026-10-29T11:30:08.049Z: alona: node .local/rider-flow-review/checks.cjs rider-analyze failed/unknown
+- 2026-10-29T11:31:19.174Z: alona: node .local/rider-flow-review/checks.cjs rider-analyze passed
+- 2026-10-29T11:32:57.322Z: alona: node .local/rider-flow-review/checks.cjs rider-web passed
+- 2026-10-29T11:35:45.200Z: alona: node .local/rider-flow-review/checks.cjs browser failed/unknown
+- 2026-10-29T11:37:43.194Z: alona: node .local/rider-flow-review/checks.cjs browser passed
+- 2026-10-29T11:40:55.724Z: Compiled Rider and actual Buyer/Seller/Logistics browser journey completed successfully with final Delivered views, one parcel/photo and stock8; screenshots inspected. Buyer activity log nevertheless displayed only initial pending because BuyerOrderController used item histories only when no parent history existed. Before focused repair: preserve existing controller edits and all records; additive read DTO change only, no migrations or fabricated events.
+- 2026-10-29T11:41:07.686Z: alona: node .local/rider-flow-review/checks.cjs buyer-history failed/unknown
+- 2026-10-29T11:41:40.045Z: alona: node .local/rider-flow-review/checks.cjs buyer-history passed
+- 2026-10-29T11:42:12.021Z: alona: node .local/rider-flow-review/checks.cjs journey passed
+- 2026-10-29T11:43:58.528Z: alona: node .local/rider-flow-review/checks.cjs browser passed
+- 2026-10-29T11:44:27.283Z: alona: node .local/rider-flow-review/checks.cjs buyer-regressions passed
+- 2026-10-29T11:46:36.392Z: Final order-flow phase:948 backend/123 Rider/123 frontend/7 helper tests verified; final analyzer/web build and real compiled browser checkout through Delivered and Buyer history passed. Source/env/index/HEAD/sibling preservation checked. Android local NDK and actual schema/operational rollout remain explicit limitations.
+- 2026-10-29T11:54:46.789Z: User explicitly authorized committing the reviewed local changes and requested a teammate prompt plus an AI-readable file for existing-schema upgrades. Active monorepo checkpoints and source hashes verified. Preserve a private snapshot of the previous partial index/patches before staging; include latest staged/unstaged source and mobile/rider, exclude private runtime artifacts.
+- 2026-10-29T12:02:15.058Z: Teammate handoff preparation complete before authorized Git commit: all99 migration fingerprints verified against source, exact4 additions relative to c69d1ab,15 new tables; links and candidate privacy/artifact checks passed. Current request authorizes local staging/commit only. Prior partial index and patches retained privately; commit command and final result will be recorded privately without rewriting committed source.
+- 2026-10-29T12:03:58.758Z: Authorized commit preparation: exact464-file reviewed source staged; index whitespace check found six redundant EOF blank lines in imported/source notes. Removed only redundant EOF newlines. No runtime logic/schema change; previous tests remain applicable. Save refreshed source fingerprints before final staging/commit. No push or DB operation.

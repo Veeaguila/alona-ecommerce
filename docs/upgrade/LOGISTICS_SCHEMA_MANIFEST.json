@@ -1,0 +1,731 @@
+{
+  "formatVersion": 1,
+  "releaseDate": "2026-10-29",
+  "repository": "https://github.com/Veeaguila/alona-ecommerce.git",
+  "branch": "feature/logistics-completion",
+  "baseCommitBeforeThisRelease": "c69d1abccc57a9e80bbe55498a490e8ac02fb723",
+  "purpose": "Read-only index of migration source for an existing-schema upgrade. Not executable SQL, a schema dump, or permission to migrate.",
+  "targetInstalledStatus": "UNKNOWN. Inspect the teammate target schema and migrations ledger; do not reuse author machine status.",
+  "fingerprint": "SHA-256 of UTF-8 file content with CRLF normalized to LF. Verify against the exact fetched release commit.",
+  "instructions": "TEAMMATE_AI_HANDOFF.md",
+  "copyablePrompt": "docs/TEAMMATE_AI_PROMPT.md",
+  "rules": [
+    "Preserve existing records, private uploads, APP_KEY and configuration.",
+    "Classify all pending migrations and inspect prerequisites, not just these four additions.",
+    "Existing object with missing migration ledger entry is drift; no blind create or fabricated ledger entry.",
+    "No fresh/refresh/reset/schema replacement, seeders or automatic rollback.",
+    "Apply only approved compatible pending changes after verified backup and matching-engine copy rehearsal.",
+    "No new real accounts, hubs/routes, money data or historical memberships are supplied.",
+    "Rider import, idle timeout and Buyer activity-history changes need no extra schema beyond the listed existing files."
+  ],
+  "releaseAdditions": [
+    {
+      "migration": "2026_10_17_100000_create_rider_decision_audits_table",
+      "path": "database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php",
+      "sha256_lf": "012f91896b0a431f0be19c94c8fa377b7abfb2269322c39f802a637199ce2153",
+      "purpose": "Immutable Rider decision audit snapshots",
+      "createsTables": [
+        "rider_decision_audits"
+      ],
+      "altersExistingTables": [],
+      "requiresExistingTables": [
+        "sorting_centers",
+        "riders",
+        "users"
+      ],
+      "dependsOnReleaseMigrations": [],
+      "dataEffects": "Creates empty new tables; hub migration adds nullable columns to existing tables. No seeding/backfill in this file. Historical/other pending migrations need their own review."
+    },
+    {
+      "migration": "2026_10_20_120000_create_logistics_workflow_records",
+      "path": "database/migrations/2026_10_20_120000_create_logistics_workflow_records.php",
+      "sha256_lf": "f32549c3d50f46f29d242df17974d0124e040601583de3b6d53ff08af1618fa7",
+      "purpose": "Dispatch, custody handovers, delivery attempts, returns, incidents and COD evidence ledger",
+      "createsTables": [
+        "logistics_audit_events",
+        "pickup_offers",
+        "parcel_handovers",
+        "parcel_delivery_attempts",
+        "parcel_returns",
+        "parcel_incidents",
+        "cod_collections",
+        "cod_remittances",
+        "cod_discrepancies"
+      ],
+      "altersExistingTables": [],
+      "requiresExistingTables": [
+        "users",
+        "sorting_centers",
+        "parcels",
+        "riders",
+        "orders"
+      ],
+      "dependsOnReleaseMigrations": [],
+      "dataEffects": "Creates empty new tables; hub migration adds nullable columns to existing tables. No seeding/backfill in this file. Historical/other pending migrations need their own review."
+    },
+    {
+      "migration": "2026_10_29_100000_create_logistics_hub_network",
+      "path": "database/migrations/2026_10_29_100000_create_logistics_hub_network.php",
+      "sha256_lf": "4ccf029db07409ab0fff133b65f110a113e9687e6edc3f01835c1add430478f3",
+      "purpose": "Owned company hubs, directed routes and booked physical parcel custody",
+      "createsTables": [
+        "logistics_hubs",
+        "logistics_routes",
+        "parcel_hub_journeys",
+        "hub_transfers"
+      ],
+      "altersExistingTables": [
+        {
+          "table": "riders",
+          "adds": [
+            {
+              "column": "logistics_hub_id",
+              "type": "nullable foreignId",
+              "references": "logistics_hubs.id",
+              "onDelete": "restrict"
+            }
+          ]
+        },
+        {
+          "table": "order_items",
+          "adds": [
+            {
+              "column": "hub_route_plan",
+              "type": "nullable json"
+            }
+          ]
+        }
+      ],
+      "requiresExistingTables": [
+        "sorting_centers",
+        "users",
+        "riders",
+        "order_items",
+        "parcels"
+      ],
+      "dependsOnReleaseMigrations": [],
+      "dataEffects": "Creates empty new tables; hub migration adds nullable columns to existing tables. No seeding/backfill in this file. Historical/other pending migrations need their own review."
+    },
+    {
+      "migration": "2026_10_29_150000_create_logistics_hub_staff_table",
+      "path": "database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php",
+      "sha256_lf": "cbde0b2df3a30fcb815e93dafdf36b479c36b91664a979a004d5c3138e8c1fc0",
+      "purpose": "User membership scoped to one owned Logistics hub",
+      "createsTables": [
+        "logistics_hub_staff"
+      ],
+      "altersExistingTables": [],
+      "requiresExistingTables": [
+        "users",
+        "sorting_centers",
+        "logistics_hubs"
+      ],
+      "dependsOnReleaseMigrations": [
+        "2026_10_29_100000_create_logistics_hub_network"
+      ],
+      "dataEffects": "Creates empty new tables; hub migration adds nullable columns to existing tables. No seeding/backfill in this file. Historical/other pending migrations need their own review."
+    }
+  ],
+  "allRepositoryMigrations": [
+    {
+      "migration": "0001_01_01_000000_create_users_table",
+      "path": "database/migrations/0001_01_01_000000_create_users_table.php",
+      "sha256_lf": "10d79883bc08ce46510f9ad8b1830b4d06d586dc56ae2c8bac3b3e491f69a90f",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "0001_01_01_000001_create_cache_table",
+      "path": "database/migrations/0001_01_01_000001_create_cache_table.php",
+      "sha256_lf": "fbb4665e5a977e71df4e74ec75b3c06ca4f17ad0de7138fe9786639189978e77",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "0001_01_01_000002_create_jobs_table",
+      "path": "database/migrations/0001_01_01_000002_create_jobs_table.php",
+      "sha256_lf": "df4910687180313a14a3f96a8bddd808ae145ed1b107cd772caf865c0dc2b746",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_22_072502_add_google_fields_to_users_table",
+      "path": "database/migrations/2026_08_22_072502_add_google_fields_to_users_table.php",
+      "sha256_lf": "a25f93d3d91170990c6706481930bf1448833481948f81d5b38abc0731e77581",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_23_000001_add_buyer_fields_to_users_table",
+      "path": "database/migrations/2026_08_23_000001_add_buyer_fields_to_users_table.php",
+      "sha256_lf": "49ad5dac959ad47e83959e698c525d48a667095ce0ae33088cbe2ca54a6e5e22",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000000_create_categories_table",
+      "path": "database/migrations/2026_08_24_000000_create_categories_table.php",
+      "sha256_lf": "c9b9e4f3fdbc16bf8e08c1deb44aea6be9f429dc4d26bf14bfce2b02811e3f64",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000001_create_products_table",
+      "path": "database/migrations/2026_08_24_000001_create_products_table.php",
+      "sha256_lf": "3c790b04fecb1edd54e58613cefbdb7a672f996b2091050a3d5048621610a762",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000002_create_cart_items_table",
+      "path": "database/migrations/2026_08_24_000002_create_cart_items_table.php",
+      "sha256_lf": "5d205956e9367d3ba2099c098385f0a1043f788226fcdceaeefea6bfed0ec8c5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000004_create_orders_table",
+      "path": "database/migrations/2026_08_24_000004_create_orders_table.php",
+      "sha256_lf": "7ab5ad3cea5923a22556745dd3730c778414750320f4cdf3fbc6d258118e6f47",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000005_create_order_items_table",
+      "path": "database/migrations/2026_08_24_000005_create_order_items_table.php",
+      "sha256_lf": "f5c73843910dc51d76ca161d56c73aba15386a2dc68cab11f8e704c41e92f0c5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000006_create_addresses_table",
+      "path": "database/migrations/2026_08_24_000006_create_addresses_table.php",
+      "sha256_lf": "6a36e40c045967f91ffca8d791aeebba9c4b727a813f7d4e4f3a59f83430afa3",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000007_create_reviews_table",
+      "path": "database/migrations/2026_08_24_000007_create_reviews_table.php",
+      "sha256_lf": "58e4afb8b5358f2ac3141df0ff0b2e2ad5ffd6baa3292adf1d84d04091ab5325",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000008_create_buyer_notifications_table",
+      "path": "database/migrations/2026_08_24_000008_create_buyer_notifications_table.php",
+      "sha256_lf": "025df2a47817be18c6e45f3d96800b31c2e6f619f6d0bfde316d94e2494fa8c3",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000009_create_messages_table",
+      "path": "database/migrations/2026_08_24_000009_create_messages_table.php",
+      "sha256_lf": "cb6d203f0bd90ed40d7a06124cddd4542400f57a1eb9dab097a1f3c7eb7cd973",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_24_000010_add_address_parts_to_users_table",
+      "path": "database/migrations/2026_08_24_000010_add_address_parts_to_users_table.php",
+      "sha256_lf": "e1987b8e6b800496dbe5ac5115374c3510f1c1ba4cd66c17da424c0713d8eab1",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_062128_create_product_variants_table",
+      "path": "database/migrations/2026_08_29_062128_create_product_variants_table.php",
+      "sha256_lf": "a834a987c7f84f67022bc69ec8286e70b66230c8df3ce3aff24bf68f0abd755a",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_062136_add_variant_id_to_cart_items_table",
+      "path": "database/migrations/2026_08_29_062136_add_variant_id_to_cart_items_table.php",
+      "sha256_lf": "da7fc65230c6d65e1f62d4795e267abb7d060ad1745bf373d0b31a9ff1135500",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_062143_add_variant_id_to_order_items_table",
+      "path": "database/migrations/2026_08_29_062143_add_variant_id_to_order_items_table.php",
+      "sha256_lf": "108efe0a99efbff60223e87c47bf083db45b08e4b9b83fda9cd7d3aada5481c9",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070000_add_fulfillment_fields_to_order_items_table",
+      "path": "database/migrations/2026_08_29_070000_add_fulfillment_fields_to_order_items_table.php",
+      "sha256_lf": "965732fb764a03d502d6525254274f5926d96a40c6a0416a96401e5c670ca449",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070001_create_order_item_status_histories_table",
+      "path": "database/migrations/2026_08_29_070001_create_order_item_status_histories_table.php",
+      "sha256_lf": "7396b5b8eff49c1dfe80748e936d7ba3d2c091df49a4db90c81f7f83c9a417f5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070002_create_vouchers_table",
+      "path": "database/migrations/2026_08_29_070002_create_vouchers_table.php",
+      "sha256_lf": "20e55934af1e3a69683e3dc29d6cfcb4006ef8bb3a3e2e04772c1e7200ab4a19",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070003_create_seller_notifications_table",
+      "path": "database/migrations/2026_08_29_070003_create_seller_notifications_table.php",
+      "sha256_lf": "a68e394c1c7690b6d7152a4ef9aa42e1883e8356542ccfc0106914fd063effa5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070004_add_seller_reply_to_reviews_table",
+      "path": "database/migrations/2026_08_29_070004_add_seller_reply_to_reviews_table.php",
+      "sha256_lf": "452b2f593ae9b29c9e1a894b0d2c47ebd54982760c465a62f8c6120dc7e092f3",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070005_create_conversations_table",
+      "path": "database/migrations/2026_08_29_070005_create_conversations_table.php",
+      "sha256_lf": "3ef6833017e62be938ee8184478c695fa7a76ea9fae0008db9a36fa1aadbf957",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070006_create_conversation_messages_table",
+      "path": "database/migrations/2026_08_29_070006_create_conversation_messages_table.php",
+      "sha256_lf": "34141845648e3123f2fbbfb10089f7d197e1cd76aeabba795aa7371146f4651f",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_08_29_070007_add_store_fields_to_users_table",
+      "path": "database/migrations/2026_08_29_070007_add_store_fields_to_users_table.php",
+      "sha256_lf": "b6a1642e9ffc87cdfd7af677f593a2d1ca8dfc281410994b3aab57e1a912662f",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_01_000001_create_platform_admin_entities_table",
+      "path": "database/migrations/2026_09_01_000001_create_platform_admin_entities_table.php",
+      "sha256_lf": "7ea314ca2ff299ffa207bc27ae719d2ad7ac6de8fa4d8801578a0a4b6511efc1",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_01_000001_fix_missing_variant_fk_columns_on_cart_and_order_items_table",
+      "path": "database/migrations/2026_09_01_000001_fix_missing_variant_fk_columns_on_cart_and_order_items_table.php",
+      "sha256_lf": "efacd0fdbc252a842bfe763587dc7981a485840af0dc9de09a6838fc5cc895b0",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_02_092122_add_voucher_fields_to_orders_table",
+      "path": "database/migrations/2026_09_02_092122_add_voucher_fields_to_orders_table.php",
+      "sha256_lf": "d5444fbdb732de7752adc052176e6f3a4f7c6a98303df0d51b73461a9b5017d7",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_02_101515_create_product_questions_table",
+      "path": "database/migrations/2026_09_02_101515_create_product_questions_table.php",
+      "sha256_lf": "24b362549bba5b502ea0e811dc5afe643e94fbc15f3cf49e28c4fd266e14b4fc",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_03_060407_create_product_images_table",
+      "path": "database/migrations/2026_09_03_060407_create_product_images_table.php",
+      "sha256_lf": "c22c3ace867e4765accd398dbaa44335facd51a4307c84ac7e92b700a180add3",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_04_071954_add_seller_registration_fields_to_users_table",
+      "path": "database/migrations/2026_09_04_071954_add_seller_registration_fields_to_users_table.php",
+      "sha256_lf": "798e5dd8c43a946cbc86f348dfaf2f25d7b44b306c137c80eb9c19f0b819f1c5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_04_120234_add_rejection_reason_to_users_table",
+      "path": "database/migrations/2026_09_04_120234_add_rejection_reason_to_users_table.php",
+      "sha256_lf": "5b58db353b0ebd94efe0fdbda594c6063e6f5daff855d94500d5b5b0dc8af4ce",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_04_122922_create_product_compliance_reviews_table",
+      "path": "database/migrations/2026_09_04_122922_create_product_compliance_reviews_table.php",
+      "sha256_lf": "287155a44e03e923be322f62b1caa96a3479b78eb062fa6f819bcc583a08b199",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_04_163910_drop_wishlists_table",
+      "path": "database/migrations/2026_09_04_163910_drop_wishlists_table.php",
+      "sha256_lf": "0910e9c6c45d38945b103774ceac40c958296bc82aabf4f477bdec800195886e",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_09_18_145219_create_recently_viewed_products_table",
+      "path": "database/migrations/2026_09_18_145219_create_recently_viewed_products_table.php",
+      "sha256_lf": "4ed783326fdd334c97e4239fa08b7c2b22f0c494013b021063b2600bde206a6d",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_06_053015_add_is_featured_to_products_table",
+      "path": "database/migrations/2026_10_06_053015_add_is_featured_to_products_table.php",
+      "sha256_lf": "83469df6b524f41708b8f866db6e7715bd4dd4a584da90b915192173a9d0e2b5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_08_000001_add_shipping_and_payment_to_orders_and_create_payment_methods",
+      "path": "database/migrations/2026_10_08_000001_add_shipping_and_payment_to_orders_and_create_payment_methods.php",
+      "sha256_lf": "c315ef4a146eb90d43ca70e63441f2f68535e04810cd7515683343df3ada0063",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_08_000002_create_order_return_requests_table",
+      "path": "database/migrations/2026_10_08_000002_create_order_return_requests_table.php",
+      "sha256_lf": "a7174db4cb77f39368719d43c6dd68f11669ab70f67b72369def935240f43168",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_08_000003_create_voucher_claims_and_seller_reviews_table",
+      "path": "database/migrations/2026_10_08_000003_create_voucher_claims_and_seller_reviews_table.php",
+      "sha256_lf": "a0a1a405d6533eb2ca19f5bbca3abd210771a5d6d8fb794e5efead8fd4160c59",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_08_000004_add_support_and_report_enhancements",
+      "path": "database/migrations/2026_10_08_000004_add_support_and_report_enhancements.php",
+      "sha256_lf": "095373281a8e000ae2a4a04461b0c4c3b94baac8abb9a59d0f5be4d4dc437b74",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_10_000001_create_faqs_table",
+      "path": "database/migrations/2026_10_10_000001_create_faqs_table.php",
+      "sha256_lf": "4484cdf46aa89443008555bb5e2c833086a02bbdc1b3a8f2c6d342d0be3cec75",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_10_000002_add_image_path_to_categories_table",
+      "path": "database/migrations/2026_10_10_000002_add_image_path_to_categories_table.php",
+      "sha256_lf": "ca4e93580f95404aad0e2c4e477a6df9cf48f951b178f03550b9d5ecda380aa0",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_11_100000_create_logistics_tables",
+      "path": "database/migrations/2026_10_11_100000_create_logistics_tables.php",
+      "sha256_lf": "bc8df81f599bfff62333c9b7d1964de89b7c41d1f8df704ab0d63725ff77f1a0",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_11_100001_create_delivery_proofs_table",
+      "path": "database/migrations/2026_10_11_100001_create_delivery_proofs_table.php",
+      "sha256_lf": "2ed1a262a5dcbc7ee3a45ba7cf651b8ee27be16e95a3d70322741f820971d9cf",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_11_100002_create_sorting_center_messages_table",
+      "path": "database/migrations/2026_10_11_100002_create_sorting_center_messages_table.php",
+      "sha256_lf": "a866fb9a1213abdf3bd0ede879e944313bd05790187e88a4ce233516e5ab1b61",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_11_100003_create_sorting_center_conversations_table",
+      "path": "database/migrations/2026_10_11_100003_create_sorting_center_conversations_table.php",
+      "sha256_lf": "ffc8baeffc2e5620db2fd6746f08a94ff8e373a06b44e8539c854ccae6ce597b",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_11_100004_add_delivered_at_to_parcels_table",
+      "path": "database/migrations/2026_10_11_100004_add_delivered_at_to_parcels_table.php",
+      "sha256_lf": "cdbb9dac26eb3bea8ad16d649cc07350d2f3d0061b5d845221ba35e6539b1a01",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_12_000001_create_partner_applications_table",
+      "path": "database/migrations/2026_10_12_000001_create_partner_applications_table.php",
+      "sha256_lf": "a13df098d2e1acbe4be5af1c3c2c4e4ef8ac8ee7977d700d9274e0eec28efa47",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_12_000002_add_city_codes_to_service_areas",
+      "path": "database/migrations/2026_10_12_000002_add_city_codes_to_service_areas.php",
+      "sha256_lf": "9000037721b516aa344c180092f8cc595ae7b4e31301d7e7c83b298df2e0f0e4",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_12_000003_add_address_geography_to_users",
+      "path": "database/migrations/2026_10_12_000003_add_address_geography_to_users.php",
+      "sha256_lf": "483bf9c9d99165b0f9c5fe1f2c6755dfa33c2b1f66ddaf3f32e6f46d18a0c617",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000001_create_stock_adjustments_table",
+      "path": "database/migrations/2026_10_15_000001_create_stock_adjustments_table.php",
+      "sha256_lf": "8e39178e89ff89f3f5e186d13a6123c319d8c6e3fc96dac1a27143a4b623fa7a",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000002_add_pickup_scheduling_to_orders_and_pickups",
+      "path": "database/migrations/2026_10_15_000002_add_pickup_scheduling_to_orders_and_pickups.php",
+      "sha256_lf": "0a61eec39db9b35a14db075f1565578f09e8ea7984aae2a728285831ef52ce71",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000004_add_promotions_and_targeting_to_vouchers_table",
+      "path": "database/migrations/2026_10_15_000004_add_promotions_and_targeting_to_vouchers_table.php",
+      "sha256_lf": "3f66df33d6e78851048cc8082b55f6e3364aec0376fbc54a0f2e5dbadd036a3e",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000005_add_reporting_to_reviews_and_seller_reviews_table",
+      "path": "database/migrations/2026_10_15_000005_add_reporting_to_reviews_and_seller_reviews_table.php",
+      "sha256_lf": "2591fc22279b3fac51fb0db635b99c1bc6bae432a041582f2e84021c99411dd2",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000006_add_returns_and_refunds_fields_and_ledger",
+      "path": "database/migrations/2026_10_15_000006_add_returns_and_refunds_fields_and_ledger.php",
+      "sha256_lf": "b60fe2c5f2cd44424fd6321854ebfd6dce1bbfce6d9e3ecc769911e941e634af",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_000007_add_chat_enhancements_media_order_and_admin_support",
+      "path": "database/migrations/2026_10_15_000007_add_chat_enhancements_media_order_and_admin_support.php",
+      "sha256_lf": "31e91b9d8bc7ef22ab4371d5afdd58d426f523deb86c159c3c07143d186a424c",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_100000_create_seller_shipment_finance",
+      "path": "database/migrations/2026_10_15_100000_create_seller_shipment_finance.php",
+      "sha256_lf": "91a1580c13ed7896f74e7c651d03eed4d158ab5bce9d86d97c75fc8cac132994",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_15_182957_add_store_management_fields_to_users_table",
+      "path": "database/migrations/2026_10_15_182957_add_store_management_fields_to_users_table.php",
+      "sha256_lf": "942869bdcf32a6a2250128b2f6146885917fba07d0f878190053a4bad8560b47",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_014904_add_low_stock_threshold_to_products_table",
+      "path": "database/migrations/2026_10_16_014904_add_low_stock_threshold_to_products_table.php",
+      "sha256_lf": "9d1ca9df383de417a26f7c7db99ac1720f02df83ece0feecbcb76d963eabaaba",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_014905_create_seller_payout_requests_table",
+      "path": "database/migrations/2026_10_16_014905_create_seller_payout_requests_table.php",
+      "sha256_lf": "5b96f340dd995a7c41bd734f50c2dd0ad66706c5701da04b9b3e85e80fc6a566",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_100000_create_rider_notifications_table",
+      "path": "database/migrations/2026_10_16_100000_create_rider_notifications_table.php",
+      "sha256_lf": "5b1de0e26601eae2e200420749528ea00e0feb8ad2e27425b9c56de58e32421d",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_110000_create_logistics_registrations_table",
+      "path": "database/migrations/2026_10_16_110000_create_logistics_registrations_table.php",
+      "sha256_lf": "bf7951d2887871862f0b55fec2f8037dcbdc1d0c11a7446fb5b24d39e7896f4b",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_115700_add_middle_name_and_suffix_to_users_table",
+      "path": "database/migrations/2026_10_16_115700_add_middle_name_and_suffix_to_users_table.php",
+      "sha256_lf": "7b02c36c6cae29e08739e5e3e91376f16b5992af1ca7abaf25fff5280d432ee7",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_16_120700_add_otp_fields_to_users_table",
+      "path": "database/migrations/2026_10_16_120700_add_otp_fields_to_users_table.php",
+      "sha256_lf": "b2bcd3d82aa1ef0886368223d7f57c8882faf1f7a4ba5793043dac9d1055382f",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_17_000001_add_seller_compliance_and_address_fields_to_users_table",
+      "path": "database/migrations/2026_10_17_000001_add_seller_compliance_and_address_fields_to_users_table.php",
+      "sha256_lf": "461841d25009a08f3013b9f2aeee129386ef44650e2825151886a9860293a4d2",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_17_000002_add_compliance_and_activation_to_riders_table",
+      "path": "database/migrations/2026_10_17_000002_add_compliance_and_activation_to_riders_table.php",
+      "sha256_lf": "24493b9cc4fa069f038694109f9135c555fc0b241d1f7f3c241bfe016c0c7b07",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_17_100000_create_rider_decision_audits_table",
+      "path": "database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php",
+      "sha256_lf": "012f91896b0a431f0be19c94c8fa377b7abfb2269322c39f802a637199ce2153",
+      "addedInThisRelease": true
+    },
+    {
+      "migration": "2026_10_19_000001_create_store_categories_and_product_pivot_table",
+      "path": "database/migrations/2026_10_19_000001_create_store_categories_and_product_pivot_table.php",
+      "sha256_lf": "98fd819511869452f083c9be2280761bdf224a3b519674cf11c4b93cafc62e4e",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000002_add_shipping_details_to_products_table",
+      "path": "database/migrations/2026_10_19_000002_add_shipping_details_to_products_table.php",
+      "sha256_lf": "f46d986dfd91a835c40515691ea176533dfb5bf7b4cf61423d7c45b1b737ed65",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000003_make_products_fields_nullable_for_drafts",
+      "path": "database/migrations/2026_10_19_000003_make_products_fields_nullable_for_drafts.php",
+      "sha256_lf": "fdb6e6302ad023600265a4f9e83a7d23f7af71cfb1e047b14a9fbe4a632947c5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000004_enhance_product_variants_for_s4",
+      "path": "database/migrations/2026_10_19_000004_enhance_product_variants_for_s4.php",
+      "sha256_lf": "306ed09f2e45cb9151614a7a1ae6312b90af90cca88eaa4fd8f9f3f26992beec",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000005_add_low_stock_alerted_for_s5",
+      "path": "database/migrations/2026_10_19_000005_add_low_stock_alerted_for_s5.php",
+      "sha256_lf": "b500aba0c8ae1751a73765857c16d26d41dd7c038aa42b21efb214675dd9a779",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000006_create_product_sales_table_for_s6",
+      "path": "database/migrations/2026_10_19_000006_create_product_sales_table_for_s6.php",
+      "sha256_lf": "d722cb96c9c398512b808de3dae2c6d0e1b7c0dc5002bfb6fd7bd93e08ea1cdf",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000007_add_display_mode_and_ended_at_to_vouchers_table_for_s7",
+      "path": "database/migrations/2026_10_19_000007_add_display_mode_and_ended_at_to_vouchers_table_for_s7.php",
+      "sha256_lf": "2cebcb51106c17fce48d9ab39a49d487cab19c7ccebaa87658a826ccc5f3affe",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000008_create_flash_sales_and_promotions_tables_for_s8",
+      "path": "database/migrations/2026_10_19_000008_create_flash_sales_and_promotions_tables_for_s8.php",
+      "sha256_lf": "d317c36e43d609e4191f5e31897868c11b8485bf53d7993b9a30ddd02f8c0f99",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_19_000009_add_s9_order_processing_columns_to_orders_and_order_items",
+      "path": "database/migrations/2026_10_19_000009_add_s9_order_processing_columns_to_orders_and_order_items.php",
+      "sha256_lf": "c33a51373fa42a39ae39039b06f4ee95a1e20f10f2c44bff91ad96c8a27b331a",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_20_000010_add_s10_returns_columns_to_order_return_requests",
+      "path": "database/migrations/2026_10_20_000010_add_s10_returns_columns_to_order_return_requests.php",
+      "sha256_lf": "54520d5dd497e27aa59d7e72a47e1b045a1f3c72af44a8f74130afbff7eed652",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_20_000011_add_s11_fields_to_reviews_table",
+      "path": "database/migrations/2026_10_20_000011_add_s11_fields_to_reviews_table.php",
+      "sha256_lf": "fbf7a5bc27454a4ce353e32f27940e687747fc4146c661d3077a5d028fd885c9",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_20_000012_create_admin_audit_logs_and_delivery_zones_tables",
+      "path": "database/migrations/2026_10_20_000012_create_admin_audit_logs_and_delivery_zones_tables.php",
+      "sha256_lf": "2865a133d6d6a71b0d6e2d1b787e03e012c9bb62679c32f08170e171be1426f5",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_20_120000_create_logistics_workflow_records",
+      "path": "database/migrations/2026_10_20_120000_create_logistics_workflow_records.php",
+      "sha256_lf": "f32549c3d50f46f29d242df17974d0124e040601583de3b6d53ff08af1618fa7",
+      "addedInThisRelease": true
+    },
+    {
+      "migration": "2026_10_20_223000_add_pending_contact_verifications_to_users_table",
+      "path": "database/migrations/2026_10_20_223000_add_pending_contact_verifications_to_users_table.php",
+      "sha256_lf": "2e28555fc5e9b7f1295916ddb2073c15ff392cd0fbd8f95c925ffb05f97a1001",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_20_231500_add_granular_fields_to_addresses_table",
+      "path": "database/migrations/2026_10_20_231500_add_granular_fields_to_addresses_table.php",
+      "sha256_lf": "0d38d10456bc7152a91d1b3c160a2dfd14976f93ab0073811a3c6d4870ecc757",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_093000_add_per_buyer_limit_to_products_table",
+      "path": "database/migrations/2026_10_21_093000_add_per_buyer_limit_to_products_table.php",
+      "sha256_lf": "9cf2f9cb11e1cea424a64ef6960ec9ddc8ad926971d249575d9a310d94a02da0",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_101000_create_wishlists_and_store_followers_tables",
+      "path": "database/migrations/2026_10_21_101000_create_wishlists_and_store_followers_tables.php",
+      "sha256_lf": "2c071b268f6f6b7c9ff615b84422abf186dd0a88d414efc1ed02756807a23f9a",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_105000_add_applied_vouchers_to_orders_table",
+      "path": "database/migrations/2026_10_21_105000_add_applied_vouchers_to_orders_table.php",
+      "sha256_lf": "205805b5e838fddb320c001f663cd4b2c6f0c56dba81dfc89bb859975846ec28",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_140000_add_delivered_at_to_orders_table",
+      "path": "database/migrations/2026_10_21_140000_add_delivered_at_to_orders_table.php",
+      "sha256_lf": "0f81c8d2c242920812cf3dd4baabab1f6d8a7eb4e98d9a07d676ce54ed39fc1b",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_140500_create_order_status_histories_table",
+      "path": "database/migrations/2026_10_21_140500_create_order_status_histories_table.php",
+      "sha256_lf": "5e99a25304d687083b5b63118b00ed8df4b86db89181894f9e82f646e4097528",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_150000_add_edit_tracking_to_reviews_table",
+      "path": "database/migrations/2026_10_21_150000_add_edit_tracking_to_reviews_table.php",
+      "sha256_lf": "5916c0094990a9e0b4fdf36097cd160b15ceed91ffa5d02389c3b1315e4e555c",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_21_160000_create_flash_sale_reminders_table",
+      "path": "database/migrations/2026_10_21_160000_create_flash_sale_reminders_table.php",
+      "sha256_lf": "431e40d993ad2291a41856a3eeb0a0c40f2666a7a00d0826b1bfec4dad4a348b",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_23_000001_make_order_return_request_id_nullable_in_refund_ledgers_table",
+      "path": "database/migrations/2026_10_23_000001_make_order_return_request_id_nullable_in_refund_ledgers_table.php",
+      "sha256_lf": "db2214da7fef379123e5de8da8897fd832ff813901eabc663d435844170a32bd",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_23_000002_seed_platform_policies_table",
+      "path": "database/migrations/2026_10_23_000002_seed_platform_policies_table.php",
+      "sha256_lf": "ec4b6cd9b34c181cf46b579943bf1862f688ef11ffe2e58ad67d569e52075fb3",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_23_000003_add_variant_label_to_order_items_table_safely",
+      "path": "database/migrations/2026_10_23_000003_add_variant_label_to_order_items_table_safely.php",
+      "sha256_lf": "ca8fbd31cff69a361832af2a8b840dc49de9a2bb52ab480aaf65f4bb40b2dacf",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_26_000001_add_parent_id_to_categories_table",
+      "path": "database/migrations/2026_10_26_000001_add_parent_id_to_categories_table.php",
+      "sha256_lf": "9109749bba3c95f4d338b47bc5d858feb0b092756a81f6c52dd24d10e7f71099",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_26_000002_organize_categories_hierarchy",
+      "path": "database/migrations/2026_10_26_000002_organize_categories_hierarchy.php",
+      "sha256_lf": "f3f25e67462a50bc5aa3006f091ccb810480c610d51052cfe48585d708872c0b",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_26_000003_add_requested_subcategories",
+      "path": "database/migrations/2026_10_26_000003_add_requested_subcategories.php",
+      "sha256_lf": "591da14ba723fad525ade8cd0063e4a71130ef3767aca9dae878b5f7fd08daeb",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_26_000004_add_ai_verification_and_admin_notifications",
+      "path": "database/migrations/2026_10_26_000004_add_ai_verification_and_admin_notifications.php",
+      "sha256_lf": "14c24c11afc07d7e0affa7ecf2d5a76a7f5344689160011c429f13a5f629c116",
+      "addedInThisRelease": false
+    },
+    {
+      "migration": "2026_10_29_100000_create_logistics_hub_network",
+      "path": "database/migrations/2026_10_29_100000_create_logistics_hub_network.php",
+      "sha256_lf": "4ccf029db07409ab0fff133b65f110a113e9687e6edc3f01835c1add430478f3",
+      "addedInThisRelease": true
+    },
+    {
+      "migration": "2026_10_29_150000_create_logistics_hub_staff_table",
+      "path": "database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php",
+      "sha256_lf": "cbde0b2df3a30fcb815e93dafdf36b479c36b91664a979a004d5c3138e8c1fc0",
+      "addedInThisRelease": true
+    }
+  ],
+  "caveats": [
+    "Some older migrations seed/update data; inspect them individually.",
+    "Existing fresh MySQL migration chronology has an order_items/product_variants FK dependency issue; do not rebuild the target to bypass it.",
+    "Foreign-key/index/default definitions are authoritative in the PHP migration source, not inferred from this index.",
+    "Source fingerprints do not certify target schema compatibility or actual data preservation."
+  ]
+}

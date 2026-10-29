@@ -58,10 +58,12 @@ remains the acceptance plan; see the latest audit for which cases are now verifi
    constraints, restrictive FKs, nullable item membership, and order funding/shipping
    snapshot columns. Existing monetary totals must match the pre-release baseline;
    existing items remain ungrouped and no historical finance rows are generated.
-5. Release the corresponding code and validate new checkout orders: one shipment per
-   seller; standard/express buyer shipping zero; method labels/selection retained;
-   merchandise vouchers separate from the shipment's 50/10/40 allocation. Buyer
-   shipping snapshots are zero for seller funding, not a manufactured voucher discount.
+5. For the 2026-10-24 merged checkout, validate buyer-paid regional/weight shipping,
+   per-store order splitting and actual gross/discount/net shipping snapshots.
+   New orders must have `delivery_fee_payer=buyer` and no seller-funded membership
+   or duplicate seller liability. Existing seller-funded shipments retain their
+   50/10/40 ledger and settlement rules. Buyer-fee allocation to Rider earnings is
+   not defined by this merge. See DELIVERY_FINANCE.md for the current scope.
 6. Build Rider with the real reachable HTTPS `API_BASE_URL` ending in `/api`.
    The passing local web compile used `https://alona.example/api`, a placeholder
    that is unsuitable for deployment. Check web CORS/preflight, real private proof

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Logistics;
 
+use App\Models\Area;
 use App\Models\Parcel;
 use App\Models\PickupRequest;
 use App\Models\Rider;
@@ -82,6 +83,33 @@ class RiderPickupFlowTest extends TestCase
         ]);
     }
 
+    public function test_collected_jobs_stay_in_owned_transit_then_paginated_handoff_history(): void
+    {
+        [$user, $rider] = $this->approvedRider();
+        $parcel = $this->parcel('PLACED');
+        $parcel->update(['sorting_center_id' => $rider->sorting_center_id]);
+        $this->confirmedPickup($parcel);
+        Sanctum::actingAs($user);
+        $this->postJson('/api/rider/pickups/'.$parcel->id.'/accept')->assertOk();
+        $this->postJson('/api/rider/pickups/'.$parcel->id.'/confirm')->assertOk();
+        $this->getJson('/api/rider/pickups/mine')->assertJsonCount(0, 'data');
+        $this->getJson('/api/rider/pickups/mine?view=transit')->assertJsonPath('data.0.id', $parcel->id)->assertJsonPath('data.0.status', 'PICKED_UP');
+        $this->getJson('/api/rider/pickups/mine?view=history')->assertJsonCount(0, 'data')->assertJsonPath('meta.total', 0);
+        $this->postJson('/api/sorting-center/parcels/mark-arrived', ['order_id' => $parcel->order_id])->assertForbidden();
+        [$other] = $this->approvedRider();
+        Sanctum::actingAs($other);
+        $this->getJson('/api/rider/pickups/mine?view=transit')->assertJsonCount(0, 'data');
+        Sanctum::actingAs($rider->sortingCenter->user);
+        $this->postJson('/api/sorting-center/parcels/mark-arrived', ['order_id' => $parcel->order_id])->assertOk();
+        Sanctum::actingAs($user);
+        $this->getJson('/api/rider/pickups/mine?view=transit')->assertJsonCount(0, 'data');
+        $this->getJson('/api/rider/pickups/mine?view=history&per_page=1')->assertJsonPath('data.0.id', $parcel->id)->assertJsonPath('meta.total', 1);
+        $parcel->update(['status' => 'OUT_FOR_DELIVERY']);
+        $this->getJson('/api/rider/pickups/mine?view=history')->assertJsonPath('data.0.status', 'OUT_FOR_DELIVERY');
+        $this->getJson('/api/rider/pickups/mine?view=bad')->assertUnprocessable();
+        $this->assertDatabaseCount('pickup_requests', 1);
+    }
+
     private function approvedRider(): array
     {
         $sortingCenterUser = User::factory()->create(['status' => 'approved', 'usertype' => 'sorting_center']);
@@ -134,6 +162,45 @@ class RiderPickupFlowTest extends TestCase
         $this->getJson('/api/rider/pickups/available')->assertForbidden();
         $this->postJson("/api/rider/pickups/{$parcel->id}/accept")->assertForbidden();
         $this->assertNull($parcel->fresh()->pickup_rider_id);
+    }
+
+    // LOG-DISP-002 / LOG-HUB-006 subsets: pickup and last-mile are different legs.
+    public function test_pickup_rider_is_preserved_when_another_rider_takes_the_last_mile(): void
+    {
+        [$pickupUser, $pickupRider] = $this->approvedRider();
+        $center = $pickupRider->sortingCenter;
+        $lastMileUser = User::factory()->create(['usertype' => 'rider', 'status' => 'approved']);
+        $lastMile = Rider::create([
+            'user_id' => $lastMileUser->id, 'sorting_center_id' => $center->id,
+            'name' => 'Last-mile Rider', 'contact' => '09170000001', 'vehicle_type' => 'bicycle',
+            'plate_number' => '', 'approval_status' => 'approved', 'is_active' => true,
+        ]);
+        $area = Area::create(['sorting_center_id' => $center->id, 'name' => 'Quezon City']);
+        $lastMile->areas()->attach($area);
+        $parcel = $this->parcel('PLACED');
+        $pickup = PickupRequest::create(['parcel_id' => $parcel->id, 'seller_id' => $parcel->seller_id, 'status' => 'pending']);
+        Sanctum::actingAs($center->user);
+        $this->postJson('/api/sorting-center/pickup-requests/'.$pickup->id.'/confirm')->assertOk();
+
+        Sanctum::actingAs($pickupUser);
+        $this->postJson('/api/rider/pickups/'.$parcel->id.'/accept')->assertOk();
+        $this->postJson('/api/rider/pickups/'.$parcel->id.'/confirm')->assertOk();
+        Sanctum::actingAs($center->user);
+        $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/assign', ['rider_id' => $lastMile->id])
+            ->assertUnprocessable();
+        $this->postJson('/api/sorting-center/parcels/mark-arrived', ['order_id' => $parcel->order_id])->assertOk();
+        $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/sort', ['area_id' => $area->id])->assertOk();
+        $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/assign', ['rider_id' => $lastMile->id])->assertOk();
+        $this->assertSame($pickupRider->id, $parcel->fresh()->pickup_rider_id);
+        $this->assertSame($lastMile->id, $parcel->fresh()->assigned_rider_id);
+        Sanctum::actingAs($pickupUser);
+        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/start')->assertForbidden();
+        Sanctum::actingAs($lastMileUser);
+        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/start')->assertOk();
+        $this->assertSame('OUT_FOR_DELIVERY', $parcel->fresh()->status);
+        $this->assertSame($pickupRider->id, $parcel->fresh()->pickup_rider_id);
+        $this->assertDatabaseCount('seller_delivery_charges', 0);
+        $this->assertDatabaseCount('rider_delivery_earnings', 0);
     }
 
     private function parcel(string $status): Parcel

@@ -106,6 +106,11 @@ class SellerReturnController extends Controller
         }
 
         $returnRequests = $query->paginate(15)->withQueryString();
+        $managedIds = Schema::hasTable('logistics_audit_events')
+            ? \App\Models\LogisticsAuditEvent::where('action', 'logistics_refund_requested')
+                ->whereIn('data->return_request_id', $returnRequests->getCollection()->pluck('id'))
+                ->get()->pluck('data.return_request_id')->map(fn ($id) => (int) $id)->all() : [];
+        $returnRequests->getCollection()->each(fn ($entry) => $entry->setAttribute('logistics_execution_blocked', in_array($entry->id, $managedIds, true)));
 
         // SELLER-41: Refund History Ledger
         $ledgerQuery = RefundLedger::query()
@@ -220,6 +225,7 @@ class SellerReturnController extends Controller
     public function decision(Request $request, OrderReturnRequest $returnRequest): RedirectResponse
     {
         abort_unless((int) $returnRequest->seller_id === (int) $request->user()->id, 403);
+        app(\App\Services\LogisticsRefundReview::class)->prohibitExecution($returnRequest);
 
         // SEL-RET-005: Once in dispute or already decided, seller cannot approve or reject
         if ($returnRequest->status !== 'pending') {
@@ -381,6 +387,7 @@ class SellerReturnController extends Controller
     public function updateTracking(Request $request, OrderReturnRequest $returnRequest): RedirectResponse
     {
         abort_unless((int) $returnRequest->seller_id === (int) $request->user()->id, 403);
+        app(\App\Services\LogisticsRefundReview::class)->prohibitExecution($returnRequest);
 
         $validated = $request->validate([
             'return_carrier' => 'required|string|max:100',
@@ -448,6 +455,7 @@ class SellerReturnController extends Controller
     public function inspectAndResolve(Request $request, OrderReturnRequest $returnRequest): RedirectResponse
     {
         abort_unless((int) $returnRequest->seller_id === (int) $request->user()->id, 403);
+        app(\App\Services\LogisticsRefundReview::class)->prohibitExecution($returnRequest);
 
         $validated = $request->validate([
             'inspection_status' => 'required|in:passed,failed,partial_damage',

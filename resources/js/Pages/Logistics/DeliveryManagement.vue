@@ -139,13 +139,25 @@
             </div>
           </article>
         </div>
+        <section class="app-panel app-panel--padded" aria-label="Sorted parcels by region">
+          <h2 class="app-section-title">Sorted parcels by region</h2>
+          <p class="app-description">Arrived parcels grouped by their assigned city's region. Existing city assignments remain unchanged.</p>
+          <p v-if="!regionalGroups.length" class="mt-3">No sorted parcels at this center.</p>
+          <section v-for="group in regionalGroups" :key="group.key" class="mt-4" :aria-label="`${group.label} sorted parcels`">
+            <h3 class="font-semibold">{{ group.label }}</h3>
+            <div class="overflow-x-auto"><table class="w-full text-left text-sm" :aria-label="`${group.label} parcel list`">
+              <thead><tr><th>Tracking reference</th><th>City service area</th><th>Status</th><th>Sorted at</th></tr></thead>
+              <tbody><tr v-for="parcel in group.parcels" :key="parcel.id"><td>{{ parcel.order_id }}</td><td>{{ areas.find(area => area.id === parcel.sorted_area_id)?.city_name || 'Unmapped service area' }}</td><td>{{ parcel.status }}</td><td>{{ parcel.sorted_at || 'Time not recorded' }}</td></tr></tbody>
+            </table></div>
+          </section>
+        </section>
       </template>
     </div>
   </sc-layout>
 </template>
 
 <script>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import ScLayout from '@/Layouts/ScLayout.vue';
 import DeliveryCoverageSelector from '@/Components/DeliveryCoverageSelector.vue';
 
@@ -159,6 +171,17 @@ export default {
     const token = ref(localStorage.getItem('logistics_auth_token'));
     const parcels = ref([]);
     const areas = ref([]);
+    const sortedParcels = ref([]);
+    const regionalGroups = computed(() => {
+      const grouped = new Map();
+      for (const parcel of sortedParcels.value) {
+        const area = areas.value.find(row => row.id === parcel.sorted_area_id);
+        const key = area?.region_code || 'unmapped';
+        if (!grouped.has(key)) grouped.set(key, { key, label: area?.region_label || 'Unmapped service area', parcels: [] });
+        grouped.get(key).parcels.push(parcel);
+      }
+      return [...grouped.values()].sort((a,b) => a.label === b.label ? 0 : a.label === 'NCR' ? -1 : b.label === 'NCR' ? 1 : a.label.localeCompare(b.label));
+    });
     const selectedAreas = reactive({});
     const loading = ref(false);
     const sortingId = ref(null);
@@ -190,12 +213,14 @@ export default {
     async function loadData() {
       loading.value = true;
       try {
-        const [parcelData, areaData] = await Promise.all([
+        const [parcelData, areaData, sortedData] = await Promise.all([
           requestJson('/api/sorting-center/parcels'),
           requestJson('/api/sorting-center/areas'),
+          requestJson('/api/sorting-center/parcels?status=sorted'),
         ]);
         parcels.value = parcelData.data || [];
         areas.value = areaData.data || [];
+        sortedParcels.value = sortedData.data || [];
       } catch (error) {
         feedback.message = error.message;
         feedback.type = 'error';
@@ -213,6 +238,7 @@ export default {
           body: JSON.stringify({ area_id: selectedAreas[id] }),
         });
         parcels.value = parcels.value.filter((parcel) => parcel.id !== id);
+        sortedParcels.value = [data.data, ...sortedParcels.value.filter(parcel => parcel.id !== id)];
         delete selectedAreas[id];
         feedback.message = data.message;
         feedback.type = 'success';
@@ -287,6 +313,7 @@ export default {
       token,
       parcels,
       areas,
+      sortedParcels, regionalGroups,
       selectedAreas,
       loading,
       sortingId,

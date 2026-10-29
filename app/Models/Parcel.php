@@ -42,7 +42,14 @@ class Parcel extends Model
 
     public function getShippingMethodAttribute(): string
     {
-        return $this->orderItem?->order?->shipping_method ?? 'standard';
+        if ($this->relationLoaded('orderItem')) {
+            return $this->orderItem?->order?->shipping_method ?? 'standard';
+        }
+
+        // Reading display metadata must not add a full item/order to an API response.
+        return OrderItem::where('order_items.id', $this->order_item_id)
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->value('orders.shipping_method') ?? 'standard';
     }
 
     public function getIsExpressAttribute(): bool
@@ -58,6 +65,13 @@ class Parcel extends Model
     protected static function booted(): void
     {
         static::updated(function (Parcel $parcel): void {
+            if ($parcel->order_item_id) {
+                $timeline = app(\App\Services\ParcelTrackingTimeline::class);
+                foreach (['pickup_rider_id' => $timeline::PICKUP_ASSIGNED, 'sorted_area_id' => $timeline::SORTED, 'assigned_rider_id' => $timeline::DELIVERY_ASSIGNED] as $field => $note) {
+                    if ($parcel->wasChanged($field) && $parcel->$field !== null) $timeline->record($parcel, $note);
+                }
+                if ($parcel->wasChanged('status') && $parcel->status === 'AT_SORTING_CENTER') $timeline->record($parcel, $timeline::ARRIVED);
+            }
             if (!$parcel->wasChanged('status') || !$parcel->order_item_id) {
                 return;
             }
@@ -98,10 +112,13 @@ class Parcel extends Model
     {
         return $query
             ->whereIn('status', [
+                'IN_HUB_TRANSIT',
                 'AT_SORTING_CENTER',
                 'OUT_FOR_DELIVERY',
                 'DELIVERED',
                 'FAILED_RETURNED',
+                'LOST',
+                'DAMAGED',
             ])
             ->where('sorting_center_id', $sortingCenterId);
     }
@@ -109,6 +126,11 @@ class Parcel extends Model
     public function sortingCenter(): BelongsTo
     {
         return $this->belongsTo(SortingCenter::class);
+    }
+
+    public function hubJourney(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ParcelHubJourney::class);
     }
 
     public function buyer(): BelongsTo
@@ -136,8 +158,21 @@ class Parcel extends Model
         return $this->belongsTo(Rider::class, 'assigned_rider_id');
     }
 
+    public function pickupRider(): BelongsTo
+    {
+        return $this->belongsTo(Rider::class, 'pickup_rider_id');
+    }
+
     public function deliveryProofs(): HasMany
     {
         return $this->hasMany(DeliveryProof::class);
     }
+
+    public function logisticsEvents(): HasMany
+    {
+        return $this->hasMany(LogisticsAuditEvent::class);
+    }
+    public function codCollections(): HasMany { return $this->hasMany(CodCollection::class); }
+    public function deliveryAttempts(): HasMany { return $this->hasMany(ParcelDeliveryAttempt::class)->orderBy('attempt_number'); }
+    public function returnToSeller(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(ParcelReturn::class); }
 }

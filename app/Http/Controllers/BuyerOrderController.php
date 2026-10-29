@@ -245,6 +245,11 @@ class BuyerOrderController extends Controller
                 ->values()
                 ->all(),
 
+            'address_serviceability' => app(\App\Services\HubNetwork::class)
+                ->checkoutCoverage($items, $request->user()->addresses()->pluck('address', 'id')->all()),
+            'hub_routes_required' => app(\App\Services\HubNetwork::class)->enforced(),
+            'shipping_rate_cards' => app(\App\Services\ShippingRates::class)->cards($request->user()->addresses()->pluck('address', 'id')->all(), $items),
+
             'seller_count' => max(1, $sellerCount),
 
             'free_shipping_threshold' => config('checkout.free_shipping_threshold'),
@@ -280,101 +285,10 @@ class BuyerOrderController extends Controller
         string $method,
         $items,
         float $merchandiseTotal,
-        ?string $shippingAddress = null
+        ?string $shippingAddress = null,
+        ?array $hubPlans = null
     ): float {
-        if ($method === 'pickup') {
-            return 0.0;
-        }
-
-        $freeThreshold = config('checkout.free_shipping_threshold');
-        if ($method !== 'express' && $freeThreshold !== null && $merchandiseTotal >= (float) $freeThreshold) {
-            return 0.0;
-        }
-
-        $shippingMethods = config('checkout.shipping_methods', []);
-        $methodConfig = $shippingMethods[$method] ?? [];
-        $isExpress = ($method === 'express');
-
-        // Group items by seller
-        $sellerGroups = ($items instanceof \Illuminate\Support\Collection ? $items : collect($items))
-            ->groupBy(fn ($item) => is_object($item) && isset($item->product) ? (int) ($item->product?->seller_id ?? 0) : 0);
-
-        if ($sellerGroups->isEmpty()) {
-            return 50.0;
-        }
-
-        $totalShippingFee = 0.0;
-        $addressLower = strtolower(trim((string) ($shippingAddress ?? '')));
-
-        foreach ($sellerGroups as $sellerId => $sellerItems) {
-            // 1. Calculate weight
-            $sellerWeight = 0.0;
-            $hasExplicitWeight = false;
-            foreach ($sellerItems as $item) {
-                if (is_object($item) && isset($item->product)) {
-                    $w = (float) ($item->product?->weight ?? 0.0);
-                    $qty = (int) ($item->quantity ?? 1);
-                    if ($w > 0) {
-                        $sellerWeight += $w * $qty;
-                        $hasExplicitWeight = true;
-                    }
-                }
-            }
-
-            // BUY-CHK-003: 1.0 kg charged ₱60; 1.2 kg rounded up to 2 kg (₱80)
-            $billedKg = $hasExplicitWeight ? max(1, (int) ceil($sellerWeight)) : 1;
-
-            // 2. Determine base rate and per-kg rate
-            // Check DeliveryZone from database
-            $matchedZone = null;
-            if (Schema::hasTable('delivery_zones') && !empty($addressLower)) {
-                $activeZones = \App\Models\DeliveryZone::where('is_active', true)->get();
-                foreach ($activeZones as $z) {
-                    if (
-                        str_contains($addressLower, strtolower($z->name)) ||
-                        (!empty($z->province) && str_contains($addressLower, strtolower($z->province)))
-                    ) {
-                        $matchedZone = $z;
-                        break;
-                    }
-                }
-            }
-
-            $isNcr = str_contains($addressLower, 'ncr') ||
-                str_contains($addressLower, 'metro manila') ||
-                str_contains($addressLower, 'manila') ||
-                str_contains($addressLower, 'quezon city');
-
-            $isVisayas = str_contains($addressLower, 'visayas') ||
-                str_contains($addressLower, 'cebu') ||
-                str_contains($addressLower, 'leyte');
-
-            if ($matchedZone) {
-                $baseRate = (float) $matchedZone->base_shipping_rate;
-                $perKgRate = (float) ($matchedZone->per_kg_rate ?? 20.0);
-            } elseif ($isVisayas) {
-                // BUY-CHK-002: Visayas shipping is ₱120
-                $baseRate = 120.0;
-                $perKgRate = 25.0;
-            } elseif ($isNcr) {
-                // BUY-CHK-002: NCR shipping is ₱50
-                $baseRate = 50.0;
-                $perKgRate = 20.0;
-            } else {
-                // BUY-CHK-003: Standard tier base ₱60 (first 1 kg), or method config
-                $baseRate = $hasExplicitWeight ? 60.0 : (float) ($methodConfig['fee_per_seller'] ?? 50.0);
-                $perKgRate = 20.0;
-            }
-
-            if ($isExpress) {
-                $baseRate = max($baseRate, 120.0);
-            }
-
-            $sellerFee = $baseRate + max(0, $billedKg - 1) * $perKgRate;
-            $totalShippingFee += $sellerFee;
-        }
-
-        return round($totalShippingFee, 2);
+        return app(\App\Services\ShippingRates::class)->calculate($method, $items, $merchandiseTotal, $shippingAddress, $hubPlans);
     }
 
     /**
@@ -382,19 +296,8 @@ class BuyerOrderController extends Controller
      */
     private function validateCourierCoverage(string $address): void
     {
-        $unserviceableLocations = [
-            'batanes',
-            'kalayaan',
-            'pag-asa island',
-        ];
-
-        $lower = strtolower($address);
-        foreach ($unserviceableLocations as $location) {
-            if (str_contains($lower, $location)) {
-                throw ValidationException::withMessages([
-                    'shipping_address' => 'The selected delivery address is outside courier serviceable coverage.',
-                ]);
-            }
+        if (app(\App\Services\ShippingRates::class)->remoteExcluded($address)) {
+            throw ValidationException::withMessages(['shipping_address' => 'The selected delivery address is outside courier serviceable coverage.']);
         }
     }
 
@@ -423,6 +326,7 @@ class BuyerOrderController extends Controller
             'items.product.images',
             'items.variant',
             'items.statusHistories',
+            'items.parcel:id,order_item_id,status,pickup_rider_id',
             'items.returnRequests',
             'returnRequests',
         ]);
@@ -431,16 +335,28 @@ class BuyerOrderController extends Controller
             ? DB::table('order_status_histories')
                 ->where('order_id', $order->id)
                 ->orderBy('created_at', 'asc')
+                ->orderBy('id', 'asc')
                 ->get()
             : collect();
 
-        if ($orderStatusHistories->isEmpty()) {
-            $orderStatusHistories = $order->items
-                ->flatMap(fn ($item) => $item->statusHistories)
-                ->unique(fn ($history) => $history->status . '_' . ($history->created_at?->format('Y-m-d H:i') ?? ''))
-                ->sortBy('created_at')
-                ->values();
-        }
+        // A checkout history must not hide later Seller/Logistics item events.
+        // Keep distinct item records even when their status/time are identical.
+        $orderStatusHistories = $orderStatusHistories->map(fn ($history) => [
+            'id' => $history->id,
+            'status' => $history->status,
+            'note' => $history->note,
+            'order_item_id' => null,
+            'created_at' => $history->created_at ? Carbon::parse($history->created_at)->toISOString() : null,
+        ])->concat($order->items->flatMap(function ($item) use ($order) {
+            return $item->statusHistories->sortBy('id')->map(fn ($history) => [
+                'id' => $history->id,
+                'status' => $history->status,
+                'note' => ($order->items->count() > 1 ? $item->product_name.': ' : '')
+                    .($history->note ?: 'Status changed to '.str_replace('_', ' ', $history->status)),
+                'order_item_id' => $item->id,
+                'created_at' => $history->created_at?->toISOString(),
+            ]);
+        }))->sortBy('created_at')->values();
 
         // Calculate order cancellability:
         // Allowed if order is in pending, processing, packed and not shipped/ready for pickup
@@ -451,6 +367,7 @@ class BuyerOrderController extends Controller
             });
 
         // Add item-level metadata
+        if (Schema::hasTable('parcel_returns')) $order->load('items.parcel.returnToSeller');
         $itemsWithMeta = $order->items->map(function ($item) use ($order) {
             $itemStatus = strtolower((string) ($item->status ?? 'pending'));
             $isDelivered = in_array($itemStatus, ['delivered', 'completed'], true)
@@ -484,13 +401,20 @@ class BuyerOrderController extends Controller
                 ->first();
 
             return array_merge($item->toArray(), [
-                'can_confirm_delivery' => $itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'),
+                'delivery_parcel_id' => $item->parcel?->id,
+                'delivery_parcel_status' => $item->parcel?->status,
+                'return_to_seller' => $item->parcel?->relationLoaded('returnToSeller') ? $item->parcel->returnToSeller : null,
+                'logistics_review' => $item->parcel && in_array($item->parcel->status, ['LOST', 'FAILED_RETURNED'], true)
+                    ? app(\App\Services\LogisticsRefundReview::class)->details($item->parcel) : null,
+                'pickup_assignment_label' => $item->parcel?->pickup_rider_id && in_array($item->parcel->status, ['PLACED', 'PREPARING'], true) ? 'Assigned' : null,
+                'can_confirm_delivery' => ($itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'))
+                    && !($item->parcel?->relationLoaded('returnToSeller') && $item->parcel->returnToSeller),
                 'can_review' => $isDelivered,
                 'has_reviewed' => (bool) $userReview,
                 'user_review' => $userReview,
                 'can_return' => $canReturn,
                 'can_reorder' => $isProductAvailable,
-                'return_deadline' => $isDelivered ? $returnDeadline->toIso8601String() : null,
+                'return_deadline' => $isDelivered ? $returnDeadline?->toIso8601String() : null,
                 'return_policy_days' => $returnDays,
                 'active_return_request' => $activeReturn,
                 'latest_return_request' => $item->returnRequests->first(),
@@ -906,6 +830,8 @@ class BuyerOrderController extends Controller
                 'max:2000',
             ],
 
+            'expected_shipping_fee' => ['nullable', 'numeric', 'min:0'],
+
             'buyer_note' => [
                 'nullable',
                 'string',
@@ -960,7 +886,7 @@ class BuyerOrderController extends Controller
             ],
         ]);
 
-        $this->validateCourierCoverage($data['shipping_address']);
+        if ($data['shipping_method'] !== 'pickup' && !app(\App\Services\HubNetwork::class)->enforced()) $this->validateCourierCoverage($data['shipping_address']);
 
         $selectedIds = $this->normalizeSelectedIds(
             $data['selected_items']
@@ -980,6 +906,8 @@ class BuyerOrderController extends Controller
         | TRANSACTION
         |--------------------------------------------------------------------------
         */
+
+        if ($data['shipping_method'] !== 'pickup' && !app(\App\Services\HubNetwork::class)->enforced()) app(\App\Services\CheckoutServiceability::class)->assertServiceable($data['shipping_address']);
 
         $order = DB::transaction(
             function () use (
@@ -1146,6 +1074,7 @@ class BuyerOrderController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
+                $hubPlans = app(\App\Services\HubNetwork::class)->checkoutPlans($items, $data['shipping_address'], $data['shipping_method']);
                 $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
                 $subtotal = (float) $evaluation['subtotal_after_promotions'];
 
@@ -1168,8 +1097,13 @@ class BuyerOrderController extends Controller
                     $shippingMethod,
                     $items,
                     $subtotal,
-                    $data['shipping_address']
+                    $data['shipping_address'],
+                    $hubPlans
                 );
+
+                if (isset($data['expected_shipping_fee']) && abs((float) $data['expected_shipping_fee'] - $shippingFeeBeforeDiscount) >= 0.005) {
+                    throw ValidationException::withMessages(['shipping_fee' => 'Shipping rates changed. Refresh checkout to review the current delivery fee before ordering.']);
+                }
 
                 $itemDiscount = 0.0;
                 $shippingDiscount = 0.0;
@@ -1390,7 +1324,8 @@ class BuyerOrderController extends Controller
                             $shippingMethod,
                             $sellerItems,
                             $storeSubtotal,
-                            $data['shipping_address']
+                            $data['shipping_address'],
+                            $hubPlans
                         );
 
                         $storeDiscount = 0.0;
@@ -1437,7 +1372,7 @@ class BuyerOrderController extends Controller
                         $storeOrder->shipping_fee = $storeFinalShippingFee;
                         $storeOrder->shipping_fee_before_discount = $storeShippingBeforeDiscount;
                         $storeOrder->shipping_discount = $storeShippingDiscount;
-                        $storeOrder->delivery_fee_payer = 'seller';
+                        $storeOrder->delivery_fee_payer = 'buyer';
                         $storeOrder->payment_status = 'unpaid';
                         $storeOrder->payment_method_id = $savedPaymentMethod?->id;
                         $storeOrder->subtotal = $storeSubtotal;
@@ -1493,6 +1428,10 @@ class BuyerOrderController extends Controller
                                     $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
                                 }
 
+                                if (isset($hubPlans[$product->seller_id])) {
+                                    $orderItemData['hub_route_plan'] = $hubPlans[$product->seller_id];
+                                    $orderItemData['courier_name'] = $hubPlans[$product->seller_id]['company_name'];
+                                }
                                 OrderItem::create($orderItemData);
 
                                 if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
@@ -1537,7 +1476,7 @@ class BuyerOrderController extends Controller
                 $order->shipping_fee = $finalShippingFee;
                 $order->shipping_fee_before_discount = $shippingFeeBeforeDiscount;
                 $order->shipping_discount = $shippingDiscount;
-                $order->delivery_fee_payer = 'seller';
+                $order->delivery_fee_payer = 'buyer';
                 $order->payment_status = 'unpaid';
                 $order->payment_method_id = $savedPaymentMethod?->id;
                 $order->subtotal = $subtotal;
@@ -1604,6 +1543,10 @@ class BuyerOrderController extends Controller
                             $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
                         }
 
+                        if (isset($hubPlans[$product->seller_id])) {
+                            $orderItemData['hub_route_plan'] = $hubPlans[$product->seller_id];
+                            $orderItemData['courier_name'] = $hubPlans[$product->seller_id]['company_name'];
+                        }
                         OrderItem::create($orderItemData);
 
                         if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
@@ -1894,6 +1837,10 @@ class BuyerOrderController extends Controller
             (int) $request->user()->id,
             403
         );
+
+        if (Schema::hasTable('parcel_returns') && $item->parcel?->returnToSeller()->exists()) {
+            abort(422, 'A parcel in Return to Seller tracking cannot be confirmed as Buyer delivery.');
+        }
 
         if ($item->seller_shipment_id) {
             $parcel = $item->parcel;

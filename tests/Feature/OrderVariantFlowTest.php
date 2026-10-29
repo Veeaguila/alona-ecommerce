@@ -17,7 +17,7 @@ class OrderVariantFlowTest extends TestCase
     {
         $category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'variant-test-electronics',
             'is_active' => true,
         ]);
 

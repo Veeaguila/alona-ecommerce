@@ -1,6 +1,7 @@
 import './bootstrap';
 import '../css/logistics.css';
 import { createApp } from 'vue';
+import { logisticsSessionFetch } from './logisticsSession';
 
 // The marketplace login supplies the same scoped Sanctum identity used by the existing portal.
 if (window.logisticsSession) {
@@ -9,12 +10,26 @@ if (window.logisticsSession) {
     localStorage.setItem('sortingCenterName', window.logisticsSession.sorting_center.business_name);
 }
 
+window.fetch = logisticsSessionFetch(window.fetch.bind(window), {
+    origin: window.location.origin,
+    getToken: () => localStorage.getItem('logistics_auth_token'),
+    onExpired: () => {
+        for (const key of ['logistics_auth_token', 'logistics_auth_session', 'sortingCenterId', 'sortingCenterName']) localStorage.removeItem(key);
+        window.location.assign('/?auth=login');
+    },
+});
+
 const components = {
+    'hub-workspace': () => import('./Pages/Logistics/HubWorkspace.vue'),
+    'hub-staff': () => import('./Pages/Logistics/HubStaff.vue'),
+    'delivery-rates': () => import('./Pages/Logistics/DeliveryRates.vue'),
+    'hub-network': () => import('./Pages/Logistics/HubNetwork.vue'),
     'sorting-center-registration': () => import('./Pages/Logistics/SortingCenterRegistration.vue'),
     'sorting-center-login': () => import('./Pages/Logistics/SortingCenterLogin.vue'),
     'order-management': () => import('./Pages/Logistics/OrderManagement.vue'),
     'delivery-management': () => import('./Pages/Logistics/DeliveryManagement.vue'),
     'rider-assignment': () => import('./Pages/Logistics/RiderAssignment.vue'),
+    'rider-management': () => import('./Pages/Logistics/RiderManagement.vue'),
     'delivery-monitoring': () => import('./Pages/Logistics/DeliveryMonitoring.vue'),
     dashboard: () => import('./Pages/Logistics/Dashboard.vue'),
     'delivery-reports': () => import('./Pages/Logistics/DeliveryReports.vue'),

@@ -52,7 +52,7 @@ class SellerReportsAndEarningsTest extends TestCase
 
         $this->category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'earnings-test-electronics',
         ]);
 
         $this->product1 = Product::create([

@@ -39,11 +39,20 @@ class LogisticsRegistrationController extends Controller
 
     public function store(Request $request, LogisticsOnboarding $onboarding, RegistrationDocumentStorage $storage)
     {
-        abort_unless(is_string($request->input('request_key'))
-            && hash_equals((string) $request->session()->get('logistics.registration_key', ''), $request->input('request_key')), 419);
+        $api = $request->is('api/sorting-center/onboarding/register');
+        if ($api) {
+            $request->validate(['request_key' => ['required', 'uuid']]);
+        } else {
+            abort_unless(is_string($request->input('request_key'))
+                && hash_equals((string) $request->session()->get('logistics.registration_key', ''), $request->input('request_key')), 419);
+        }
         $key = hash('sha256', $request->input('request_key'));
         if ($existing = LogisticsRegistration::where('request_key', $key)->first()) {
             // Only the browser session that rendered the form may resume its own submission.
+            if ($api) {
+                // An idempotency key is not authentication; never resume an existing account with it.
+                return response()->json(['message' => 'This application was already submitted. Sign in with your account credentials.'], 409);
+            }
             Auth::login(User::findOrFail($existing->user_id));
             $request->session()->regenerate();
 
@@ -55,7 +64,11 @@ class LogisticsRegistrationController extends Controller
             $identity = $form->oauth();
         } catch (ValidationException $exception) {
             if ($existing = LogisticsRegistration::where('request_key', $key)->first()) {
-                Auth::login(User::findOrFail($existing->user_id));
+                if ($api) {
+                // An idempotency key is not authentication; never resume an existing account with it.
+                return response()->json(['message' => 'This application was already submitted. Sign in with your account credentials.'], 409);
+            }
+            Auth::login(User::findOrFail($existing->user_id));
                 $request->session()->regenerate();
 
                 return redirect()->route('application.status');
@@ -101,7 +114,11 @@ class LogisticsRegistrationController extends Controller
             }
             if ($exception instanceof UniqueConstraintViolationException || $exception instanceof ValidationException) {
                 if ($existing = LogisticsRegistration::where('request_key', $key)->first()) {
-                    Auth::login(User::findOrFail($existing->user_id));
+                    if ($api) {
+                // An idempotency key is not authentication; never resume an existing account with it.
+                return response()->json(['message' => 'This application was already submitted. Sign in with your account credentials.'], 409);
+            }
+            Auth::login(User::findOrFail($existing->user_id));
                     $request->session()->regenerate();
 
                     return redirect()->route('application.status');
@@ -119,6 +136,9 @@ class LogisticsRegistrationController extends Controller
             Log::warning('Logistics verification email could not be sent.', ['user_id' => $user->id, 'exception' => $exception::class]);
             $message = 'Application saved, but the email could not be sent. Use Resend code to try again.';
         }
+        if ($api) {
+            return response()->json(app(\App\Services\SortingCenterSession::class)->issue($user, $message), 201);
+        }
         Auth::login($user);
         $request->session()->regenerate();
         $request->session()->forget('onboarding.google');
@@ -132,7 +152,7 @@ class LogisticsRegistrationController extends Controller
         $input = $request->validate(['otp' => ['required', 'string', 'regex:/^[0-9]{6}$/']]);
         $onboarding->verify($request->user(), $input['otp']);
 
-        return back()->with('status', 'Email verified. Your application is waiting for admin approval.');
+        return $request->expectsJson() ? response()->json(['message' => 'Email verified. Your application is waiting for admin approval.']) : back()->with('status', 'Email verified. Your application is waiting for admin approval.');
     }
 
     public function resend(Request $request, LogisticsOnboarding $onboarding)
@@ -143,10 +163,13 @@ class LogisticsRegistrationController extends Controller
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'The verification email could not be sent. Please try again later.'], 503);
+            }
             return back()->withErrors(['otp' => 'The verification email could not be sent. Please try again later.']);
         }
 
-        return back()->with('status', 'A new six-digit code has been sent. Your previous code is no longer valid.');
+        return $request->expectsJson() ? response()->json(['message' => 'A new six-digit code has been sent. Your previous code is no longer valid.']) : back()->with('status', 'A new six-digit code has been sent. Your previous code is no longer valid.');
     }
 
     public function resubmit(Request $request, RegistrationDocumentStorage $storage)
@@ -191,6 +214,6 @@ class LogisticsRegistrationController extends Controller
             Storage::disk('local')->delete($path);
         }
 
-        return back()->with('status', 'Documents replaced. Your application is waiting for admin approval.');
+        return $request->expectsJson() ? response()->json(['message' => 'Documents replaced. Your application is waiting for admin approval.']) : back()->with('status', 'Documents replaced. Your application is waiting for admin approval.');
     }
 }

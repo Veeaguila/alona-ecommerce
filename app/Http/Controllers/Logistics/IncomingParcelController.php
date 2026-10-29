@@ -32,7 +32,7 @@ class IncomingParcelController extends Controller
 
         return response()->json([
             'message' => 'Parcel found successfully.',
-            'data' => $parcel->only([
+            'data' => array_merge($parcel->only([
                 'order_id',
                 'status',
                 'order_item_id',
@@ -43,7 +43,7 @@ class IncomingParcelController extends Controller
                 'delivery_barangay',
                 'delivery_street',
                 'delivery_house_number',
-            ]),
+            ]), ['hub_route' => app(\App\Services\HubNetwork::class)->journey($parcel)?->route_snapshot]),
         ]);
     }
 
@@ -51,10 +51,12 @@ class IncomingParcelController extends Controller
     {
         $validated = $request->validate([
             'order_id' => ['required', 'string', 'max:50'],
+            'hub_id' => ['nullable', 'integer'],
         ]);
         $sortingCenterId = $request->user()->sortingCenter->id;
 
-        $parcel = DB::transaction(function () use ($validated, $sortingCenterId): Parcel {
+        $actor = $request->user();
+        $parcel = DB::transaction(function () use ($validated, $sortingCenterId, $actor): Parcel {
             $parcel = Parcel::query()
                 ->where('order_id', $validated['order_id'])
                 ->lockForUpdate()
@@ -82,6 +84,7 @@ class IncomingParcelController extends Controller
                 ], 422));
             }
 
+            app(\App\Services\HubNetwork::class)->receiveOrigin($parcel, $validated['hub_id'] ?? null, $actor);
             $parcel->update([
                 'sorting_center_id' => $sortingCenterId,
                 'status' => 'AT_SORTING_CENTER',
