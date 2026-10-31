@@ -1,9 +1,40 @@
 # Logistics registration — current handoff
 
+## Validation-error document retry (2026-10-29)
+
+Fixed a reproduced mismatch between reset document model values and still-selected
+native file inputs. Validation errors now remount all four file inputs alongside
+the password/document reset. Selecting the same documents again emits fresh file
+parts; submitting without reselecting them is blocked by native validation.
+The actual Vue/Inertia/Axios regression is tests/browser/logistics-registration.cjs.
+Current evidence and upgrade instructions: testing/results/LOGISTICS_COMMIT_READINESS.md
+and LOGISTICS_TEAM_UPDATE.md.
+
+
 2026-10-16, upstream baseline a52966b. All 44 workbook cases have passing automated
 coverage. This is not a deployed/manual acceptance claim. Full case mapping,
 source-audit classifications, evidence and live limits: docs/LOGISTICS_REGISTRATION_TEST_MATRIX.md.
 Safe origin/main preservation receipt: docs/ORIGIN_MAIN_INTEGRATION.md.
+
+## TIN field formatting (2026-10-28)
+
+Correcting the TIN field clears its old error. Client and server accept the
+existing twelve-digit value with or without spaces/hyphens, including copied
+Unicode hyphens, and normalize it to `000-000-000-000`. The form validates before
+leaving Company or submitting; incomplete/extra digits and letters remain invalid.
+Existing duplicate checks run on the normalized value. This is format validation,
+not verification of tax registration. No stored records or session handling changed.
+
+## Mobile-number validation (2026-10-28)
+
+The dedicated form checks the existing supported mobile formats before leaving
+Account and before submission: `09` plus nine digits, or `+639` plus nine digits.
+Native input limits are 11 and 13 characters respectively, with a format hint,
+accessible inline errors and blur validation. Oversized/non-numeric pastes are
+rejected without truncating them into a different number; full international
+pastes remain intact. Backend validation retains both formats, adds an explicit
+13-character maximum and gives matching format feedback. No database or stored
+contact records changed; local numbers still normalize to international format.
 
 ## Latest: submission failure recovery
 

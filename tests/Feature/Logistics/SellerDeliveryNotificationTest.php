@@ -56,7 +56,7 @@ class SellerDeliveryNotificationTest extends TestCase
         $parcel = $f['parcels'][0];
         $this->upload($parcel);
         $path = '/api/rider/deliveries/'.$parcel->id.'/deliver';
-        $this->postJson($path)->assertOk();
+        $this->postJson($path, ['otp' => $this->deliveryOtp($parcel->id)])->assertOk();
         $this->postJson($path)->assertUnprocessable();
         DB::transaction(fn () => app(SellerParcelDelivery::class)->notifyDelivered($parcel->fresh()));
         $this->assertDatabaseCount('seller_notifications', 1);
@@ -78,7 +78,7 @@ class SellerDeliveryNotificationTest extends TestCase
         $this->actingAs($f['sellers'][0], 'web');
         $this->get($url)->assertNotFound();
         Sanctum::actingAs($f['riderUser']);
-        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][0]->id)])->assertOk();
         $url = route('seller.delivery-proofs.file', ['orderItem' => $f['items'][0]->id, 'proof' => $proof->id], false);
         $this->actingAs($f['sellers'][0], 'web');
         $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
@@ -101,7 +101,7 @@ class SellerDeliveryNotificationTest extends TestCase
         $event = 'eloquent.creating: '.SellerNotification::class;
         Event::listen($event, fn () => throw new \RuntimeException('Simulated notification failure'));
         try {
-            $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver')->assertServerError();
+            $this->postJson('/api/rider/deliveries/'.$f['parcels'][0]->id.'/deliver', ['otp' => $this->deliveryOtp($f['parcels'][0]->id)])->assertServerError();
             $this->assertSame('OUT_FOR_DELIVERY', $f['parcels'][0]->fresh()->status);
             $this->assertSame('out_for_delivery', $f['items'][0]->fresh()->status);
             $this->assertDatabaseCount('buyer_notifications', 0);
@@ -117,7 +117,7 @@ class SellerDeliveryNotificationTest extends TestCase
         $parcel = $f['parcels'][0];
         $parcel->update(['seller_id' => $f['sellers'][1]->id]);
         $this->upload($parcel);
-        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => $this->deliveryOtp($parcel->id)])->assertOk();
         $this->assertDatabaseCount('seller_notifications', 0);
         $this->actingAs($f['sellers'][0], 'web');
         $this->get(route('seller.order.details', $f['items'][0]))->assertInertia(fn (Assert $page) => $page
@@ -129,7 +129,7 @@ class SellerDeliveryNotificationTest extends TestCase
         $legacy->status = 'OUT_FOR_DELIVERY';
         $legacy->save();
         $this->upload($legacy);
-        $this->postJson('/api/rider/deliveries/'.$legacy->id.'/deliver')->assertOk();
+        $this->postJson('/api/rider/deliveries/'.$legacy->id.'/deliver', ['otp' => $this->deliveryOtp($legacy->id)])->assertOk();
         $this->assertDatabaseCount('seller_notifications', 0);
     }
 }

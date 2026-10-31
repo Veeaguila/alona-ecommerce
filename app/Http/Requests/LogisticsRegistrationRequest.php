@@ -40,6 +40,12 @@ class LogisticsRegistrationRequest extends FormRequest
                 }]);
             }
         }
+        $tin = $this->input('tin');
+        if (is_string($tin)) {
+            $digits = preg_replace('/[\s\x{2010}-\x{2015}\x{2212}-]/u', '', trim($tin));
+            $this->merge(['tin' => is_string($digits) && preg_match('/^[0-9]{12}$/D', $digits)
+                ? implode('-', str_split($digits, 3)) : trim($tin)]);
+        }
     }
 
     public function rules(): array
@@ -49,7 +55,7 @@ class LogisticsRegistrationRequest extends FormRequest
         return [
             'first_name' => $name, 'last_name' => $name,
             'email' => ['required', 'string', 'email', 'regex:/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/', 'max:255'],
-            'contact_no' => ['required', 'string', 'regex:/^(09[0-9]{9}|\\+639[0-9]{9})$/'],
+            'contact_no' => ['bail', 'required', 'string', 'max:13', 'regex:/^(09[0-9]{9}|\\+639[0-9]{9})$/'],
             'password' => [$this->oauth() ? 'nullable' : 'required', 'string', Password::min(8)->mixedCase()->numbers()->symbols()],
             'password_confirmation' => [$this->oauth() ? 'nullable' : 'required', 'string', function ($attribute, $value, $fail) {
                 if ($this->filled('password') && $value !== $this->input('password')) {
@@ -83,8 +89,11 @@ class LogisticsRegistrationRequest extends FormRequest
     {
         return ['first_name.regex' => 'Use letters, spaces, hyphens, apostrophes or periods only.',
             'last_name.regex' => 'Use letters, spaces, hyphens, apostrophes or periods only.',
+            'contact_no.required' => 'Enter your Philippine mobile number.',
+            'contact_no.regex' => 'Use 11 digits starting with 09 (09171234567), or +639 followed by 9 digits (+639171234567).',
+            'contact_no.max' => 'Use 11 digits starting with 09 (09171234567), or +639 followed by 9 digits (+639171234567).',
             'registration_number.regex' => 'Use 2 letters followed by 9 digits.',
-            'tin.regex' => 'Use a 12-digit TIN in the format 000-000-000-000.',
+            'tin.regex' => 'Enter 12 digits, with or without hyphens (for example, 123-456-789-000).',
             '*.mimes' => 'Upload a JPG, PNG or PDF file.', '*.extensions' => 'Upload a JPG, PNG or PDF file.',
             '*.max' => 'The value exceeds the allowed maximum. Uploads must be 5 MB or less.'];
     }

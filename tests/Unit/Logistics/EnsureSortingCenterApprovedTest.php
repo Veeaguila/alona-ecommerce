@@ -40,6 +40,8 @@ class EnsureSortingCenterApprovedTest extends TestCase
         $request = Request::create('/api/test', 'GET');
         $request->setUserResolver(fn () => $user);
 
+        $request->headers->set('Accept', 'application/json');
+
         $response = $this->middleware->handle($request, function () {
             return response('OK');
         });

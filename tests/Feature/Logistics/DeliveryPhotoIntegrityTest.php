@@ -58,7 +58,7 @@ class DeliveryPhotoIntegrityTest extends TestCase
         $this->assertDatabaseCount('delivery_proofs', 1);
         $this->assertCount(1, Storage::disk('local')->allFiles());
         $this->getJson('/api/rider/deliveries/lookup?reference=ITEM-123')->assertOk()->assertJsonPath('data.has_valid_photo_proof', true);
-        $this->postJson($path.'/deliver')->assertOk()->assertJsonPath('data.status', 'DELIVERED');
+        $this->postJson($path.'/deliver', ['otp' => $this->deliveryOtp($parcel->id)])->assertOk()->assertJsonPath('data.status', 'DELIVERED');
         $this->postJson($path.'/deliver')->assertUnprocessable();
         $this->assertDatabaseCount('delivery_proofs', 1);
     }

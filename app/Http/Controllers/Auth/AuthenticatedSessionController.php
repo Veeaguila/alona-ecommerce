@@ -24,6 +24,9 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        if ($request->user()->usertype === 'sorting_center') {
+            $request->session()->put(\App\Services\LogisticsSessionLifetime::ACTIVITY_KEY, now()->timestamp);
+        }
 
         $destination = app(AccountDestination::class)->route($request->user());
         // Discard arbitrary cross-role intended URLs; dashboard routes enforce their own permissions.

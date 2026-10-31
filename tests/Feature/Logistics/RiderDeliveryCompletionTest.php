@@ -34,7 +34,7 @@ class RiderDeliveryCompletionTest extends TestCase
         ]);
         Sanctum::actingAs($user);
 
-        $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver")
+        $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver", ['otp' => $this->deliveryOtp($parcel->id)])
             ->assertOk()
             ->assertJsonPath('data.status', 'DELIVERED')
             ->assertJsonPath('message', 'Delivery marked as delivered.');
@@ -146,23 +146,23 @@ class RiderDeliveryCompletionTest extends TestCase
         ]);
     }
 
-    public function test_rider_can_mark_an_assigned_delivery_failed_with_a_reason(): void
+    public function test_rider_records_a_failed_attempt_without_inventing_physical_return(): void
     {
         [$user, $rider] = $this->riderUser();
         $parcel = $this->parcel($rider->id);
         Sanctum::actingAs($user);
 
         $this->postJson("/api/rider/deliveries/{$parcel->id}/fail", [
-            'reason' => 'Customer not available',
+            'reason' => 'Buyer not home',
         ])
             ->assertOk()
-            ->assertJsonPath('data.status', 'FAILED_RETURNED')
-            ->assertJsonPath('data.failure_reason', 'Customer not available');
+            ->assertJsonPath('data.status', 'OUT_FOR_DELIVERY')
+            ->assertJsonPath('data.failure_reason', 'Buyer not home');
 
         $this->assertDatabaseHas('parcels', [
             'id' => $parcel->id,
-            'status' => 'FAILED_RETURNED',
-            'failure_reason' => 'Customer not available',
+            'status' => 'OUT_FOR_DELIVERY',
+            'failure_reason' => 'Buyer not home',
         ]);
     }
 

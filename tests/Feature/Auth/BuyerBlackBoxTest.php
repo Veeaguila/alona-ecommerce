@@ -497,7 +497,10 @@ class BuyerBlackBoxTest extends TestCase
         $resendResponse->assertSessionHasNoErrors();
 
         $user->refresh();
-        $secondCode = $user->otp_code;
+        $secondCode = Notification::sent(
+            $user,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
         $this->assertNotEquals($firstCode, $secondCode);
 
         // Verify with old code fails

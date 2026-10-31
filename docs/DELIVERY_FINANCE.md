@@ -1,16 +1,25 @@
 # Seller shipment delivery finance
 
-Implemented 2026-10-15. Migration file is prepared and exercised only by isolated
-SQLite tests; it has not been applied to the development/production database.
+Current Buyer-funded Rider job pay (31 October 2026) is documented separately in
+[RIDER_PAY_IMPLEMENTATION.md](RIDER_PAY_IMPLEMENTATION.md): configured rates per
+Seller-shipment leg, one per complete transfer manifest, grouped manual payouts.
+This document describes the preserved historical Seller-funded ledger.
+
+Seller-funded ledger implemented 2026-10-15. On 2026-10-24 the user selected the
+incoming buyer-paid shipping policy for new checkout orders. Historical records
+and existing seller-funded settlements remain unchanged. Database rollout has not
+been verified or performed as part of this merge.
 
 ## Scope and money
 
-Checkout creates one `seller_shipments` row per seller/new order and assigns its
-items through `order_items.seller_shipment_id`. Parcels retain their item links and
-ITEM scan references. Historical orders remain buyer-funded, with null memberships
-and unchanged totals. There is no historical backfill.
+New checkout orders use `delivery_fee_payer=buyer`, with per-store shipping quotes,
+and do not create seller-funded shipment memberships or seller delivery liabilities.
+`SellerShipmentFinance::createMembership` retains its seller-funding guard, avoiding
+an additional seller charge on an order whose buyer already pays shipping.
+Parcels retain their item links and ITEM scan references. Existing orders retain
+their original payer, totals and memberships; there is no historical backfill.
 
-For a successful shipment, `seller_delivery_charges` records PHP 50.00 seller
+For an existing seller-funded successful shipment, `seller_delivery_charges` records PHP 50.00 seller
 liability, PHP 10.00 Logistics allocation and PHP 40.00 rider allocation.
 `rider_delivery_earnings` separately records the completing rider's PHP 40.00.
 Amounts are fixed decimal strings; allocation uses integer cents. The rule version
@@ -48,17 +57,17 @@ API in a separate delivery-earnings view; operational layouts/history are preser
 
 ## Checkout compatibility
 
-New checkout quotes and created orders have zero buyer shipping, including express.
-The selected express/standard method, labels, descriptions and existing operational
-behavior remain. Legacy config and historical order totals are unchanged. Source
-inspection found no express-priority Logistics handler; no new priority guarantee
-or premium fee was introduced.
+The merged checkout uses the incoming regional/weight rates, express pricing,
+per-store order splitting, free-shipping eligibility and shipping-voucher handling.
+New orders snapshot the actual `shipping_fee_before_discount`, `shipping_discount`
+and net `shipping_fee`, with `delivery_fee_payer=buyer`. `orders.discount` remains
+the merchandise discount. Standard/express metadata remains available to Seller
+and Logistics workflows; store pickup follows the incoming courier-bypass flow.
 
-`orders.discount` remains merchandise-voucher discount. New orders snapshot
-`shipping_fee_before_discount=0`, `shipping_discount=0`, `shipping_fee=0` and
-`delivery_fee_payer=seller`. Seller funding is a payer change, not a shipping voucher.
-Historical gross shipping/discount snapshots remain null. Existing fixed/percentage
-vouchers remain merchandise-only; this work adds no shipping-voucher type.
+The existing PHP 50/10/40 seller-funded ledger continues to apply only to its
+seller-funded shipments. Buyer-funded work now uses the separately enabled company
+job rates and manual payouts described above. It does not allocate shipping receipts
+or rewrite historical settlements; company payroll must fund the approved rates.
 
 ## HTTP contracts
 

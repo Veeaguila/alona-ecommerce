@@ -425,6 +425,8 @@ class SellerProductManagementTest extends TestCase
             ->patch(route('seller.products.update', $draft->id), [
                 'name' => 'Draft Woven Fan',
                 'status' => 'pending',
+                // Explicit empty weight must fail; an omitted field has an existing 0.5 kg API default.
+                'weight' => null,
             ]);
 
         $response->assertSessionHasErrors(['description', 'category_id', 'price', 'stock', 'weight', 'images']);

@@ -1,4 +1,5 @@
 *.log
+/.recovery/
 .DS_Store
 .env
 .env.backup

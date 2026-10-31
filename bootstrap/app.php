@@ -40,7 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
         |--------------------------------------------------------------------------
         */
 
-        $middleware->web(append: [
+        $middleware->web(prepend: [
+            \App\Http\Middleware\UseLocalSessionCookies::class,
+        ], append: [
+            \App\Http\Middleware\EnforceLogisticsIdleTimeout::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
@@ -52,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
         */
 
         $middleware->alias([
+            'hub.operator' => \App\Http\Middleware\EnsureHubOperator::class,
             'sorting_center.approved' => \App\Http\Middleware\EnsureSortingCenterApproved::class,
             'rider.approved' => \App\Http\Middleware\EnsureRiderApproved::class,
             'buyer' => \App\Http\Middleware\EnsureBuyer::class,

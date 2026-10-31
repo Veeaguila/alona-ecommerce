@@ -218,7 +218,7 @@ class BuyerAddressController extends Controller
     /**
      * Validate address input fields (BUY-ADDR-001, BUY-ADDR-003, BUY-ADDR-004).
      */
-    protected function validateAddress(Request $request): array
+    public function validateAddress(Request $request): array
     {
         // Support legacy/profile sync if only freeform address is passed
         if (! $request->filled('recipient_name') && $request->filled('address')) {

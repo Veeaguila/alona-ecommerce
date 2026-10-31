@@ -40,6 +40,14 @@
         <div class="flex flex-wrap items-center justify-between gap-4 app-panel app-panel--padded app-toolbar">
           <p class="text-sm font-semibold text-slate-700">Filter Deliveries</p>
           <div class="flex flex-wrap items-center gap-3">
+            <form class="flex flex-wrap items-end gap-2" @submit.prevent="searchParcels">
+              <div>
+                <label for="parcel-search" class="block text-sm font-semibold text-gray-700">Tracking / order / Buyer name</label>
+                <input id="parcel-search" v-model="searchTerm" type="search" maxlength="255" class="app-input" placeholder="Enter an exact reference or full name" />
+              </div>
+              <button type="submit" :disabled="loading" class="disabled:opacity-50 app-button-primary">Search</button>
+              <button v-if="appliedSearch" type="button" :disabled="loading" class="disabled:opacity-50 app-button-secondary" @click="clearSearch">Clear search</button>
+            </form>
             <div class="flex items-center gap-2">
               <label for="status-filter" class="text-sm font-semibold text-gray-700">Status:</label>
               <select
@@ -74,7 +82,7 @@
             None
           </div>
           <h2 class="mt-4 app-section-title">No Parcels Match This Filter</h2>
-          <p class="mt-2 text-sm text-gray-500">Try choosing another status filter or check back later.</p>
+          <p class="mt-2 text-sm text-gray-500">Try another exact reference, full Buyer name or status filter.</p>
         </div>
 
         <!-- Parcels Table Card -->
@@ -90,6 +98,7 @@
                   <th scope="col" >Sorting Area</th>
                   <th scope="col" >Assigned Rider</th>
                   <th scope="col" >Last Updated</th>
+                  <th scope="col">Operations</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#DCE7E2] bg-white">
@@ -128,6 +137,7 @@
                     <span v-else class="text-gray-400 italic">Unassigned</span>
                   </td>
                   <td class="whitespace-nowrap text-gray-500">{{ formatDate(parcel.updated_at) }}</td>
+                  <td><button type="button" class="app-button-secondary" @click="operationParcel = parcel">View parcel operations</button></td>
                 </tr>
               </tbody>
             </table>
@@ -156,6 +166,7 @@
             </div>
           </div>
         </div>
+        <parcel-operations-panel v-if="operationParcel" :key="operationParcel.id" :parcel="operationParcel" :token="token" @close="operationParcel = null" @updated="status => { operationParcel.status = status; loadParcels(pagination.current_page); }" />
       </template>
     </div>
   </sc-layout>
@@ -164,28 +175,55 @@
 <script>
 import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import ScLayout from '@/Layouts/ScLayout.vue';
+import ParcelOperationsPanel from '@/Components/Logistics/ParcelOperationsPanel.vue';
 
 export default {
   name: 'DeliveryMonitoring',
   components: {
     ScLayout,
+    ParcelOperationsPanel,
   },
   setup() {
     const token = ref(localStorage.getItem('logistics_auth_token'));
     const parcels = ref([]);
+    const operationParcel = ref(null);
     const selectedStatus = ref('');
+    const searchTerm = ref('');
+    const appliedSearch = ref('');
     const loading = ref(false);
     const statusOptions = [
       { value: '', label: 'All monitorable parcels' },
       { value: 'AT_SORTING_CENTER', label: 'At sorting center' },
+      { value: 'IN_HUB_TRANSIT', label: 'Transport between hubs' },
       { value: 'OUT_FOR_DELIVERY', label: 'Out for delivery' },
       { value: 'DELIVERED', label: 'Delivered' },
       { value: 'FAILED_RETURNED', label: 'Failed / returned' },
+      { value: 'LOST', label: 'Lost' },
+      { value: 'DAMAGED', label: 'Damaged' },
     ];
     const pagination = reactive({ current_page: 1, last_page: 1, total: 0, prev_page_url: null, next_page_url: null });
     const feedback = reactive({ message: '', type: 'success' });
     let latestRequest = 0;
     onUnmounted(() => { latestRequest++; });
+
+    async function searchParcels() {
+      if (loading.value) return;
+      const search = searchTerm.value.trim();
+      if ([...search].length > 255) {
+        feedback.message = 'Search must be 255 characters or fewer.';
+        feedback.type = 'error';
+        return;
+      }
+      appliedSearch.value = search;
+      await loadParcels(1);
+    }
+
+    async function clearSearch() {
+      if (loading.value) return;
+      searchTerm.value = '';
+      appliedSearch.value = '';
+      await loadParcels(1);
+    }
 
     async function loadParcels(page = 1) {
       if (!token.value) return;
@@ -193,6 +231,7 @@ export default {
       loading.value = true;
       const params = new URLSearchParams({ page: String(page) });
       if (selectedStatus.value) params.set('status', selectedStatus.value);
+      if (appliedSearch.value) params.set('search', appliedSearch.value);
 
       try {
         const response = await fetch(`/api/sorting-center/parcels/monitoring?${params}`, {
@@ -200,7 +239,7 @@ export default {
         });
         const data = await response.json();
         if (requestId !== latestRequest) return;
-        if (!response.ok) throw new Error(data.message || 'Monitoring data could not be loaded.');
+        if (!response.ok) throw new Error(data.errors?.search?.[0] || data.message || 'Monitoring data could not be loaded.');
         if (!Array.isArray(data.data?.data)) throw new Error('Invalid monitoring response.');
         parcels.value = data.data.data || [];
         Object.assign(pagination, {
@@ -243,12 +282,17 @@ export default {
     return {
       token,
       parcels,
+      operationParcel,
       selectedStatus,
+      searchTerm,
+      appliedSearch,
       loading,
       statusOptions,
       pagination,
       feedback,
       loadParcels,
+      searchParcels,
+      clearSearch,
       formatStatus,
       statusBadgeClass,
       formatDate,

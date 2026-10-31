@@ -190,6 +190,10 @@ Route::middleware([
         BuyerOrderController::class,
         'show',
     ])->name('buyer.orders.show');
+    Route::get('/buyer/orders/{order}/parcels/{parcel}/delivery-otp', [\App\Http\Controllers\BuyerDeliveryOtpController::class, 'show'])
+        ->whereNumber('parcel')->middleware('throttle:30,1')->name('buyer.delivery-otp.show');
+    Route::post('/buyer/orders/{order}/parcels/{parcel}/delivery-otp/renew', [\App\Http\Controllers\BuyerDeliveryOtpController::class, 'renew'])
+        ->whereNumber('parcel')->middleware('throttle:3,15')->name('buyer.delivery-otp.renew');
 
     Route::match(['post', 'patch'], '/buyer/orders/{order}/cancel', [
         BuyerOrderController::class,

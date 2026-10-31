@@ -90,7 +90,7 @@ class AdminDeliveryZoneController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],
-            'base_shipping_rate' => ['required', 'numeric', 'min:0'],
+            'base_shipping_rate' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
             'per_kg_rate' => ['nullable', 'numeric', 'min:0'],
             'estimated_days' => ['nullable', 'string', 'max:50'],
             'is_active' => ['nullable', 'boolean'],
@@ -126,7 +126,7 @@ class AdminDeliveryZoneController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],
-            'base_shipping_rate' => ['required', 'numeric', 'min:0'],
+            'base_shipping_rate' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
             'per_kg_rate' => ['nullable', 'numeric', 'min:0'],
             'estimated_days' => ['nullable', 'string', 'max:50'],
             'is_active' => ['nullable', 'boolean'],

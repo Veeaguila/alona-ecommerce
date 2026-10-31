@@ -18,9 +18,11 @@ Route::get('verify-otp', [BuyerOtpVerificationController::class, 'show'])
     ->name('verification.otp');
 
 Route::post('verify-otp', [BuyerOtpVerificationController::class, 'verify'])
+    ->middleware('throttle:5,1')
     ->name('verification.otp.verify');
 
 Route::post('verify-otp/resend', [BuyerOtpVerificationController::class, 'resend'])
+    ->middleware('throttle:3,5')
     ->name('verification.otp.resend');
 
 Route::middleware('guest')->group(function () {
@@ -37,7 +39,8 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:5,1');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

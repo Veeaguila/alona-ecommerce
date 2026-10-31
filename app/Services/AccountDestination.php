@@ -8,6 +8,9 @@ class AccountDestination
 {
     public function route(User $user): string
     {
+        if (app(HubAccess::class)->membership($user)) {
+            return 'sorting-center.hub-workspace';
+        }
         if (in_array($user->usertype, ['buyer', 'seller'], true) && ! $user->hasVerifiedEmail()) {
             return 'verification.otp';
         }

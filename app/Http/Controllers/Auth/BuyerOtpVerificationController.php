@@ -84,7 +84,7 @@ class BuyerOtpVerificationController extends Controller
                 ->with('status', 'Your email is already verified. Please log in.');
         }
 
-        if (! $user->otp_code || $user->otp_code !== $request->input('otp')) {
+        if (! $user->verifyOtp($request->input('otp'))) {
             throw ValidationException::withMessages([
                 'otp' => 'Invalid verification code.',
             ]);
@@ -185,4 +185,3 @@ class BuyerOtpVerificationController extends Controller
         );
     }
 }
-

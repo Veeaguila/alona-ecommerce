@@ -27,8 +27,9 @@ return [
     'default_shipping_method' => 'standard',
 
     /*
-    | Orders with a merchandise subtotal (after discount) at or above this
-    | amount ship free on non-express methods. Set to null to disable.
+    | Each store order with a merchandise subtotal after promotions and before
+    | vouchers at or above this amount ships free on non-express methods.
+    | Multi-store checkout splits into store orders. Set to null to disable.
     */
     'free_shipping_threshold' => 2000,
 

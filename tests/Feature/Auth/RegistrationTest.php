@@ -86,7 +86,12 @@ class RegistrationTest extends TestCase
 
         $user = \App\Models\User::where('email', 'juanmiguel.delacruz@example.com')->firstOrFail();
         $this->assertNull($user->email_verified_at);
-        $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $user->otp_code);
+        $otp = \Illuminate\Support\Facades\Notification::sent(
+            $user,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $otp);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($otp, $user->otp_code));
         $this->assertNotNull($user->otp_expires_at);
 
         \Illuminate\Support\Facades\Notification::assertSentTo(
@@ -119,6 +124,7 @@ class RegistrationTest extends TestCase
 
     public function test_seller_registration_can_be_created_with_pending_review(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
         Storage::fake('local');
         $response = $this->post('/register/seller', [
             'last_name' => 'Seller',
@@ -165,8 +171,12 @@ class RegistrationTest extends TestCase
         $response->assertRedirect(route('verification.otp'));
 
         $user = User::where('email', 'seller@example.com')->firstOrFail();
+        $otp = \Illuminate\Support\Facades\Notification::sent(
+            $user,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
         $verifyResponse = $this->actingAs($user)->post('/verify-otp', [
-            'otp' => $user->otp_code,
+            'otp' => $otp,
         ]);
 
         $verifyResponse->assertRedirect(route('application.status'));
@@ -207,7 +217,10 @@ class RegistrationTest extends TestCase
         $resendResponse->assertJson(['status' => 'success']);
 
         $user->refresh();
-        $otp = $user->otp_code;
+        $otp = \Illuminate\Support\Facades\Notification::sent(
+            $user,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
 
         // 3. Verify OTP via modal JSON
         $verifyResponse = $this->postJson('/verify-otp', [
@@ -760,8 +773,7 @@ class RegistrationTest extends TestCase
             'usertype' => 'buyer',
             'status' => 'unverified',
         ]);
-        $user->generateAndSendOtp();
-        $otp = $user->otp_code;
+        $otp = $user->generateAndSendOtp();
 
         $response = $this->post('/verify-otp', [
             'email' => $user->email,
@@ -864,7 +876,12 @@ class RegistrationTest extends TestCase
 
         $user->refresh();
         $this->assertNotEquals('111111', $user->otp_code);
-        $this->assertMatchesRegularExpression('/^\d{6}$/', $user->otp_code);
+        $newOtp = \Illuminate\Support\Facades\Notification::sent(
+            $user,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $newOtp);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($newOtp, $user->otp_code));
         $this->assertTrue(now()->lessThanOrEqualTo($user->otp_expires_at));
 
         // Old code fails
@@ -877,7 +894,7 @@ class RegistrationTest extends TestCase
         // New code succeeds
         $newCodeResponse = $this->postJson('/verify-otp', [
             'email' => $user->email,
-            'otp' => $user->otp_code,
+            'otp' => $newOtp,
         ]);
         $newCodeResponse->assertOk();
     }
@@ -1076,4 +1093,3 @@ class RegistrationTest extends TestCase
         $this->assertTrue(in_array($riderResponse->status(), [403, 302]));
     }
 }
-

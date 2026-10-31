@@ -1,7 +1,10 @@
 <script setup>
+import SellerPickupLocation from '@/Components/Logistics/SellerPickupLocation.vue'
+import LogisticsReviewNotice from '@/Components/Logistics/LogisticsReviewNotice.vue'
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import SellerLayout from '@/Layouts/SellerLayout.vue'
+import SellerReturnReceipt from '@/Components/Logistics/SellerReturnReceipt.vue'
 
 const props = defineProps({
     orderItem: {
@@ -707,6 +710,9 @@ const formatMoney = (value) => {
             <p v-if="deliveryLinkUnverified" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 Delivery proof is unavailable because this parcel has no verified Seller/order-item link. Contact Logistics with the order reference.
             </p>
+            <SellerPickupLocation v-if="deliveryDetails && ['PLACED', 'PREPARING'].includes(deliveryDetails.status)" :item-id="orderItem.id" />
+            <LogisticsReviewNotice :review="deliveryDetails?.logistics_review" />
+            <SellerReturnReceipt v-if="deliveryDetails?.return_to_seller" :entry="deliveryDetails.return_to_seller" />
             <section v-if="deliveryDetails?.status === 'DELIVERED'" class="mb-5 rounded-lg border border-teal-200 bg-white p-5" aria-label="Delivery proof">
                 <h2 class="text-lg font-semibold text-[#087F8C]">Delivery confirmed</h2>
                 <p class="mt-1 text-sm text-gray-600">{{ deliveryDetails.reference }} · {{ formatDate(deliveryDetails.delivered_at) }}</p>

@@ -31,7 +31,7 @@ class SellerConversationController extends Controller
             ->with([
                 'buyer:id,name,email,avatar',
                 'admin:id,name,email,avatar',
-                'order:id,order_number,status,total',
+                'order' => fn ($query) => $query->whereHas('items.product', fn ($products) => $products->where('seller_id', $sellerId))->select(['id', 'user_id', 'order_number', 'status', 'total']),
                 'messages' => fn ($q) => $q->latest()->limit(1),
             ])
             ->withCount([
@@ -39,6 +39,12 @@ class SellerConversationController extends Controller
             ])
             ->orderByDesc('last_message_at')
             ->get();
+
+        $conversations->each(function ($conversation) {
+            if ($conversation->order && $conversation->buyer_id && (int) $conversation->order->user_id !== (int) $conversation->buyer_id) {
+                $conversation->setRelation('order', null);
+            }
+        });
 
         $sellerOrders = Order::query()
             ->whereHas('items.product', fn ($q) => $q->where('seller_id', $sellerId))
@@ -69,10 +75,10 @@ class SellerConversationController extends Controller
         $conversation->load([
             'buyer:id,name,email,avatar',
             'admin:id,name,email,avatar',
-            'order' => fn ($q) => $q->with([
+            'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $conversation)->with([
                 'items.product:id,name,image_path,price',
-                'items.variant:id,title,price',
-                'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                'items.variant:id,product_id,color,size,price',
+                'items.parcel:id,order_item_id,order_id,status',
             ]),
         ]);
 
@@ -80,10 +86,10 @@ class SellerConversationController extends Controller
         $messages = $conversation->messages()
             ->with([
                 'sender:id,name,usertype,avatar',
-                'order' => fn ($q) => $q->with([
+                'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $conversation)->with([
                     'items.product:id,name,image_path,price',
-                    'items.variant:id,title,price',
-                    'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                    'items.variant:id,product_id,color,size,price',
+                    'items.parcel:id,order_item_id,order_id,status',
                 ]),
             ])
             ->orderBy('created_at')
@@ -170,6 +176,8 @@ class SellerConversationController extends Controller
             'attachment.mimetypes' => 'The attachment must be a valid JPG or PNG image (executable or non-image content is rejected).',
         ]);
 
+        app(\App\Services\ConversationOrderAccess::class)->assertCanShare($conversation, isset($validated['order_id']) ? (int) $validated['order_id'] : null);
+
         $attachmentPath = null;
         $attachmentName = null;
         $attachmentType = null;
@@ -235,6 +243,10 @@ class SellerConversationController extends Controller
             'order_id' => ['nullable', 'exists:orders,id'],
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
         ]);
+
+        app(\App\Services\ConversationOrderAccess::class)->assertCanShare(
+            new Conversation(['seller_id' => $seller->id]), isset($validated['order_id']) ? (int) $validated['order_id'] : null
+        );
 
         $attachmentPath = null;
         $attachmentName = null;

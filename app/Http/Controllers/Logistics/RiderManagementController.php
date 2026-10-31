@@ -7,6 +7,7 @@ use App\Models\Rider;
 use App\Models\User;
 use App\Notifications\RiderActivationNotification;
 use Carbon\Carbon;
+use App\Models\RiderDecisionAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 
 class RiderManagementController extends Controller
 {
@@ -26,7 +28,7 @@ class RiderManagementController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Rider::query()
-            ->with('user:id,name,email')
+            ->with(['user:id,name,email', 'user.partnerApplication:id,user_id,documents'])
             ->where('sorting_center_id', $request->user()->sortingCenter->id);
 
         if ($request->filled('status')) {
@@ -34,6 +36,21 @@ class RiderManagementController extends Controller
         }
 
         $riders = $query->orderBy('created_at', 'desc')->get();
+        $riders->each(function (Rider $rider): void {
+            $documents = $rider->user?->partnerApplication?->documents ?? [];
+            $reviewDocuments = [];
+            foreach (['id_doc' => 'Government ID', 'license_doc' => "Driver's License", 'or_cr_doc' => 'OR/CR'] as $key => $label) {
+                $available = is_string($documents[$key] ?? null) && $documents[$key] !== '';
+                $reviewDocuments[] = [
+                    'key' => $key, 'label' => $label, 'available' => $available,
+                    'url' => $available ? route('partner.documents', ['user' => $rider->user_id, 'document' => $key], false) : null,
+                ];
+            }
+            $rider->setAttribute('review_documents', $reviewDocuments);
+            // Do not serialize the eagerly loaded application or its private storage paths.
+            $rider->user?->unsetRelation('partnerApplication');
+        });
+        app(\App\Services\RiderWorkload::class)->append($riders, (int) $request->user()->sortingCenter->id);
 
         return response()->json([
             'message' => 'Riders retrieved successfully.',
@@ -305,7 +322,6 @@ class RiderManagementController extends Controller
             'message' => 'Activation email resent successfully.',
             'data' => [
                 'rider_id' => $rider->id,
-                'activation_token' => $token,
                 'activation_token_expires_at' => $rider->activation_token_expires_at,
             ],
         ], 200);
@@ -318,23 +334,22 @@ class RiderManagementController extends Controller
     public function approve(Request $request, int $id): JsonResponse
     {
         $sortingCenterId = $request->user()->sortingCenter->id;
-        $rider = DB::transaction(function () use ($id, $sortingCenterId): ?Rider {
-            $rider = Rider::query()
-                ->where('sorting_center_id', $sortingCenterId)
-                ->whereKey($id)
-                ->lockForUpdate()
-                ->first();
+        $rider = DB::transaction(function () use ($request, $id, $sortingCenterId): ?Rider {
+            $rider = $this->lockedRider($sortingCenterId, $id);
 
             if (! $rider || $rider->approval_status !== 'pending') {
                 return null;
             }
 
+            $this->requireAuditStorage();
+            $before = $this->decisionState($rider);
             $rider->update([
                 'approval_status' => 'approved',
                 'is_active' => true,
             ]);
 
             $rider->user->update(['status' => $rider->approval_status]);
+            $this->recordDecision($request, $rider, $before, 'approve');
             return $rider->load('user:id,name,email');
         });
 
@@ -344,6 +359,7 @@ class RiderManagementController extends Controller
             ], 404);
         }
 
+        app(\App\Services\RiderWorkload::class)->append(new \Illuminate\Database\Eloquent\Collection([$rider]), (int) $sortingCenterId);
         return response()->json([
             'message' => 'Rider approved successfully.',
             'data' => $rider,
@@ -357,19 +373,22 @@ class RiderManagementController extends Controller
     public function reject(Request $request, int $id): JsonResponse
     {
         $sortingCenterId = $request->user()->sortingCenter->id;
-        $rider = DB::transaction(function () use ($id, $sortingCenterId): ?Rider {
-            $rider = Rider::query()
-                ->where('sorting_center_id', $sortingCenterId)
-                ->whereKey($id)
-                ->lockForUpdate()
-                ->first();
+        $rider = DB::transaction(function () use ($request, $id, $sortingCenterId): ?Rider {
+            $rider = $this->lockedRider($sortingCenterId, $id);
 
             if (! $rider || $rider->approval_status !== 'pending') {
                 return null;
             }
 
+            $validated = $request->validate([
+                'reason' => ['bail', 'required', 'string', 'min:10', 'max:300'],
+            ]);
+
+            $this->requireAuditStorage();
+            $before = $this->decisionState($rider);
             $rider->update(['approval_status' => 'rejected']);
-            $rider->user->update(['status' => 'rejected']);
+            $rider->user->update(['status' => 'rejected', 'rejection_reason' => $validated['reason']]);
+            $this->recordDecision($request, $rider, $before, 'reject', $validated['reason']);
 
             return $rider->load('user:id,name,email');
         });
@@ -380,10 +399,44 @@ class RiderManagementController extends Controller
             ], 404);
         }
 
+        app(\App\Services\RiderWorkload::class)->append(new \Illuminate\Database\Eloquent\Collection([$rider]), (int) $sortingCenterId);
         return response()->json([
             'message' => 'Rider rejected successfully.',
             'data' => $rider,
         ], 200);
+    }
+
+    public function audits(Request $request, int $id): JsonResponse
+    {
+        $sortingCenterId = $request->user()->sortingCenter->id;
+        abort_unless(Rider::where('sorting_center_id', $sortingCenterId)->whereKey($id)->exists(), 404, 'Rider not found.');
+        $this->requireAuditStorage();
+        $request->validate(['page' => ['nullable', 'integer', 'min:1']]);
+        $history = RiderDecisionAudit::where('sorting_center_id', $sortingCenterId)->where('rider_id', $id)
+            ->orderByDesc('occurred_at')->orderByDesc('id')->paginate(10);
+
+        return response()->json(['message' => 'Rider decision history retrieved successfully.', 'data' => $history]);
+    }
+
+    private function requireAuditStorage(): void
+    {
+        abort_unless(Schema::hasTable('rider_decision_audits'), 503, 'Rider decision auditing is unavailable. Contact your administrator.');
+    }
+
+    private function decisionState(Rider $rider): array
+    {
+        return ['approval_status' => $rider->approval_status, 'user_status' => $rider->user->status, 'is_active' => (bool) $rider->is_active];
+    }
+
+    private function recordDecision(Request $request, Rider $rider, array $before, string $action, ?string $reason = null): void
+    {
+        $audit = RiderDecisionAudit::create([
+            'sorting_center_id' => $rider->sorting_center_id, 'rider_id' => $rider->id,
+            'actor_user_id' => $request->user()->id, 'actor_name' => $request->user()->name,
+            'action' => $action, 'old_state' => $before, 'new_state' => $this->decisionState($rider),
+            'reason' => $reason, 'occurred_at' => now('UTC'),
+        ]);
+        abort_unless($audit->exists, 500, 'The Rider decision could not be recorded. Please try again.');
     }
 
     /**
@@ -392,31 +445,7 @@ class RiderManagementController extends Controller
      */
     public function activate(Request $request, int $id): JsonResponse
     {
-        $rider = Rider::query()
-            ->where('sorting_center_id', $request->user()->sortingCenter->id)
-            ->with('user:id,name,email')
-            ->find($id);
-
-        if (! $rider) {
-            return response()->json([
-                'message' => 'Rider not found.',
-            ], 404);
-        }
-
-        if ($rider->approval_status !== 'approved') {
-            return response()->json([
-                'message' => 'Only approved riders can be activated.',
-                'approval_status' => $rider->approval_status,
-            ], 422);
-        }
-
-        $rider->is_active = true;
-        $rider->save();
-
-        return response()->json([
-            'message' => 'Rider activated successfully.',
-            'data' => $rider,
-        ], 200);
+        return $this->changeAvailability($request, $id, true);
     }
 
     /**
@@ -425,23 +454,47 @@ class RiderManagementController extends Controller
      */
     public function deactivate(Request $request, int $id): JsonResponse
     {
-        $rider = Rider::query()
-            ->where('sorting_center_id', $request->user()->sortingCenter->id)
-            ->with('user:id,name,email')
-            ->find($id);
+        return $this->changeAvailability($request, $id, false);
+    }
 
-        if (! $rider) {
-            return response()->json([
-                'message' => 'Rider not found.',
-            ], 404);
-        }
+    private function changeAvailability(Request $request, int $id, bool $active): JsonResponse
+    {
+        $centerId = $request->user()->sortingCenter->id;
+        $rider = app(\App\Services\RiderAllocation::class)->run([$id], fn () => DB::transaction(function () use ($request, $id, $active, $centerId): Rider {
+            $rider = $this->lockedRider($centerId, $id);
+            abort_unless($rider, 404, 'Rider not found.');
+            $user = $rider->user;
+            abort_unless($rider->approval_status === 'approved', 422, 'Only approved Riders can be suspended or reactivated.');
+            abort_if((bool) $rider->is_active === $active, 409, $active ? 'Rider is already active.' : 'Rider is already suspended.');
+            if ($active) {
+                abort_unless($user->usertype === 'rider' && $user->status === 'approved'
+                    && (!$user->partnerApplication()->exists() || $user->hasVerifiedEmail()), 422,
+                    'This account must be approved and eligible before reactivation.');
+            }
+            $reason = $active ? null : $request->validate([
+                'reason' => ['bail', 'required', 'string', 'min:10', 'max:300'],
+            ])['reason'];
+            $this->requireAuditStorage();
+            $rider->setRelation('user', $user);
+            $before = $this->decisionState($rider);
+            $rider->update(['is_active' => $active]);
+            $this->recordDecision($request, $rider, $before, $active ? 'reactivate' : 'suspend', $reason);
+            if (!$active) app(\App\Services\ReleaseUncollectedPickups::class)->release($rider, $request->user(), $reason);
+            return $rider->fresh(['user:id,name,email']);
+        }, 5));
+        app(\App\Services\RiderPresence::class)->offline($rider);
+        app(\App\Services\RiderWorkload::class)->append(new \Illuminate\Database\Eloquent\Collection([$rider]), (int) $centerId);
+        return response()->json(['message' => $active ? 'Rider reactivated. Existing jobs are unchanged.'
+            : 'Rider suspended. Uncollected pickup claims were released when safe; collected shipments stay with the Rider until a supervised handover.', 'data' => $rider]);
+    }
 
-        $rider->is_active = false;
-        $rider->save();
-
-        return response()->json([
-            'message' => 'Rider deactivated successfully.',
-            'data' => $rider,
-        ], 200);
+    private function lockedRider(int $centerId, int $id): ?Rider
+    {
+        $userId = Rider::where('sorting_center_id', $centerId)->whereKey($id)->value('user_id');
+        if (!$userId) return null;
+        // All management decisions use the same User -> Rider order as coverage/profile changes.
+        $user = User::whereKey($userId)->lockForUpdate()->firstOrFail();
+        $rider = Rider::where('sorting_center_id', $centerId)->where('user_id', $userId)->whereKey($id)->lockForUpdate()->first();
+        return $rider?->setRelation('user', $user);
     }
 }

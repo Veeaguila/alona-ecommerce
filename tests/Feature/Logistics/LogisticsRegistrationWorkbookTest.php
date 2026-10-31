@@ -228,9 +228,18 @@ class LogisticsRegistrationWorkbookTest extends TestCase
 
     public function test_tc_log_012_mobile_boundaries(): void
     {
-        $this->invalid('contact_no', ['0917123456', '091712345678']);
+        $this->invalid('contact_no', ['0917123456', '091712345678', '+63917123456', '+6391712345678']);
         $this->submit(array_replace($this->payload(), ['contact_no' => '09170000001']))->assertSessionHasNoErrors();
         $this->assertDatabaseHas('users', ['contact_no' => '+639170000001']);
+    }
+
+    public function test_international_mobile_format_is_accepted_and_invalid_input_has_clear_feedback(): void
+    {
+        $this->submit(array_replace($this->payload(), ['contact_no' => '091712345678']))
+            ->assertSessionHasErrors(['contact_no' => 'Use 11 digits starting with 09 (09171234567), or +639 followed by 9 digits (+639171234567).']);
+        $this->assertDatabaseCount('logistics_registrations', 0);
+        $this->submit(array_replace($this->payload(), ['contact_no' => '+639171234567']))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['contact_no' => '+639171234567']);
     }
 
     public function test_tc_log_013_duplicate_mobile(): void
@@ -274,7 +283,8 @@ class LogisticsRegistrationWorkbookTest extends TestCase
         $p = $this->payload();
         $this->submit($p)->assertRedirect(route('application.status'));
         $this->post('/logout');
-        $this->submit($p)->assertRedirect(route('application.status'));
+        $this->submit($p)->assertRedirect('/?auth=login')->assertSessionHasErrors('email');
+        $this->assertGuest();
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseCount('logistics_registrations', 1);
         Notification::assertCount(1);
@@ -362,7 +372,22 @@ class LogisticsRegistrationWorkbookTest extends TestCase
     {
         $seller = User::factory()->create(['usertype' => 'seller']);
         PartnerApplication::create(['user_id' => $seller->id, 'role' => 'seller', 'details' => ['tin' => '234-567-890-000'], 'address' => [], 'documents' => [], 'terms_accepted_at' => now(), 'privacy_accepted_at' => now()]);
-        $this->invalid('tin', ['234-567-890-000']);
+        $this->invalid('tin', ['234-567-890-000', '234567890000', '234 567 890 000']);
+    }
+
+    public static function equivalent_tin_formats(): array
+    {
+        return ['digits only' => ['345678901000'], 'outer spaces' => [' 345-678-901-000 '],
+            'spaced groups' => ['345 678 901 000'], 'copied nonbreaking hyphens' => ["345\u{2011}678\u{2011}901\u{2011}000"]];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('equivalent_tin_formats')]
+    public function test_equivalent_tin_formats_are_saved_canonically(string $tin): void
+    {
+        $this->submit(array_replace($this->payload(), ['tin' => $tin]))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('logistics_registrations', ['tin' => '345-678-901-000']);
+        $application = PartnerApplication::sole();
+        $this->assertSame('345-678-901-000', $application->details['tin']);
     }
 
     public function test_tc_log_027_address_parent_validation(): void

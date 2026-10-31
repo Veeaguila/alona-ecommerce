@@ -141,12 +141,13 @@ class EcommerceSortingIntegrationTest extends TestCase
         $this->postJson("/api/rider/deliveries/{$parcel->id}/upload-proof", [
             'file' => UploadedFile::fake()->image('proof.jpg'), 'type' => 'PHOTO',
         ])->assertCreated();
-        $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver")->assertOk();
+        $this->postJson("/api/rider/deliveries/{$parcel->id}/deliver", ['otp' => $this->deliveryOtp($parcel->id)])->assertOk();
         $this->assertSame('delivered', $item->fresh()->status);
         $this->assertSame('pending', $second->fresh()->status);
         $this->assertSame('pending', $item->order->fresh()->status);
         $this->assertNotNull($parcel->fresh()->delivered_at);
-        $this->assertSame(3, $item->statusHistories()->count());
+        $this->assertSame(9, $item->statusHistories()->count());
+        $this->assertSame(1, $item->statusHistories()->where('note', 'like', 'Pickup Rider assigned to %')->count());
         $this->assertSame(3, BuyerNotification::where('user_id', $item->order->user_id)->count());
         $proof = $parcel->deliveryProofs()->firstOrFail();
         Storage::disk('local')->assertExists($proof->file_path);

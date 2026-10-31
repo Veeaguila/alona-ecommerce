@@ -1,5 +1,10 @@
 # Sorting-center integration
 
+Company-owned physical hubs and directed transport routes are prepared separately
+from the legacy company/sorting-center account. See [Hub network setup](LOGISTICS_HUB_NETWORK.md)
+for the migration review, explicit booking activation, transfer workflow and limits.
+Existing coverage cities are not automatically converted into physical hubs.
+
 Imported from `C:\Users\user\Logistics`, following its `docs/PICKUP_INTEGRATION.md`.
 
 ## Entry points and compatibility
