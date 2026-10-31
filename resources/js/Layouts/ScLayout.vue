@@ -447,6 +447,7 @@ export default {
       { label: 'Overview', items: [navItems[0]] },
       { label: 'Operations', items: [hubWorkspace, navItems[1], navItems[2], navItems[3], navItems[8], navItems[9], navItems[10], navItems[4], navItems[5], navItems[6]] },
       { label: 'Staff access', items: [{ path: '/sorting-center/hub-staff', label: 'Hub staff', key: 'rider-management' }] },
+      { label: 'Finance', items: [{ path: '/sorting-center/payouts', label: 'Rider payouts', key: 'payouts' }] },
       { label: 'Communication', items: [navItems[7]] },
     ];
 

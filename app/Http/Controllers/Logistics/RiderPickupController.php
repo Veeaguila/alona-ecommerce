@@ -157,7 +157,8 @@ class RiderPickupController extends Controller
     {
         $riderId = $request->user()->rider?->id;
 
-        $parcel = DB::transaction(function () use ($parcelId, $riderId): Parcel {
+        $parcel = DB::transaction(function () use ($parcelId, $riderId, $request): Parcel {
+            app(\App\Services\RiderJobPay::class)->groupedMembers($parcelId, (int) $request->user()->rider->sorting_center_id);
             app(\App\Services\SellerShipmentFinance::class)->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
 

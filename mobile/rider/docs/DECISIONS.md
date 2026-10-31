@@ -19,3 +19,19 @@ to ALONA docs/DELIVERY_FINANCE.md for the authoritative boundary.
 
 Older imported audits describe the upstream commit, not current schema observations,
 source locations or test counts. Use CURRENT_STATE and current integration bundle.
+
+## 31 October 2026 — Shipment jobs and manual grouped payroll
+
+User explicitly selected per-Seller-shipment pickup/delivery work after the
+PocketFinds source comparison (reference commit ca70ed1), keeping transfer pay once
+per complete explicit manifest. Laravel snapshots owner-configured future rates;
+none are assumed. Pickup needs all physical receipts and delivery all proof/OTP
+completions. Grouped manual payouts reserve earned jobs and record private proof,
+reference and recipient instructions; the Rider confirms actual receipt. Company
+payroll funds this policy; COD and historical Seller-funded records stay separate.
+This keeps one batch payment for many jobs without inventing a wallet or a provider
+transfer. Exceptions/subsidies/settlements remain separate policy. Migration rollout,
+real payments and numeric-rate approval remain operator responsibilities.
+Follow-up handover fix: this remains one unfinished shipment job. Both Rider
+acknowledgments and Logistics confirmation continue its existing rate/revision for
+the receiving custodian; they do not generate another rate or rewrite earned pay.

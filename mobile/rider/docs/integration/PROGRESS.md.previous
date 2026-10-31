@@ -1,6 +1,6 @@
 # Integration progress
 
-Checkpoint: 2026-10-29T12:02:15.058Z
+Checkpoint: 2026-10-30T20:42:46.470Z
 
 ALONA is the single backend and database. Phase definitions below supersede the earlier six-phase outline.
 
@@ -16,32 +16,29 @@ ALONA is the single backend and database. Phase definitions below supersede the 
 | 8 | Chat, Account Management, Notifications | COMPLETED |
 | 9 | API Errors and Security | COMPLETED |
 | 10 | Testing and Final Review | SOURCE, MEMORY HTTP AND COMPILED BROWSER VERIFIED; ANDROID TOOLCHAIN / TARGET ROLLOUT PENDING |
+| 11 | Seller-shipment earnings and grouped manual company payroll | SOURCE, MEMORY TESTS AND COMPILED BROWSER VERIFIED; OWNER RATES / TARGET SCHEMA / DEVICE ACCEPTANCE PENDING |
 
 Completed
 
-- Phases1-9 integration contracts remain implemented; no unnecessary rewrites of completed API/address/authentication work.
-- All223 upstream files imported from Veeaguila/rider commit0ea8018db81287d82981c17b10d5551c7750dd2e as ordinary ALONA mobile/rider source; no nested Git or submodule.
-- Teammate interface preserved with real pickup decline, enum failure outcomes, retry/RTS detail gates, honest missing data, validated handovers and accessible actions.
-- Observed duplicate-tap navigation/conflict issue and IndexedStack stale assignment issue fixed with regression tests and final compiled browser acceptance.
-- Actual checkout fixture covers Buyer cart placement, Seller preparation, Logistics acceptance/manual dispatch/arrival/sort/assignment, two Rider legs, photo/OTP, physical RTS/restock, store pickup and separate COD evidence.
-- Buyer activity DTO merges recorded parent/item events without same-minute suppression and supplies timezone-explicit dates; final browser screenshot confirms full preparation-to-delivery log.
-- 947 initial backend coverage expanded to948 current passing tests/56,958 assertions; category fixture collisions and explicit empty draft weight corrected without changing production rules.
-- Final Rider123, frontend123 and helper7 tests passed; final Flutter analyzer clean; profile web build and actual full browser journey passed. No browser JavaScript errors.
-- Existing source files all retained; .env, Git index/HEAD and preserved sibling Rider source hashes unchanged. No commit/push/reset or application migration performed.
-- Safe parent verifier scripts/verify-system.cjs, mobile guidance, provenance, architecture/current memory and ORDER_FLOW_REVIEW report are ready for review.
-- TEAMMATE_AI_HANDOFF.md guides source synchronization, actual-schema/ledger comparison, private backup/copy rehearsal, only compatible pending deltas, locked dependency/mobile setup and memory-only verification.
-- docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json fingerprints all99 migrations with LF-normalized SHA-256 and identifies the four additions,15 created tables and nullable Rider/order-item hub columns. No application migration was executed.
-- docs/TEAMMATE_AI_PROMPT.md contains the receiving-owner authorization text for their own local target; merely reading the handoff does not grant DB-write permission. Local commit publishing/push remains separate.
+- Phases1-10 shared backend/teammate imports and Buyer/Seller/Logistics/Rider operational integration remain complete within recorded native/live limitations; no reimplementation or source loss.
+- Earlier Buyer OTP/Google security, canonical checkout/review/voucher/cart/reorder/chat and mobile lifecycle fixes preserved. Original Buyer/Logistics/Rider themes/assets retained.
+- Confirmed per-Seller-shipment pay snapshots approved future rates; pickup/delivery require all physical receipts/proof/OTP; transfer pays once after all explicit manifest parcels arrive.
+- Web and Logistics mobile owner payroll provide rate setup/review/grouping/actual proof-reference payment/unsent cancellation; Rider My Earnings provides own instructions/history/actual-receipt acknowledgement. Historical Seller-funded and COD ledgers stay separate.
+- Final full backend 994 tests/57512 assertions, frontend129/helper7 PASS. Rider127 full tests then16 affected final tests PASS; combined Flutter50 PASS. Both analyzers clean, both profile web builds and Vite production build PASS.
+- Actual compiled Buyer order through Seller/Logistics/Rider delivery and receipt then owner web payout and compiled Rider acknowledgement; Logistics mobile sees same payment total. Browser1/18 PASS, no JS errors; synthetic only, no real payment.
+- All148 upstream combined-mobile source files retained and original assets/theme unchanged. Original99 migration fingerprints unchanged;100-file manifest includes six empty payroll tables plus one nullable transfer FK. Teammate handoff/prompt/memory updated; no application migration, commit, push or deployment.
 
 Remaining
 
+- Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.
+- Complete upstream missing native launcher/icon assets, Android/iOS packaging, gallery/camera/signing and actual-device acceptance. Compiled web is not native release certification.
+- Company configuration, onboarding, exports and full document/PDF review continue in the existing web portal; not every admin page has a native counterpart.
 - Repair incomplete local Android NDK28.2.13676358 through the intended SDK toolchain, then verify APK/native camera/scanner/GPS/lifecycle. iOS requires its platform tooling. No native success is claimed.
 - Team must configure real release application identity/signing and deployed HTTPS API/CORS/upload/mail settings; upstream placeholders are not release configuration.
 - Compare teammates actual schema and migration ledger and rehearse reviewed pending incremental migrations on an approved copy. No full database replacement or automatic application migration.
 - Verify real company hubs, directed routes, staff/Rider coverage and scheduler before enabling required checkout routing; no fake runtime setup was created.
-- Buyer-funded shipping has no newly defined Rider earnings allocation; keep historical seller-funded ledgers separate and obtain actual compensation/refund-execution rules before implementing them.
+- Company owner must supply/fund actual approved rates after schema rollout. Shipping-revenue/subsidy/expense/Seller-settlement, disputed/RTS compensation and actual refund execution are separate policy; never infer a company profit/wallet or COD offset.
 - Real operational acceptance, actual-engine contention/locking and external payment/email/device behavior remain outside isolated test proof.
-- Latest user explicitly authorized the complete reviewed local commit. Git log/HEAD is authoritative for the resulting commit; the private .local/team-release receipt records execution. Do not automatically repeat this commit or push.
 - The author must explicitly authorize/push the release before teammates can fetch this new branch state. Receiving owners can use docs/TEAMMATE_AI_PROMPT.md for a bounded local existing-schema upgrade; target production/shared writes require separate owner authorization.
 
 Evidence and limitations: see CHECKPOINT.md and existing ../CURRENT_STATE.md.

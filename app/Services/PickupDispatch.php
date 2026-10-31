@@ -16,6 +16,7 @@ class PickupDispatch
 
     public function members(int $parcelId, int $centerId): Collection
     {
+        if ($group = app(RiderJobPay::class)->groupedMembers($parcelId, $centerId, 'pickup')) return $group;
         $shipment = app(SellerShipmentFinance::class)->lockParcel($parcelId);
         $parcel = Parcel::where('sorting_center_id', $centerId)->whereKey($parcelId)->lockForUpdate()->firstOrFail();
         if (!$shipment) return new Collection([$parcel]);
@@ -32,6 +33,7 @@ class PickupDispatch
         return app(RiderAllocation::class)->run([$riderId, $fromId], function () use ($actor, $centerId, $parcelId, $riderId, $fromId, $reason, $claim) {
             return DB::transaction(function () use ($actor, $centerId, $parcelId, $riderId, $fromId, $reason, $claim) {
                 $members = $this->members($parcelId, $centerId);
+                $payGroup = app(RiderJobPay::class)->groupedMembers($parcelId, $centerId, 'pickup');
                 $parcel = $members->firstWhere('id', $parcelId);
                 abort_unless($parcel, 422, 'The requested item is no longer an active shipment member.');
                 if ($fromId) abort_unless(Rider::where('sorting_center_id', $centerId)->whereKey($fromId)->exists(), 422, 'The previous Rider does not belong to this Logistics organization.');
@@ -87,6 +89,7 @@ class PickupDispatch
                             'data' => ['screen' => 'pickups', 'parcel_id' => $member->id]]);
                     }
                 }
+                app(RiderJobPay::class)->assign($parcel->fresh(), $riderId, 'pickup', $actor, $payGroup);
                 return $parcel->fresh(['pickupRequests.seller:id,name,email']);
             }, 5);
         });

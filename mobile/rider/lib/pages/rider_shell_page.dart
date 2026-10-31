@@ -4,7 +4,7 @@ import '../services/rider_session.dart';
 import '../widgets/rider_bottom_nav.dart';
 import 'delivery_dashboard_page.dart';
 import 'pickup_dashboard_page.dart';
-import 'profit_dashboard_page.dart';
+import 'job_earnings_page.dart';
 import 'rider_portal_page.dart';
 
 class RiderShellPage extends StatefulWidget {
@@ -31,7 +31,7 @@ class _RiderShellPageState extends State<RiderShellPage> {
     final pages = [
       PickupDashboardPage(session: widget.session, active: _currentTab == 0),
       DeliveryDashboardPage(session: widget.session, active: _currentTab == 1),
-      ProfitDashboardPage(session: widget.session),
+      JobEarningsPage(session: widget.session, active: _currentTab == 2),
       RiderChatPage(session: widget.session),
       RiderAccountPage(session: widget.session),
     ];

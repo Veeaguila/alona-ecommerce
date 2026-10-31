@@ -1,8 +1,8 @@
 {
-  "phase": 10,
-  "task": "Teammate handoff prepared and validated; local commit explicitly authorized",
-  "lastCompleted": "AI-readable upgrade handoff, copyable bounded local-upgrade prompt and complete99-migration fingerprint manifest prepared; four release additions/15 new tables verified against pre-release HEAD.",
-  "lastVerified": "948 backend tests/56,958 assertions across all124 test files and affected reruns; Rider123, frontend123, helper7; clean analyzer, final web build and full browser checkout-to-delivery PASS. Handoff manifest checksums/base-diff/links and credential/generated-file candidate audit PASS; .env unchanged.",
+  "phase": 11,
+  "task": "Validation completed",
+  "lastCompleted": "Implemented per-Seller-shipment pickup/delivery pay, complete transfer manifests and grouped manual payroll across web/Rider/Logistics mobile; preserved designs, COD, historical ledgers and existing edits. Post-shutdown integrity verified; all saved source and existing edits preserved.",
+  "lastVerified": "alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs passed",
   "phases": [
     {
       "number": 1,
@@ -53,31 +53,32 @@
       "number": 10,
       "name": "Testing and Final Review",
       "status": "SOURCE, MEMORY HTTP AND COMPILED BROWSER VERIFIED; ANDROID TOOLCHAIN / TARGET ROLLOUT PENDING"
+    },
+    {
+      "number": 11,
+      "name": "Seller-shipment earnings and grouped manual company payroll",
+      "status": "SOURCE, MEMORY TESTS AND COMPILED BROWSER VERIFIED; OWNER RATES / TARGET SCHEMA / DEVICE ACCEPTANCE PENDING"
     }
   ],
   "completed": [
-    "Phases1-9 integration contracts remain implemented; no unnecessary rewrites of completed API/address/authentication work.",
-    "All223 upstream files imported from Veeaguila/rider commit0ea8018db81287d82981c17b10d5551c7750dd2e as ordinary ALONA mobile/rider source; no nested Git or submodule.",
-    "Teammate interface preserved with real pickup decline, enum failure outcomes, retry/RTS detail gates, honest missing data, validated handovers and accessible actions.",
-    "Observed duplicate-tap navigation/conflict issue and IndexedStack stale assignment issue fixed with regression tests and final compiled browser acceptance.",
-    "Actual checkout fixture covers Buyer cart placement, Seller preparation, Logistics acceptance/manual dispatch/arrival/sort/assignment, two Rider legs, photo/OTP, physical RTS/restock, store pickup and separate COD evidence.",
-    "Buyer activity DTO merges recorded parent/item events without same-minute suppression and supplies timezone-explicit dates; final browser screenshot confirms full preparation-to-delivery log.",
-    "947 initial backend coverage expanded to948 current passing tests/56,958 assertions; category fixture collisions and explicit empty draft weight corrected without changing production rules.",
-    "Final Rider123, frontend123 and helper7 tests passed; final Flutter analyzer clean; profile web build and actual full browser journey passed. No browser JavaScript errors.",
-    "Existing source files all retained; .env, Git index/HEAD and preserved sibling Rider source hashes unchanged. No commit/push/reset or application migration performed.",
-    "Safe parent verifier scripts/verify-system.cjs, mobile guidance, provenance, architecture/current memory and ORDER_FLOW_REVIEW report are ready for review.",
-    "TEAMMATE_AI_HANDOFF.md guides source synchronization, actual-schema/ledger comparison, private backup/copy rehearsal, only compatible pending deltas, locked dependency/mobile setup and memory-only verification.",
-    "docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json fingerprints all99 migrations with LF-normalized SHA-256 and identifies the four additions,15 created tables and nullable Rider/order-item hub columns. No application migration was executed.",
-    "docs/TEAMMATE_AI_PROMPT.md contains the receiving-owner authorization text for their own local target; merely reading the handoff does not grant DB-write permission. Local commit publishing/push remains separate."
+    "Phases1-10 shared backend/teammate imports and Buyer/Seller/Logistics/Rider operational integration remain complete within recorded native/live limitations; no reimplementation or source loss.",
+    "Earlier Buyer OTP/Google security, canonical checkout/review/voucher/cart/reorder/chat and mobile lifecycle fixes preserved. Original Buyer/Logistics/Rider themes/assets retained.",
+    "Confirmed per-Seller-shipment pay snapshots approved future rates; pickup/delivery require all physical receipts/proof/OTP; transfer pays once after all explicit manifest parcels arrive.",
+    "Web and Logistics mobile owner payroll provide rate setup/review/grouping/actual proof-reference payment/unsent cancellation; Rider My Earnings provides own instructions/history/actual-receipt acknowledgement. Historical Seller-funded and COD ledgers stay separate.",
+    "Final full backend 994 tests/57512 assertions, frontend129/helper7 PASS. Rider127 full tests then16 affected final tests PASS; combined Flutter50 PASS. Both analyzers clean, both profile web builds and Vite production build PASS.",
+    "Actual compiled Buyer order through Seller/Logistics/Rider delivery and receipt then owner web payout and compiled Rider acknowledgement; Logistics mobile sees same payment total. Browser1/18 PASS, no JS errors; synthetic only, no real payment.",
+    "All148 upstream combined-mobile source files retained and original assets/theme unchanged. Original99 migration fingerprints unchanged;100-file manifest includes six empty payroll tables plus one nullable transfer FK. Teammate handoff/prompt/memory updated; no application migration, commit, push or deployment."
   ],
   "remaining": [
+    "Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.",
+    "Complete upstream missing native launcher/icon assets, Android/iOS packaging, gallery/camera/signing and actual-device acceptance. Compiled web is not native release certification.",
+    "Company configuration, onboarding, exports and full document/PDF review continue in the existing web portal; not every admin page has a native counterpart.",
     "Repair incomplete local Android NDK28.2.13676358 through the intended SDK toolchain, then verify APK/native camera/scanner/GPS/lifecycle. iOS requires its platform tooling. No native success is claimed.",
     "Team must configure real release application identity/signing and deployed HTTPS API/CORS/upload/mail settings; upstream placeholders are not release configuration.",
     "Compare teammates actual schema and migration ledger and rehearse reviewed pending incremental migrations on an approved copy. No full database replacement or automatic application migration.",
     "Verify real company hubs, directed routes, staff/Rider coverage and scheduler before enabling required checkout routing; no fake runtime setup was created.",
-    "Buyer-funded shipping has no newly defined Rider earnings allocation; keep historical seller-funded ledgers separate and obtain actual compensation/refund-execution rules before implementing them.",
+    "Company owner must supply/fund actual approved rates after schema rollout. Shipping-revenue/subsidy/expense/Seller-settlement, disputed/RTS compensation and actual refund execution are separate policy; never infer a company profit/wallet or COD offset.",
     "Real operational acceptance, actual-engine contention/locking and external payment/email/device behavior remain outside isolated test proof.",
-    "Latest user explicitly authorized the complete reviewed local commit. Git log/HEAD is authoritative for the resulting commit; the private .local/team-release receipt records execution. Do not automatically repeat this commit or push.",
     "The author must explicitly authorize/push the release before teammates can fetch this new branch state. Receiving owners can use docs/TEAMMATE_AI_PROMPT.md for a bounded local existing-schema upgrade; target production/shared writes require separate owner authorization."
   ],
   "flutterFiles": [
@@ -297,7 +298,10 @@
     "windows/runner/utils.cpp",
     "windows/runner/utils.h",
     "windows/runner/win32_window.cpp",
-    "windows/runner/win32_window.h"
+    "windows/runner/win32_window.h",
+    "lib/pages/job_earnings_page.dart",
+    "lib/services/rider_job_pay_api.dart",
+    "test/job_earnings_test.dart"
   ],
   "laravelFiles": [
     ".agents/architecture/architecture.md",
@@ -1045,7 +1049,194 @@
     "tests/frontend/logistics-session.test.mjs",
     "tests/frontend/onboarding.test.mjs",
     "tests/frontend/workbook-readiness.test.mjs",
-    "vite.config.js"
+    "vite.config.js",
+    "tests/Feature/BuyerMobileCheckoutTest.php",
+    "docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md",
+    "tests/Feature/BuyerMobileParityTest.php",
+    "tests/Feature/BuyerMobileAuthSecurityTest.php",
+    "app/Services/ConversationOrderAccess.php",
+    "mobile/alona_mobile/.gitignore",
+    "mobile/alona_mobile/.metadata",
+    "mobile/alona_mobile/AGENTS.md",
+    "mobile/alona_mobile/README.md",
+    "mobile/alona_mobile/analysis_options.yaml",
+    "mobile/alona_mobile/android/.gitignore",
+    "mobile/alona_mobile/android/app/build.gradle.kts",
+    "mobile/alona_mobile/android/app/src/debug/AndroidManifest.xml",
+    "mobile/alona_mobile/android/app/src/main/AndroidManifest.xml",
+    "mobile/alona_mobile/android/app/src/main/kotlin/online/shopalona/alona_mobile/MainActivity.kt",
+    "mobile/alona_mobile/android/app/src/main/res/drawable-v21/launch_background.xml",
+    "mobile/alona_mobile/android/app/src/main/res/drawable/launch_background.xml",
+    "mobile/alona_mobile/android/app/src/main/res/values-night/styles.xml",
+    "mobile/alona_mobile/android/app/src/main/res/values/styles.xml",
+    "mobile/alona_mobile/android/app/src/profile/AndroidManifest.xml",
+    "mobile/alona_mobile/android/build.gradle.kts",
+    "mobile/alona_mobile/android/gradle.properties",
+    "mobile/alona_mobile/android/gradle/wrapper/gradle-wrapper.properties",
+    "mobile/alona_mobile/android/settings.gradle.kts",
+    "mobile/alona_mobile/assets/fonts/Figtree-Black.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-Bold.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-ExtraBold.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-Light.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-Medium.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-Regular.ttf",
+    "mobile/alona_mobile/assets/fonts/Figtree-SemiBold.ttf",
+    "mobile/alona_mobile/assets/fonts/OFL.txt",
+    "mobile/alona_mobile/assets/images/Alogo.png",
+    "mobile/alona_mobile/assets/images/alona-icon.png",
+    "mobile/alona_mobile/assets/images/alona.png",
+    "mobile/alona_mobile/docs/ARCHITECTURE.md",
+    "mobile/alona_mobile/docs/CURRENT_STATE.md",
+    "mobile/alona_mobile/docs/LOGISTICS_PARITY.md",
+    "mobile/alona_mobile/docs/PROJECT_CONTEXT.md",
+    "mobile/alona_mobile/docs/UPSTREAM.md",
+    "mobile/alona_mobile/ios/.gitignore",
+    "mobile/alona_mobile/ios/Flutter/AppFrameworkInfo.plist",
+    "mobile/alona_mobile/ios/Flutter/Debug.xcconfig",
+    "mobile/alona_mobile/ios/Flutter/Release.xcconfig",
+    "mobile/alona_mobile/ios/Runner.xcodeproj/project.pbxproj",
+    "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+    "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+    "mobile/alona_mobile/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+    "mobile/alona_mobile/ios/Runner.xcworkspace/contents.xcworkspacedata",
+    "mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    "mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+    "mobile/alona_mobile/ios/Runner/AppDelegate.swift",
+    "mobile/alona_mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+    "mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+    "mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md",
+    "mobile/alona_mobile/ios/Runner/Base.lproj/LaunchScreen.storyboard",
+    "mobile/alona_mobile/ios/Runner/Base.lproj/Main.storyboard",
+    "mobile/alona_mobile/ios/Runner/Info.plist",
+    "mobile/alona_mobile/ios/Runner/Runner-Bridging-Header.h",
+    "mobile/alona_mobile/ios/Runner/SceneDelegate.swift",
+    "mobile/alona_mobile/ios/RunnerTests/RunnerTests.swift",
+    "mobile/alona_mobile/lib/core/config/api_config.dart",
+    "mobile/alona_mobile/lib/core/config/app_theme.dart",
+    "mobile/alona_mobile/lib/core/network/api_client.dart",
+    "mobile/alona_mobile/lib/core/services/auth_state.dart",
+    "mobile/alona_mobile/lib/core/services/session_store.dart",
+    "mobile/alona_mobile/lib/core/utils/currency_formatter.dart",
+    "mobile/alona_mobile/lib/core/utils/date_formatter.dart",
+    "mobile/alona_mobile/lib/core/utils/request_key.dart",
+    "mobile/alona_mobile/lib/features/buyer/models/buyer_models.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_login_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_otp_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_register_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/buyer_main_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/cart/cart_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/categories/buyer_categories_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/checkout/checkout_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/checkout/order_confirmation_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/home/buyer_home_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/flash_sales_widget.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/hero_banner_carousel.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/product_card.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_chat_detail_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_conversations_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/notifications/notifications_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/orders/delivery_otp_dialog.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/orders/order_detail_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/orders/order_list_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/products/product_detail_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/products/product_list_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/profile/address_management_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/profile/buyer_profile_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/store/buyer_store_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/vouchers/vouchers_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/presentation/wishlist/wishlist_screen.dart",
+    "mobile/alona_mobile/lib/features/buyer/services/buyer_service.dart",
+    "mobile/alona_mobile/lib/features/logistics/models/logistics_models.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/assignment/rider_assignment_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/auth/logistics_login_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/cod/cod_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/dashboard/logistics_dashboard_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/hubs/hub_workspace_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/incoming/incoming_parcels_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/logistics_access_gate.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/logistics_main_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/monitoring/delivery_monitoring_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/operations/parcel_operations_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/outbound/outbound_parcels_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/payroll/rider_payouts_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/pickups/pickup_requests_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/proofs/proof_review_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/proofs/protected_proof_image.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/reports/logistics_reports_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/returns/returns_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/riders/rider_management_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/sorting/parcel_sorting_screen.dart",
+    "mobile/alona_mobile/lib/features/logistics/presentation/workflow_widgets.dart",
+    "mobile/alona_mobile/lib/features/logistics/services/logistics_service.dart",
+    "mobile/alona_mobile/lib/main.dart",
+    "mobile/alona_mobile/lib/shared/widgets/alona_button.dart",
+    "mobile/alona_mobile/lib/shared/widgets/alona_text_field.dart",
+    "mobile/alona_mobile/lib/shared/widgets/empty_state_view.dart",
+    "mobile/alona_mobile/lib/shared/widgets/network_image_box.dart",
+    "mobile/alona_mobile/lib/shared/widgets/status_badge.dart",
+    "mobile/alona_mobile/linux/.gitignore",
+    "mobile/alona_mobile/linux/CMakeLists.txt",
+    "mobile/alona_mobile/linux/flutter/CMakeLists.txt",
+    "mobile/alona_mobile/linux/flutter/generated_plugin_registrant.cc",
+    "mobile/alona_mobile/linux/flutter/generated_plugin_registrant.h",
+    "mobile/alona_mobile/linux/flutter/generated_plugins.cmake",
+    "mobile/alona_mobile/linux/runner/CMakeLists.txt",
+    "mobile/alona_mobile/linux/runner/main.cc",
+    "mobile/alona_mobile/linux/runner/my_application.cc",
+    "mobile/alona_mobile/linux/runner/my_application.h",
+    "mobile/alona_mobile/macos/.gitignore",
+    "mobile/alona_mobile/macos/Flutter/Flutter-Debug.xcconfig",
+    "mobile/alona_mobile/macos/Flutter/Flutter-Release.xcconfig",
+    "mobile/alona_mobile/macos/Flutter/GeneratedPluginRegistrant.swift",
+    "mobile/alona_mobile/macos/Runner.xcodeproj/project.pbxproj",
+    "mobile/alona_mobile/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    "mobile/alona_mobile/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+    "mobile/alona_mobile/macos/Runner.xcworkspace/contents.xcworkspacedata",
+    "mobile/alona_mobile/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    "mobile/alona_mobile/macos/Runner/AppDelegate.swift",
+    "mobile/alona_mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+    "mobile/alona_mobile/macos/Runner/Base.lproj/MainMenu.xib",
+    "mobile/alona_mobile/macos/Runner/Configs/AppInfo.xcconfig",
+    "mobile/alona_mobile/macos/Runner/Configs/Debug.xcconfig",
+    "mobile/alona_mobile/macos/Runner/Configs/Release.xcconfig",
+    "mobile/alona_mobile/macos/Runner/Configs/Warnings.xcconfig",
+    "mobile/alona_mobile/macos/Runner/DebugProfile.entitlements",
+    "mobile/alona_mobile/macos/Runner/Info.plist",
+    "mobile/alona_mobile/macos/Runner/MainFlutterWindow.swift",
+    "mobile/alona_mobile/macos/Runner/Release.entitlements",
+    "mobile/alona_mobile/macos/RunnerTests/RunnerTests.swift",
+    "mobile/alona_mobile/pubspec.lock",
+    "mobile/alona_mobile/pubspec.yaml",
+    "mobile/alona_mobile/scripts/check.cjs",
+    "mobile/alona_mobile/test/buyer_checkout_test.dart",
+    "mobile/alona_mobile/test/buyer_error_paths_test.dart",
+    "mobile/alona_mobile/test/flutter_test_config.dart",
+    "mobile/alona_mobile/test/logistics_contract_test.dart",
+    "mobile/alona_mobile/test/logistics_operations_test.dart",
+    "mobile/alona_mobile/test/logistics_workflow_test.dart",
+    "mobile/alona_mobile/test/rider_payouts_test.dart",
+    "mobile/alona_mobile/test/widget_test.dart",
+    "mobile/alona_mobile/web/index.html",
+    "mobile/alona_mobile/web/manifest.json",
+    "mobile/alona_mobile/windows/.gitignore",
+    "mobile/alona_mobile/windows/CMakeLists.txt",
+    "mobile/alona_mobile/windows/flutter/CMakeLists.txt",
+    "mobile/alona_mobile/windows/flutter/generated_plugin_registrant.cc",
+    "mobile/alona_mobile/windows/flutter/generated_plugin_registrant.h",
+    "mobile/alona_mobile/windows/flutter/generated_plugins.cmake",
+    "mobile/alona_mobile/windows/runner/CMakeLists.txt",
+    "mobile/alona_mobile/windows/runner/Runner.rc",
+    "mobile/alona_mobile/windows/runner/flutter_window.cpp",
+    "mobile/alona_mobile/windows/runner/flutter_window.h",
+    "mobile/alona_mobile/windows/runner/main.cpp",
+    "mobile/alona_mobile/windows/runner/resource.h",
+    "mobile/alona_mobile/windows/runner/resources/app_icon.ico",
+    "mobile/alona_mobile/windows/runner/runner.exe.manifest",
+    "mobile/alona_mobile/windows/runner/utils.cpp",
+    "mobile/alona_mobile/windows/runner/utils.h",
+    "mobile/alona_mobile/windows/runner/win32_window.cpp",
+    "mobile/alona_mobile/windows/runner/win32_window.h"
   ],
   "endpoints": [
     "POST /api/rider/register; POST /api/rider/login; POST /api/logistics/logout",
@@ -1059,28 +1250,45 @@
     "POST /api/rider/messages; POST /api/rider/messages/conversations/{id}",
     "Sorting operator: POST /api/sorting-center/riders/{id}/approve",
     "Sorting operator: POST /api/sorting-center/pickup-requests/{id}/confirm; POST /api/sorting-center/parcels/mark-arrived",
-    "Sorting operator: POST /api/sorting-center/parcels/{id}/sort; GET .../{id}/eligible-riders; POST .../{id}/assign"
+    "Sorting operator: POST /api/sorting-center/parcels/{id}/sort; GET .../{id}/eligible-riders; POST .../{id}/assign",
+    "POST /api/buyer/checkout/preview and /api/buyer/orders: canonical quote/booking; reviewed prices,shipping,total and request UUID required.",
+    "GET /api/buyer/orders/{order}/parcels/{parcel}/delivery-otp; POST matching /renew: owning approved verified Buyer, no-store; shared existing OTP controller.",
+    "GET /api/rider/job-pay; POST /job-pay/destinations; own payouts/details/private proof/acknowledge",
+    "GET /api/sorting-center/payroll; PUT /payroll/settings; GET /payroll/riders/{id}/review",
+    "POST /api/sorting-center/payroll/payouts; own company details/pay/cancel/private proof",
+    "GET|POST /api/sorting-center/payroll/trips; GET /sorting-center/payouts"
   ],
   "tests": [
-    "Backend:948 PASS,56,958 assertions across all124 test files in11 independent memory batches plus focused updated Buyer/checkout reruns; .local/rider-flow-review/evidence-summary.json.",
-    "Buyer affected regression batch78 PASS/911 assertions; actual checkout4 PASS/168; full browser1 PASS/11. Browser actual Vue/Blade/Inertia plus compiled Flutter and real API logins; memory-only synthetic users.",
-    "Rider complete123 PASS; Flutter analyzer no issues; final profile web build PASS; .local/rider-flow-review/{rider-test,rider-analyze,rider-web}.txt.",
-    "Frontend123 PASS; imported checkpoint helper7 PASS; .local/system-verification/.",
-    "Android debug build FAIL due incomplete local NDK source.properties, before native app compilation; .local/rider-flow-review/rider-apk.txt.",
-    "Preservation PASS: no existing source paths removed; env/index/HEAD/sibling source unchanged. Generated platform registrant differences are line endings only; locked dependencies unchanged."
+    "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only => FAIL/UNKNOWN; log .recovery\\logs\\1793383894399-alona.txt",
+    "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only => PASS; log .recovery\\logs\\1793384038631-alona.txt",
+    "alona: node .local/mobile-repo-inspection/pay-final-check.cjs => FAIL/UNKNOWN; log .recovery\\logs\\1793390964213-alona.txt",
+    "alona: node .local/mobile-repo-inspection/pay-final-check.cjs => PASS; log .recovery\\logs\\1793391297200-alona.txt",
+    "Full backend 994/57512, helper7 PASS. Initial concurrent frontend128/129 timed out in Vite security test; isolated security and complete serial frontend129 rerun PASS; preserve both receipts.",
+    "Rider127 full tests then16 affected final tests PASS; clean analyzer. Combined Flutter50 PASS; clean analyzer. Both profile web builds and Vite production build PASS.",
+    "Compiled payroll browser1/18 PASS; no JS errors, same payment across owner web/Logistics mobile/Rider; private synthetic receipts under .local/mobile-repo-inspection.",
+    "alona: node .local/mobile-repo-inspection/power-loss-check.cjs => PASS; log .recovery\\logs\\1793391521890-alona.txt",
+    "Post-shutdown checkpoint/source hashes match the completed baseline; fresh memory payroll14/240 and web/helper12 PASS, source/design100 migration fingerprints and compiled artifacts verified; no application source repair or database access.",
+    "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php => FAIL/UNKNOWN; log .recovery\\logs\\1793391876631-alona.txt",
+    "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php tests/Feature/Logistics/SupervisedHandoverTest.php => PASS; log .recovery\\logs\\1793391975132-alona.txt",
+    "alona: node .local/mobile-repo-inspection/review-mobile-check.cjs => FAIL/UNKNOWN; log .recovery\\logs\\1793392127747-alona.txt",
+    "alona: node .local/mobile-repo-inspection/review-mobile-check.cjs => PASS; log .recovery\\logs\\1793392263279-alona.txt",
+    "alona: node .local/mobile-repo-inspection/review-release.cjs => PASS; log .recovery\\logs\\1793392840168-alona.txt",
+    "alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs => PASS; log .recovery\\logs\\1793392966453-alona.txt"
   ],
   "issues": [
+    "Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.",
+    "Imported native launcher/icon PNGs are absent; platform resources and device packaging remain pending.",
     "Android debug build failed with CXX1101: installed NDK28.2.13676358 lacks source.properties. No SDK deletion or project-version workaround performed.",
     "Teammates actual schema not supplied/certified; last recorded local staff migration was pending. This review did not requery or mutate shared/development databases.",
     "Existing chronological fresh MySQL bootstrap has order_items/product_variants foreign-key ordering risk; no existing migration file changed to conceal it.",
     "SQLite memory proves contracts/rollback, not MySQL contention or live deployment. Required real-device, SMTP, native signing and actual-operator acceptance remain pending.",
-    "Rider notices remain best-effort after-commit without durable replay/background push; existing finance rules and limits are unchanged.",
+    "Rider notices remain best-effort after-commit without durable replay/background push. New opt-in job payroll is separate from the preserved historical Seller-funded ledger; actual rates/funding/rollout remain operator-controlled.",
     "Earlier imported audit/database/test-count documents are historical. Current source, ORDER_FLOW_REVIEW.md and active integration bundle take precedence."
   ],
   "operations": [],
-  "next": "Inspect Git HEAD/log for the explicitly authorized local commit and use TEAMMATE_AI_HANDOFF.md / docs/TEAMMATE_AI_PROMPT.md. No automatic push or database change. Native NDK and target-schema rollout limits remain.",
-  "event": "Teammate handoff preparation complete before authorized Git commit: all99 migration fingerprints verified against source, exact4 additions relative to c69d1ab,15 new tables; links and candidate privacy/artifact checks passed. Current request authorizes local staging/commit only. Prior partial index and patches retained privately; commit command and final result will be recorded privately without rewriting committed source.",
-  "id": "2026-10-29T12:02:15.058Z",
+  "next": "Repeat compiled order-to-payout journey with updated app; audit preserved source/design and finalize review evidence",
+  "event": "alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs passed",
+  "id": "2026-10-30T20:42:46.470Z",
   "projectPaths": {
     "rider": "C:\\Users\\user\\alona-ecommerce-integration\\mobile\\rider",
     "alona": "C:\\Users\\user\\alona-ecommerce-integration"
@@ -1089,14 +1297,14 @@
     "rider": {
       "tracked": true,
       "branch": "feature/logistics-completion",
-      "head": "c69d1ab",
-      "status": "M ../../.gitignore\n M ../../README.md\n M ../../app/Http/Controllers/AdminDeliveryZoneController.php\n M ../../app/Http/Controllers/Auth/AuthenticatedSessionController.php\n M ../../app/Http/Controllers/Auth/EmailVerificationNotificationController.php\n M ../../app/Http/Controllers/Auth/PasswordController.php\nA  ../../app/Http/Controllers/BuyerDeliveryOtpController.php\nMM ../../app/Http/Controllers/BuyerOrderController.php\nA  ../../app/Http/Controllers/Logistics/CodController.php\nM  ../../app/Http/Controllers/Logistics/DashboardController.php\n M ../../app/Http/Controllers/Logistics/IncomingParcelController.php\n M ../../app/Http/Controllers/Logistics/LoginSortingCenterController.php\nA  ../../app/Http/Controllers/Logistics/LogisticsClaimController.php\nAM ../../app/Http/Controllers/Logistics/OutboundParcelController.php\nMM ../../app/Http/Controllers/Logistics/ParcelAssignmentController.php\nA  ../../app/Http/Controllers/Logistics/ParcelHandoverController.php\nMM ../../app/Http/Controllers/Logistics/ParcelMonitoringController.php\nAM ../../app/Http/Controllers/Logistics/ParcelOperationsController.php\nM  ../../app/Http/Controllers/Logistics/ParcelSortingController.php\nAM ../../app/Http/Controllers/Logistics/PickupDispatchController.php\nA  ../../app/Http/Controllers/Logistics/PickupLocationController.php\nM  ../../app/Http/Controllers/Logistics/PickupRequestController.php\nM  ../../app/Http/Controllers/Logistics/ReportController.php\nA  ../../app/Http/Controllers/Logistics/ReturnToSellerController.php\nA  ../../app/Http/Controllers/Logistics/RiderCoverageController.php\nMM ../../app/Http/Controllers/Logistics/RiderDeliveryController.php\nMM ../../app/Http/Controllers/Logistics/RiderManagementController.php\nMM ../../app/Http/Controllers/Logistics/RiderPickupController.php\nA  ../../app/Http/Controllers/Logistics/RiderPresenceController.php\n M ../../app/Http/Controllers/LogisticsRegistrationController.php\nMM ../../app/Http/Controllers/PartnerProfileController.php\n M ../../app/Http/Controllers/SellerOrderController.php\nM  ../../app/Http/Controllers/SellerReturnController.php\n M ../../app/Http/Middleware/EnsureSortingCenterApproved.php\n M ../../app/Http/Requests/LogisticsRegistrationRequest.php\nA  ../../app/Models/CodCollection.php\nA  ../../app/Models/CodDiscrepancy.php\nA  ../../app/Models/CodRemittance.php\nA  ../../app/Models/LogisticsAuditEvent.php\n M ../../app/Models/OrderItem.php\nMM ../../app/Models/Parcel.php\nA  ../../app/Models/ParcelDeliveryAttempt.php\nA  ../../app/Models/ParcelHandover.php\nA  ../../app/Models/ParcelIncident.php\nA  ../../app/Models/ParcelReturn.php\nA  ../../app/Models/PickupOffer.php\n M ../../app/Models/Rider.php\nA  ../../app/Models/RiderDecisionAudit.php\nM  ../../app/Observers/RiderNotificationObserver.php\n M ../../app/Providers/AppServiceProvider.php\n M ../../app/Services/AccountDestination.php\nAM ../../app/Services/CheckoutServiceability.php\nA  ../../app/Services/CodLedger.php\nA  ../../app/Services/CodReport.php\nAM ../../app/Services/DeliveryAttempts.php\nAM ../../app/Services/DeliveryOtp.php\n M ../../app/Services/FooterService.php\nA  ../../app/Services/LogisticsAudit.php\nAM ../../app/Services/LogisticsParcelSummary.php\nA  ../../app/Services/LogisticsRefundReview.php\nA  ../../app/Services/LogisticsReportExport.php\nAM ../../app/Services/NearestPickupOffer.php\n M ../../app/Services/OrderItemPickup.php\nAM ../../app/Services/ParcelTrackingTimeline.php\nAM ../../app/Services/PickupDispatch.php\nA  ../../app/Services/PickupLocations.php\nA  ../../app/Services/ReleaseUncollectedPickups.php\nAM ../../app/Services/ReturnToSeller.php\nAM ../../app/Services/RiderAllocation.php\nA  ../../app/Services/RiderPresence.php\nA  ../../app/Services/RiderWorkload.php\nM  ../../app/Services/SellerParcelDelivery.php\nA  ../../app/Services/SupervisedHandover.php\n M ../../bootstrap/app.php\nA  ../../database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php\nA  ../../database/migrations/2026_10_20_120000_create_logistics_workflow_records.php\n M ../../docs/DELIVERY_FINANCE.md\n M ../../docs/DELIVERY_FINANCE_DEPLOYMENT.md\n M ../../docs/LOGISTICS_REGISTRATION_HANDOFF.md\n M ../../docs/SORTING_CENTER_INTEGRATION.md\nAM ../../docs/testing/results/LOGISTICS_TEST_PROGRESS.md\n M ../../resources/js/Components/AppFooter.vue\nA  ../../resources/js/Components/BuyerDeliveryOtp.vue\nA  ../../resources/js/Components/Logistics/CodCashPanel.vue\nA  ../../resources/js/Components/Logistics/CodDiscrepancyPanel.vue\nA  ../../resources/js/Components/Logistics/LogisticsClaimPanel.vue\nA  ../../resources/js/Components/Logistics/LogisticsReviewNotice.vue\nAM ../../resources/js/Components/Logistics/ParcelHandoverPanel.vue\nAM ../../resources/js/Components/Logistics/ParcelOperationsPanel.vue\nAM ../../resources/js/Components/Logistics/PickupDispatchPanel.vue\nA  ../../resources/js/Components/Logistics/ReturnToSellerPanel.vue\nA  ../../resources/js/Components/Logistics/SellerPickupLocation.vue\nA  ../../resources/js/Components/Logistics/SellerReturnReceipt.vue\nMM ../../resources/js/Layouts/ScLayout.vue\nM  ../../resources/js/Pages/Admin/Reports.vue\n M ../../resources/js/Pages/Admin/Settings.vue\n M ../../resources/js/Pages/Auth/LogisticsRegistration.vue\nMM ../../resources/js/Pages/Buyer/Checkout.vue\nMM ../../resources/js/Pages/Buyer/OrderDetails.vue\nM  ../../resources/js/Pages/Logistics/Dashboard.vue\nM  ../../resources/js/Pages/Logistics/DeliveryManagement.vue\nMM ../../resources/js/Pages/Logistics/DeliveryMonitoring.vue\nM  ../../resources/js/Pages/Logistics/DeliveryReports.vue\nMM ../../resources/js/Pages/Logistics/OrderManagement.vue\nM  ../../resources/js/Pages/Logistics/PickupRequestManagement.vue\nM  ../../resources/js/Pages/Logistics/RiderAssignment.vue\nA  ../../resources/js/Pages/Logistics/RiderManagement.vue\nM  ../../resources/js/Pages/Seller/OrderDetails.vue\nM  ../../resources/js/Pages/Seller/Returns.vue\nMM ../../resources/js/logistics.js\nA  ../../resources/views/sorting-center/rider-management.blade.php\nMM ../../routes/api.php\nM  ../../routes/buyer.php\n M ../../routes/console.php\nMM ../../routes/logistics.php\nM  ../../routes/seller.php\n M ../../tests/Feature/BuyerOrderTrackingTest.php\n M ../../tests/Feature/BuyerPaymentTest.php\n M ../../tests/Feature/BuyerStoreTest.php\n M ../../tests/Feature/ExampleTest.php\n M ../../tests/Feature/GuestMarketplaceTest.php\nA  ../../tests/Feature/Logistics/BatchOneAccessTest.php\nAM ../../tests/Feature/Logistics/BuyerOtpTest.php\nAM ../../tests/Feature/Logistics/CheckoutCoverageTest.php\nA  ../../tests/Feature/Logistics/CodLedgerTest.php\nA  ../../tests/Feature/Logistics/CompleteWorkflowTest.php\nA  ../../tests/Feature/Logistics/DashboardDateFilterTest.php\nM  ../../tests/Feature/Logistics/DashboardTest.php\nM  ../../tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php\nM  ../../tests/Feature/Logistics/EcommerceSortingIntegrationTest.php\nM  ../../tests/Feature/Logistics/IncomingParcelTest.php\n M ../../tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php\nAM ../../tests/Feature/Logistics/NearestPickupOfferTest.php\nA  ../../tests/Feature/Logistics/OutboundParcelTest.php\nM  ../../tests/Feature/Logistics/ParcelAssignmentTest.php\nA  ../../tests/Feature/Logistics/ParcelMonitoringSearchTest.php\nA  ../../tests/Feature/Logistics/ParcelOperationsTest.php\nA  ../../tests/Feature/Logistics/ParcelSummaryTest.php\nA  ../../tests/Feature/Logistics/PickupDispatchTest.php\nA  ../../tests/Feature/Logistics/PickupTrackingTest.php\nA  ../../tests/Feature/Logistics/ReportExportTest.php\nAM ../../tests/Feature/Logistics/ReturnToSellerTest.php\n M ../../tests/Feature/Logistics/RiderBlackBoxTest.php\nA  ../../tests/Feature/Logistics/RiderCoverageTest.php\nAM ../../tests/Feature/Logistics/RiderDecisionAuditTest.php\nMM ../../tests/Feature/Logistics/RiderDeliveryCompletionTest.php\nM  ../../tests/Feature/Logistics/RiderPickupFlowTest.php\nA  ../../tests/Feature/Logistics/RiderPresenceTest.php\nM  ../../tests/Feature/Logistics/RiderProfileTest.php\nA  ../../tests/Feature/Logistics/RiderRejectionTest.php\nA  ../../tests/Feature/Logistics/RiderSuspensionTest.php\nA  ../../tests/Feature/Logistics/RiderWorkloadTest.php\nM  ../../tests/Feature/Logistics/SellerDeliveryNotificationTest.php\nMM ../../tests/Feature/Logistics/SellerShipmentFinanceTest.php\nA  ../../tests/Feature/Logistics/SupervisedHandoverTest.php\nA  ../../tests/Feature/Logistics/SuspensionReleaseTest.php\n M ../../tests/Feature/OrderVariantFlowTest.php\n M ../../tests/Feature/SellerFulfillmentWaybillAndPickupTest.php\n M ../../tests/Feature/SellerNotificationsAlertsTest.php\n M ../../tests/Feature/SellerProductManagementTest.php\n M ../../tests/Feature/SellerReportsAndEarningsTest.php\n M ../../tests/Feature/StockAdjustmentAuditLoggingTest.php\nM  ../../tests/TestCase.php\n M ../../tests/Unit/Logistics/EnsureSortingCenterApprovedTest.php\nM  ../../tests/frontend/data-flow.test.mjs\n M ../../tests/frontend/onboarding.test.mjs\n M ../../vite.config.js\n?? ../../.agents/\n?? ../../AGENTS.md\n?? ../../TEAMMATE_AI_HANDOFF.md\n?? ../../app/Http/Controllers/Logistics/DeliveryRateController.php\n?? ../../app/Http/Controllers/Logistics/HubNetworkController.php\n?? ../../app/Http/Controllers/Logistics/HubStaffController.php\n?? ../../app/Http/Controllers/Logistics/HubWorkspaceController.php\n?? ../../app/Http/Middleware/EnforceLogisticsIdleTimeout.php\n?? ../../app/Http/Middleware/EnsureHubOperator.php\n?? ../../app/Http/Middleware/UseLocalSessionCookies.php\n?? ../../app/Models/HubTransfer.php\n?? ../../app/Models/LogisticsHub.php\n?? ../../app/Models/LogisticsHubStaff.php\n?? ../../app/Models/LogisticsRoute.php\n?? ../../app/Models/ParcelHubJourney.php\n?? ../../app/Services/HubAccess.php\n?? ../../app/Services/HubNetwork.php\n?? ../../app/Services/HubOperations.php\n?? ../../app/Services/HubTransport.php\n?? ../../app/Services/HubWorkspace.php\n?? ../../app/Services/LogisticsSessionLifetime.php\n?? ../../app/Services/ShippingRates.php\n?? ../../app/Services/SortingCenterSession.php\n?? ../../config/logistics_hubs.php\n?? ../../database/migrations/2026_10_29_100000_create_logistics_hub_network.php\n?? ../../database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php\n?? ../../docs/LOGISTICS_HUB_NETWORK.md\n?? ../../docs/LOGISTICS_TEAM_UPDATE.md\n?? ../../docs/LOGISTICS_WORKBOOK_READINESS.md\n?? ../../docs/TEAMMATE_AI_PROMPT.md\n?? ../../docs/testing/Blackbox_Test_Cases_Logistics_Modules-1.xlsx\n?? ../../docs/testing/results/LOGISTICS_BATCH_1_EXECUTION.md\n?? ../../docs/testing/results/LOGISTICS_COMMIT_READINESS.md\n?? ../../docs/testing/results/LOGISTICS_IMPLEMENTATION_BATCH_1.md\n?? ../../docs/testing/results/LOGISTICS_MISSING_FEATURES.md\n?? ../../docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md\n?? ../../docs/testing/results/LOGISTICS_TEST_ANALYSIS.md\n?? ../../docs/testing/results/ORDER_FLOW_REVIEW.md\n?? ../../docs/upgrade/\n?? ../\n?? ../../resources/js/Pages/Logistics/DeliveryRates.vue\n?? ../../resources/js/Pages/Logistics/HubNetwork.vue\n?? ../../resources/js/Pages/Logistics/HubStaff.vue\n?? ../../resources/js/Pages/Logistics/HubWorkspace.vue\n?? ../../resources/js/logisticsSession.js\n?? ../../resources/js/requestKey.js\n?? ../../resources/views/sorting-center/delivery-rates.blade.php\n?? ../../resources/views/sorting-center/hub-staff.blade.php\n?? ../../resources/views/sorting-center/hub-workspace.blade.php\n?? ../../resources/views/sorting-center/hubs.blade.php\n?? ../../scripts/verify-logistics.cjs\n?? ../../scripts/verify-system.cjs\n?? ../../tests/Feature/Auth/LocalSessionCookieTest.php\n?? ../../tests/Feature/Logistics/CheckoutToDeliveryTest.php\n?? ../../tests/Feature/Logistics/HubNetworkTest.php\n?? ../../tests/Feature/Logistics/HubStaffWorkflowTest.php\n?? ../../tests/Feature/Logistics/LogisticsIdleSessionTest.php\n?? ../../tests/Feature/Logistics/WorkbookRatesTest.php\n?? ../../tests/Support/\n?? ../../tests/Unit/Logistics/OnboardingApiContractTest.php\n?? ../../tests/Unit/Logistics/PasswordApiContractTest.php\n?? ../../tests/Unit/Logistics/RiderActivationTokenExposureTest.php\n?? ../../tests/Unit/Logistics/RiderDocumentApiContractTest.php\n?? ../../tests/Unit/Logistics/VerificationEmailApiContractTest.php\n?? ../../tests/browser/\n?? ../../tests/frontend/dev-server-security.test.mjs\n?? ../../tests/frontend/hub-network.test.mjs\n?? ../../tests/frontend/hub-workspace.test.mjs\n?? ../../tests/frontend/logistics-session.test.mjs\n?? ../../tests/frontend/workbook-readiness.test.mjs"
+      "head": "d117595",
+      "status": "M ../../README.md\n M ../../TEAMMATE_AI_HANDOFF.md\n M ../../app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php\n M ../../app/Http/Controllers/Api/Buyer/BuyerAuthController.php\n M ../../app/Http/Controllers/Api/Buyer/BuyerCartApiController.php\n M ../../app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php\n M ../../app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php\n M ../../app/Http/Controllers/BuyerAddressController.php\n M ../../app/Http/Controllers/BuyerConversationController.php\n M ../../app/Http/Controllers/BuyerOrderController.php\n M ../../app/Http/Controllers/BuyerReviewController.php\n M ../../app/Http/Controllers/Logistics/HubWorkspaceController.php\n M ../../app/Http/Controllers/Logistics/IncomingParcelController.php\n M ../../app/Http/Controllers/Logistics/ParcelAssignmentController.php\n M ../../app/Http/Controllers/Logistics/RiderDeliveryController.php\n M ../../app/Http/Controllers/Logistics/RiderPickupController.php\n M ../../app/Http/Controllers/SellerConversationController.php\n M ../../app/Http/Middleware/EnsureBuyer.php\n M ../../app/Services/HubTransport.php\n M ../../app/Services/PickupDispatch.php\n M ../../app/Services/RiderWorkload.php\n M ../../app/Services/SupervisedHandover.php\n M ../../config/checkout.php\n M ../../docs/DELIVERY_FINANCE.md\n M ../../docs/LOGISTICS_TEAM_UPDATE.md\n M ../../docs/TEAMMATE_AI_PROMPT.md\n M ../../docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json\n M ../README.md\n M docs/ARCHITECTURE.md\n M docs/CURRENT_STATE.md\n M docs/DECISIONS.md\n M docs/PROJECT_CONTEXT.md\n M docs/integration/CHANGELOG.md\n M docs/integration/CHANGELOG.md.previous\n M docs/integration/CHECKPOINT.md\n M docs/integration/CHECKPOINT.md.previous\n M docs/integration/PROGRESS.md\n M docs/integration/PROGRESS.md.previous\n M docs/integration/RESUME.md\n M docs/integration/RESUME.md.previous\n M docs/integration/checkpoint-state.json\n M docs/integration/checkpoint-state.json.previous\n M lib/pages/rider_notifications_page.dart\n M lib/pages/rider_portal_page.dart\n M lib/pages/rider_shell_page.dart\n M scripts/integration_checkpoint.cjs\n M test/rider_earnings_test.dart\n M ../../package.json\n M ../../resources/js/Layouts/ScLayout.vue\n M ../../resources/js/Pages/Buyer/Checkout.vue\n M ../../resources/js/logistics.js\n M ../../routes/api.php\n M ../../routes/logistics.php\n M ../../scripts/verify-system.cjs\n M ../../tests/frontend/workbook-readiness.test.mjs\n?? ../../app/Http/Controllers/Logistics/RiderPayController.php\n?? ../../app/Models/RiderPayBatch.php\n?? ../../app/Models/RiderPayDestination.php\n?? ../../app/Models/RiderPayEarning.php\n?? ../../app/Models/RiderPaySetting.php\n?? ../../app/Models/RiderPayTrip.php\n?? ../../app/Services/ConversationOrderAccess.php\n?? ../../app/Services/RiderJobPay.php\n?? ../../database/migrations/2026_10_31_000001_create_rider_job_payments.php\n?? ../../docs/RIDER_PAY_IMPLEMENTATION.md\n?? ../../docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md\n?? ../../docs/testing/results/POST_IMPLEMENTATION_REVIEW.md\n?? ../../docs/testing/results/RIDER_PAY_REVIEW.md\n?? ../alona_mobile/\n?? lib/pages/job_earnings_page.dart\n?? lib/services/rider_job_pay_api.dart\n?? test/job_earnings_test.dart\n?? ../../resources/js/Pages/Logistics/RiderPayouts.vue\n?? ../../resources/views/sorting-center/payouts.blade.php\n?? ../../tests/Feature/BuyerMobileAuthSecurityTest.php\n?? ../../tests/Feature/BuyerMobileCheckoutTest.php\n?? ../../tests/Feature/BuyerMobileParityTest.php\n?? ../../tests/Feature/Logistics/RiderJobPayTest.php\n?? ../../tests/frontend/rider-payouts.test.mjs"
     },
     "alona": {
       "tracked": true,
       "branch": "feature/logistics-completion",
-      "head": "c69d1ab",
-      "status": "M .gitignore\n M README.md\n M app/Http/Controllers/AdminDeliveryZoneController.php\n M app/Http/Controllers/Auth/AuthenticatedSessionController.php\n M app/Http/Controllers/Auth/EmailVerificationNotificationController.php\n M app/Http/Controllers/Auth/PasswordController.php\nA  app/Http/Controllers/BuyerDeliveryOtpController.php\nMM app/Http/Controllers/BuyerOrderController.php\nA  app/Http/Controllers/Logistics/CodController.php\nM  app/Http/Controllers/Logistics/DashboardController.php\n M app/Http/Controllers/Logistics/IncomingParcelController.php\n M app/Http/Controllers/Logistics/LoginSortingCenterController.php\nA  app/Http/Controllers/Logistics/LogisticsClaimController.php\nAM app/Http/Controllers/Logistics/OutboundParcelController.php\nMM app/Http/Controllers/Logistics/ParcelAssignmentController.php\nA  app/Http/Controllers/Logistics/ParcelHandoverController.php\nMM app/Http/Controllers/Logistics/ParcelMonitoringController.php\nAM app/Http/Controllers/Logistics/ParcelOperationsController.php\nM  app/Http/Controllers/Logistics/ParcelSortingController.php\nAM app/Http/Controllers/Logistics/PickupDispatchController.php\nA  app/Http/Controllers/Logistics/PickupLocationController.php\nM  app/Http/Controllers/Logistics/PickupRequestController.php\nM  app/Http/Controllers/Logistics/ReportController.php\nA  app/Http/Controllers/Logistics/ReturnToSellerController.php\nA  app/Http/Controllers/Logistics/RiderCoverageController.php\nMM app/Http/Controllers/Logistics/RiderDeliveryController.php\nMM app/Http/Controllers/Logistics/RiderManagementController.php\nMM app/Http/Controllers/Logistics/RiderPickupController.php\nA  app/Http/Controllers/Logistics/RiderPresenceController.php\n M app/Http/Controllers/LogisticsRegistrationController.php\nMM app/Http/Controllers/PartnerProfileController.php\n M app/Http/Controllers/SellerOrderController.php\nM  app/Http/Controllers/SellerReturnController.php\n M app/Http/Middleware/EnsureSortingCenterApproved.php\n M app/Http/Requests/LogisticsRegistrationRequest.php\nA  app/Models/CodCollection.php\nA  app/Models/CodDiscrepancy.php\nA  app/Models/CodRemittance.php\nA  app/Models/LogisticsAuditEvent.php\n M app/Models/OrderItem.php\nMM app/Models/Parcel.php\nA  app/Models/ParcelDeliveryAttempt.php\nA  app/Models/ParcelHandover.php\nA  app/Models/ParcelIncident.php\nA  app/Models/ParcelReturn.php\nA  app/Models/PickupOffer.php\n M app/Models/Rider.php\nA  app/Models/RiderDecisionAudit.php\nM  app/Observers/RiderNotificationObserver.php\n M app/Providers/AppServiceProvider.php\n M app/Services/AccountDestination.php\nAM app/Services/CheckoutServiceability.php\nA  app/Services/CodLedger.php\nA  app/Services/CodReport.php\nAM app/Services/DeliveryAttempts.php\nAM app/Services/DeliveryOtp.php\n M app/Services/FooterService.php\nA  app/Services/LogisticsAudit.php\nAM app/Services/LogisticsParcelSummary.php\nA  app/Services/LogisticsRefundReview.php\nA  app/Services/LogisticsReportExport.php\nAM app/Services/NearestPickupOffer.php\n M app/Services/OrderItemPickup.php\nAM app/Services/ParcelTrackingTimeline.php\nAM app/Services/PickupDispatch.php\nA  app/Services/PickupLocations.php\nA  app/Services/ReleaseUncollectedPickups.php\nAM app/Services/ReturnToSeller.php\nAM app/Services/RiderAllocation.php\nA  app/Services/RiderPresence.php\nA  app/Services/RiderWorkload.php\nM  app/Services/SellerParcelDelivery.php\nA  app/Services/SupervisedHandover.php\n M bootstrap/app.php\nA  database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php\nA  database/migrations/2026_10_20_120000_create_logistics_workflow_records.php\n M docs/DELIVERY_FINANCE.md\n M docs/DELIVERY_FINANCE_DEPLOYMENT.md\n M docs/LOGISTICS_REGISTRATION_HANDOFF.md\n M docs/SORTING_CENTER_INTEGRATION.md\nAM docs/testing/results/LOGISTICS_TEST_PROGRESS.md\n M resources/js/Components/AppFooter.vue\nA  resources/js/Components/BuyerDeliveryOtp.vue\nA  resources/js/Components/Logistics/CodCashPanel.vue\nA  resources/js/Components/Logistics/CodDiscrepancyPanel.vue\nA  resources/js/Components/Logistics/LogisticsClaimPanel.vue\nA  resources/js/Components/Logistics/LogisticsReviewNotice.vue\nAM resources/js/Components/Logistics/ParcelHandoverPanel.vue\nAM resources/js/Components/Logistics/ParcelOperationsPanel.vue\nAM resources/js/Components/Logistics/PickupDispatchPanel.vue\nA  resources/js/Components/Logistics/ReturnToSellerPanel.vue\nA  resources/js/Components/Logistics/SellerPickupLocation.vue\nA  resources/js/Components/Logistics/SellerReturnReceipt.vue\nMM resources/js/Layouts/ScLayout.vue\nM  resources/js/Pages/Admin/Reports.vue\n M resources/js/Pages/Admin/Settings.vue\n M resources/js/Pages/Auth/LogisticsRegistration.vue\nMM resources/js/Pages/Buyer/Checkout.vue\nMM resources/js/Pages/Buyer/OrderDetails.vue\nM  resources/js/Pages/Logistics/Dashboard.vue\nM  resources/js/Pages/Logistics/DeliveryManagement.vue\nMM resources/js/Pages/Logistics/DeliveryMonitoring.vue\nM  resources/js/Pages/Logistics/DeliveryReports.vue\nMM resources/js/Pages/Logistics/OrderManagement.vue\nM  resources/js/Pages/Logistics/PickupRequestManagement.vue\nM  resources/js/Pages/Logistics/RiderAssignment.vue\nA  resources/js/Pages/Logistics/RiderManagement.vue\nM  resources/js/Pages/Seller/OrderDetails.vue\nM  resources/js/Pages/Seller/Returns.vue\nMM resources/js/logistics.js\nA  resources/views/sorting-center/rider-management.blade.php\nMM routes/api.php\nM  routes/buyer.php\n M routes/console.php\nMM routes/logistics.php\nM  routes/seller.php\n M tests/Feature/BuyerOrderTrackingTest.php\n M tests/Feature/BuyerPaymentTest.php\n M tests/Feature/BuyerStoreTest.php\n M tests/Feature/ExampleTest.php\n M tests/Feature/GuestMarketplaceTest.php\nA  tests/Feature/Logistics/BatchOneAccessTest.php\nAM tests/Feature/Logistics/BuyerOtpTest.php\nAM tests/Feature/Logistics/CheckoutCoverageTest.php\nA  tests/Feature/Logistics/CodLedgerTest.php\nA  tests/Feature/Logistics/CompleteWorkflowTest.php\nA  tests/Feature/Logistics/DashboardDateFilterTest.php\nM  tests/Feature/Logistics/DashboardTest.php\nM  tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php\nM  tests/Feature/Logistics/EcommerceSortingIntegrationTest.php\nM  tests/Feature/Logistics/IncomingParcelTest.php\n M tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php\nAM tests/Feature/Logistics/NearestPickupOfferTest.php\nA  tests/Feature/Logistics/OutboundParcelTest.php\nM  tests/Feature/Logistics/ParcelAssignmentTest.php\nA  tests/Feature/Logistics/ParcelMonitoringSearchTest.php\nA  tests/Feature/Logistics/ParcelOperationsTest.php\nA  tests/Feature/Logistics/ParcelSummaryTest.php\nA  tests/Feature/Logistics/PickupDispatchTest.php\nA  tests/Feature/Logistics/PickupTrackingTest.php\nA  tests/Feature/Logistics/ReportExportTest.php\nAM tests/Feature/Logistics/ReturnToSellerTest.php\n M tests/Feature/Logistics/RiderBlackBoxTest.php\nA  tests/Feature/Logistics/RiderCoverageTest.php\nAM tests/Feature/Logistics/RiderDecisionAuditTest.php\nMM tests/Feature/Logistics/RiderDeliveryCompletionTest.php\nM  tests/Feature/Logistics/RiderPickupFlowTest.php\nA  tests/Feature/Logistics/RiderPresenceTest.php\nM  tests/Feature/Logistics/RiderProfileTest.php\nA  tests/Feature/Logistics/RiderRejectionTest.php\nA  tests/Feature/Logistics/RiderSuspensionTest.php\nA  tests/Feature/Logistics/RiderWorkloadTest.php\nM  tests/Feature/Logistics/SellerDeliveryNotificationTest.php\nMM tests/Feature/Logistics/SellerShipmentFinanceTest.php\nA  tests/Feature/Logistics/SupervisedHandoverTest.php\nA  tests/Feature/Logistics/SuspensionReleaseTest.php\n M tests/Feature/OrderVariantFlowTest.php\n M tests/Feature/SellerFulfillmentWaybillAndPickupTest.php\n M tests/Feature/SellerNotificationsAlertsTest.php\n M tests/Feature/SellerProductManagementTest.php\n M tests/Feature/SellerReportsAndEarningsTest.php\n M tests/Feature/StockAdjustmentAuditLoggingTest.php\nM  tests/TestCase.php\n M tests/Unit/Logistics/EnsureSortingCenterApprovedTest.php\nM  tests/frontend/data-flow.test.mjs\n M tests/frontend/onboarding.test.mjs\n M vite.config.js\n?? .agents/\n?? AGENTS.md\n?? TEAMMATE_AI_HANDOFF.md\n?? app/Http/Controllers/Logistics/DeliveryRateController.php\n?? app/Http/Controllers/Logistics/HubNetworkController.php\n?? app/Http/Controllers/Logistics/HubStaffController.php\n?? app/Http/Controllers/Logistics/HubWorkspaceController.php\n?? app/Http/Middleware/EnforceLogisticsIdleTimeout.php\n?? app/Http/Middleware/EnsureHubOperator.php\n?? app/Http/Middleware/UseLocalSessionCookies.php\n?? app/Models/HubTransfer.php\n?? app/Models/LogisticsHub.php\n?? app/Models/LogisticsHubStaff.php\n?? app/Models/LogisticsRoute.php\n?? app/Models/ParcelHubJourney.php\n?? app/Services/HubAccess.php\n?? app/Services/HubNetwork.php\n?? app/Services/HubOperations.php\n?? app/Services/HubTransport.php\n?? app/Services/HubWorkspace.php\n?? app/Services/LogisticsSessionLifetime.php\n?? app/Services/ShippingRates.php\n?? app/Services/SortingCenterSession.php\n?? config/logistics_hubs.php\n?? database/migrations/2026_10_29_100000_create_logistics_hub_network.php\n?? database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php\n?? docs/LOGISTICS_HUB_NETWORK.md\n?? docs/LOGISTICS_TEAM_UPDATE.md\n?? docs/LOGISTICS_WORKBOOK_READINESS.md\n?? docs/TEAMMATE_AI_PROMPT.md\n?? docs/testing/Blackbox_Test_Cases_Logistics_Modules-1.xlsx\n?? docs/testing/results/LOGISTICS_BATCH_1_EXECUTION.md\n?? docs/testing/results/LOGISTICS_COMMIT_READINESS.md\n?? docs/testing/results/LOGISTICS_IMPLEMENTATION_BATCH_1.md\n?? docs/testing/results/LOGISTICS_MISSING_FEATURES.md\n?? docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md\n?? docs/testing/results/LOGISTICS_TEST_ANALYSIS.md\n?? docs/testing/results/ORDER_FLOW_REVIEW.md\n?? docs/upgrade/\n?? mobile/\n?? resources/js/Pages/Logistics/DeliveryRates.vue\n?? resources/js/Pages/Logistics/HubNetwork.vue\n?? resources/js/Pages/Logistics/HubStaff.vue\n?? resources/js/Pages/Logistics/HubWorkspace.vue\n?? resources/js/logisticsSession.js\n?? resources/js/requestKey.js\n?? resources/views/sorting-center/delivery-rates.blade.php\n?? resources/views/sorting-center/hub-staff.blade.php\n?? resources/views/sorting-center/hub-workspace.blade.php\n?? resources/views/sorting-center/hubs.blade.php\n?? scripts/verify-logistics.cjs\n?? scripts/verify-system.cjs\n?? tests/Feature/Auth/LocalSessionCookieTest.php\n?? tests/Feature/Logistics/CheckoutToDeliveryTest.php\n?? tests/Feature/Logistics/HubNetworkTest.php\n?? tests/Feature/Logistics/HubStaffWorkflowTest.php\n?? tests/Feature/Logistics/LogisticsIdleSessionTest.php\n?? tests/Feature/Logistics/WorkbookRatesTest.php\n?? tests/Support/\n?? tests/Unit/Logistics/OnboardingApiContractTest.php\n?? tests/Unit/Logistics/PasswordApiContractTest.php\n?? tests/Unit/Logistics/RiderActivationTokenExposureTest.php\n?? tests/Unit/Logistics/RiderDocumentApiContractTest.php\n?? tests/Unit/Logistics/VerificationEmailApiContractTest.php\n?? tests/browser/\n?? tests/frontend/dev-server-security.test.mjs\n?? tests/frontend/hub-network.test.mjs\n?? tests/frontend/hub-workspace.test.mjs\n?? tests/frontend/logistics-session.test.mjs\n?? tests/frontend/workbook-readiness.test.mjs"
+      "head": "d117595",
+      "status": "M README.md\n M TEAMMATE_AI_HANDOFF.md\n M app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php\n M app/Http/Controllers/Api/Buyer/BuyerAuthController.php\n M app/Http/Controllers/Api/Buyer/BuyerCartApiController.php\n M app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php\n M app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php\n M app/Http/Controllers/BuyerAddressController.php\n M app/Http/Controllers/BuyerConversationController.php\n M app/Http/Controllers/BuyerOrderController.php\n M app/Http/Controllers/BuyerReviewController.php\n M app/Http/Controllers/Logistics/HubWorkspaceController.php\n M app/Http/Controllers/Logistics/IncomingParcelController.php\n M app/Http/Controllers/Logistics/ParcelAssignmentController.php\n M app/Http/Controllers/Logistics/RiderDeliveryController.php\n M app/Http/Controllers/Logistics/RiderPickupController.php\n M app/Http/Controllers/SellerConversationController.php\n M app/Http/Middleware/EnsureBuyer.php\n M app/Services/HubTransport.php\n M app/Services/PickupDispatch.php\n M app/Services/RiderWorkload.php\n M app/Services/SupervisedHandover.php\n M config/checkout.php\n M docs/DELIVERY_FINANCE.md\n M docs/LOGISTICS_TEAM_UPDATE.md\n M docs/TEAMMATE_AI_PROMPT.md\n M docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json\n M mobile/README.md\n M mobile/rider/docs/ARCHITECTURE.md\n M mobile/rider/docs/CURRENT_STATE.md\n M mobile/rider/docs/DECISIONS.md\n M mobile/rider/docs/PROJECT_CONTEXT.md\n M mobile/rider/docs/integration/CHANGELOG.md\n M mobile/rider/docs/integration/CHANGELOG.md.previous\n M mobile/rider/docs/integration/CHECKPOINT.md\n M mobile/rider/docs/integration/CHECKPOINT.md.previous\n M mobile/rider/docs/integration/PROGRESS.md\n M mobile/rider/docs/integration/PROGRESS.md.previous\n M mobile/rider/docs/integration/RESUME.md\n M mobile/rider/docs/integration/RESUME.md.previous\n M mobile/rider/docs/integration/checkpoint-state.json\n M mobile/rider/docs/integration/checkpoint-state.json.previous\n M mobile/rider/lib/pages/rider_notifications_page.dart\n M mobile/rider/lib/pages/rider_portal_page.dart\n M mobile/rider/lib/pages/rider_shell_page.dart\n M mobile/rider/scripts/integration_checkpoint.cjs\n M mobile/rider/test/rider_earnings_test.dart\n M package.json\n M resources/js/Layouts/ScLayout.vue\n M resources/js/Pages/Buyer/Checkout.vue\n M resources/js/logistics.js\n M routes/api.php\n M routes/logistics.php\n M scripts/verify-system.cjs\n M tests/frontend/workbook-readiness.test.mjs\n?? app/Http/Controllers/Logistics/RiderPayController.php\n?? app/Models/RiderPayBatch.php\n?? app/Models/RiderPayDestination.php\n?? app/Models/RiderPayEarning.php\n?? app/Models/RiderPaySetting.php\n?? app/Models/RiderPayTrip.php\n?? app/Services/ConversationOrderAccess.php\n?? app/Services/RiderJobPay.php\n?? database/migrations/2026_10_31_000001_create_rider_job_payments.php\n?? docs/RIDER_PAY_IMPLEMENTATION.md\n?? docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md\n?? docs/testing/results/POST_IMPLEMENTATION_REVIEW.md\n?? docs/testing/results/RIDER_PAY_REVIEW.md\n?? mobile/alona_mobile/\n?? mobile/rider/lib/pages/job_earnings_page.dart\n?? mobile/rider/lib/services/rider_job_pay_api.dart\n?? mobile/rider/test/job_earnings_test.dart\n?? resources/js/Pages/Logistics/RiderPayouts.vue\n?? resources/views/sorting-center/payouts.blade.php\n?? tests/Feature/BuyerMobileAuthSecurityTest.php\n?? tests/Feature/BuyerMobileCheckoutTest.php\n?? tests/Feature/BuyerMobileParityTest.php\n?? tests/Feature/Logistics/RiderJobPayTest.php\n?? tests/frontend/rider-payouts.test.mjs"
     }
   },
   "hashes": {
@@ -1104,7 +1312,7 @@
       ".agents/architecture/architecture.md": "d2b81da887c0295e3244e16b1964341c206e34345ad9e406756b5fd98dc6968a",
       ".gitignore": "466c13253f81714cccb9de905dd9f1311ec62bc0dca975c8edbc55730c878106",
       ".metadata": "abbea995049a1d4118acabf8724850fb71c73cb5d2d30ed0d6420ec9bf1b1fb1",
-      ".vscode/launch.json": "f15232a623ed9f2362f5dc2b79814ac78b82b6b2228f44b495651249169814f7",
+      ".vscode/launch.json": "79dda3e35c7d134fd8d3c980cb00b3430f0577c39b70d3a597defe299ad5600a",
       "AGENTS.md": "54460d94d744aa6aafd38a39e826743d1ea921c589412b29a11c70fa07fd80ea",
       "README.md": "9f39acb6fe263589f9d95fc6837d8dcc29b34e92b2cf5ae424dd241288ff21e8",
       "analysis_options.yaml": "98d70dd5a9033911f40e2e7f3ff9d74618e2aa13652990efe860ed0fe1cedfa9",
@@ -1129,10 +1337,10 @@
       "android/settings.gradle.kts": "092ba880c8d4a07591aafc082f45deedc9afcf60c113a4bb3d13cbe1a1fce9de",
       "assets/images/alona/alonalogo1.png": "bc973635d8d37c2eb5536454b4ce108026880840574cafef0ea6d36a6c844e8b",
       "assets/images/alona/alonalogo2.png": "a76878a8855c9432b552091e6bb0cf8cf9183ec6c416ff947cd7d67ed84e08d0",
-      "docs/ARCHITECTURE.md": "19ec23ef1b19355b0183a21d7a93071a491a238e7c1a568f32a349c90db2f529",
-      "docs/CURRENT_STATE.md": "3100b7c4b670f23228d401d1f5adc1b14e754bb0b6b22dab5b38d3b0e54e0bea",
-      "docs/DECISIONS.md": "76c5eb921fbe01da240b909a190c92202e2cf9fdebf59a779aa59cb7d3fd5a3e",
-      "docs/PROJECT_CONTEXT.md": "68cdc067e5e07821e215118654bbebaa01dc112d306b409bdfebbcc1292d77f8",
+      "docs/ARCHITECTURE.md": "d21e57f40a03cbda02112b6f4be1fda33abd7c3f6aea7274407d29af2339793f",
+      "docs/CURRENT_STATE.md": "3ec112a1057583a2a3d3b5d2c7f650b9e8c4fc911f627f99e598a3bcd535a0a5",
+      "docs/DECISIONS.md": "4f94c8d6b01c4f9db6a863c957b409bb115db65372d52d2ff14395e47ee6ccae",
+      "docs/PROJECT_CONTEXT.md": "1cc47145f889e1eec2078bb00773192e97be2b3bc1c8e3081b8b3556a6c1c0a0",
       "docs/UI_DESIGN.md": "dd360a9d9efb15c8f807615969410e9a2aec563ad6053267859e174fea9dca11",
       "docs/UPSTREAM.md": "f85d2b832cde50f8b1c7b35ba937aa36091a9d2c8c1f57fced7aedc8d3d82fc4",
       "docs/integration/FINAL_REVIEW.md": "9b31ace22ed8d9ae88cabf6a15dbeae563f6b0c785f59b46fbc468c3edb83389",
@@ -1183,7 +1391,7 @@
       "ios/Runner/Runner-Bridging-Header.h": "efe657d8b27f7f8595a0d416bffb33fe7d93bd2869d81f7353b556c439d7a1a7",
       "ios/Runner/SceneDelegate.swift": "edce811c671ca0a6ccb14753e14e16deb0d89a0adf4f1b685e362d87d8f4c366",
       "ios/RunnerTests/RunnerTests.swift": "c0e04141287eb7f9c9f3d31cf5be8cb626a9ea71351206c9121578e8b8f480c3",
-      "lib/app.dart": "a3960d59e673faeae98a18d351f867c635a967784e612a64208878e853a24b24",
+      "lib/app.dart": "1dbacc6b1bc5bcfc4344c6ba26aaf551f060461978b86a87b179b2b9677a2dd4",
       "lib/main.dart": "cf6ac38cd3a2f04dc00f3746e4bf332f56de725e8867acc2961c58dc0942f839",
       "lib/pages/delivery_dashboard_page.dart": "be8b698eab05c74291e184964a40038d79291ae1b98c0d1626b0e0480a05a1ca",
       "lib/pages/delivery_history_page.dart": "03318a7542e1a1009d1773a1661cfbfa4317607660033dfb49edfb1e60df73ce",
@@ -1198,10 +1406,10 @@
       "lib/pages/rider_account_page.dart": "da12163ae2cc96052dfdde0ecf3470facf3afc5575316be13a4f4d5380c5b85d",
       "lib/pages/rider_address_edit_page.dart": "acccbdd2f2e19d7238b3d7346948d29eaa9965e864956edc14e7b14f4fcaac9e",
       "lib/pages/rider_cod_page.dart": "b5b7b4750d378bf95a44f4153c91d6430052011fecf9d1d5c89cae908f15cd29",
-      "lib/pages/rider_notifications_page.dart": "672d3f14520118b9729b68beec2b2e7cb2a3365a353378042575f00a2a983de1",
-      "lib/pages/rider_portal_page.dart": "81119f77e935faa9115c3ce850ca30c52836f24a8630d928c4ff77567050d201",
+      "lib/pages/rider_notifications_page.dart": "80373fde8501e614bf33fc6dc3a5161ba9b825bf2f77a9ae50b38ebe0e6d3367",
+      "lib/pages/rider_portal_page.dart": "23513127ee6dae0aa516f046b752b2a3fc5615f28cc17db76e1176e489fd1c92",
       "lib/pages/rider_returns_page.dart": "efbae2bef223a781b8eed3fc82004d95e803a1025a767ffa4dd9543ee060c821",
-      "lib/pages/rider_shell_page.dart": "67c24b9d0b6964fe7a1b6579bab5988f0bb606b5439b9b504ff277804327bda2",
+      "lib/pages/rider_shell_page.dart": "56303947fc8a38cb981671adafe3733736ab8af6fca1fa201ff798de06621c5e",
       "lib/services/api_config.dart": "340f47a94ffe6ca51c8456c4ac5a446b624d2892b5fbf2c072b4e37a65d5b7d3",
       "lib/services/api_error.dart": "8a9ca2559dbcb17b91d3d8555ef73b85551dbcca31d394b495549e66232a030e",
       "lib/services/parcel_address.dart": "183df0a0c2cc23baa54f669b3754089f8c8e17129a35d4fefb5569de4d8f00b1",
@@ -1213,13 +1421,13 @@
       "lib/services/rider_session.dart": "6aa7d925a681b14f67102803d6a85a078abeeec065b35de40151795cd9eef094",
       "lib/services/rider_session_guard.dart": "5622983933ac4626292e5ff78c5e067b8113bff00015336095da411fc8d5eaa9",
       "lib/services/token_store.dart": "c4b3e4366d65b29062cf1b9d1158c81b0ee01f2b76c533162988a8e0d66e2396",
-      "lib/theme/rider_theme.dart": "4f5cd51bfd03b17604ec6e38e41c2a821c1a233122ae0fe58651cf8bb7a226db",
+      "lib/theme/rider_theme.dart": "50b577e626d1f0c66ea700b127b4769b6707c04e115919e2c4ee8048509e239f",
       "lib/widgets/address_details.dart": "1a85f5aca3778c4acc01728550ad2d36dcddbeee6b7db186f4df2cc8629d2261",
       "lib/widgets/delivery_otp_dialog.dart": "c6777d5e50b02692e1091621179ad18f84f13fe03da7083e9702ba1911d40220",
       "lib/widgets/failure_reason_dialog.dart": "6f1d294cea10cc7ad3418723e920295ea9967490f7ebe5c421816fece3ebcebe",
       "lib/widgets/rider_bottom_nav.dart": "977210829abebbd40f294dfd13af3aab4e0a1931409c7ca34f21568db2acd87e",
       "lib/widgets/rider_content.dart": "51cf374d382d3228c41acaea622fdc5039515fc23e86c7a31f5b7461f9532c50",
-      "lib/widgets/rider_design_widgets.dart": "8ba15af4713bd6951137856107c0a4cd3ecc6634e9dce91550a07733d676630a",
+      "lib/widgets/rider_design_widgets.dart": "c426d96d38be078793eb053af33f8c01a25a1dd86a8404ce40f0e87777dca8b8",
       "lib/widgets/rider_handovers.dart": "e822f9720f9fd3cc0ccd587c6952532ee537ef90b903980d2af991e3a1b60d6a",
       "lib/widgets/rider_pickup_location.dart": "cf87256648bf9344607e47712d1b4cde375185462b18de0b065af1794ed9310d",
       "lib/widgets/rider_presence_control.dart": "2f70ec4886370d043c82bd6810d084110fa9e1d19dc8e748a1d1c1cb6581e803",
@@ -1264,7 +1472,7 @@
       "pubspec.lock": "703c80bf3b57b694cded0c1b4b6dc1da6a17afad75926c62e9f6f612b6ffc7b5",
       "pubspec.yaml": "decfa034e9f2a71700e011f62848b6c9dba4a0fba0e00e168e7e57fe339e3557",
       "scripts/checkpoint_recovery.cjs": "439402f386ef96a51dcda1eea95fabfeccadd5482c5ac4fa7bfc102a63e78fa2",
-      "scripts/integration_checkpoint.cjs": "7061a0cb6553e6664f2848760858a419e788b351c55e64bf2b76c629bddf691c",
+      "scripts/integration_checkpoint.cjs": "5eef02c9d054a34c9e8ca3abc602fc9c33de125c12f7e635b192784b7dcf691e",
       "scripts/integration_checkpoint.test.cjs": "40e70d8bcb67a98e851ad62863a62ea026c30687dbfcad36057617f58c6910c2",
       "test/address_details_test.dart": "477471c371cc2be03b530f0b69be2e36162efc4adfbedd492cf34aac6fd93bb4",
       "test/api_config_test.dart": "0dc5b95d79c3a48ec195e46afab02cf98e79b81be19bd66cfa3ad0990982bc24",
@@ -1282,7 +1490,7 @@
       "test/registration_api_test.dart": "e06bf7338fa48c2054b29f2ebe7c9c89c3d5f6af2654661adbb288077134c413",
       "test/rider_account_test.dart": "0c2e6111b3a0cbba85e1884b5e303d68ccdc89c0b50d2885e6c181795fb225e3",
       "test/rider_cod_test.dart": "5b0b54a5e8b4ce60182bbde563cf2aa25de9b3a7a1db42b8e119bada689d3b7f",
-      "test/rider_earnings_test.dart": "291492730f98db7e449e108d341b763ac2e36d9bf62d65755b0fd1fc27f8191b",
+      "test/rider_earnings_test.dart": "b30166e578c7e15f67e041dd3d0d282c8b6c6c120576672054bafe9aad966190",
       "test/rider_handovers_test.dart": "381ef98d9dd4a2e11092f75e26fe438dd59a5f1cc7b3aa7ed28c653b0fed0210",
       "test/rider_notifications_test.dart": "88fce6ad58d0dd4887b530ee4e0a3f94bf7172795eaef0a3df181298ca93d5fb",
       "test/rider_pickup_location_test.dart": "9a2f1183d767f963a7b6a734760a5b45e016746bd8375884ec055f294d83464e",
@@ -1317,7 +1525,10 @@
       "windows/runner/utils.cpp": "a128b67b9f3c2579e2ecef5b0dde2c33f222a097cdfe5da2a3067c73d1485b39",
       "windows/runner/utils.h": "832e246b6758253f89016fb0374b30791242e97ad950d27fc678b3d9feacfdc4",
       "windows/runner/win32_window.cpp": "4e4f4dcf8e86ea6e097562cb3476039e693449bd8045367538afee579c017511",
-      "windows/runner/win32_window.h": "d154cf89ba85f820631a9b5bedacbe64fc5815e428fe6bc5da579ce649f69841"
+      "windows/runner/win32_window.h": "d154cf89ba85f820631a9b5bedacbe64fc5815e428fe6bc5da579ce649f69841",
+      "lib/pages/job_earnings_page.dart": "4f94361950dd46d08c1eb8a0cc645bfaa6e5ece734a7afb61a6485482d11f8d7",
+      "lib/services/rider_job_pay_api.dart": "de0d002de8ab6ac949a7405c813a054f83287716b97e24cbccef5ded1e7b02f9",
+      "test/job_earnings_test.dart": "092e48384ea666eadabfcf9456d0ffe6f3ca98e28afbdae0bd7717f09b2ecd6e"
     },
     "alona": {
       ".agents/architecture/architecture.md": "5e443259d862c3e06735a192f748df49712ab6fdd2186f49fcb5e638aee83a95",
@@ -1327,10 +1538,10 @@
       "BUYER_ERP_MISSING_TASKS.md": "477cc530aeb4d980ef63098e7e7379421d87461e40f5a85c4d1b6d4194a00e0e",
       "BUYER_REGISTRATION_FIX_TASKS.md": null,
       "ERP_REGISTRATION_IMPLEMENTATION.md": "a28083ed6c52e52f3276f1de4cb6504cac3b5da8d21722f3c85dae95f976e155",
-      "README.md": "ee410aa4d521ada445c0a30bd49f2eb9b3e48a2fe84d8c8dbb440fcc8a6c387e",
+      "README.md": "4dfa8c0210b29181fde578eb9977b14b1a76149ff4f8d3e9630552d7d107dfef",
       "REGISTRATION_SYSTEM_SUMMARY.md": "214ad3a160c4ecab5ec78143a8baa1caeb3f7cf5645a3551d4e1ae757f43f338",
       "SELLER_ERP_MISSING_TASKS.md": "cbe148463cf2c566838958818eba0002a9e3d61958ec8c3ef9856bfcaf1b9feb",
-      "TEAMMATE_AI_HANDOFF.md": "7ca412048d502d3e296853cd302f29efe7c8106040a5ce9028b17bc2de07c905",
+      "TEAMMATE_AI_HANDOFF.md": "4ad800a4e5d8eab8e4d2b4ebf571da2c5a70b6529996e6aa0a5d9ae3408c912e",
       "TOGGLE_BUTTON_IMPLEMENTATION.md": "dd6874052c6c8a5c92ef824e2428d2acdb8614925eb1d36fb8da5c885c2e9196",
       "app/Console/Commands/CheckLowStockAlerts.php": "4c41d890db8f8bc58801bafa85ca2fb7e0dc59fa4b0c794f1563fc90b45a60ea",
       "app/Http/Controllers/AdminApplicationController.php": "f19a4d8283c48982c0ac324e7919fbdf6c19c5c2eb1299d18515435197a57f68",
@@ -1347,12 +1558,12 @@
       "app/Http/Controllers/AdminSettingsController.php": "3eddf8fb341f0a8c117e122d21eff10b722a88c3c2cb3cadd87f0d21e0e72032",
       "app/Http/Controllers/AdminUserController.php": "b5438844e5ce90be1daa4c80d749ade56b534291eadb3602d9337e6a58e1d4cd",
       "app/Http/Controllers/AdminVoucherController.php": "07f207d747722aa32fc3602dc48e918043f857b2029966544e0080f67152c637",
-      "app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php": "36f843034be70aa10b231f3369c3e0528d7f04bd5bc519c7addaee9e7c42347b",
-      "app/Http/Controllers/Api/Buyer/BuyerAuthController.php": "8d6e1a3bb6075150e8b5bf03b9dd70dcfab1a066a804f97df05d88589846497a",
-      "app/Http/Controllers/Api/Buyer/BuyerCartApiController.php": "b73f378775a8dcc1cdb96eae73326867ab56f6abf5b8abf85e4c99f62b87877d",
+      "app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php": "4361411622fef0024ca144c7533ac2a936bc7ed716b817d7227d7c720019ff74",
+      "app/Http/Controllers/Api/Buyer/BuyerAuthController.php": "ac177164c03ff5a8cae65df69ac6c63a7471258dd528ee8f781df6d013f2163b",
+      "app/Http/Controllers/Api/Buyer/BuyerCartApiController.php": "b9e15349fb4cb4b2debc980e78619c36fec90a9c1052900ef62a4ce83c66677c",
       "app/Http/Controllers/Api/Buyer/BuyerCatalogController.php": "18658e45b947fd73d9c592b61e8b85c6827d1b96ffd9e34854b2330c682b4658",
-      "app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php": "2e773fb7d51f91d1e5af4566dbede268d8ed9259535e29b174d1d91903e8246a",
-      "app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php": "f20186d6399fda76bfafa80dd9f56b4500258a678181580101088e6365bcfc5b",
+      "app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php": "3880ebb5c5d359fc4ca4eaf7ae5b7ca8bda5e6a905791efbbe9f9a73d6d47912",
+      "app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php": "e859de7e2aced43906bdfabc0b3a58bc35412288ef720532f83b00c49df32a72",
       "app/Http/Controllers/Auth/AuthenticatedSessionController.php": "842c1699730f1e90cd66e9f8cc9b4c06ee0b55cedf13cb1797862c23fdcea625",
       "app/Http/Controllers/Auth/BuyerOtpVerificationController.php": "77edac1f2c8189b4f9494b8b80cd9f4bf22c19ad11c777c6a2d0d09e448ebdbc",
       "app/Http/Controllers/Auth/ConfirmablePasswordController.php": "99285d8af325a5a8d00dbea3c5443277a8ce9050d5a7fa29afce2e310191ef17",
@@ -1365,22 +1576,22 @@
       "app/Http/Controllers/Auth/RegisteredUserController.php": "ccce5b656be8a6af662ba1914368194420cbb67dd2d495745b173a2e8ee870dc",
       "app/Http/Controllers/Auth/VerifyEmailController.php": "58b628dc9a809d6fcd28a783d61d3c4205ee483fff3f59a59f16cf5415c44b4a",
       "app/Http/Controllers/Buyer/ReviewController.php": "ac7678b9e3846b35c0223cc5ec332f201f91e8f8ad655b4ad6fc992d297385fb",
-      "app/Http/Controllers/BuyerAddressController.php": "b72aaae012b2de284bbb5d2728a8e5ad894e3d4780834a98eb29e8eee25cd1fb",
+      "app/Http/Controllers/BuyerAddressController.php": "4dc0ed1435dff67307295bf41f769654cbb223a0604a466501198ac1a57f9ee7",
       "app/Http/Controllers/BuyerCartController.php": "df281a8cb079a2a7e3b92b48b76343eb3ea394ca2be775165844318398b98750",
       "app/Http/Controllers/BuyerCategoryController.php": "48b9f36868d1ff75a4389d71130bb21a0847cacaa9b2a3a128613148cd344f66",
       "app/Http/Controllers/BuyerComplaintController.php": "29c1faab710a85a7638b462a419efd8516c5fce232067a2e2f163ef3818984f3",
-      "app/Http/Controllers/BuyerConversationController.php": "82f4bcb180c5dd73263e0c4aaef7f53febda9793db97dc329a4dec9d37c823d4",
+      "app/Http/Controllers/BuyerConversationController.php": "f0b31c0d18f58445039fd78e327e1fc0202fa6d35ce92f068f3ac126c4c66120",
       "app/Http/Controllers/BuyerDashboardController.php": "c572fbb1d6827a506e410dc07c0c8beab7dc82e816ca001239c304625a6fdebd",
       "app/Http/Controllers/BuyerDeliveryOtpController.php": "01954d3632646dc927c13a08bd9a3eb5e859106a91a5c07d4587440d02952cbb",
       "app/Http/Controllers/BuyerFlashSaleReminderController.php": "5cc6916077dbefca9063bc981799c7d89d489be00c29c3b90eacb281effec773",
       "app/Http/Controllers/BuyerMessageController.php": "b5e9ee91b3d91724dccf46384067ee2b863d33baa10a1fa6971ddf9239a2386e",
       "app/Http/Controllers/BuyerNotificationController.php": "ccc52e5077c84c41050dfdaec6b6fd048498f94576ab267f480df91622d66f15",
-      "app/Http/Controllers/BuyerOrderController.php": "18781f148b68a5b8592cc397c6e5da44d85bbb6fd65f1852041aff36076220be",
+      "app/Http/Controllers/BuyerOrderController.php": "15f89769eae8286e47fe75b6d3d8f8a257911162441b2c680abb222745068253",
       "app/Http/Controllers/BuyerOrderConversationController.php": "18d354e7115ddd4b1c36618c6efe66fb2aa6ebb0e9bf96ed7a8a1de723ac188e",
       "app/Http/Controllers/BuyerPaymentMethodController.php": "026c48032460d1e3b4c8a3f8cc510941d7c91ef5e9b70a2ea8bef2b14c3c3f4b",
       "app/Http/Controllers/BuyerProductController.php": "8f926d3a86f77f8439d3bfd4578eb4ed9bdb7841ca38a1d9c2d1597cdc06a657",
       "app/Http/Controllers/BuyerProductQuestionController.php": "532db083ae5dbba9391070ad3ae1970d7b72f3c82832b96ac68106eb0f6117b3",
-      "app/Http/Controllers/BuyerReviewController.php": "f3fe89fbc7aa5bd792799a3cdd38a032f881226044a81cf433d7c30090a0e012",
+      "app/Http/Controllers/BuyerReviewController.php": "7ba2918e5d17337b34ca0170268b1ae53f52cf563b26bc34192cf1e8173ed4df",
       "app/Http/Controllers/BuyerStoreController.php": "8a858dd87ce8b8f812514c10b9cafee8bfe69cb8f0759e77fef9750b4379b0fb",
       "app/Http/Controllers/BuyerSupportController.php": "fa6df61e3854f5815ac53bcf92c90289d1e2298397d418864bf14c6ec93c6739",
       "app/Http/Controllers/BuyerVoucherController.php": "c29d4329e5cef51c66c7f61fa181b3a83b3b598c9d91ee552797148837a72d36",
@@ -1395,14 +1606,14 @@
       "app/Http/Controllers/Logistics/DeliveryRateController.php": "e6ce1e85afa5d58770819973a40b6d40b95780d77198efea89c3bdb1ac151d04",
       "app/Http/Controllers/Logistics/HubNetworkController.php": "7f48c48a64267907b3e59ee36792027f4a5c98e7633549bd8486f57a39c30b16",
       "app/Http/Controllers/Logistics/HubStaffController.php": "835a25edd768e940fe801f685ca739d7ef0141b8615c6b92e5496d881eb5f238",
-      "app/Http/Controllers/Logistics/HubWorkspaceController.php": "63a9234c6994579c031bb3a2354ceda1606f2bde5c6b1508fe902ab2a677b9fb",
-      "app/Http/Controllers/Logistics/IncomingParcelController.php": "0bc20982c37a97447bc1927221fafe44550b9551b81715d96ca81ba969309508",
+      "app/Http/Controllers/Logistics/HubWorkspaceController.php": "d01d69467160433f89a6c45adfe52e357822974a0865f65e6faba1a95a532e2d",
+      "app/Http/Controllers/Logistics/IncomingParcelController.php": "cb9d22370c1dd1fc3dea5ab6de2dd9e8258894a3b49b28e8fea25b461187b454",
       "app/Http/Controllers/Logistics/LoginRiderController.php": "af2248f7d4acf7a568cbe447ee9cf56aa2398705929fadfdd3c60c9a55786222",
       "app/Http/Controllers/Logistics/LoginSortingCenterController.php": "3fc8b82135c5f04d9735c9ccef60dcecc0aeb9c19fbc4110afcc7d393b3a2849",
       "app/Http/Controllers/Logistics/LogisticsClaimController.php": "c2b5f9b48d124837758741031c2b7ac6e5f9a648e937395b0464a43d814335ba",
       "app/Http/Controllers/Logistics/MessageController.php": "f1ed66196077182200ee636f8ba8ca77b8abef1a64b083545857de1034659171",
       "app/Http/Controllers/Logistics/OutboundParcelController.php": "fe6a3df89d97746cd7a3a8eec1aa6f74e9c56711494dac354c5d0cf025730e53",
-      "app/Http/Controllers/Logistics/ParcelAssignmentController.php": "98786cee8af0967017116834b19601e2c9290dd8a47976996b8f166808617be4",
+      "app/Http/Controllers/Logistics/ParcelAssignmentController.php": "b2ae2ac536cf3076466bd22604cc01c592fa94e697f023ab03ca67b13f4f1802",
       "app/Http/Controllers/Logistics/ParcelHandoverController.php": "b80043d7b14f116a9716fcb2443de446323950a703283a13e62ff181fb6f85e5",
       "app/Http/Controllers/Logistics/ParcelMonitoringController.php": "a83ce04ff4fbb070482a0447004174b4b36c781c25f7535cf055f4202b24473f",
       "app/Http/Controllers/Logistics/ParcelOperationsController.php": "0f3f9c954832fdc970195f00ad4cbda8c8bf83eab0044c928e6126f9d29b71c0",
@@ -1415,10 +1626,10 @@
       "app/Http/Controllers/Logistics/ReportController.php": "d82d2d41abc6685ec24ba0e38f730d06735c2185427d9895462cc4f555dfc3ba",
       "app/Http/Controllers/Logistics/ReturnToSellerController.php": "71f41c2cc428c942b5ab5e11ed4ef19553dea5d0d7e414e78ff15c87f43151aa",
       "app/Http/Controllers/Logistics/RiderCoverageController.php": "0988e50da463280de8a6710322d2186bbe7109f9ad82fa5de3a685951651a409",
-      "app/Http/Controllers/Logistics/RiderDeliveryController.php": "6c492fefb6b46a49509e0b3744b811ff0032ccccb79e79dc32609608dbcefdd8",
+      "app/Http/Controllers/Logistics/RiderDeliveryController.php": "2d575d59a222d778e30b2ce4ae809882cbc72b0894c56d6bbe365c82c31b3135",
       "app/Http/Controllers/Logistics/RiderManagementController.php": "cfed39789410305396d5aec6bb0f762ca6795aeab2b871cbd4713160b8c22711",
       "app/Http/Controllers/Logistics/RiderNotificationController.php": "8168aa28a350f3d3881e9942549afc6e7b3601bf5adfd3d11892d069bbbaa3a5",
-      "app/Http/Controllers/Logistics/RiderPickupController.php": "f09f50f6dff6093ac8b2457e2070e4754bdb205b6f0fe31299786e381aa679a1",
+      "app/Http/Controllers/Logistics/RiderPickupController.php": "96e61cb05f23a0baccff05b6d8e7fd9e7804da8234cc509a85fd5a2abd3c8d5c",
       "app/Http/Controllers/Logistics/RiderPresenceController.php": "63f347f86ebf015d565db95698319a46f500bd29cb878fdd226c982c733bc93f",
       "app/Http/Controllers/Logistics/RiderProfileController.php": "100664abfb3f64c948283170ed8baa4f296d2b0030188fc53f8e1aeac0aac4e8",
       "app/Http/Controllers/Logistics/SellerPickupRequestController.php": "9fddb84f86c7ed16f93e965ed5d8f6175988f18da15ec8a45cf2f1049a0c35d7",
@@ -1430,7 +1641,7 @@
       "app/Http/Controllers/ProfileController.php": "a1e3b4eae8d6fc7ad0d8a1906caa7b2c75ee5dad2519c374aabfbda9a1276ac5",
       "app/Http/Controllers/RiderActivationController.php": "8a0160c721f940db085b50e6088e2ad3c510675a5a12951e27da60bbc76965f8",
       "app/Http/Controllers/SellerAccountController.php": "4a73354e67326e0b4ca17632afbc424c601a7d1cb489fe0db78e80c99d79728d",
-      "app/Http/Controllers/SellerConversationController.php": "39de0c5372529a0bb6700c2b612536451caec5fec9c29de966c6281b09f9ced7",
+      "app/Http/Controllers/SellerConversationController.php": "f75e8e33f9f976fe9a9f2a3cbfb006ec54ea3b123edcd80d81d5a993c5da3f05",
       "app/Http/Controllers/SellerCustomerController.php": "b507e5ad75b7ee7788e125d075e25e8fd1ef4a8e7af3fe4691a47df749b2a4f8",
       "app/Http/Controllers/SellerDashboardController.php": "7271154201e84de8b2857e44868825ece75e0d6692d006cf75686c836208d9b9",
       "app/Http/Controllers/SellerDeliveryProofController.php": "d7ada45c6d972b94e2d8ff21e60cf2a6492b93a5deb909261d6d5d8265ac0c0f",
@@ -1450,7 +1661,7 @@
       "app/Http/Controllers/SellerVoucherController.php": "3bc0f956c36cd1076b770e2a61cd85a36034364746028f6586d6f5e46ea88612",
       "app/Http/Middleware/EnforceLogisticsIdleTimeout.php": "ed191f6a0838c3576962367a50d285e61a0b4c88ac133535e9e6ef221ba66b71",
       "app/Http/Middleware/EnsureAdmin.php": "2be054f4183ccd83abe4709207123d0d47646bff270d8e95303c59d2de1f36c3",
-      "app/Http/Middleware/EnsureBuyer.php": "9a798ce82e366d53acd10b26bbc728047d4bb50b26ac8d5448761146f95f21c8",
+      "app/Http/Middleware/EnsureBuyer.php": "c9b73175f1125b01995544a61ccdc85f36385a743b90f93ee419f388c0b052cd",
       "app/Http/Middleware/EnsureHubOperator.php": "d574363f7e25ef31b99488224f1f945a120c8346edd7c95bd70937bb0eca9c4d",
       "app/Http/Middleware/EnsureRiderApproved.php": "ec5d2e4bd4f4ed60558f1b62429d1fad928abb2e0ec17d4b3e8d1a24b7e0ad28",
       "app/Http/Middleware/EnsureSeller.php": "a15ff4893a3dfa7243c91b98ce6940b9622e0a8562a54fdfaeb5c077700389ef",
@@ -1562,7 +1773,7 @@
       "app/Services/HubAccess.php": "e27c469eab47411e7844d960ac0fca2ac3818197a1d304a8b4ad7e552378bf84",
       "app/Services/HubNetwork.php": "bbfdd662d45078708b496cb10a455c7127221e67733d0853158fb140ed4a9266",
       "app/Services/HubOperations.php": "1f34c29e5116a961615be6e05148a9cd98a8232050539fed2e1fde7b98615542",
-      "app/Services/HubTransport.php": "75fd2bda266e197e529d48363321a81cd85b9a85cc5efaec1727baef1c318b80",
+      "app/Services/HubTransport.php": "150d0813458b7e73bbd78dec35f5e47a3f87bf5491b4032032199b76e1461073",
       "app/Services/HubWorkspace.php": "190e0be660040d6611aaaa537010eacbcf89fb3cb5b431cf1634d28ae5755edd",
       "app/Services/LogisticsAudit.php": "3b3ed901be002240d9504e81e13e15aaa83b7354468117a524c3be74bbbf4c15",
       "app/Services/LogisticsOnboarding.php": "b06afe1b6636af1ed0a28b4d5041404aef7aa116bf69823b4ae88dec832dca2e",
@@ -1574,7 +1785,7 @@
       "app/Services/OrderItemPickup.php": "45448072329ada7ed704661bc1a448549d61f8ed6daaf003d367e71072a4611e",
       "app/Services/ParcelTrackingTimeline.php": "d9833bd3c2d48e7203c53ced229043d0d2a0c80c6e4813aad5286a3774602a4e",
       "app/Services/PhilippineAddressService.php": "a954d19fc8bea3f8727fa99d2aaad8bc004d80cebe118e38312936eac59a6e8b",
-      "app/Services/PickupDispatch.php": "188122c2dfaeabe608fec98f7b68bbf5ea4335adb59093a3f2244ca92746b080",
+      "app/Services/PickupDispatch.php": "6bc06ae3fb947595c64bc2aef1219934da16236d2a986ab2a77a424c308038d4",
       "app/Services/PickupLocations.php": "12876743e4b7c2a452b296ab24bdee604c925170480fefad16c763f218e1895b",
       "app/Services/RegistrationDocumentStorage.php": "b45fabaeb86cad56fdc5260896723abaa661f5c346c30406207536e612c1c954",
       "app/Services/ReleaseUncollectedPickups.php": "de62023014536581dbac9287df7939dd0e244683fd8cb210749c103e5521f85e",
@@ -1582,13 +1793,13 @@
       "app/Services/RiderAllocation.php": "5341dc09b0a42c68561e3b64cc94009deb31c647788079c64f8e2feb483dfbab",
       "app/Services/RiderParcelDetails.php": "fa73cbad1e2b379d4983e75be88fd866882e6e64eeb367a13008503dd7133c26",
       "app/Services/RiderPresence.php": "406d01ef2fe2527ba63d7b0dd388ca55afdbc0cddf33ba276131664dea978e40",
-      "app/Services/RiderWorkload.php": "a5c18229e3648061d2d221112e808b1d3f864159217873f82adc0a3b3b04888a",
+      "app/Services/RiderWorkload.php": "cb1cd77c177876a0e481fdf878d05339158e060218f61f05c1395d9ef3775fa3",
       "app/Services/SellerNotificationService.php": "bb6d25687dc8f5a6af2ab16fea9a50e9ded474eaa346d0375422c0e462ebd423",
       "app/Services/SellerParcelDelivery.php": "2f9944136f1d9ad5a20b56250f686ac15e4f2a4d20a12fbb873697a42f30ff4c",
       "app/Services/SellerShipmentFinance.php": "423917777a3dd5fb0300ba8af1f3fcf4ed4391c024f894918fe668c940f56854",
       "app/Services/ShippingRates.php": "2885bc2a409abb8896e309b98cbcef69fe12673cd7179168576350dfff9d3116",
       "app/Services/SortingCenterSession.php": "b991987d20d739575f4dacfec80597445593f3f6260f344babf610a1867f52a5",
-      "app/Services/SupervisedHandover.php": "572fa968acd0459ea47fa6a2172c9c5a7ee4cf297d596cb35aac5d806b57b18f",
+      "app/Services/SupervisedHandover.php": "ab51fc76f843fd56bfbc2853c18310f598a85656b7010a1cb4f3305940847115",
       "artisan": "f91a517c0c5d3a904c3f390933964a5e08ec1fc68146882730daac4aca4ffcec",
       "bootstrap/app.php": "61685028c6e62783cbfd061da889642889dcb7363f6bbac242e669475ed8cc8c",
       "bootstrap/cache/.gitignore": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
@@ -1598,7 +1809,7 @@
       "config/app.php": "b4b25e15efa76846a7f2e19fd1044fec4945e4e928c4098126a2b0042b034383",
       "config/auth.php": "c7e204e9785c9f596d66fb884b493f658f2327f157646bdb4088efd6b3a7773f",
       "config/cache.php": "ee4ad2bba1edfcff52e9599f37371f2370d0b167cc226ce72d46cdf6edf2dc55",
-      "config/checkout.php": "d3be31d7e6116e5c9723256c3984638cd50f33dd87d308957415d867dace640f",
+      "config/checkout.php": "c7356f47591a866353b9d664bd621aef25af7ba59dd404d202cd45145bd71f10",
       "config/database.php": "02cd62f589b43d33f9ceac740705dac1dec9740eb2bb9e6e202d4b66a15244cf",
       "config/filesystems.php": "ba7060d7a23e490c3ce830656f6d24ad3ccf5b868e3293f2a12e411959dc5635",
       "config/logging.php": "beb1ffd0db910f6f0b4f75214c3d5aa385d692733ece8a450f4c169d2c99ce38",
@@ -1713,19 +1924,19 @@
       "database/seeders/FaqAndSupportSettingSeeder.php": "ad97b82e44593ab3ee275d41e80ef7681bf9ee47873c1386d515a8ba728abf52",
       "debug_verify.php": "16672a1fc4cfc3ee1a1bfe2208e2ff6f0b51310984498d9d728735f769922a49",
       "docs/ALONA_TEAM_HANDOFF.zip": "adda93ac053c29c00fa9241b35b3911f51ec47768d320f8421f07af85cb933f8",
-      "docs/DELIVERY_FINANCE.md": "27f63409b0b9530aa2e54ee025de615a62e794936773fc5e5111369fdfdf2f08",
+      "docs/DELIVERY_FINANCE.md": "3e1791bdff8176c49c23c5256c3be3e90247672ad6407281f0e5b7d0775954eb",
       "docs/DELIVERY_FINANCE_DEPLOYMENT.md": "2b20cedc9db3adebc9fb39a47762ff6770ea007e53af455b24a74f1fb8a02c69",
       "docs/LOGISTICS_HUB_NETWORK.md": "45668bc124f36cb3e0c5759b8b6fb59fb50a21ad4abc7bdf126f6f4aa54dbe04",
       "docs/LOGISTICS_REGISTRATION_HANDOFF.md": "9b04d26fc82260748cbe8aab7caebe1e9fd24e1ca1111d06b354f64b29534d04",
       "docs/LOGISTICS_REGISTRATION_TEST_MATRIX.md": "df47b6c38792b0d2c29d70aab713858eb3bc20c1b947bf654746d13a9a187bd3",
-      "docs/LOGISTICS_TEAM_UPDATE.md": "ccbc8b1c9abcbd0458c6d865acd84def12f2c0eb3e3dcd4ac82104255e407ac8",
+      "docs/LOGISTICS_TEAM_UPDATE.md": "649fc5cc8216ed62093027eb5a714c4ede045e49c1a9422164cf664f4055ba1d",
       "docs/LOGISTICS_WORKBOOK_READINESS.md": "9085c6bc0b7b2d7fa9638de890a9a76b5793ac3bfe965c0d7e60665755ebe4bc",
       "docs/ORIGIN_MAIN_INTEGRATION.md": "b788da90e0a10a85f3c7582a8718498c672c2c4450790c28f3bf2e954afd107d",
       "docs/PARTNER_ONBOARDING.md": "b6293d6a3165410598f88280b83e0d36c8577bd39297e55df6b4785473ed977e",
       "docs/PR_DESCRIPTION.md": "901034e9a9a37f95fcc3543224089c1c25a64baab5ecc312d4cb71787ff3688f",
       "docs/RIDER_FUNCTIONALITY.md": "e252627a0965cc99127646e90838928c22ec0ae2ebb8b74aaa4d8c2a5805651e",
       "docs/SORTING_CENTER_INTEGRATION.md": "0b687bea17b4e26f2922ebe52a468836d7bb97b74ab24c40993d9cba92e31375",
-      "docs/TEAMMATE_AI_PROMPT.md": "4058af3063c2b873f2eb566ded072831a8d57b5d8b77c2a939d29f9dc415deec",
+      "docs/TEAMMATE_AI_PROMPT.md": "5e822a7d850ba58d1660ae19795ff134b6eacfd74768ca5c2baa870e1e851489",
       "docs/TEAM_PULL_NOTES.md": "dea6ca5f2743d116cc7e872d95d40c9847529f21e0c540fc352def1659fd4dc2",
       "docs/buyer-module-audit.md": "0794038f613ca7389df666bc9767108ffd2f642f94fb254f47c11489f9456c8d",
       "docs/teammate-handoff/00-mysql-preflight.sql": "5af6d1206bbe6c0c9a84fae9a4b76c3fc4b44bc2bac52e21bbcbda24d99ddedc",
@@ -1740,15 +1951,15 @@
       "docs/testing/results/LOGISTICS_COMMIT_READINESS.md": "fc26c45c7edb5bb43df6a87934fb9f25c34cb1aeb47aadb09dac31860d3f91ad",
       "docs/testing/results/LOGISTICS_IMPLEMENTATION_BATCH_1.md": "f855c441c7942d49e3e50a7b404329d9d4202f503cb33133b349c7ae1436f2c5",
       "docs/testing/results/LOGISTICS_MISSING_FEATURES.md": "dda37dc53821fe313530f45853bff59b18d2488c38bb655135179fe6e958c932",
-      "docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md": "69a336ce2b07ff2301152d56fd57b9e9fc217ef924f37623bacb8400e4aafc57",
-      "docs/testing/results/LOGISTICS_TEST_ANALYSIS.md": "c3f7699380b34b7f2e5a21e8f4958042eea2883599260d42d04b412c8b6dd236",
+      "docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md": "4c9db6b67d9b71c902f8bdf3f101457ded5f2ddfe497cf90e329b2197e86965d",
+      "docs/testing/results/LOGISTICS_TEST_ANALYSIS.md": "976bd3df9a30b545b67108aff141481f3cb42402376235973bfd375d0427149d",
       "docs/testing/results/LOGISTICS_TEST_PROGRESS.md": "2e87c76f52461bef3ff3c1a90e89bc30014401eb478099d25fc432515641def6",
       "docs/testing/results/ORDER_FLOW_REVIEW.md": "9991a6295eca14eb68d68aad4955b841c4b96150332637bacdb516dc0b9b5008",
-      "docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json": "cc1e8bd4e8d2ecccdc757241e979173edd2b237199ad2227980c945927bb74d7",
+      "docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json": "80e3a85b81e8fe7b7124918b6fee31d0313c50dc2ca204161e4b3e89ff6216a5",
       "jsconfig.json": "b216e1e7ab6648db2f0bfd84e0d4e909ba5349931ff9ff1230d0b649a3565a0e",
-      "mobile/README.md": "cdf79b5f1568262230a710d70b1652af88bf708a15ef830475a141c51ac90f5e",
+      "mobile/README.md": "e8eeefe12433cfa254708de0b7620f463bd59b989da9a0e79ad8a33440eab1f6",
       "package-lock.json": "17f8d11003aaed783f054d4d81124a8a3903b5ef69958d4457d6198e3f98b870",
-      "package.json": "d9e3fbf7341f06dc454a2c1dff2729167f0985eee5b4d4dd299b97a8e0d658ac",
+      "package.json": "b31c5abe7f394e366d34d52bdcfde737bc1efb8c1f2f8be8c29fde1b748f663f",
       "phpunit.xml": "c274d270bd6fe19670dc4f1267023c15287431ce16edae22b35d46f9cbc84051",
       "postcss.config.js": "c713dcb623f3a959b28f6e7f724440660f890288c7b796d8c9ce42372ee7f36b",
       "public/.htaccess": "b7e379c77639fd56144947dbae84c84eb466d9c686ea81f2f013ae85421da923",
@@ -1800,7 +2011,7 @@
       "resources/js/Layouts/BuyerAccountLayout.vue": "9903852dc7481599f1ac2f8046867c692553a54617c1d836e183efd26c1afd21",
       "resources/js/Layouts/BuyerLayout.vue": "03e601b42ca6b0f58decf777586fce516c1c839604c25d82d1f92b98450ca6be",
       "resources/js/Layouts/GuestLayout.vue": "433a6fcee2ad6febece8d1d8a8e301c265c8ce1848de8e085a0bb2905378bbaf",
-      "resources/js/Layouts/ScLayout.vue": "f1e23b9da94c55fb72ea4c11ae626239a92c8a43511f3932fef4eaf3c9d11fcf",
+      "resources/js/Layouts/ScLayout.vue": "268f37eb8ff24d8ece61e4aa71cfaabe3328450835106f1176f0186ed14b4eeb",
       "resources/js/Layouts/SellerLayout.vue": "0023fc3ba760c0d86a027d602e1305ec94334375de6f534aad850998b1beed8e",
       "resources/js/Pages/Admin/Applications.vue": "8a7eaf8603430ff0742ec46c4049a5a20884264a6ea9418692a44e3c74a443e7",
       "resources/js/Pages/Admin/AuditLogs.vue": "bae5a1784b7f38d24d5130c9d63de807d6d44412c8f69348f95aaa7b5f659395",
@@ -1828,7 +2039,7 @@
       "resources/js/Pages/Buyer/Cart.vue": "8d8799dadcda0465fde9ce124f9ad823c520d42c7f5150df7dd2487f7357a70e",
       "resources/js/Pages/Buyer/Categories.vue": "49bb8f7122afa5fbe2bfc101b92ca74dbcfcfa0f21ca8495e9d8749dfd40ae3b",
       "resources/js/Pages/Buyer/CategoryShow.vue": "a736b2a678a1cff6e2b82ae23e58cfd120b9c13bd4ba22fdc17c13d6b96a565e",
-      "resources/js/Pages/Buyer/Checkout.vue": "2e6174a1eff6a3e465b8c67c971b85b5073bc109f903279abdb30b76a65eb410",
+      "resources/js/Pages/Buyer/Checkout.vue": "b1d8b82a26809bb444c509aaca0a3e5ad3a03814494ba32359a57aa4f82c6c34",
       "resources/js/Pages/Buyer/Complaints.vue": "b0e731512ad68f5e24ab46442b1fa0372886252f195286b637135be43e585a27",
       "resources/js/Pages/Buyer/Conversations.vue": "0513fde4df5f9c7a9357ddf5b44401985d9a354939f10f8187bd59c07163832e",
       "resources/js/Pages/Buyer/Dashboard.vue": "7081dcec9f6f433c705a9c49022cfcb8695a532eb23c695044fc256c2898012b",
@@ -1896,7 +2107,7 @@
       "resources/js/Utils/barcode.js": "9c83dbdb173970ce30467766a2f5a9ad5a536708b41408a76a8a496c4a89b134",
       "resources/js/app.js": "7169d041f95ca30b8c24ec57df0f3d781576a83960e25d099cc7f806411cf163",
       "resources/js/bootstrap.js": "1bc01d0bd57794507735868c0e967cced7778e6f07d682f9ac0cfd2a4d7d91df",
-      "resources/js/logistics.js": "61da2c18bbe3f15dea470e8a293da02b94d05b9d39eb831064aa59d5ed85576e",
+      "resources/js/logistics.js": "490834ab1fdaa87167e5161e0399683567c0eb38065a0b31ac183303a918f85b",
       "resources/js/logisticsSession.js": "3b6e3dce3e56e3ca100e9c01baed41aa1fe274d4a3e18a59584fd67100c6baba",
       "resources/js/requestKey.js": "60c2441ac1fa0271da4569c1befbda1c232f4d500e8b9ee83a8b8e99f4a3df9b",
       "resources/views/app.blade.php": "daecf2b75961f4826e74b52aaa000312f1b5e7644b253ac14e8aa5caf99082a3",
@@ -1917,11 +2128,11 @@
       "resources/views/sorting-center/rider-management.blade.php": "afa9f837d68af64a05b0cf2ff307d7795dcdd63bae645e438f565fb8aa17f2cb",
       "resources/views/sorting-center/session.blade.php": "0f00ca3e3346a29ef8d65a5419adc3b3071580fcb24ccb4b8c476c1c3907b04e",
       "routes/admin.php": "2952d8b00f437ee88adbb5997872b8214bc6447763e4bc1d6f794fd8887f295d",
-      "routes/api.php": "74d87f4be8824a534b1725ded1e4f2bd467ed2e83af650df50a817a349adcecf",
+      "routes/api.php": "bdfd48baa21f568732c0ce2a7c02aeb29db449993d0021c53bcea60802d64a9e",
       "routes/auth.php": "6b00909b4c94a83c9fef882ee44993c4d07e574beb07548f561520c34e7640ce",
       "routes/buyer.php": "b462e1b5dd23c1929b017c2365e6f74bb48e0b7528137675031d3b94bdc1a641",
       "routes/console.php": "8dd157a01b96e2f2058ce29496b595d83d156b00c2b6e6b54420b8c22c8d40dd",
-      "routes/logistics.php": "4d5ea952c04e128ae6ea37b4f6530bd8713b1e9091badc2387df6a2c42041e0d",
+      "routes/logistics.php": "de6d6e438a9abf04c1e05fd23bbec8e1254339f95d2d3101c40804d599f61d64",
       "routes/seller.php": "6aebe8f290c2a1353c6af0a1b36ca26be04990bd47cab0c7956326a877fa3919",
       "routes/web.php": "8e63dd07261f1ae06bc05ca2b24263a75de6357922cb58a05f05b6bb79cdcb19",
       "scripts/build-psgc.mjs": "7f9282004d75388c22558c7fefd9b76cb4467ac1dbe636b0c526857aab5b4f70",
@@ -1929,7 +2140,7 @@
       "scripts/check-logistics-submission.cjs": "9e5b2d0aca29865de500367af563c70dc56a19112f318cd358f7c9327f5b501a",
       "scripts/check-logistics-ui.cjs": "1a161062cb62064fbf46385ef3892d84d537ac1569e16b4547a1874ccef4dc1e",
       "scripts/verify-logistics.cjs": "d1ba557b786116dda232f412ea4f6ffb9fed70e6b0a88765acc13c562f904aaf",
-      "scripts/verify-system.cjs": "e0b4a33f4a1eaf4ac975103d999aa880f1590695b016af0e0f2089e5542aed57",
+      "scripts/verify-system.cjs": "61172e67dfd2b86d1fe02a5dd73ece3d35f414dda934b8527db5202fb43eae46",
       "tailwind.config.js": "8f845f7f88c36b04e788510ef8630c971d4d25ceb108c077d29912b10aacaf85",
       "tests/Feature/AdminAccessTest.php": "b7a20b76ebfca912a935594022ca866dce225b82df42ebb1be7b998ab6a78446",
       "tests/Feature/AdminApplicationReliabilityTest.php": "708c61b625d45a83f7644953955d17ba8cb0a79356c0d73527c78a430ea59089",
@@ -2064,8 +2275,195 @@
       "tests/frontend/hub-workspace.test.mjs": "6142df41f469af43233e19ee2885903d7134deb0beab89d96a2a54d04a639bf1",
       "tests/frontend/logistics-session.test.mjs": "b8763f22274daddb733b4ff4f35d7b8bb6d1fcd74e69f76123d55f41e7e21e42",
       "tests/frontend/onboarding.test.mjs": "13bbbc6b81cbe804cfc2c3d22f83bb7ab7e8a8ef33853b862070ad0df280e45c",
-      "tests/frontend/workbook-readiness.test.mjs": "62350e803287aa72a79e3ff3b60a67b8df477caeca3b4a300c8b3f181474a360",
-      "vite.config.js": "40f3dad3bcf95ef231aa4817614969675736895bc4f34dd830971ad3fc918463"
+      "tests/frontend/workbook-readiness.test.mjs": "0ac4f14e6452e7df80f97eb90f55dd9468de40186b555ff0622747e57ec23149",
+      "vite.config.js": "40f3dad3bcf95ef231aa4817614969675736895bc4f34dd830971ad3fc918463",
+      "tests/Feature/BuyerMobileCheckoutTest.php": "0b6142d2294401eb19b901262c67e980dd28527dc45966b0ee4ee3e52d79cb81",
+      "docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md": "974b7e0a77574262ff4564d1579c6db9f897e0875b161c917bd81b07f40594dd",
+      "tests/Feature/BuyerMobileParityTest.php": "ccceb442bea97de26ffbcee0dfcfec54e19d89c22ea10ecf93c81b8cd840bb9c",
+      "tests/Feature/BuyerMobileAuthSecurityTest.php": "aab705f985f6539d6a22bf80bc9d64b8d9a34f4fad63defe8ce90a2a8271d95f",
+      "app/Services/ConversationOrderAccess.php": "dfaab3969fb835a862ca606b37e80f8b1662f24ddd8271b8338f0ac00b808470",
+      "mobile/alona_mobile/.gitignore": "5f297570c7f68531fc352593af46a0faacb896048b9f7bc601b95f58bb7a7284",
+      "mobile/alona_mobile/.metadata": "c7a465c983f988809622bb82ab66ab144470821f7b2f7448fb04333e3f53a415",
+      "mobile/alona_mobile/AGENTS.md": "81815cf58feea359af4c9231686edab0faece9704d84292b1d74ec7a616d07c0",
+      "mobile/alona_mobile/README.md": "8911952e51599123930911cc2eff392004c782b4c342de690a483e986ec1d6bc",
+      "mobile/alona_mobile/analysis_options.yaml": "98d70dd5a9033911f40e2e7f3ff9d74618e2aa13652990efe860ed0fe1cedfa9",
+      "mobile/alona_mobile/android/.gitignore": "c9af75dbc2c8aa867476a09426c80b178c4aeed8b9393ae48503eedfa3273d71",
+      "mobile/alona_mobile/android/app/build.gradle.kts": "8a860f854e09d4f80801bfbfec306f33d5942ee20fe7a8a1c426c234cb378fdd",
+      "mobile/alona_mobile/android/app/src/debug/AndroidManifest.xml": "2ec9c0555c7991c4646a61950c422692f0e96bf307a0273a853d5fdfeda4f71e",
+      "mobile/alona_mobile/android/app/src/main/AndroidManifest.xml": "59b7cd52276a8ae6374ecc4ca8f5d48e85a714f0c8d908246237b04cb5caba91",
+      "mobile/alona_mobile/android/app/src/main/kotlin/online/shopalona/alona_mobile/MainActivity.kt": "ac04963ca9ef730a397c80625c8cd5076fa43c41c6e1b70eff8e352e96d846c5",
+      "mobile/alona_mobile/android/app/src/main/res/drawable-v21/launch_background.xml": "dca312ec77de83e43ef70a825c299b51451247286c29167d62f19165750b8793",
+      "mobile/alona_mobile/android/app/src/main/res/drawable/launch_background.xml": "2df60e2cfbee873ce2858088cf003e6b93498f2f568476da437610467ea1a9d7",
+      "mobile/alona_mobile/android/app/src/main/res/values-night/styles.xml": "ea763597dc1a84c8034251caee98d7753e0fbf57340ffc94677427de4b537516",
+      "mobile/alona_mobile/android/app/src/main/res/values/styles.xml": "cca15a99b59380a548bf6a890f7ca5380ee509b1f9bbb2f5f9ec3589fa25c2f7",
+      "mobile/alona_mobile/android/app/src/profile/AndroidManifest.xml": "2ec9c0555c7991c4646a61950c422692f0e96bf307a0273a853d5fdfeda4f71e",
+      "mobile/alona_mobile/android/build.gradle.kts": "218f400e3fff31c9c986a2535dfb974560e1b4d33cc27b7c1fee96a2b7e44454",
+      "mobile/alona_mobile/android/gradle.properties": "5a74e6bf55c9edb335ffbe69d54d0fabcc3513504201a23f967e41fc5c855248",
+      "mobile/alona_mobile/android/gradle/wrapper/gradle-wrapper.properties": "594a00250ef7a36609a01f3263bf5ed63963afaf9ca9f82f2cd1de0f6f056383",
+      "mobile/alona_mobile/android/settings.gradle.kts": "092ba880c8d4a07591aafc082f45deedc9afcf60c113a4bb3d13cbe1a1fce9de",
+      "mobile/alona_mobile/assets/fonts/Figtree-Black.ttf": "25fa6ad43e327b6089b52f83a613fa8271a6132f6134ccfe06ec7597f6ef2e65",
+      "mobile/alona_mobile/assets/fonts/Figtree-Bold.ttf": "e18bc3968e0c25eb4925188cfa3447ccd50be785f2dc014323aaf36b4cb2bd1d",
+      "mobile/alona_mobile/assets/fonts/Figtree-ExtraBold.ttf": "d224449eee8431551400855e096615968293207ed35834bc188ee708edda82f5",
+      "mobile/alona_mobile/assets/fonts/Figtree-Light.ttf": "28bc74381fd0f9889e16b05cf2de7ec9537331bbf4b978329ddbf230bf0a9932",
+      "mobile/alona_mobile/assets/fonts/Figtree-Medium.ttf": "8c9862af17c0db8ae2183a3aecf89da684b88a63821c965ef346a54a967715a8",
+      "mobile/alona_mobile/assets/fonts/Figtree-Regular.ttf": "8423cfaccddf9a150fd350b6a4361dea3e902c1311def1c7d15214912810a6e3",
+      "mobile/alona_mobile/assets/fonts/Figtree-SemiBold.ttf": "7a1bba78348bd3080acd2a7c3c2939a4c02950643ec1bdc256576862399a4438",
+      "mobile/alona_mobile/assets/fonts/OFL.txt": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268",
+      "mobile/alona_mobile/assets/images/Alogo.png": "dec10d0b36d8947519747a8b4331c90362c804b0d64d888158cc387527814517",
+      "mobile/alona_mobile/assets/images/alona-icon.png": "1355c8357a063bd9ae0507cb1c9320f50d62053d0865a4d8076dcc92a1d4a3ad",
+      "mobile/alona_mobile/assets/images/alona.png": "49d10886786a8f8f2fd9e22ffb0a9fb659742b312f9d9e23f67cd91f949edcc6",
+      "mobile/alona_mobile/docs/ARCHITECTURE.md": "383d3a565fb4e2276c4a61cd08b73d93ec7d73d56d965f5f4ae2abbb3edc919d",
+      "mobile/alona_mobile/docs/CURRENT_STATE.md": "18e859be40e090812176f0cd09ca858dff5cfb26fff3b8fc0dbfda4d74556412",
+      "mobile/alona_mobile/docs/LOGISTICS_PARITY.md": "f28008ce6b541204417832d52f2ee1197b5164544ee05331e51b48eba5a2f11e",
+      "mobile/alona_mobile/docs/PROJECT_CONTEXT.md": "d3f5b795d060907c8a5906d1751fd5c60d03600d414227372f4fb8a4f456a0df",
+      "mobile/alona_mobile/docs/UPSTREAM.md": "ecd80b57f445f1be456484b8e12eaee94b04cf2644298ad6a5ddef12bb1f280f",
+      "mobile/alona_mobile/ios/.gitignore": "e85b4db8ba6ed14708e5f7d3c60336e5a3067ce11329b84aa8ba5d98603ee253",
+      "mobile/alona_mobile/ios/Flutter/AppFrameworkInfo.plist": "e51cfa76fca1ae586244b43bf97423577315d2906394c1e7768ef43b8d23e161",
+      "mobile/alona_mobile/ios/Flutter/Debug.xcconfig": "c0d1da54718e75f2028962b689258ecc741abf7cdaed50483aa5225264d0a7d7",
+      "mobile/alona_mobile/ios/Flutter/Release.xcconfig": "c0d1da54718e75f2028962b689258ecc741abf7cdaed50483aa5225264d0a7d7",
+      "mobile/alona_mobile/ios/Runner.xcodeproj/project.pbxproj": "a202da5019217671129a497e886b57e1241a3f3f7d79a7932f796ee6b34e112e",
+      "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata": "ac28b35c2b940210bec0fff8e424b07fd0efe9112ab178a10533583f251a386c",
+      "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "mobile/alona_mobile/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "a46c0d064503db8bf9f452b492c61fdf76f9febb8894005fe30b2facec21e550",
+      "mobile/alona_mobile/ios/Runner.xcworkspace/contents.xcworkspacedata": "706a4c812f2a1e220e6785c27580020d58048e2ae4d30d1280f3c43344ce6b38",
+      "mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "mobile/alona_mobile/ios/Runner/AppDelegate.swift": "54a5e98d6c3e8a79413ad50607b83aac8ded8828bc913eda1fe86bb33a66cd5d",
+      "mobile/alona_mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "5f8b941b774bde4496d73347c1f79cbdd786bb76fbdab9ed1f3f0cb78a0fb0d3",
+      "mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": "fbd112a9f3b541a1d811f71ac8e4fe68b6176687d973a5f4d99b7aa4a722e94e",
+      "mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": "853ac958e2416fe2540f6f61165283a3618b71a7ba5f85f65ac41c2158dfcd21",
+      "mobile/alona_mobile/ios/Runner/Base.lproj/LaunchScreen.storyboard": "bc3644fbb251ff1e18de25a4932c927850ae1a025be3dd1447940429633fe4b2",
+      "mobile/alona_mobile/ios/Runner/Base.lproj/Main.storyboard": "dcea4686c02065e56217fd19fcfb73d7509b41872e7486126149d47a18559363",
+      "mobile/alona_mobile/ios/Runner/Info.plist": "40f55c83fc2c01e4551327637ccc4becfeae1c400658975f426c010788cca2ae",
+      "mobile/alona_mobile/ios/Runner/Runner-Bridging-Header.h": "efe657d8b27f7f8595a0d416bffb33fe7d93bd2869d81f7353b556c439d7a1a7",
+      "mobile/alona_mobile/ios/Runner/SceneDelegate.swift": "edce811c671ca0a6ccb14753e14e16deb0d89a0adf4f1b685e362d87d8f4c366",
+      "mobile/alona_mobile/ios/RunnerTests/RunnerTests.swift": "c0e04141287eb7f9c9f3d31cf5be8cb626a9ea71351206c9121578e8b8f480c3",
+      "mobile/alona_mobile/lib/core/config/api_config.dart": "6117e4bd7c04c9608e2d362cf223504dcbd0fc82dbf307761e4aa3e30dc7b297",
+      "mobile/alona_mobile/lib/core/config/app_theme.dart": "825a96e4e17a063b342bc8c56caf9504acd30aa279a945b6ae290873426bc9c0",
+      "mobile/alona_mobile/lib/core/network/api_client.dart": "d54df61262ae880d341a7c919bd3c4e4bd09647461f8039cb0c93ed503b8fba4",
+      "mobile/alona_mobile/lib/core/services/auth_state.dart": "5b16dca4258b4dc6d2b21705764fbaf30ebebdfdcd22489fded06b3f9587c428",
+      "mobile/alona_mobile/lib/core/services/session_store.dart": "6c6913b1f07aee3ff588db1abd40b34745955272f383210e03f466d513e51182",
+      "mobile/alona_mobile/lib/core/utils/currency_formatter.dart": "c162946316a9d3d57349270be29e03ebb40efa79b8f64bb451466a574c50c256",
+      "mobile/alona_mobile/lib/core/utils/date_formatter.dart": "e1897849498dcb32a55b5dd0bb086117e8bf66f37dbcd9af7bcf6fde29201e79",
+      "mobile/alona_mobile/lib/core/utils/request_key.dart": "b21713653e99fdb6b7da1f75b90f74564a4dbc336a47b02ea439785e2d6de3e8",
+      "mobile/alona_mobile/lib/features/buyer/models/buyer_models.dart": "548f4b9b0e93e9a37be1ba93cdf27946fd07c91ed9f23d70d2c959e7b128e92d",
+      "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_login_screen.dart": "df892e2c1dcc479324c5fbe569ea9cc80575f4610885b90d2b904ee1eb6e5faa",
+      "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_otp_screen.dart": "977919e40d9770133aa0c0f8d31ff7215fb61bc3da28836971129d40a2d8f362",
+      "mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_register_screen.dart": "e92b54b58f6af7d5cf0028957f20ad89c1949f882a40b90a6e12fe92b5f3aacd",
+      "mobile/alona_mobile/lib/features/buyer/presentation/buyer_main_screen.dart": "12dbb410ba7fba12af50bfb9971417f824eb976520983953ddecc4a67366c463",
+      "mobile/alona_mobile/lib/features/buyer/presentation/cart/cart_screen.dart": "782ef9d6a4c342feb21f9f08a9d0318656ed380b0869e3f0a43217c1018b5aa2",
+      "mobile/alona_mobile/lib/features/buyer/presentation/categories/buyer_categories_screen.dart": "40e4bf2753d66441581087d7ba9120ead3cf9a5f6d81978f8484ae23c371f003",
+      "mobile/alona_mobile/lib/features/buyer/presentation/checkout/checkout_screen.dart": "14c274cf41189d6aa795754eae9519c4e1da206be951c4d592d977da31ef6aa3",
+      "mobile/alona_mobile/lib/features/buyer/presentation/checkout/order_confirmation_screen.dart": "22a10ce484f8a41917295482385ff9cdf1e58c093ece244e7ef22d6f82b9469e",
+      "mobile/alona_mobile/lib/features/buyer/presentation/home/buyer_home_screen.dart": "aa11dde728cea7eac9a2b1c27ff1575ffa532e319aef18a14a93c234378e3ab7",
+      "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/flash_sales_widget.dart": "5ed8f9eb3717d17fbb4fb681d74318ec5df58e9e195618da498ed48c2ad3b6fa",
+      "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/hero_banner_carousel.dart": "0807c5dae1d75abb4e76bedca8e8fa293d308b31500dd00f1af0c5e2297baa68",
+      "mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/product_card.dart": "3f529005a0695ae07dbf0e70071b4c0bb9b85908d22347df37c2e1e2e392367f",
+      "mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_chat_detail_screen.dart": "615d390aaa2f709b29b7ef8e78be0fc493a89efd8f12f3f29747de9ffb885254",
+      "mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_conversations_screen.dart": "1108712ec2b0f9fe1581dae70506e1222a800c98ab4f924b1088646077bfef36",
+      "mobile/alona_mobile/lib/features/buyer/presentation/notifications/notifications_screen.dart": "019a5da969324c30fefeabafc6c5ee0552b1215c16e39095ef351e6619befaa2",
+      "mobile/alona_mobile/lib/features/buyer/presentation/orders/delivery_otp_dialog.dart": "17286fff66563f376c5df1881da58d667ef5f7f429de886fc40af55534f150f5",
+      "mobile/alona_mobile/lib/features/buyer/presentation/orders/order_detail_screen.dart": "9e701a071c1b8e3cce6d888560adf72d5edb6e7a3db5b544a32fb1424c7dc2fb",
+      "mobile/alona_mobile/lib/features/buyer/presentation/orders/order_list_screen.dart": "3cb5f104904eb0eed33510542c5799ef8f4500ac8fdfcee483b4940354ae46d6",
+      "mobile/alona_mobile/lib/features/buyer/presentation/products/product_detail_screen.dart": "16739067b5dcfb22bdfb8152bbe0abbf53d543d7ec85433b5b4f05ccbab3e895",
+      "mobile/alona_mobile/lib/features/buyer/presentation/products/product_list_screen.dart": "6b4d3ba148d5fd2c97f8e3b1ffcbb650236026e5305aa4e0e3c0e485c4bde1fe",
+      "mobile/alona_mobile/lib/features/buyer/presentation/profile/address_management_screen.dart": "ec43de1acc5f41a181e7555205cd3d73a32d45b1c45f85dfe740bf721cc5d3a9",
+      "mobile/alona_mobile/lib/features/buyer/presentation/profile/buyer_profile_screen.dart": "2beb70f2c416f5ea306db219d758245d9c2d400b4b56fb629ad4dbddd89c4cfd",
+      "mobile/alona_mobile/lib/features/buyer/presentation/store/buyer_store_screen.dart": "07a42b1eaa1c4c94eec10cbbeb50ab5f1988f195b2340555a3f439ccdd53c242",
+      "mobile/alona_mobile/lib/features/buyer/presentation/vouchers/vouchers_screen.dart": "b216f262543b5245c3d4fddde04251f12cf8ca5f1887fcad455bbc83a5239097",
+      "mobile/alona_mobile/lib/features/buyer/presentation/wishlist/wishlist_screen.dart": "6e71ddd1227c721dfc0ecff6be01e7c6fa8acc131e539b8c184a1c437343a8da",
+      "mobile/alona_mobile/lib/features/buyer/services/buyer_service.dart": "f48b0753ebe215ffb3a4395390372471f0d4278e4eee944605a7dbe91c858f58",
+      "mobile/alona_mobile/lib/features/logistics/models/logistics_models.dart": "34091d072ff570d98354b142a3806a138488bf89080d342560b7aebce44016cf",
+      "mobile/alona_mobile/lib/features/logistics/presentation/assignment/rider_assignment_screen.dart": "393cbe9548f04c2a912f3843884a51d47cb3d03e0861e9d3d6a951081f3e78e6",
+      "mobile/alona_mobile/lib/features/logistics/presentation/auth/logistics_login_screen.dart": "7dc960ec7c396d184290a719d458bf5a15216c2b3837c0dd942f1d65bb5f1750",
+      "mobile/alona_mobile/lib/features/logistics/presentation/cod/cod_screen.dart": "a5ccab40fcad7601260ff46c79409c79b642000b7b137d0a66c805f8bb6a353d",
+      "mobile/alona_mobile/lib/features/logistics/presentation/dashboard/logistics_dashboard_screen.dart": "a41bf75c9699e775b471c64666c5be63af6ef0dd3872845d6ab7d7a526ffb653",
+      "mobile/alona_mobile/lib/features/logistics/presentation/hubs/hub_workspace_screen.dart": "cc1d2550712ef66608551150d112b23e969cdaa31b6422196f9378d1ad0653e2",
+      "mobile/alona_mobile/lib/features/logistics/presentation/incoming/incoming_parcels_screen.dart": "a25faf0c6f7412211a1306b3adb797e3e8e5c1b4f973a62a2d2cd2a375297d7c",
+      "mobile/alona_mobile/lib/features/logistics/presentation/logistics_access_gate.dart": "0bce6937ebf14ceb2d28ec188e8c4eb7aebb92991bd7cee1a7cb9d0d506dc261",
+      "mobile/alona_mobile/lib/features/logistics/presentation/logistics_main_screen.dart": "a1d3edc15ab2b7e3b999accf281e5c78537d3b1ac9a7f1edbe99d0ea4d7924b8",
+      "mobile/alona_mobile/lib/features/logistics/presentation/monitoring/delivery_monitoring_screen.dart": "e6b7ed81ac277f9692e2df75074c1b29e4ad15f5f580038c6ed6d87ee89e62e4",
+      "mobile/alona_mobile/lib/features/logistics/presentation/operations/parcel_operations_screen.dart": "9cc9b7c7c747b7749ddf12a1e17d92fe99285fd106100aa339581d68986e2c21",
+      "mobile/alona_mobile/lib/features/logistics/presentation/outbound/outbound_parcels_screen.dart": "70142415f8de2fde13da6c41df1cfc8551d22edf600f504cc7056ef65556f1e4",
+      "mobile/alona_mobile/lib/features/logistics/presentation/payroll/rider_payouts_screen.dart": "649ee9ad90be94533c832657e6dc2ab7ff28eb49dc45fc1813d46cd919c0a526",
+      "mobile/alona_mobile/lib/features/logistics/presentation/pickups/pickup_requests_screen.dart": "7b9bc18de92c3cfefa7b3850cbfb7421db244c245b83ef0d95eaa54aa8a7c91e",
+      "mobile/alona_mobile/lib/features/logistics/presentation/proofs/proof_review_screen.dart": "447279931161dfdc534c6b987a316d302b407e0d1b58258ce225e4a153c6048d",
+      "mobile/alona_mobile/lib/features/logistics/presentation/proofs/protected_proof_image.dart": "682bb351e0b2a0c07e685fa62fffcebebf51b9883d858538aed9073d8c762c06",
+      "mobile/alona_mobile/lib/features/logistics/presentation/reports/logistics_reports_screen.dart": "b9385188c5980a747e1024a2a05defb9bea43f8290178b403604d0760e251dc4",
+      "mobile/alona_mobile/lib/features/logistics/presentation/returns/returns_screen.dart": "2f78df07d3e05d9f0ca73704800b717a18869a4132dd73ce9c04eb74a9be1f9a",
+      "mobile/alona_mobile/lib/features/logistics/presentation/riders/rider_management_screen.dart": "c2ef0ba76a933691825ffc7b94d2305618e918f4c97d6e8efece3db087b62b82",
+      "mobile/alona_mobile/lib/features/logistics/presentation/sorting/parcel_sorting_screen.dart": "24757e13911192a949833bd2db7065edc9d4fa6cf9f741f44de5e2e38cf28318",
+      "mobile/alona_mobile/lib/features/logistics/presentation/workflow_widgets.dart": "eb13db4a7adf2d8c855274f724efabc86c170eff54001c9cd779393f5c964a35",
+      "mobile/alona_mobile/lib/features/logistics/services/logistics_service.dart": "b589f055e6c6316abc867d200247b802b7227073eeff6be076c812052e2a19ff",
+      "mobile/alona_mobile/lib/main.dart": "79605681cf6b9ad9a69aaa807adefaa2a77eb09be941689f9e0a79ae009f9e70",
+      "mobile/alona_mobile/lib/shared/widgets/alona_button.dart": "dd9a5cf337782c1ad5a85294d541cd5eee64f989eecdd55303471a1dcc245da5",
+      "mobile/alona_mobile/lib/shared/widgets/alona_text_field.dart": "776052a101090178f9dfdead0ba3aa735bd7b320aa642c7d6d9d7574a20e3a47",
+      "mobile/alona_mobile/lib/shared/widgets/empty_state_view.dart": "5e6682c241de526351187ba6c32ae91602f65c530372e12c46297da02e6a14f6",
+      "mobile/alona_mobile/lib/shared/widgets/network_image_box.dart": "c54b70ce390623c52d1a205b951bd7582d8c60acdc6c0246521272fffec1b344",
+      "mobile/alona_mobile/lib/shared/widgets/status_badge.dart": "f3470f202d86373d816deaf490275ba9eb49c1ee3682cefc6ad5de47ba6f9d5b",
+      "mobile/alona_mobile/linux/.gitignore": "d7bbeac6ba86e2d94d8ccc63a1a2fbbac5ee7467f52f75c168165412d6ac3b60",
+      "mobile/alona_mobile/linux/CMakeLists.txt": "eb26beeee02f0318a5f26b0d9daf5b7e2703c570158a293f34a6dba2d79a39ea",
+      "mobile/alona_mobile/linux/flutter/CMakeLists.txt": "4eb17836308c1cd53f6b2bb8edb3b7b30610bff3b1d9df7fecc9317f9109700c",
+      "mobile/alona_mobile/linux/flutter/generated_plugin_registrant.cc": "2d820ff616e2228f699316fa2329d173ddbe6b98bbd7faca780daf329e4efacb",
+      "mobile/alona_mobile/linux/flutter/generated_plugin_registrant.h": "00f93bb5b1faefdede8f6065df327522900fb0b8efee86bacf424fd947ed14bb",
+      "mobile/alona_mobile/linux/flutter/generated_plugins.cmake": "9b0a3121ceab17166a6bdd0bf114dc7478c95b0c99e50c19d3257f89f36bafdb",
+      "mobile/alona_mobile/linux/runner/CMakeLists.txt": "81ecf2604c50f480c23d460b2ddf653ecd39df29cc5b2fe4913f1a59f008a5a7",
+      "mobile/alona_mobile/linux/runner/main.cc": "905b4dfa4eab584c1eb6244899b7d5ef56d0bceaf3bffb5ea335ed7e0ba3c549",
+      "mobile/alona_mobile/linux/runner/my_application.cc": "282d665f11e1b24b2f54b0842f3e52e063dad0b5f8a3b0494877f431d3d5fa7c",
+      "mobile/alona_mobile/linux/runner/my_application.h": "880393cb82d7feaaa95d9acd6c2317749afae0e17ea5f5ee44b456bc081b5987",
+      "mobile/alona_mobile/macos/.gitignore": "236a523a43625a2d63af3cd0f2ce8600a3668846f8cb278c1c7c5cbfd4aa4088",
+      "mobile/alona_mobile/macos/Flutter/Flutter-Debug.xcconfig": "7e9b3ee3961b7d7718b418ceaed812a5f06a4e4cec894aae712a78e159c32ab0",
+      "mobile/alona_mobile/macos/Flutter/Flutter-Release.xcconfig": "7e9b3ee3961b7d7718b418ceaed812a5f06a4e4cec894aae712a78e159c32ab0",
+      "mobile/alona_mobile/macos/Flutter/GeneratedPluginRegistrant.swift": "bf55055dae36dfb798ab4be67820294501b315d7baae326147e11cb491cc0dbb",
+      "mobile/alona_mobile/macos/Runner.xcodeproj/project.pbxproj": "b88f5602e4495abe57dcb25926eacfea4f95fe29c8c9e6df8edf3e0fa3300597",
+      "mobile/alona_mobile/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "mobile/alona_mobile/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "766baee3558f3e436c564e9a5b5022831750976608d241a8ef57f534b8fe693d",
+      "mobile/alona_mobile/macos/Runner.xcworkspace/contents.xcworkspacedata": "706a4c812f2a1e220e6785c27580020d58048e2ae4d30d1280f3c43344ce6b38",
+      "mobile/alona_mobile/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "mobile/alona_mobile/macos/Runner/AppDelegate.swift": "5b9cbdcb563ad8578a99b7c283958490e4af537322e9092fe1efbb3c29ab3e1b",
+      "mobile/alona_mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "992ba63d183dfb8f8e3af38ac203d834d23c004da1417c438b4c5a3d7d1d7103",
+      "mobile/alona_mobile/macos/Runner/Base.lproj/MainMenu.xib": "776c35481f6581f14148b90071558b25f6ce6262e771988985e9fe8d3e70a472",
+      "mobile/alona_mobile/macos/Runner/Configs/AppInfo.xcconfig": "fa023eeb72f2ef167236167cb96970a9b5b9c8158aca2adec0ad5cabf68f3bcd",
+      "mobile/alona_mobile/macos/Runner/Configs/Debug.xcconfig": "86be603022e2a385dd7884fce4cc29255676c3dda579d3d4a56c958bf1e57de0",
+      "mobile/alona_mobile/macos/Runner/Configs/Release.xcconfig": "d1bf3f0349aadd5c58ee9d46c0ce4ce45467127c438936e9bb481d861d296565",
+      "mobile/alona_mobile/macos/Runner/Configs/Warnings.xcconfig": "aa8ded4c14068cb05f51f5446509fe56805cf1e29961ad6d5a97233bb0632bc1",
+      "mobile/alona_mobile/macos/Runner/DebugProfile.entitlements": "b2aa41d03e18907d360b721b7bb3edb302897c8a3de98ec47b6665033fea0b0e",
+      "mobile/alona_mobile/macos/Runner/Info.plist": "047f9cb0f1122c04589483beaedbbe23492fdc8946b94e09bb13080736af4f93",
+      "mobile/alona_mobile/macos/Runner/MainFlutterWindow.swift": "8178ad756f958f986f794a8bb06e321a6630ceaaf8f235b3b4ae3936e415dc7c",
+      "mobile/alona_mobile/macos/Runner/Release.entitlements": "c3b881c72aa4cca9cf50da6654c4d675dec929056692af46a6fbecd00aef5990",
+      "mobile/alona_mobile/macos/RunnerTests/RunnerTests.swift": "8a0ff977c64ceac0750fffa48087988b7b4125d1b1c49019221e7fffb574423e",
+      "mobile/alona_mobile/pubspec.lock": "971b9aabc677151b0856bf9a00c75400eabfd660692b39fbdc99dac948d6185a",
+      "mobile/alona_mobile/pubspec.yaml": "e622414cc31657f0df4ef9ba512881d159a24f2063ac5a9319f02de243a56b27",
+      "mobile/alona_mobile/scripts/check.cjs": "10a9a90730ff822a56694bd0d8b2f4520e9523af60ac9441321f3ab8ec5248f7",
+      "mobile/alona_mobile/test/buyer_checkout_test.dart": "aa86d53668915b685149bf3e15a08eb65bfe69bfc358f40db54793c8d22f9d54",
+      "mobile/alona_mobile/test/buyer_error_paths_test.dart": "783039aeff9b2e5a0c6403b7118c61f507a7ed4e09ce37744a8319bb5619afa0",
+      "mobile/alona_mobile/test/flutter_test_config.dart": "533169de76cb9961a8980dd35c9764831c2e6315e2e30c71b2b439ee2c310d60",
+      "mobile/alona_mobile/test/logistics_contract_test.dart": "45856d5cbc836e0dc1134c2b01dbfffbd3a7172a156687e884c4653b0b16d4b7",
+      "mobile/alona_mobile/test/logistics_operations_test.dart": "106e6c15e39a6ae02c171d925c8fd0507e16a702d810499923ef4b50d0fcb9cb",
+      "mobile/alona_mobile/test/logistics_workflow_test.dart": "5eb4cc59bc324250f5edbdf9d69adf8efc9ee2b72f902a2b7a2df8fa878d07ff",
+      "mobile/alona_mobile/test/rider_payouts_test.dart": "659b9b15c0eaf3728bd46419b58f6df90864d4677ed8670aae8708141f3fa417",
+      "mobile/alona_mobile/test/widget_test.dart": "15ab6e4d96925eb181e84f75b6b3a9806c84c17ef44bcf2f5f96dd64ac35df84",
+      "mobile/alona_mobile/web/index.html": "cdc4ba5c57a152f400be857230a21f699900649b3a8ff8340921546ccc8bfa19",
+      "mobile/alona_mobile/web/manifest.json": "ab7f5800e261bf8b287da4aca8433806173e92d1a22eb2bc9d25b80993c70df2",
+      "mobile/alona_mobile/windows/.gitignore": "955e3110cb16494ee76e1cd5df47e2c212309eb94a49a123fe87f718de413cb8",
+      "mobile/alona_mobile/windows/CMakeLists.txt": "f1137c00d8314812c63dd13afd9261773b811a10d0b8f6f8ffd37b11469195d7",
+      "mobile/alona_mobile/windows/flutter/CMakeLists.txt": "bd05e3268b2f246bcbafdb778165fe67a7bafdba04eb73599502563a67b8ae7e",
+      "mobile/alona_mobile/windows/flutter/generated_plugin_registrant.cc": "384b2836e0f01867036cc70a4c622775fad3dda23cf6c9093eb5c9fdf793cc09",
+      "mobile/alona_mobile/windows/flutter/generated_plugin_registrant.h": "dbc11635d7b1ba1887adf40df5b83d634e9c3ab0bee34510c71528bb4d73602a",
+      "mobile/alona_mobile/windows/flutter/generated_plugins.cmake": "01cb8fe76e1560c04f199b09893edf70f89d65d5c29784ddc00796142806627a",
+      "mobile/alona_mobile/windows/runner/CMakeLists.txt": "d765fdd05f63ad099e585a2cced0cbff13ec3229b7de68c8681b2107db850089",
+      "mobile/alona_mobile/windows/runner/Runner.rc": "f073cae0d4c5aa16e6cec39080a2b41f595fd674a45117a780bd1bf7de0ef012",
+      "mobile/alona_mobile/windows/runner/flutter_window.cpp": "d615eedc06ae37321e59c2c00c7687d1887dcd97904eb7225fafd8dcb5b83da6",
+      "mobile/alona_mobile/windows/runner/flutter_window.h": "0252b804f5da380c7709cbe1daff2b8d18daf6c49d7e6dd43e5af3c99c19f56c",
+      "mobile/alona_mobile/windows/runner/main.cpp": "be520737560ffa15c845da925aaea1a03484e9905d41eb33011dc52427b84949",
+      "mobile/alona_mobile/windows/runner/resource.h": "d0e8bf7835468b4b6b1f8f0747f2e8f25c19841f2df2ac60aaa584ddae3aa7c6",
+      "mobile/alona_mobile/windows/runner/resources/app_icon.ico": "c098d3fc85cacff98b8e69811b48e9f0d852fcee278132d794411d978869cbf8",
+      "mobile/alona_mobile/windows/runner/runner.exe.manifest": "639a56233fcd8cbcb8bbefcd93e4680ec2664f32d9acfb3d2ec1d8726a96e090",
+      "mobile/alona_mobile/windows/runner/utils.cpp": "a128b67b9f3c2579e2ecef5b0dde2c33f222a097cdfe5da2a3067c73d1485b39",
+      "mobile/alona_mobile/windows/runner/utils.h": "832e246b6758253f89016fb0374b30791242e97ad950d27fc678b3d9feacfdc4",
+      "mobile/alona_mobile/windows/runner/win32_window.cpp": "4e4f4dcf8e86ea6e097562cb3476039e693449bd8045367538afee579c017511",
+      "mobile/alona_mobile/windows/runner/win32_window.h": "d154cf89ba85f820631a9b5bedacbe64fc5815e428fe6bc5da579ce649f69841"
     }
   },
   "history": [
@@ -3700,6 +4098,558 @@
     {
       "id": "2026-10-29T12:02:15.058Z",
       "event": "Teammate handoff preparation complete before authorized Git commit: all99 migration fingerprints verified against source, exact4 additions relative to c69d1ab,15 new tables; links and candidate privacy/artifact checks passed. Current request authorizes local staging/commit only. Prior partial index and patches retained privately; commit command and final result will be recorded privately without rewriting committed source."
+    },
+    {
+      "id": "2026-10-29T12:03:58.758Z",
+      "event": "Authorized commit preparation: exact464-file reviewed source staged; index whitespace check found six redundant EOF blank lines in imported/source notes. Removed only redundant EOF newlines. No runtime logic/schema change; previous tests remain applicable. Save refreshed source fingerprints before final staging/commit. No push or DB operation."
+    },
+    {
+      "id": "2026-10-30T10:50:02.458Z",
+      "event": "User authorized mobile Logistics to follow existing web process; backend and database rules remain authoritative"
+    },
+    {
+      "id": "2026-10-30T10:52:35.394Z",
+      "event": "Imported upstream alona-mobile 4277995 without Git metadata; offline dependency resolution missing cached_network_image"
+    },
+    {
+      "id": "2026-10-30T10:55:48.829Z",
+      "event": "Core API corrected for role-specific tokens, stale401, explicit server and pagination; added secure native credentials, requiring a deliberate lockfile update"
+    },
+    {
+      "id": "2026-10-30T11:00:25.156Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs analyze failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:02:58.140Z",
+      "event": "Dependency resolution passed with only secure-storage additions; first analyzer found three style notices, no compile errors"
+    },
+    {
+      "id": "2026-10-30T11:05:37.432Z",
+      "event": "Canonical workflow widgets, hub/staff gate, private proof loading and native secure credential store implemented; Figtree assets checksum-verified and licensed"
+    },
+    {
+      "id": "2026-10-30T11:07:18.773Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:09:58.374Z",
+      "event": "First test pass:20 passed;3 widget harness waits timed out on intentionally active progress animations; changed those waits to bounded dialog pumps. Returns, COD and parcel operations use existing API contracts"
+    },
+    {
+      "id": "2026-10-30T11:10:58.122Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test passed"
+    },
+    {
+      "id": "2026-10-30T11:14:25.699Z",
+      "event": "23 tests passed before operational coverage additions; added four regressions for RTS custody, handover acknowledgments, COD amounts and320px layout. Credentials are bound to the selected API server"
+    },
+    {
+      "id": "2026-10-30T11:15:29.628Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:17:07.328Z",
+      "event": "Operational regressions exposed early dialog-controller disposal and cascading failures; dialog now owns its controller until route disposal"
+    },
+    {
+      "id": "2026-10-30T11:17:41.535Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:19:38.020Z",
+      "event": "26 of27 tests passed after dialog fix;320px test exposed header/grid overflow, corrected with flexible title and taller narrow cards"
+    },
+    {
+      "id": "2026-10-30T11:20:11.828Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:21:22.871Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test passed"
+    },
+    {
+      "id": "2026-10-30T11:21:48.926Z",
+      "event": "All27 mobile HTTP/widget tests pass, including RTS custody, handover acknowledgment, COD display and320px operations"
+    },
+    {
+      "id": "2026-10-30T11:24:38.698Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs analyze failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:25:32.095Z",
+      "event": "27 mobile tests passed. Buyer quote/order contracts differ from web, so imported mobile checkout is explicitly unavailable and service calls blocked pending separate alignment. No backend rule changed"
+    },
+    {
+      "id": "2026-10-30T11:27:07.285Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs analyze passed"
+    },
+    {
+      "id": "2026-10-30T11:31:12.003Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs build-web passed"
+    },
+    {
+      "id": "2026-10-30T11:34:27.388Z",
+      "event": "alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result --colors=never .local/mobile-repo-inspection/MobileLogisticsBrowserTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:36:17.094Z",
+      "event": "Profile build passed. First actual browser run reached mobile login/dashboard; harness expected bare tab labels but Flutter exposes Tab N of5. Corrected selectors. Screenshot also exposed white header text on white; set intended teal header. Native photo usage descriptions and debug-only cleartext configured"
+    },
+    {
+      "id": "2026-10-30T11:36:33.024Z",
+      "event": "alona: php vendor/phpunit/phpunit/phpunit --do-not-cache-result --colors=never --configuration .local/mobile-repo-inspection/backend.xml failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:38:37.423Z",
+      "event": "Direct grouped PHP check hit the CLI128MB limit in PSGC data loading; no application failure or real DB write. Use independent test processes with the existing verifier1024MB test-only allowance"
+    },
+    {
+      "id": "2026-10-30T11:39:17.216Z",
+      "event": "alona: node .local/mobile-repo-inspection/backend-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T11:40:57.871Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test passed"
+    },
+    {
+      "id": "2026-10-30T11:43:23.923Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs build-web passed"
+    },
+    {
+      "id": "2026-10-30T11:47:57.880Z",
+      "event": "alona: node .local/mobile-repo-inspection/browser-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:50:27.463Z",
+      "event": "alona: node .local/mobile-repo-inspection/browser-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T11:51:28.094Z",
+      "event": "Actual compiled flow reached Delivered through web Buyer/Seller, mobile Logistics and existing Rider APIs. Monitoring merged accessible labels need group-based final assertion; screenshot exposed partial structured municipality hiding full delivery snapshot"
+    },
+    {
+      "id": "2026-10-30T11:52:55.973Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test passed"
+    },
+    {
+      "id": "2026-10-30T11:55:22.556Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs build-web passed"
+    },
+    {
+      "id": "2026-10-30T11:56:33.709Z",
+      "event": "alona: node .local/mobile-repo-inspection/browser-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T11:58:41.255Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs analyze passed"
+    },
+    {
+      "id": "2026-10-30T11:59:59.967Z",
+      "event": "Completed verified mobile Logistics process alignment; final artifacts/checkpoints saved; existing backend, schema, Rider runtime and Git HEAD preserved"
+    },
+    {
+      "id": "2026-10-30T12:02:38.882Z",
+      "event": "Design source audit compared original theme, Buyer presentation files and logo assets; no runtime edits in this review"
+    },
+    {
+      "id": "2026-10-30T12:03:05.280Z",
+      "event": "Saved explicit user requirement to keep Buyer and Logistics mobile design; source-only design audit completed, no application runtime changes"
+    },
+    {
+      "id": "2026-10-30T12:19:31.671Z",
+      "event": "Verified current source and existing Buyer checkout guard; beginning shared quote/booking alignment with original design preserved"
+    },
+    {
+      "id": "2026-10-30T12:24:01.103Z",
+      "event": "Shared canonical quote/allocation, JSON booking/detail/cancel, mobile address schema mapping, Buyer authorization and OTP routes implemented; starting in-memory regressions"
+    },
+    {
+      "id": "2026-10-30T12:24:31.622Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:25:23.554Z",
+      "event": "Existing web checkout/voucher/cancellation regressions pass; initial mobile tests 9/11 pass, two test expectations incorrectly assumed seller-funded shipments for buyer-funded orders"
+    },
+    {
+      "id": "2026-10-30T12:28:57.181Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileCheckoutTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:30:25.205Z",
+      "event": "Buyer checkout, quote refresh gates, stable retry reference, canonical address DTO, private OTP dialog, store-order confirmation and Orders tab refresh implemented"
+    },
+    {
+      "id": "2026-10-30T12:30:59.894Z",
+      "event": "alona: node mobile/alona_mobile/scripts/check.cjs test failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:31:28.114Z",
+      "event": "Flutter suite32 pass/2 fail: transient Updating total label overflows button; duplicate-tap test must target loading button rather than hidden text. Mobile backend10/11 pass; remaining assertion corrected to actual notification schema"
+    },
+    {
+      "id": "2026-10-30T12:34:19.900Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileCheckoutTest.php passed"
+    },
+    {
+      "id": "2026-10-30T12:35:18.193Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:36:17.044Z",
+      "event": "Mobile API journey11 tests/125 assertions PASS including Seller, Logistics and delivery. Flutter33 pass/1 layout failure from shared fixed-width button text at test font metrics; duplicate retry test now passes"
+    },
+    {
+      "id": "2026-10-30T12:37:19.709Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:38:29.799Z",
+      "event": "All34 combined Flutter tests PASS; analyzer reports8 missing-brace style issues in new dialog/tests only; build not started"
+    },
+    {
+      "id": "2026-10-30T12:38:56.105Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs --skip-tests failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:41:09.032Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs --skip-tests passed"
+    },
+    {
+      "id": "2026-10-30T12:42:21.782Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs .local/mobile-repo-inspection/MobileBuyerBrowserTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:43:52.317Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs .local/mobile-repo-inspection/MobileBuyerBrowserTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T12:45:12.019Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs .local/mobile-repo-inspection/MobileBuyerBrowserTest.php passed"
+    },
+    {
+      "id": "2026-10-30T12:46:08.435Z",
+      "event": "Actual compiled Buyer/Logistics mobile plus Buyer/Seller/Logistics web and Rider API journey PASS:1 fixture/11 assertions, one Delivered order/parcel/proof,stock8; no JavaScript errors. Flutter34 tests and analyzer/profile build PASS"
+    },
+    {
+      "id": "2026-10-30T12:53:48.442Z",
+      "event": "alona: node scripts/verify-system.cjs passed"
+    },
+    {
+      "id": "2026-10-30T12:56:35.936Z",
+      "event": "Full backend964 tests/57119 assertions PASS; frontend123/helper7 PASS. Actual compiled cross-client journey PASS. Final review confirms global free-shipping preview disagrees with per-store persistence for split orders"
+    },
+    {
+      "id": "2026-10-30T12:57:23.515Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileCheckoutTest.php tests/Feature/BuyerCheckoutTest.php tests/Feature/BuyerVouchersTest.php tests/Feature/Logistics/HubNetworkTest.php passed"
+    },
+    {
+      "id": "2026-10-30T12:58:44.571Z",
+      "event": "Per-store preview correction passes59 focused backend tests/684 assertions including16 mobile tests; previous full suite964/57119 and123 frontend/helper7 passed. Final UI will distinguish Delivered from Completed and show local event time"
+    },
+    {
+      "id": "2026-10-30T13:00:12.407Z",
+      "event": "alona: node .local/mobile-repo-inspection/final-web-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T13:00:57.510Z",
+      "event": "Final124 frontend tests and Vite production build PASS;59 focused server tests/684 assertions PASS after shipping fix. Buyer labels, local dates, paginated history and checkout disposal/refresh fixes ready for final mobile validation"
+    },
+    {
+      "id": "2026-10-30T13:01:36.412Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T13:05:25.016Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-mobile-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T13:06:40.710Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs .local/mobile-repo-inspection/MobileBuyerBrowserTest.php passed"
+    },
+    {
+      "id": "2026-10-30T13:09:09.976Z",
+      "event": "Main mobile Buyer-to-Seller-to-Logistics flow review complete; final browser delivery/receipt passed and current source/design/schema evidence saved. Native/live acceptance remains pending; no automatic commit/push or application DB operation."
+    },
+    {
+      "id": "2026-10-30T13:21:13.987Z",
+      "event": "Checkpoint verified; prior edits preserved. Confirmed stale order-filter response, cart async/disposal and mutation races, missing Buyer chat API routes, review eligibility/schema mismatch and voucher claim validity gaps"
+    },
+    {
+      "id": "2026-10-30T13:23:56.617Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileParityTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T13:26:05.533Z",
+      "event": "Nine isolated parity regressions reproduce review eligibility/variant, voucher claim/list/tariff, unavailable cart, reorder overwrite and missing/private chat failures"
+    },
+    {
+      "id": "2026-10-30T13:28:04.424Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileParityTest.php tests/Feature/BuyerRatingsAndReviewsTest.php tests/Feature/BuyerVouchersTest.php tests/Feature/BuyerFloatingChatTest.php tests/Feature/BuyerChatAndNotificationsTest.php passed"
+    },
+    {
+      "id": "2026-10-30T13:33:08.509Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileAuthSecurityTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T13:33:34.089Z",
+      "event": "Security regression confirms4 failures: already-verified OTP bypass/replay, untrusted Google identity login/account creation, and verification resends for verified/restricted accounts"
+    },
+    {
+      "id": "2026-10-30T13:34:06.962Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileAuthSecurityTest.php tests/Feature/BuyerMobileParityTest.php tests/Feature/Auth/BuyerBlackBoxTest.php passed"
+    },
+    {
+      "id": "2026-10-30T13:35:23.160Z",
+      "event": "Auth security5/35 and parity9/79 PASS; existing Buyer black-box30/149 PASS. Shared chat APIs and review/voucher/cart rules aligned; mobile Google fake identity form removed and login/OTP async guards added"
+    },
+    {
+      "id": "2026-10-30T13:35:50.924Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileParityTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T15:47:34.885Z",
+      "event": "Verified both project directories and checkpoint bundle; inspected six source hashes changed since checkpoint. Changes are preserved and awaiting targeted verification."
+    },
+    {
+      "id": "2026-10-30T15:49:28.191Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/BuyerMobileParityTest.php tests/Feature/BuyerMobileAuthSecurityTest.php passed"
+    },
+    {
+      "id": "2026-10-30T15:49:48.017Z",
+      "event": "Backend parity11/115 and auth5/35 passed. Added nine mocked mobile cases for stale filters, pending cart/reorder, disposed login, honest Google, chat draft/poll/lifecycle."
+    },
+    {
+      "id": "2026-10-30T15:50:56.092Z",
+      "event": "alona: node .local/mobile-repo-inspection/error-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T15:51:43.919Z",
+      "event": "First mobile run:42 passed/3 failed. Chat tests need a rendered frame after typing and valid Flutter lifecycle transitions. Source review also found login/OTP pending guard released before session persistence and emoji draft changes lacking rebuild."
+    },
+    {
+      "id": "2026-10-30T15:54:01.060Z",
+      "event": "alona: node .local/mobile-repo-inspection/error-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T15:54:45.079Z",
+      "event": "48 mocked Flutter tests passed; analyzer found six brace-style infos only. Fixing those before final analysis/build/full backend/browser validation."
+    },
+    {
+      "id": "2026-10-30T16:09:24.557Z",
+      "event": "alona: node .local/mobile-repo-inspection/final-error-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T16:09:36.595Z",
+      "event": "Final analysis clean/profile build PASS; full980 backend tests57272 assertions,124 frontend,7 helper PASS;48 mocked mobile tests PASS;compiled browser1/12 PASS with no JS errors."
+    },
+    {
+      "id": "2026-10-30T16:11:54.241Z",
+      "event": "Broader error/security-path review completed and documented; full current regression/browser proof verified against source. Synchronous checkpoint saved for safe resume."
+    },
+    {
+      "id": "2026-10-30T16:57:02.378Z",
+      "event": "User approved automatic completed-job earnings, configurable rates, grouped manual payout and Rider receipt acknowledgement. No numeric rates approved; default remains unconfigured/disabled. Preserve historical seller ledger and existing source/data. Work-unit clarification asked; independent schema/API design proceeds."
+    },
+    {
+      "id": "2026-10-30T17:03:28.398Z",
+      "event": "Additive seven-table payroll schema, models, configurable no-default rates, encrypted receiving instructions, grouped manual payment controller/service and explicit transfer manifests drafted. No application migration. Work-unit clarification has no response; proposed parcel-job unit proceeds as stated."
+    },
+    {
+      "id": "2026-10-30T17:07:56.749Z",
+      "event": "User explicitly chose per Seller shipment like PocketFinds. Draft parcel-job work keys are unverified and will be replaced before tests. Rates remain owner-configured, disabled until set; one earning per Seller order leg and one per explicit full transfer manifest."
+    },
+    {
+      "id": "2026-10-30T17:11:35.926Z",
+      "event": "Confirmed per-Seller-shipment work keys/grouped assignments and full-manifest completion hooks connected; no-default settings, encrypted destinations, manual proof-backed payouts, cancellation and acknowledgement added. Eight isolated tests drafted; no application migration executed."
+    },
+    {
+      "id": "2026-10-30T17:11:46.098Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php passed"
+    },
+    {
+      "id": "2026-10-30T17:13:16.577Z",
+      "event": "First backend pass:8 tests/176 assertions, including actual two-parcel Seller shipment earning once per leg, rate snapshots, payout reservation/retries/proof/ack, untouched COD, private destinations and audit rollback. Syntax passed. Transfer rate is optional until real transfer work is configured; no defaults or live migration."
+    },
+    {
+      "id": "2026-10-30T17:25:10.334Z",
+      "event": "Owner web Payouts/rates/transfer manifest UI and mobile Payouts/My Earnings screens drafted using existing components. New default Rider navigation retains legacy earnings as a separate link. Added frontend duplicate/confirmation/stale-response cases, mobile lifecycle cases and transfer/security backend tests."
+    },
+    {
+      "id": "2026-10-30T17:26:02.637Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-verify.cjs backend passed"
+    },
+    {
+      "id": "2026-10-30T17:27:04.337Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-verify.cjs frontend passed"
+    },
+    {
+      "id": "2026-10-30T17:30:27.850Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-verify.cjs mobile failed/unknown"
+    },
+    {
+      "id": "2026-10-30T17:34:38.119Z",
+      "event": "Before mobile edit batch"
+    },
+    {
+      "id": "2026-10-30T17:40:32.182Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-verify.cjs mobile failed/unknown"
+    },
+    {
+      "id": "2026-10-30T17:41:04.885Z",
+      "event": "Before final backend/mobile correction batch"
+    },
+    {
+      "id": "2026-10-30T17:43:10.999Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T17:43:39.881Z",
+      "event": "Before fixture correction and remaining Flutter verification"
+    },
+    {
+      "id": "2026-10-30T17:45:23.797Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-remaining-mobile.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T17:47:00.573Z",
+      "event": "Before final test-scrolling correction and checkpoint guidance update"
+    },
+    {
+      "id": "2026-10-30T17:56:04.103Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-release-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T17:56:25.873Z",
+      "event": "Full backend994/57512 and helper7 PASS, frontend128/129 with Vite security timeout; mobile50/analyzers/builds PASS"
+    },
+    {
+      "id": "2026-10-30T17:59:17.747Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:00:44.853Z",
+      "event": "Frontend129 serial and isolated security PASS; browser order/delivery completed but amount locator timed out"
+    },
+    {
+      "id": "2026-10-30T18:02:49.048Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:03:17.613Z",
+      "event": "Synthetic server and compiled Rider both show earned65 (pickup25/delivery40); only exact text locator was wrong"
+    },
+    {
+      "id": "2026-10-30T18:04:52.296Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:05:37.080Z",
+      "event": "Order/delivery and server job65 verified; Flutter merged accessibility text needs snapshot assertions"
+    },
+    {
+      "id": "2026-10-30T18:06:46.881Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:07:27.897Z",
+      "event": "Compiled Rider display and job amounts verified; replace unavailable Playwright expect helper with direct accessibility polling"
+    },
+    {
+      "id": "2026-10-30T18:08:47.255Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:09:56.346Z",
+      "event": "Browser direct fill intermittently left the Flutter parcel reference empty; prior runs completed this flow"
+    },
+    {
+      "id": "2026-10-30T18:11:34.420Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only failed/unknown"
+    },
+    {
+      "id": "2026-10-30T18:12:42.991Z",
+      "event": "Compiled Rider receiving-instructions step PASS; owner select locator needs its actual accessible name"
+    },
+    {
+      "id": "2026-10-30T18:13:58.650Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only passed"
+    },
+    {
+      "id": "2026-10-30T18:14:31.244Z",
+      "event": "Compiled Buyer/Seller/Logistics/Rider order-to-payout browser1 test/18 assertions PASS, no JS errors"
+    },
+    {
+      "id": "2026-10-30T20:09:24.247Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-final-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T20:14:24.092Z",
+      "event": "Final npm frontend128/129 failed only Vite timeout after6893s elapsed; earlier129 serial and compiled payroll1/18 PASS; source preserved"
+    },
+    {
+      "id": "2026-10-30T20:14:57.210Z",
+      "event": "alona: node .local/mobile-repo-inspection/pay-final-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T20:17:52.099Z",
+      "event": "Baseline checkpoint and source hashes verified; Git HEAD d117595 and all existing edits preserved"
+    },
+    {
+      "id": "2026-10-30T20:18:41.908Z",
+      "event": "alona: node .local/mobile-repo-inspection/power-loss-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T20:19:33.891Z",
+      "event": "Post-shutdown checkpoint/source hashes match the completed baseline; fresh memory payroll14/240 and web/helper12 PASS, source/design100 migration fingerprints and compiled artifacts verified; no application source repair or database access."
+    },
+    {
+      "id": "2026-10-30T20:23:56.107Z",
+      "event": "Before regression tests: confirmed handover changes parcel custodian but not pending job-pay recipient; inspect optional transfer-rate clearing too"
+    },
+    {
+      "id": "2026-10-30T20:24:36.649Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php failed/unknown"
+    },
+    {
+      "id": "2026-10-30T20:25:54.172Z",
+      "event": "Regression reproduction: original14 payroll tests PASS; pickup/delivery handovers fail409 and clearing transfer retains150 (3 new failures)"
+    },
+    {
+      "id": "2026-10-30T20:26:15.150Z",
+      "event": "alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php tests/Feature/Logistics/SupervisedHandoverTest.php passed"
+    },
+    {
+      "id": "2026-10-30T20:28:16.218Z",
+      "event": "Payroll17/336 and legacy handover4/201 PASS after confirmed fixes"
+    },
+    {
+      "id": "2026-10-30T20:28:47.758Z",
+      "event": "alona: node .local/mobile-repo-inspection/review-mobile-check.cjs failed/unknown"
+    },
+    {
+      "id": "2026-10-30T20:30:40.948Z",
+      "event": "Picker API explicitly throws on denied permissions; current callback lacks catch/pending guard. Deterministic injected picker needed for native failure test"
+    },
+    {
+      "id": "2026-10-30T20:31:03.298Z",
+      "event": "alona: node .local/mobile-repo-inspection/review-mobile-check.cjs passed"
+    },
+    {
+      "id": "2026-10-30T20:32:22.800Z",
+      "event": "Deterministic gallery-denial/duplicate-picker regression3 PASS; handover/rate reproductions fixed"
+    },
+    {
+      "id": "2026-10-30T20:40:40.187Z",
+      "event": "alona: node .local/mobile-repo-inspection/review-release.cjs passed"
+    },
+    {
+      "id": "2026-10-30T20:41:30.228Z",
+      "event": "Full shared regression997/57614, frontend129/helper7 and combined Flutter51/analyzer/build PASS"
+    },
+    {
+      "id": "2026-10-30T20:42:46.470Z",
+      "event": "alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs passed"
     }
   ],
   "manualChecks": {
@@ -3711,13 +4661,14 @@
     "reportedCameraPlatform": "User confirmed laptop Microsoft Edge. Browser flow selects real photos; live browser webcam capture NOT IMPLEMENTED. Native Android/iOS device acceptance remains pending.",
     "sellerDeliveryProof": "PENDING live four-role notice/link/private photo and cross-Seller denial"
   },
-  "approvedEarningsRules": [
-    "Grouping/completion model explicitly approved: one seller shipment per seller/new order; fixed item membership; one delivery rider; all noncancelled parcel proofs required",
-    "Seller PHP 50 / Logistics PHP 10 / Rider PHP 40 once per successful shipment; no vouchers/expense deductions; all cancelled zero",
-    "New orders only, no backfill; zero new-order buyer shipping including express per prior approval; preserve express method behavior and report conflicts",
-    "Separate full manual collection and payout; unchanged Flutter UI/history",
-    "Authorized to create schema/migrations/APIs/integration code; do not run production migrations or modify production data"
-  ],
+  "approvedEarningsRules": {
+    "transfer": "One rate per complete explicit received trip manifest",
+    "status": "Approved structure on 2026-10-31; amounts configured by company owner",
+    "payout": "Grouped manual payment, private proof/reference, Rider acknowledgement; COD is separate",
+    "rates": "Owner-configurable only, disabled and blank by default; no test/PocketFinds values adopted",
+    "pickup_delivery": "One rate per Seller-order shipment leg, including all active parcels; user explicitly confirmed",
+    "funding": "Explicit manual company payroll; no COD offset, provider transfer or fabricated company balance"
+  },
   "githubSave": {
     "branch": "master",
     "backendPublished": false,

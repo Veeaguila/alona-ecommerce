@@ -10,6 +10,7 @@ import 'package:rider_app/pages/rider_portal_page.dart';
 import 'package:rider_app/services/rider_session.dart';
 
 import 'rider_session_test.dart' show MemoryTokens, readyProfile;
+import 'job_earnings_test.dart' show fixture;
 
 Map<String, dynamic> earnings({int page = 1, bool empty = false}) => {
   'summary': {
@@ -123,8 +124,8 @@ void main() {
     'missing or numeric money is rejected instead of showing fallback totals',
     (tester) async {
       final broken = earnings();
-    broken['summary'] = Map<String, dynamic>.from(broken['summary'] as Map)
-      ..['total'] = 1234.57;
+      broken['summary'] = Map<String, dynamic>.from(broken['summary'] as Map)
+        ..['total'] = 1234.57;
       final session = sessionFor(
         (_) async => http.Response(jsonEncode(broken), 200),
       );
@@ -156,8 +157,18 @@ void main() {
   testWidgets('earnings is reachable through existing Rider tools', (
     tester,
   ) async {
-    final session = sessionFor(
-      (_) async => http.Response(jsonEncode(earnings(empty: true)), 200),
+    final session = RiderSession(
+      tokens: MemoryTokens(),
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/partner/profile')) {
+          return http.Response(jsonEncode({'data': readyProfile()}), 200);
+        }
+        if (request.url.path == '/api/rider/job-pay') {
+          return http.Response(jsonEncode(fixture()), 200);
+        }
+        expect(request.url.path, '/api/rider/earnings');
+        return http.Response(jsonEncode(earnings(empty: true)), 200);
+      }),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -170,6 +181,13 @@ void main() {
     await tester.tap(find.byTooltip('Rider tools'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Earnings'));
+    await tester.pumpAndSettle();
+    expect(find.text('My Earnings'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Historical Seller-funded earnings'),
+      300,
+    );
+    await tester.tap(find.text('Historical Seller-funded earnings'));
     await tester.pumpAndSettle();
     expect(find.text('Delivery earnings'), findsOneWidget);
   });

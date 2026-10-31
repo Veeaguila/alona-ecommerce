@@ -16,3 +16,10 @@ Explicit build/run API URLs; HTTPS for release. Tests use synthetic HTTP or SQLi
 :memory:. No automatic commit/push/reset, deployment or real database operation.
 Read the current integration bundle before resuming; source/test evidence overrides
 historical imported notes. Current review: ALONA docs/testing/results/ORDER_FLOW_REVIEW.md.
+
+31 October addition: user approved per-Seller-shipment pickup/delivery pay and one
+rate per complete transfer manifest, owner-configurable with no runtime defaults.
+My Earnings receives backend job totals and grouped manual payout history; Rider
+supplies receiving instructions and confirms real receipt. Original operational
+theme and the separate historical Seller-funded view are preserved. Details:
+ALONA docs/RIDER_PAY_IMPLEMENTATION.md. No provider cash transfer is implemented.

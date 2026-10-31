@@ -110,7 +110,8 @@ class ParcelAssignmentController extends Controller
         ]);
         $sortingCenterId = $request->user()->sortingCenter->id;
 
-        $parcel = app(\App\Services\RiderAllocation::class)->run([$validated['rider_id']], fn () => DB::transaction(function () use ($id, $validated, $sortingCenterId): Parcel {
+        $parcel = app(\App\Services\RiderAllocation::class)->run([$validated['rider_id']], fn () => DB::transaction(function () use ($id, $validated, $sortingCenterId, $request): Parcel {
+            $jobMembers = app(\App\Services\RiderJobPay::class)->groupedMembers($id, (int) $sortingCenterId, 'delivery');
             $finance = app(\App\Services\SellerShipmentFinance::class);
             $shipment = $finance->lockParcel($id);
             $parcel = Parcel::query()
@@ -163,10 +164,15 @@ class ParcelAssignmentController extends Controller
 
             app(\App\Services\RiderAllocation::class)->assertCanReceive($rider, $parcel, 'delivery');
             $finance->assign($shipment, $parcel, $rider->id, $sortingCenterId);
-            $parcel->update([
-                'assigned_rider_id' => $rider->id,
-                'assigned_at' => null,
-            ]);
+            foreach ($jobMembers ?? collect([$parcel]) as $member) {
+                abort_unless($member->status === 'AT_SORTING_CENTER' && !$member->assigned_rider_id
+                    && (!$jobMembers || $member->sorted_at) && $member->sorted_area_id
+                    && $rider->areas()->where('areas.id', $member->sorted_area_id)->exists(), 422,
+                    'Every parcel in this Seller shipment must arrive, be sorted and share an eligible delivery Rider.');
+                app(\App\Services\HubNetwork::class)->assertRider($member, $rider, 'delivery');
+                $member->update(['assigned_rider_id' => $rider->id, 'assigned_at' => null]);
+            }
+            app(\App\Services\RiderJobPay::class)->assign($parcel->fresh(), (int) $rider->id, 'delivery', $request->user(), $jobMembers);
 
             return $parcel->fresh(['sortedArea', 'assignedRider.user']);
         }, 5));

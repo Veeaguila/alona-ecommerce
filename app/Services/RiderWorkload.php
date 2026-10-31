@@ -15,6 +15,16 @@ class RiderWorkload
         $eligible = Rider::where('sorting_center_id', $centerId)->whereIn('id', $ids)
             ->operationallyEligible()->pluck('id')->all();
         $pickups = $deliveries = $completed = $parcelCounts = [];
+        $paidJobs = $paidCompleted = $tripJobs = [];
+        if (app(RiderJobPay::class)->installed()) {
+            foreach (\App\Models\RiderPayEarning::where('sorting_center_id', $centerId)->whereIn('rider_id', $ids)->whereNotNull('active_key')->get() as $earning) {
+                foreach ($earning->snapshot['parcel_ids'] ?? [] as $parcelId) {
+                    $paidJobs[$earning->leg][$parcelId] = $earning->work_key;
+                    if ($earning->leg === 'delivery' && $earning->status === 'earned') $paidCompleted[$parcelId] = $earning->earned_at;
+                }
+            }
+            foreach (\App\Models\RiderPayTrip::where('sorting_center_id', $centerId)->whereIn('rider_id', $ids)->whereNull('completed_at')->get() as $trip) $tripJobs[$trip->rider_id][$trip->id] = true;
+        }
         $active = Parcel::where('sorting_center_id', $centerId)
             ->where(function ($query) use ($ids) {
                 $query->where(fn ($query) => $query->whereIn('pickup_rider_id', $ids)->whereIn('status', ['PLACED', 'PREPARING', 'PICKED_UP']))
@@ -29,6 +39,7 @@ class RiderWorkload
             $pickup = in_array($parcel->status, ['PLACED', 'PREPARING', 'PICKED_UP'], true)
                 || (in_array($parcel->status, ['LOST', 'DAMAGED'], true) && !$parcel->assigned_rider_id);
             $riderId = $pickup ? $parcel->pickup_rider_id : $parcel->assigned_rider_id;
+            $key = $paidJobs[$pickup ? 'pickup' : 'delivery'][$parcel->id] ?? $key;
             if ($pickup) $pickups[$riderId][$key] = true;
             else $deliveries[$riderId][$key] = true;
             $parcelCounts[$riderId][$parcel->id] = true;
@@ -45,7 +56,10 @@ class RiderWorkload
                 if (!$shipment?->completed_at || $shipment->completed_at->lt($start) || $shipment->completed_at->gte($end)
                     || (int) $shipment->sorting_center_id !== $centerId || (int) $shipment->assigned_rider_id !== (int) $parcel->assigned_rider_id) continue;
                 $key = 'shipment:'.$shipment->id;
-            } else $key = 'parcel:'.$parcel->id;
+            } else {
+                $key = $paidJobs['delivery'][$parcel->id] ?? 'parcel:'.$parcel->id;
+                if (isset($paidJobs['delivery'][$parcel->id]) && (!isset($paidCompleted[$parcel->id]) || $paidCompleted[$parcel->id]->lt($start) || $paidCompleted[$parcel->id]->gte($end))) continue;
+            }
             $completed[$parcel->assigned_rider_id][$key] = true;
         }
         foreach ($riders as $rider) {
@@ -59,7 +73,8 @@ class RiderWorkload
             }
             $rider->setAttribute('pickup_jobs_count', $pickupCount);
             $rider->setAttribute('delivery_jobs_count', $deliveryCount);
-            $rider->setAttribute('active_jobs_count', $pickupCount + $deliveryCount);
+            $rider->setAttribute('transfer_jobs_count', count($tripJobs[$rider->id] ?? []));
+            $rider->setAttribute('active_jobs_count', $pickupCount + $deliveryCount + count($tripJobs[$rider->id] ?? []));
             $rider->setAttribute('active_parcels_count', count($parcelCounts[$rider->id] ?? []));
             $rider->setAttribute('completed_jobs_today', count($completed[$rider->id] ?? []));
         }

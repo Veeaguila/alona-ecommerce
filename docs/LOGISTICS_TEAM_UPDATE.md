@@ -62,12 +62,16 @@ migrations already present in the repository may also be pending on your databas
 | `2026_10_20_120000_create_logistics_workflow_records` | Dispatch, delivery attempts, returns, cash and operation records |
 | `2026_10_29_100000_create_logistics_hub_network` | Company hubs, directed routes and booked parcel custody |
 | `2026_10_29_150000_create_logistics_hub_staff_table` | Staff membership scoped to an owned hub |
+| `2026_10_31_000001_create_rider_job_payments` | Six empty payroll tables and nullable trip link on hub transfers; configured future shipment jobs and grouped manual payouts |
 
 The October 29 review's local database previously had the hub network migration
 applied, while the staff migration was still pending. That is a local observation,
 not an instruction to mark the same migrations applied on another machine.
 The registration retry, dev-server privacy and idle-session fixes need no new schema.
 Accounts, real hubs/routes and uploaded documents are not supplied by these migrations.
+The payroll addition supplies no rates or historical earnings; preserve APP_KEY and
+private payment proofs. Read [Rider pay implementation](RIDER_PAY_IMPLEMENTATION.md)
+before enabling company rates. It does not send provider funds or offset COD.
 
 ## Runtime setup and acceptance
 

@@ -1,8 +1,10 @@
 # Mobile applications
 
 `rider/` contains the active Flutter Rider client for the ALONA backend in `..`.
-Future Logistics, Buyer and Seller mobile clients can have their own directories here.
-They are not included yet. Each client keeps its own Flutter dependencies, platforms,
+`alona_mobile/` contains the imported Buyer/Logistics Flutter application. Its
+Logistics operations follow the same backend as web; see its README and
+docs/LOGISTICS_PARITY.md for verified Buyer/Logistics scope and remaining native work.
+Seller mobile is not included. Each client keeps its own Flutter dependencies, platforms,
 tests and documentation; the parent repository tracks their regular source files.
 
 From the repository root:
@@ -24,3 +26,7 @@ Run `node scripts/verify-system.cjs --mobile` from the repository root after ins
 the locked PHP, Node and Flutter dependencies. Backend tests use SQLite `:memory:`;
 Rider widget tests use synthetic HTTP fixtures. Device API URLs belong in build/run
 arguments; do not edit the source to use someone else's laptop address.
+
+Install the locked Flutter dependencies separately in `rider/` and `alona_mobile/`.
+The combined app accepts a backend origin (with or without `/api`); Rider's build
+argument uses the `/api` base. Both share the same ALONA records and authorization.

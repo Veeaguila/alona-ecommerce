@@ -1,5 +1,10 @@
 # Seller shipment delivery finance
 
+Current Buyer-funded Rider job pay (31 October 2026) is documented separately in
+[RIDER_PAY_IMPLEMENTATION.md](RIDER_PAY_IMPLEMENTATION.md): configured rates per
+Seller-shipment leg, one per complete transfer manifest, grouped manual payouts.
+This document describes the preserved historical Seller-funded ledger.
+
 Seller-funded ledger implemented 2026-10-15. On 2026-10-24 the user selected the
 incoming buyer-paid shipping policy for new checkout orders. Historical records
 and existing seller-funded settlements remain unchanged. Database rollout has not
@@ -60,9 +65,9 @@ the merchandise discount. Standard/express metadata remains available to Seller
 and Logistics workflows; store pickup follows the incoming courier-bypass flow.
 
 The existing PHP 50/10/40 seller-funded ledger continues to apply only to its
-seller-funded shipments. No new rule maps buyer shipping receipts to Rider earnings
-or payouts. That allocation needs a separately defined policy; this merge does not
-invent an allocation or rewrite historical settlements.
+seller-funded shipments. Buyer-funded work now uses the separately enabled company
+job rates and manual payouts described above. It does not allocate shipping receipts
+or rewrite historical settlements; company payroll must fund the approved rates.
 
 ## HTTP contracts
 

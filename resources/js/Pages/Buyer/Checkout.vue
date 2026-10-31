@@ -185,7 +185,7 @@ const calculateStoreShipping = (option, sellerItems) => {
         option.key !== 'express' &&
         props.free_shipping_threshold !== null &&
         props.free_shipping_threshold !== undefined &&
-        subtotal.value >= Number(props.free_shipping_threshold)
+        sellerItems.reduce((sum, item) => sum + itemPrice(item) * itemQuantity(item), 0) >= Number(props.free_shipping_threshold)
     ) {
         return 0
     }
@@ -213,15 +213,6 @@ const calculateStoreShipping = (option, sellerItems) => {
 
 // Mirrors the server-side calculation (the server is authoritative).
 const feeFor = option => {
-    if (
-        option.key !== 'express' &&
-        props.free_shipping_threshold !== null &&
-        props.free_shipping_threshold !== undefined &&
-        subtotal.value >= Number(props.free_shipping_threshold)
-    ) {
-        return 0
-    }
-
     const groups = {}
     for (const item of activeItems.value) {
         const sId = item.product?.seller_id || 0
@@ -735,7 +726,7 @@ const submit = () => {
                                     Fees are charged per seller
                                     ({{ sellerCount }} {{ sellerCount === 1 ? 'seller' : 'sellers' }} in this order).
                                     <span v-if="free_shipping_threshold">
-                                        Free standard shipping on orders of {{ money(free_shipping_threshold) }} or more.
+                                        Free standard shipping on each store order of {{ money(free_shipping_threshold) }} or more.
                                     </span>
                                 </p>
                             </div>

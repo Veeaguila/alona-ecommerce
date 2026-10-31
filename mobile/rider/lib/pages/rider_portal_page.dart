@@ -9,7 +9,7 @@ import 'rider_account_page.dart';
 export 'rider_account_page.dart';
 import 'rider_notifications_page.dart';
 export 'rider_notifications_page.dart';
-import 'profit_dashboard_page.dart';
+import 'job_earnings_page.dart';
 import '../theme/rider_theme.dart';
 
 Widget riderTools(BuildContext context, RiderSession session) =>
@@ -17,7 +17,7 @@ Widget riderTools(BuildContext context, RiderSession session) =>
       tooltip: 'Rider tools',
       onSelected: (value) {
         final page = value == 'earnings'
-            ? ProfitDashboardPage(session: session)
+            ? JobEarningsPage(session: session)
             : value == 'chat'
             ? RiderChatPage(session: session)
             : value == 'notifications'

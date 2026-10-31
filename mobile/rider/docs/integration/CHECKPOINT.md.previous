@@ -1,38 +1,34 @@
 # Integration checkpoint
 
-Checkpoint: 2026-10-29T12:02:15.058Z
+Checkpoint: 2026-10-30T20:42:46.470Z
 Saved synchronously; timestamps are UTC.
 
-CURRENT PHASE: 10
-CURRENT TASK: Teammate handoff prepared and validated; local commit explicitly authorized
-LAST COMPLETED TASK: AI-readable upgrade handoff, copyable bounded local-upgrade prompt and complete99-migration fingerprint manifest prepared; four release additions/15 new tables verified against pre-release HEAD.
-LAST VERIFIED TEST: 948 backend tests/56,958 assertions across all124 test files and affected reruns; Rider123, frontend123, helper7; clean analyzer, final web build and full browser checkout-to-delivery PASS. Handoff manifest checksums/base-diff/links and credential/generated-file candidate audit PASS; .env unchanged.
+CURRENT PHASE: 11
+CURRENT TASK: Validation completed
+LAST COMPLETED TASK: Implemented per-Seller-shipment pickup/delivery pay, complete transfer manifests and grouped manual payroll across web/Rider/Logistics mobile; preserved designs, COD, historical ledgers and existing edits. Post-shutdown integrity verified; all saved source and existing edits preserved.
+LAST VERIFIED TEST: alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs passed
 
 COMPLETED TASKS:
 
-- Phases1-9 integration contracts remain implemented; no unnecessary rewrites of completed API/address/authentication work.
-- All223 upstream files imported from Veeaguila/rider commit0ea8018db81287d82981c17b10d5551c7750dd2e as ordinary ALONA mobile/rider source; no nested Git or submodule.
-- Teammate interface preserved with real pickup decline, enum failure outcomes, retry/RTS detail gates, honest missing data, validated handovers and accessible actions.
-- Observed duplicate-tap navigation/conflict issue and IndexedStack stale assignment issue fixed with regression tests and final compiled browser acceptance.
-- Actual checkout fixture covers Buyer cart placement, Seller preparation, Logistics acceptance/manual dispatch/arrival/sort/assignment, two Rider legs, photo/OTP, physical RTS/restock, store pickup and separate COD evidence.
-- Buyer activity DTO merges recorded parent/item events without same-minute suppression and supplies timezone-explicit dates; final browser screenshot confirms full preparation-to-delivery log.
-- 947 initial backend coverage expanded to948 current passing tests/56,958 assertions; category fixture collisions and explicit empty draft weight corrected without changing production rules.
-- Final Rider123, frontend123 and helper7 tests passed; final Flutter analyzer clean; profile web build and actual full browser journey passed. No browser JavaScript errors.
-- Existing source files all retained; .env, Git index/HEAD and preserved sibling Rider source hashes unchanged. No commit/push/reset or application migration performed.
-- Safe parent verifier scripts/verify-system.cjs, mobile guidance, provenance, architecture/current memory and ORDER_FLOW_REVIEW report are ready for review.
-- TEAMMATE_AI_HANDOFF.md guides source synchronization, actual-schema/ledger comparison, private backup/copy rehearsal, only compatible pending deltas, locked dependency/mobile setup and memory-only verification.
-- docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json fingerprints all99 migrations with LF-normalized SHA-256 and identifies the four additions,15 created tables and nullable Rider/order-item hub columns. No application migration was executed.
-- docs/TEAMMATE_AI_PROMPT.md contains the receiving-owner authorization text for their own local target; merely reading the handoff does not grant DB-write permission. Local commit publishing/push remains separate.
+- Phases1-10 shared backend/teammate imports and Buyer/Seller/Logistics/Rider operational integration remain complete within recorded native/live limitations; no reimplementation or source loss.
+- Earlier Buyer OTP/Google security, canonical checkout/review/voucher/cart/reorder/chat and mobile lifecycle fixes preserved. Original Buyer/Logistics/Rider themes/assets retained.
+- Confirmed per-Seller-shipment pay snapshots approved future rates; pickup/delivery require all physical receipts/proof/OTP; transfer pays once after all explicit manifest parcels arrive.
+- Web and Logistics mobile owner payroll provide rate setup/review/grouping/actual proof-reference payment/unsent cancellation; Rider My Earnings provides own instructions/history/actual-receipt acknowledgement. Historical Seller-funded and COD ledgers stay separate.
+- Final full backend 994 tests/57512 assertions, frontend129/helper7 PASS. Rider127 full tests then16 affected final tests PASS; combined Flutter50 PASS. Both analyzers clean, both profile web builds and Vite production build PASS.
+- Actual compiled Buyer order through Seller/Logistics/Rider delivery and receipt then owner web payout and compiled Rider acknowledgement; Logistics mobile sees same payment total. Browser1/18 PASS, no JS errors; synthetic only, no real payment.
+- All148 upstream combined-mobile source files retained and original assets/theme unchanged. Original99 migration fingerprints unchanged;100-file manifest includes six empty payroll tables plus one nullable transfer FK. Teammate handoff/prompt/memory updated; no application migration, commit, push or deployment.
 
 REMAINING TASKS:
 
+- Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.
+- Complete upstream missing native launcher/icon assets, Android/iOS packaging, gallery/camera/signing and actual-device acceptance. Compiled web is not native release certification.
+- Company configuration, onboarding, exports and full document/PDF review continue in the existing web portal; not every admin page has a native counterpart.
 - Repair incomplete local Android NDK28.2.13676358 through the intended SDK toolchain, then verify APK/native camera/scanner/GPS/lifecycle. iOS requires its platform tooling. No native success is claimed.
 - Team must configure real release application identity/signing and deployed HTTPS API/CORS/upload/mail settings; upstream placeholders are not release configuration.
 - Compare teammates actual schema and migration ledger and rehearse reviewed pending incremental migrations on an approved copy. No full database replacement or automatic application migration.
 - Verify real company hubs, directed routes, staff/Rider coverage and scheduler before enabling required checkout routing; no fake runtime setup was created.
-- Buyer-funded shipping has no newly defined Rider earnings allocation; keep historical seller-funded ledgers separate and obtain actual compensation/refund-execution rules before implementing them.
+- Company owner must supply/fund actual approved rates after schema rollout. Shipping-revenue/subsidy/expense/Seller-settlement, disputed/RTS compensation and actual refund execution are separate policy; never infer a company profit/wallet or COD offset.
 - Real operational acceptance, actual-engine contention/locking and external payment/email/device behavior remain outside isolated test proof.
-- Latest user explicitly authorized the complete reviewed local commit. Git log/HEAD is authoritative for the resulting commit; the private .local/team-release receipt records execution. Do not automatically repeat this commit or push.
 - The author must explicitly authorize/push the release before teammates can fetch this new branch state. Receiving owners can use docs/TEAMMATE_AI_PROMPT.md for a bounded local existing-schema upgrade; target production/shared writes require separate owner authorization.
 
 MODIFIED FLUTTER FILES:
@@ -254,6 +250,9 @@ MODIFIED FLUTTER FILES:
 - windows/runner/utils.h
 - windows/runner/win32_window.cpp
 - windows/runner/win32_window.h
+- lib/pages/job_earnings_page.dart
+- lib/services/rider_job_pay_api.dart
+- test/job_earnings_test.dart
 
 MODIFIED LARAVEL FILES:
 
@@ -1003,6 +1002,193 @@ MODIFIED LARAVEL FILES:
 - tests/frontend/onboarding.test.mjs
 - tests/frontend/workbook-readiness.test.mjs
 - vite.config.js
+- tests/Feature/BuyerMobileCheckoutTest.php
+- docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md
+- tests/Feature/BuyerMobileParityTest.php
+- tests/Feature/BuyerMobileAuthSecurityTest.php
+- app/Services/ConversationOrderAccess.php
+- mobile/alona_mobile/.gitignore
+- mobile/alona_mobile/.metadata
+- mobile/alona_mobile/AGENTS.md
+- mobile/alona_mobile/README.md
+- mobile/alona_mobile/analysis_options.yaml
+- mobile/alona_mobile/android/.gitignore
+- mobile/alona_mobile/android/app/build.gradle.kts
+- mobile/alona_mobile/android/app/src/debug/AndroidManifest.xml
+- mobile/alona_mobile/android/app/src/main/AndroidManifest.xml
+- mobile/alona_mobile/android/app/src/main/kotlin/online/shopalona/alona_mobile/MainActivity.kt
+- mobile/alona_mobile/android/app/src/main/res/drawable-v21/launch_background.xml
+- mobile/alona_mobile/android/app/src/main/res/drawable/launch_background.xml
+- mobile/alona_mobile/android/app/src/main/res/values-night/styles.xml
+- mobile/alona_mobile/android/app/src/main/res/values/styles.xml
+- mobile/alona_mobile/android/app/src/profile/AndroidManifest.xml
+- mobile/alona_mobile/android/build.gradle.kts
+- mobile/alona_mobile/android/gradle.properties
+- mobile/alona_mobile/android/gradle/wrapper/gradle-wrapper.properties
+- mobile/alona_mobile/android/settings.gradle.kts
+- mobile/alona_mobile/assets/fonts/Figtree-Black.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-Bold.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-ExtraBold.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-Light.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-Medium.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-Regular.ttf
+- mobile/alona_mobile/assets/fonts/Figtree-SemiBold.ttf
+- mobile/alona_mobile/assets/fonts/OFL.txt
+- mobile/alona_mobile/assets/images/Alogo.png
+- mobile/alona_mobile/assets/images/alona-icon.png
+- mobile/alona_mobile/assets/images/alona.png
+- mobile/alona_mobile/docs/ARCHITECTURE.md
+- mobile/alona_mobile/docs/CURRENT_STATE.md
+- mobile/alona_mobile/docs/LOGISTICS_PARITY.md
+- mobile/alona_mobile/docs/PROJECT_CONTEXT.md
+- mobile/alona_mobile/docs/UPSTREAM.md
+- mobile/alona_mobile/ios/.gitignore
+- mobile/alona_mobile/ios/Flutter/AppFrameworkInfo.plist
+- mobile/alona_mobile/ios/Flutter/Debug.xcconfig
+- mobile/alona_mobile/ios/Flutter/Release.xcconfig
+- mobile/alona_mobile/ios/Runner.xcodeproj/project.pbxproj
+- mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+- mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- mobile/alona_mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+- mobile/alona_mobile/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
+- mobile/alona_mobile/ios/Runner.xcworkspace/contents.xcworkspacedata
+- mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- mobile/alona_mobile/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+- mobile/alona_mobile/ios/Runner/AppDelegate.swift
+- mobile/alona_mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+- mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json
+- mobile/alona_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md
+- mobile/alona_mobile/ios/Runner/Base.lproj/LaunchScreen.storyboard
+- mobile/alona_mobile/ios/Runner/Base.lproj/Main.storyboard
+- mobile/alona_mobile/ios/Runner/Info.plist
+- mobile/alona_mobile/ios/Runner/Runner-Bridging-Header.h
+- mobile/alona_mobile/ios/Runner/SceneDelegate.swift
+- mobile/alona_mobile/ios/RunnerTests/RunnerTests.swift
+- mobile/alona_mobile/lib/core/config/api_config.dart
+- mobile/alona_mobile/lib/core/config/app_theme.dart
+- mobile/alona_mobile/lib/core/network/api_client.dart
+- mobile/alona_mobile/lib/core/services/auth_state.dart
+- mobile/alona_mobile/lib/core/services/session_store.dart
+- mobile/alona_mobile/lib/core/utils/currency_formatter.dart
+- mobile/alona_mobile/lib/core/utils/date_formatter.dart
+- mobile/alona_mobile/lib/core/utils/request_key.dart
+- mobile/alona_mobile/lib/features/buyer/models/buyer_models.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_login_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_otp_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/auth/buyer_register_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/buyer_main_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/cart/cart_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/categories/buyer_categories_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/checkout/checkout_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/checkout/order_confirmation_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/home/buyer_home_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/flash_sales_widget.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/hero_banner_carousel.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/home/widgets/product_card.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_chat_detail_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/messages/buyer_conversations_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/notifications/notifications_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/orders/delivery_otp_dialog.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/orders/order_detail_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/orders/order_list_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/products/product_detail_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/products/product_list_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/profile/address_management_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/profile/buyer_profile_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/store/buyer_store_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/vouchers/vouchers_screen.dart
+- mobile/alona_mobile/lib/features/buyer/presentation/wishlist/wishlist_screen.dart
+- mobile/alona_mobile/lib/features/buyer/services/buyer_service.dart
+- mobile/alona_mobile/lib/features/logistics/models/logistics_models.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/assignment/rider_assignment_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/auth/logistics_login_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/cod/cod_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/dashboard/logistics_dashboard_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/hubs/hub_workspace_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/incoming/incoming_parcels_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/logistics_access_gate.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/logistics_main_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/monitoring/delivery_monitoring_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/operations/parcel_operations_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/outbound/outbound_parcels_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/payroll/rider_payouts_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/pickups/pickup_requests_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/proofs/proof_review_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/proofs/protected_proof_image.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/reports/logistics_reports_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/returns/returns_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/riders/rider_management_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/sorting/parcel_sorting_screen.dart
+- mobile/alona_mobile/lib/features/logistics/presentation/workflow_widgets.dart
+- mobile/alona_mobile/lib/features/logistics/services/logistics_service.dart
+- mobile/alona_mobile/lib/main.dart
+- mobile/alona_mobile/lib/shared/widgets/alona_button.dart
+- mobile/alona_mobile/lib/shared/widgets/alona_text_field.dart
+- mobile/alona_mobile/lib/shared/widgets/empty_state_view.dart
+- mobile/alona_mobile/lib/shared/widgets/network_image_box.dart
+- mobile/alona_mobile/lib/shared/widgets/status_badge.dart
+- mobile/alona_mobile/linux/.gitignore
+- mobile/alona_mobile/linux/CMakeLists.txt
+- mobile/alona_mobile/linux/flutter/CMakeLists.txt
+- mobile/alona_mobile/linux/flutter/generated_plugin_registrant.cc
+- mobile/alona_mobile/linux/flutter/generated_plugin_registrant.h
+- mobile/alona_mobile/linux/flutter/generated_plugins.cmake
+- mobile/alona_mobile/linux/runner/CMakeLists.txt
+- mobile/alona_mobile/linux/runner/main.cc
+- mobile/alona_mobile/linux/runner/my_application.cc
+- mobile/alona_mobile/linux/runner/my_application.h
+- mobile/alona_mobile/macos/.gitignore
+- mobile/alona_mobile/macos/Flutter/Flutter-Debug.xcconfig
+- mobile/alona_mobile/macos/Flutter/Flutter-Release.xcconfig
+- mobile/alona_mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+- mobile/alona_mobile/macos/Runner.xcodeproj/project.pbxproj
+- mobile/alona_mobile/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- mobile/alona_mobile/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
+- mobile/alona_mobile/macos/Runner.xcworkspace/contents.xcworkspacedata
+- mobile/alona_mobile/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- mobile/alona_mobile/macos/Runner/AppDelegate.swift
+- mobile/alona_mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+- mobile/alona_mobile/macos/Runner/Base.lproj/MainMenu.xib
+- mobile/alona_mobile/macos/Runner/Configs/AppInfo.xcconfig
+- mobile/alona_mobile/macos/Runner/Configs/Debug.xcconfig
+- mobile/alona_mobile/macos/Runner/Configs/Release.xcconfig
+- mobile/alona_mobile/macos/Runner/Configs/Warnings.xcconfig
+- mobile/alona_mobile/macos/Runner/DebugProfile.entitlements
+- mobile/alona_mobile/macos/Runner/Info.plist
+- mobile/alona_mobile/macos/Runner/MainFlutterWindow.swift
+- mobile/alona_mobile/macos/Runner/Release.entitlements
+- mobile/alona_mobile/macos/RunnerTests/RunnerTests.swift
+- mobile/alona_mobile/pubspec.lock
+- mobile/alona_mobile/pubspec.yaml
+- mobile/alona_mobile/scripts/check.cjs
+- mobile/alona_mobile/test/buyer_checkout_test.dart
+- mobile/alona_mobile/test/buyer_error_paths_test.dart
+- mobile/alona_mobile/test/flutter_test_config.dart
+- mobile/alona_mobile/test/logistics_contract_test.dart
+- mobile/alona_mobile/test/logistics_operations_test.dart
+- mobile/alona_mobile/test/logistics_workflow_test.dart
+- mobile/alona_mobile/test/rider_payouts_test.dart
+- mobile/alona_mobile/test/widget_test.dart
+- mobile/alona_mobile/web/index.html
+- mobile/alona_mobile/web/manifest.json
+- mobile/alona_mobile/windows/.gitignore
+- mobile/alona_mobile/windows/CMakeLists.txt
+- mobile/alona_mobile/windows/flutter/CMakeLists.txt
+- mobile/alona_mobile/windows/flutter/generated_plugin_registrant.cc
+- mobile/alona_mobile/windows/flutter/generated_plugin_registrant.h
+- mobile/alona_mobile/windows/flutter/generated_plugins.cmake
+- mobile/alona_mobile/windows/runner/CMakeLists.txt
+- mobile/alona_mobile/windows/runner/Runner.rc
+- mobile/alona_mobile/windows/runner/flutter_window.cpp
+- mobile/alona_mobile/windows/runner/flutter_window.h
+- mobile/alona_mobile/windows/runner/main.cpp
+- mobile/alona_mobile/windows/runner/resource.h
+- mobile/alona_mobile/windows/runner/resources/app_icon.ico
+- mobile/alona_mobile/windows/runner/runner.exe.manifest
+- mobile/alona_mobile/windows/runner/utils.cpp
+- mobile/alona_mobile/windows/runner/utils.h
+- mobile/alona_mobile/windows/runner/win32_window.cpp
+- mobile/alona_mobile/windows/runner/win32_window.h
 
 RELEVANT API ENDPOINTS:
 
@@ -1018,522 +1204,223 @@ RELEVANT API ENDPOINTS:
 - Sorting operator: POST /api/sorting-center/riders/{id}/approve
 - Sorting operator: POST /api/sorting-center/pickup-requests/{id}/confirm; POST /api/sorting-center/parcels/mark-arrived
 - Sorting operator: POST /api/sorting-center/parcels/{id}/sort; GET .../{id}/eligible-riders; POST .../{id}/assign
+- POST /api/buyer/checkout/preview and /api/buyer/orders: canonical quote/booking; reviewed prices,shipping,total and request UUID required.
+- GET /api/buyer/orders/{order}/parcels/{parcel}/delivery-otp; POST matching /renew: owning approved verified Buyer, no-store; shared existing OTP controller.
+- GET /api/rider/job-pay; POST /job-pay/destinations; own payouts/details/private proof/acknowledge
+- GET /api/sorting-center/payroll; PUT /payroll/settings; GET /payroll/riders/{id}/review
+- POST /api/sorting-center/payroll/payouts; own company details/pay/cancel/private proof
+- GET|POST /api/sorting-center/payroll/trips; GET /sorting-center/payouts
 
 TEST RESULTS:
 
-- Backend:948 PASS,56,958 assertions across all124 test files in11 independent memory batches plus focused updated Buyer/checkout reruns; .local/rider-flow-review/evidence-summary.json.
-- Buyer affected regression batch78 PASS/911 assertions; actual checkout4 PASS/168; full browser1 PASS/11. Browser actual Vue/Blade/Inertia plus compiled Flutter and real API logins; memory-only synthetic users.
-- Rider complete123 PASS; Flutter analyzer no issues; final profile web build PASS; .local/rider-flow-review/{rider-test,rider-analyze,rider-web}.txt.
-- Frontend123 PASS; imported checkpoint helper7 PASS; .local/system-verification/.
-- Android debug build FAIL due incomplete local NDK source.properties, before native app compilation; .local/rider-flow-review/rider-apk.txt.
-- Preservation PASS: no existing source paths removed; env/index/HEAD/sibling source unchanged. Generated platform registrant differences are line endings only; locked dependencies unchanged.
+- alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only => FAIL/UNKNOWN; log .recovery\logs\1793383894399-alona.txt
+- alona: node .local/mobile-repo-inspection/pay-browser-check.cjs browser-only => PASS; log .recovery\logs\1793384038631-alona.txt
+- alona: node .local/mobile-repo-inspection/pay-final-check.cjs => FAIL/UNKNOWN; log .recovery\logs\1793390964213-alona.txt
+- alona: node .local/mobile-repo-inspection/pay-final-check.cjs => PASS; log .recovery\logs\1793391297200-alona.txt
+- Full backend 994/57512, helper7 PASS. Initial concurrent frontend128/129 timed out in Vite security test; isolated security and complete serial frontend129 rerun PASS; preserve both receipts.
+- Rider127 full tests then16 affected final tests PASS; clean analyzer. Combined Flutter50 PASS; clean analyzer. Both profile web builds and Vite production build PASS.
+- Compiled payroll browser1/18 PASS; no JS errors, same payment across owner web/Logistics mobile/Rider; private synthetic receipts under .local/mobile-repo-inspection.
+- alona: node .local/mobile-repo-inspection/power-loss-check.cjs => PASS; log .recovery\logs\1793391521890-alona.txt
+- Post-shutdown checkpoint/source hashes match the completed baseline; fresh memory payroll14/240 and web/helper12 PASS, source/design100 migration fingerprints and compiled artifacts verified; no application source repair or database access.
+- alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php => FAIL/UNKNOWN; log .recovery\logs\1793391876631-alona.txt
+- alona: node .local/mobile-repo-inspection/buyer-check.cjs tests/Feature/Logistics/RiderJobPayTest.php tests/Feature/Logistics/SupervisedHandoverTest.php => PASS; log .recovery\logs\1793391975132-alona.txt
+- alona: node .local/mobile-repo-inspection/review-mobile-check.cjs => FAIL/UNKNOWN; log .recovery\logs\1793392127747-alona.txt
+- alona: node .local/mobile-repo-inspection/review-mobile-check.cjs => PASS; log .recovery\logs\1793392263279-alona.txt
+- alona: node .local/mobile-repo-inspection/review-release.cjs => PASS; log .recovery\logs\1793392840168-alona.txt
+- alona: node .local/mobile-repo-inspection/review-browser-and-audit.cjs => PASS; log .recovery\logs\1793392966453-alona.txt
 
 UNCOMMITTED CHANGES:
 
 ### ALONA
 
-Git tracked: true; branch: feature/logistics-completion; HEAD: c69d1ab
+Git tracked: true; branch: feature/logistics-completion; HEAD: d117595
 
 ```text
-M .gitignore
- M README.md
- M app/Http/Controllers/AdminDeliveryZoneController.php
- M app/Http/Controllers/Auth/AuthenticatedSessionController.php
- M app/Http/Controllers/Auth/EmailVerificationNotificationController.php
- M app/Http/Controllers/Auth/PasswordController.php
-A  app/Http/Controllers/BuyerDeliveryOtpController.php
-MM app/Http/Controllers/BuyerOrderController.php
-A  app/Http/Controllers/Logistics/CodController.php
-M  app/Http/Controllers/Logistics/DashboardController.php
+M README.md
+ M TEAMMATE_AI_HANDOFF.md
+ M app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php
+ M app/Http/Controllers/Api/Buyer/BuyerAuthController.php
+ M app/Http/Controllers/Api/Buyer/BuyerCartApiController.php
+ M app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php
+ M app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php
+ M app/Http/Controllers/BuyerAddressController.php
+ M app/Http/Controllers/BuyerConversationController.php
+ M app/Http/Controllers/BuyerOrderController.php
+ M app/Http/Controllers/BuyerReviewController.php
+ M app/Http/Controllers/Logistics/HubWorkspaceController.php
  M app/Http/Controllers/Logistics/IncomingParcelController.php
- M app/Http/Controllers/Logistics/LoginSortingCenterController.php
-A  app/Http/Controllers/Logistics/LogisticsClaimController.php
-AM app/Http/Controllers/Logistics/OutboundParcelController.php
-MM app/Http/Controllers/Logistics/ParcelAssignmentController.php
-A  app/Http/Controllers/Logistics/ParcelHandoverController.php
-MM app/Http/Controllers/Logistics/ParcelMonitoringController.php
-AM app/Http/Controllers/Logistics/ParcelOperationsController.php
-M  app/Http/Controllers/Logistics/ParcelSortingController.php
-AM app/Http/Controllers/Logistics/PickupDispatchController.php
-A  app/Http/Controllers/Logistics/PickupLocationController.php
-M  app/Http/Controllers/Logistics/PickupRequestController.php
-M  app/Http/Controllers/Logistics/ReportController.php
-A  app/Http/Controllers/Logistics/ReturnToSellerController.php
-A  app/Http/Controllers/Logistics/RiderCoverageController.php
-MM app/Http/Controllers/Logistics/RiderDeliveryController.php
-MM app/Http/Controllers/Logistics/RiderManagementController.php
-MM app/Http/Controllers/Logistics/RiderPickupController.php
-A  app/Http/Controllers/Logistics/RiderPresenceController.php
- M app/Http/Controllers/LogisticsRegistrationController.php
-MM app/Http/Controllers/PartnerProfileController.php
- M app/Http/Controllers/SellerOrderController.php
-M  app/Http/Controllers/SellerReturnController.php
- M app/Http/Middleware/EnsureSortingCenterApproved.php
- M app/Http/Requests/LogisticsRegistrationRequest.php
-A  app/Models/CodCollection.php
-A  app/Models/CodDiscrepancy.php
-A  app/Models/CodRemittance.php
-A  app/Models/LogisticsAuditEvent.php
- M app/Models/OrderItem.php
-MM app/Models/Parcel.php
-A  app/Models/ParcelDeliveryAttempt.php
-A  app/Models/ParcelHandover.php
-A  app/Models/ParcelIncident.php
-A  app/Models/ParcelReturn.php
-A  app/Models/PickupOffer.php
- M app/Models/Rider.php
-A  app/Models/RiderDecisionAudit.php
-M  app/Observers/RiderNotificationObserver.php
- M app/Providers/AppServiceProvider.php
- M app/Services/AccountDestination.php
-AM app/Services/CheckoutServiceability.php
-A  app/Services/CodLedger.php
-A  app/Services/CodReport.php
-AM app/Services/DeliveryAttempts.php
-AM app/Services/DeliveryOtp.php
- M app/Services/FooterService.php
-A  app/Services/LogisticsAudit.php
-AM app/Services/LogisticsParcelSummary.php
-A  app/Services/LogisticsRefundReview.php
-A  app/Services/LogisticsReportExport.php
-AM app/Services/NearestPickupOffer.php
- M app/Services/OrderItemPickup.php
-AM app/Services/ParcelTrackingTimeline.php
-AM app/Services/PickupDispatch.php
-A  app/Services/PickupLocations.php
-A  app/Services/ReleaseUncollectedPickups.php
-AM app/Services/ReturnToSeller.php
-AM app/Services/RiderAllocation.php
-A  app/Services/RiderPresence.php
-A  app/Services/RiderWorkload.php
-M  app/Services/SellerParcelDelivery.php
-A  app/Services/SupervisedHandover.php
- M bootstrap/app.php
-A  database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php
-A  database/migrations/2026_10_20_120000_create_logistics_workflow_records.php
+ M app/Http/Controllers/Logistics/ParcelAssignmentController.php
+ M app/Http/Controllers/Logistics/RiderDeliveryController.php
+ M app/Http/Controllers/Logistics/RiderPickupController.php
+ M app/Http/Controllers/SellerConversationController.php
+ M app/Http/Middleware/EnsureBuyer.php
+ M app/Services/HubTransport.php
+ M app/Services/PickupDispatch.php
+ M app/Services/RiderWorkload.php
+ M app/Services/SupervisedHandover.php
+ M config/checkout.php
  M docs/DELIVERY_FINANCE.md
- M docs/DELIVERY_FINANCE_DEPLOYMENT.md
- M docs/LOGISTICS_REGISTRATION_HANDOFF.md
- M docs/SORTING_CENTER_INTEGRATION.md
-AM docs/testing/results/LOGISTICS_TEST_PROGRESS.md
- M resources/js/Components/AppFooter.vue
-A  resources/js/Components/BuyerDeliveryOtp.vue
-A  resources/js/Components/Logistics/CodCashPanel.vue
-A  resources/js/Components/Logistics/CodDiscrepancyPanel.vue
-A  resources/js/Components/Logistics/LogisticsClaimPanel.vue
-A  resources/js/Components/Logistics/LogisticsReviewNotice.vue
-AM resources/js/Components/Logistics/ParcelHandoverPanel.vue
-AM resources/js/Components/Logistics/ParcelOperationsPanel.vue
-AM resources/js/Components/Logistics/PickupDispatchPanel.vue
-A  resources/js/Components/Logistics/ReturnToSellerPanel.vue
-A  resources/js/Components/Logistics/SellerPickupLocation.vue
-A  resources/js/Components/Logistics/SellerReturnReceipt.vue
-MM resources/js/Layouts/ScLayout.vue
-M  resources/js/Pages/Admin/Reports.vue
- M resources/js/Pages/Admin/Settings.vue
- M resources/js/Pages/Auth/LogisticsRegistration.vue
-MM resources/js/Pages/Buyer/Checkout.vue
-MM resources/js/Pages/Buyer/OrderDetails.vue
-M  resources/js/Pages/Logistics/Dashboard.vue
-M  resources/js/Pages/Logistics/DeliveryManagement.vue
-MM resources/js/Pages/Logistics/DeliveryMonitoring.vue
-M  resources/js/Pages/Logistics/DeliveryReports.vue
-MM resources/js/Pages/Logistics/OrderManagement.vue
-M  resources/js/Pages/Logistics/PickupRequestManagement.vue
-M  resources/js/Pages/Logistics/RiderAssignment.vue
-A  resources/js/Pages/Logistics/RiderManagement.vue
-M  resources/js/Pages/Seller/OrderDetails.vue
-M  resources/js/Pages/Seller/Returns.vue
-MM resources/js/logistics.js
-A  resources/views/sorting-center/rider-management.blade.php
-MM routes/api.php
-M  routes/buyer.php
- M routes/console.php
-MM routes/logistics.php
-M  routes/seller.php
- M tests/Feature/BuyerOrderTrackingTest.php
- M tests/Feature/BuyerPaymentTest.php
- M tests/Feature/BuyerStoreTest.php
- M tests/Feature/ExampleTest.php
- M tests/Feature/GuestMarketplaceTest.php
-A  tests/Feature/Logistics/BatchOneAccessTest.php
-AM tests/Feature/Logistics/BuyerOtpTest.php
-AM tests/Feature/Logistics/CheckoutCoverageTest.php
-A  tests/Feature/Logistics/CodLedgerTest.php
-A  tests/Feature/Logistics/CompleteWorkflowTest.php
-A  tests/Feature/Logistics/DashboardDateFilterTest.php
-M  tests/Feature/Logistics/DashboardTest.php
-M  tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php
-M  tests/Feature/Logistics/EcommerceSortingIntegrationTest.php
-M  tests/Feature/Logistics/IncomingParcelTest.php
- M tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php
-AM tests/Feature/Logistics/NearestPickupOfferTest.php
-A  tests/Feature/Logistics/OutboundParcelTest.php
-M  tests/Feature/Logistics/ParcelAssignmentTest.php
-A  tests/Feature/Logistics/ParcelMonitoringSearchTest.php
-A  tests/Feature/Logistics/ParcelOperationsTest.php
-A  tests/Feature/Logistics/ParcelSummaryTest.php
-A  tests/Feature/Logistics/PickupDispatchTest.php
-A  tests/Feature/Logistics/PickupTrackingTest.php
-A  tests/Feature/Logistics/ReportExportTest.php
-AM tests/Feature/Logistics/ReturnToSellerTest.php
- M tests/Feature/Logistics/RiderBlackBoxTest.php
-A  tests/Feature/Logistics/RiderCoverageTest.php
-AM tests/Feature/Logistics/RiderDecisionAuditTest.php
-MM tests/Feature/Logistics/RiderDeliveryCompletionTest.php
-M  tests/Feature/Logistics/RiderPickupFlowTest.php
-A  tests/Feature/Logistics/RiderPresenceTest.php
-M  tests/Feature/Logistics/RiderProfileTest.php
-A  tests/Feature/Logistics/RiderRejectionTest.php
-A  tests/Feature/Logistics/RiderSuspensionTest.php
-A  tests/Feature/Logistics/RiderWorkloadTest.php
-M  tests/Feature/Logistics/SellerDeliveryNotificationTest.php
-MM tests/Feature/Logistics/SellerShipmentFinanceTest.php
-A  tests/Feature/Logistics/SupervisedHandoverTest.php
-A  tests/Feature/Logistics/SuspensionReleaseTest.php
- M tests/Feature/OrderVariantFlowTest.php
- M tests/Feature/SellerFulfillmentWaybillAndPickupTest.php
- M tests/Feature/SellerNotificationsAlertsTest.php
- M tests/Feature/SellerProductManagementTest.php
- M tests/Feature/SellerReportsAndEarningsTest.php
- M tests/Feature/StockAdjustmentAuditLoggingTest.php
-M  tests/TestCase.php
- M tests/Unit/Logistics/EnsureSortingCenterApprovedTest.php
-M  tests/frontend/data-flow.test.mjs
- M tests/frontend/onboarding.test.mjs
- M vite.config.js
-?? .agents/
-?? AGENTS.md
-?? TEAMMATE_AI_HANDOFF.md
-?? app/Http/Controllers/Logistics/DeliveryRateController.php
-?? app/Http/Controllers/Logistics/HubNetworkController.php
-?? app/Http/Controllers/Logistics/HubStaffController.php
-?? app/Http/Controllers/Logistics/HubWorkspaceController.php
-?? app/Http/Middleware/EnforceLogisticsIdleTimeout.php
-?? app/Http/Middleware/EnsureHubOperator.php
-?? app/Http/Middleware/UseLocalSessionCookies.php
-?? app/Models/HubTransfer.php
-?? app/Models/LogisticsHub.php
-?? app/Models/LogisticsHubStaff.php
-?? app/Models/LogisticsRoute.php
-?? app/Models/ParcelHubJourney.php
-?? app/Services/HubAccess.php
-?? app/Services/HubNetwork.php
-?? app/Services/HubOperations.php
-?? app/Services/HubTransport.php
-?? app/Services/HubWorkspace.php
-?? app/Services/LogisticsSessionLifetime.php
-?? app/Services/ShippingRates.php
-?? app/Services/SortingCenterSession.php
-?? config/logistics_hubs.php
-?? database/migrations/2026_10_29_100000_create_logistics_hub_network.php
-?? database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php
-?? docs/LOGISTICS_HUB_NETWORK.md
-?? docs/LOGISTICS_TEAM_UPDATE.md
-?? docs/LOGISTICS_WORKBOOK_READINESS.md
-?? docs/TEAMMATE_AI_PROMPT.md
-?? docs/testing/Blackbox_Test_Cases_Logistics_Modules-1.xlsx
-?? docs/testing/results/LOGISTICS_BATCH_1_EXECUTION.md
-?? docs/testing/results/LOGISTICS_COMMIT_READINESS.md
-?? docs/testing/results/LOGISTICS_IMPLEMENTATION_BATCH_1.md
-?? docs/testing/results/LOGISTICS_MISSING_FEATURES.md
-?? docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md
-?? docs/testing/results/LOGISTICS_TEST_ANALYSIS.md
-?? docs/testing/results/ORDER_FLOW_REVIEW.md
-?? docs/upgrade/
-?? mobile/
-?? resources/js/Pages/Logistics/DeliveryRates.vue
-?? resources/js/Pages/Logistics/HubNetwork.vue
-?? resources/js/Pages/Logistics/HubStaff.vue
-?? resources/js/Pages/Logistics/HubWorkspace.vue
-?? resources/js/logisticsSession.js
-?? resources/js/requestKey.js
-?? resources/views/sorting-center/delivery-rates.blade.php
-?? resources/views/sorting-center/hub-staff.blade.php
-?? resources/views/sorting-center/hub-workspace.blade.php
-?? resources/views/sorting-center/hubs.blade.php
-?? scripts/verify-logistics.cjs
-?? scripts/verify-system.cjs
-?? tests/Feature/Auth/LocalSessionCookieTest.php
-?? tests/Feature/Logistics/CheckoutToDeliveryTest.php
-?? tests/Feature/Logistics/HubNetworkTest.php
-?? tests/Feature/Logistics/HubStaffWorkflowTest.php
-?? tests/Feature/Logistics/LogisticsIdleSessionTest.php
-?? tests/Feature/Logistics/WorkbookRatesTest.php
-?? tests/Support/
-?? tests/Unit/Logistics/OnboardingApiContractTest.php
-?? tests/Unit/Logistics/PasswordApiContractTest.php
-?? tests/Unit/Logistics/RiderActivationTokenExposureTest.php
-?? tests/Unit/Logistics/RiderDocumentApiContractTest.php
-?? tests/Unit/Logistics/VerificationEmailApiContractTest.php
-?? tests/browser/
-?? tests/frontend/dev-server-security.test.mjs
-?? tests/frontend/hub-network.test.mjs
-?? tests/frontend/hub-workspace.test.mjs
-?? tests/frontend/logistics-session.test.mjs
-?? tests/frontend/workbook-readiness.test.mjs
+ M docs/LOGISTICS_TEAM_UPDATE.md
+ M docs/TEAMMATE_AI_PROMPT.md
+ M docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json
+ M mobile/README.md
+ M mobile/rider/docs/ARCHITECTURE.md
+ M mobile/rider/docs/CURRENT_STATE.md
+ M mobile/rider/docs/DECISIONS.md
+ M mobile/rider/docs/PROJECT_CONTEXT.md
+ M mobile/rider/docs/integration/CHANGELOG.md
+ M mobile/rider/docs/integration/CHANGELOG.md.previous
+ M mobile/rider/docs/integration/CHECKPOINT.md
+ M mobile/rider/docs/integration/CHECKPOINT.md.previous
+ M mobile/rider/docs/integration/PROGRESS.md
+ M mobile/rider/docs/integration/PROGRESS.md.previous
+ M mobile/rider/docs/integration/RESUME.md
+ M mobile/rider/docs/integration/RESUME.md.previous
+ M mobile/rider/docs/integration/checkpoint-state.json
+ M mobile/rider/docs/integration/checkpoint-state.json.previous
+ M mobile/rider/lib/pages/rider_notifications_page.dart
+ M mobile/rider/lib/pages/rider_portal_page.dart
+ M mobile/rider/lib/pages/rider_shell_page.dart
+ M mobile/rider/scripts/integration_checkpoint.cjs
+ M mobile/rider/test/rider_earnings_test.dart
+ M package.json
+ M resources/js/Layouts/ScLayout.vue
+ M resources/js/Pages/Buyer/Checkout.vue
+ M resources/js/logistics.js
+ M routes/api.php
+ M routes/logistics.php
+ M scripts/verify-system.cjs
+ M tests/frontend/workbook-readiness.test.mjs
+?? app/Http/Controllers/Logistics/RiderPayController.php
+?? app/Models/RiderPayBatch.php
+?? app/Models/RiderPayDestination.php
+?? app/Models/RiderPayEarning.php
+?? app/Models/RiderPaySetting.php
+?? app/Models/RiderPayTrip.php
+?? app/Services/ConversationOrderAccess.php
+?? app/Services/RiderJobPay.php
+?? database/migrations/2026_10_31_000001_create_rider_job_payments.php
+?? docs/RIDER_PAY_IMPLEMENTATION.md
+?? docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md
+?? docs/testing/results/POST_IMPLEMENTATION_REVIEW.md
+?? docs/testing/results/RIDER_PAY_REVIEW.md
+?? mobile/alona_mobile/
+?? mobile/rider/lib/pages/job_earnings_page.dart
+?? mobile/rider/lib/services/rider_job_pay_api.dart
+?? mobile/rider/test/job_earnings_test.dart
+?? resources/js/Pages/Logistics/RiderPayouts.vue
+?? resources/views/sorting-center/payouts.blade.php
+?? tests/Feature/BuyerMobileAuthSecurityTest.php
+?? tests/Feature/BuyerMobileCheckoutTest.php
+?? tests/Feature/BuyerMobileParityTest.php
+?? tests/Feature/Logistics/RiderJobPayTest.php
+?? tests/frontend/rider-payouts.test.mjs
 ```
 
 ### Rider
 
-Git tracked: true; branch: feature/logistics-completion; HEAD: c69d1ab
+Git tracked: true; branch: feature/logistics-completion; HEAD: d117595
 
 ```text
-M ../../.gitignore
- M ../../README.md
- M ../../app/Http/Controllers/AdminDeliveryZoneController.php
- M ../../app/Http/Controllers/Auth/AuthenticatedSessionController.php
- M ../../app/Http/Controllers/Auth/EmailVerificationNotificationController.php
- M ../../app/Http/Controllers/Auth/PasswordController.php
-A  ../../app/Http/Controllers/BuyerDeliveryOtpController.php
-MM ../../app/Http/Controllers/BuyerOrderController.php
-A  ../../app/Http/Controllers/Logistics/CodController.php
-M  ../../app/Http/Controllers/Logistics/DashboardController.php
+M ../../README.md
+ M ../../TEAMMATE_AI_HANDOFF.md
+ M ../../app/Http/Controllers/Api/Buyer/BuyerAccountApiController.php
+ M ../../app/Http/Controllers/Api/Buyer/BuyerAuthController.php
+ M ../../app/Http/Controllers/Api/Buyer/BuyerCartApiController.php
+ M ../../app/Http/Controllers/Api/Buyer/BuyerOrderApiController.php
+ M ../../app/Http/Controllers/Api/Buyer/BuyerVoucherApiController.php
+ M ../../app/Http/Controllers/BuyerAddressController.php
+ M ../../app/Http/Controllers/BuyerConversationController.php
+ M ../../app/Http/Controllers/BuyerOrderController.php
+ M ../../app/Http/Controllers/BuyerReviewController.php
+ M ../../app/Http/Controllers/Logistics/HubWorkspaceController.php
  M ../../app/Http/Controllers/Logistics/IncomingParcelController.php
- M ../../app/Http/Controllers/Logistics/LoginSortingCenterController.php
-A  ../../app/Http/Controllers/Logistics/LogisticsClaimController.php
-AM ../../app/Http/Controllers/Logistics/OutboundParcelController.php
-MM ../../app/Http/Controllers/Logistics/ParcelAssignmentController.php
-A  ../../app/Http/Controllers/Logistics/ParcelHandoverController.php
-MM ../../app/Http/Controllers/Logistics/ParcelMonitoringController.php
-AM ../../app/Http/Controllers/Logistics/ParcelOperationsController.php
-M  ../../app/Http/Controllers/Logistics/ParcelSortingController.php
-AM ../../app/Http/Controllers/Logistics/PickupDispatchController.php
-A  ../../app/Http/Controllers/Logistics/PickupLocationController.php
-M  ../../app/Http/Controllers/Logistics/PickupRequestController.php
-M  ../../app/Http/Controllers/Logistics/ReportController.php
-A  ../../app/Http/Controllers/Logistics/ReturnToSellerController.php
-A  ../../app/Http/Controllers/Logistics/RiderCoverageController.php
-MM ../../app/Http/Controllers/Logistics/RiderDeliveryController.php
-MM ../../app/Http/Controllers/Logistics/RiderManagementController.php
-MM ../../app/Http/Controllers/Logistics/RiderPickupController.php
-A  ../../app/Http/Controllers/Logistics/RiderPresenceController.php
- M ../../app/Http/Controllers/LogisticsRegistrationController.php
-MM ../../app/Http/Controllers/PartnerProfileController.php
- M ../../app/Http/Controllers/SellerOrderController.php
-M  ../../app/Http/Controllers/SellerReturnController.php
- M ../../app/Http/Middleware/EnsureSortingCenterApproved.php
- M ../../app/Http/Requests/LogisticsRegistrationRequest.php
-A  ../../app/Models/CodCollection.php
-A  ../../app/Models/CodDiscrepancy.php
-A  ../../app/Models/CodRemittance.php
-A  ../../app/Models/LogisticsAuditEvent.php
- M ../../app/Models/OrderItem.php
-MM ../../app/Models/Parcel.php
-A  ../../app/Models/ParcelDeliveryAttempt.php
-A  ../../app/Models/ParcelHandover.php
-A  ../../app/Models/ParcelIncident.php
-A  ../../app/Models/ParcelReturn.php
-A  ../../app/Models/PickupOffer.php
- M ../../app/Models/Rider.php
-A  ../../app/Models/RiderDecisionAudit.php
-M  ../../app/Observers/RiderNotificationObserver.php
- M ../../app/Providers/AppServiceProvider.php
- M ../../app/Services/AccountDestination.php
-AM ../../app/Services/CheckoutServiceability.php
-A  ../../app/Services/CodLedger.php
-A  ../../app/Services/CodReport.php
-AM ../../app/Services/DeliveryAttempts.php
-AM ../../app/Services/DeliveryOtp.php
- M ../../app/Services/FooterService.php
-A  ../../app/Services/LogisticsAudit.php
-AM ../../app/Services/LogisticsParcelSummary.php
-A  ../../app/Services/LogisticsRefundReview.php
-A  ../../app/Services/LogisticsReportExport.php
-AM ../../app/Services/NearestPickupOffer.php
- M ../../app/Services/OrderItemPickup.php
-AM ../../app/Services/ParcelTrackingTimeline.php
-AM ../../app/Services/PickupDispatch.php
-A  ../../app/Services/PickupLocations.php
-A  ../../app/Services/ReleaseUncollectedPickups.php
-AM ../../app/Services/ReturnToSeller.php
-AM ../../app/Services/RiderAllocation.php
-A  ../../app/Services/RiderPresence.php
-A  ../../app/Services/RiderWorkload.php
-M  ../../app/Services/SellerParcelDelivery.php
-A  ../../app/Services/SupervisedHandover.php
- M ../../bootstrap/app.php
-A  ../../database/migrations/2026_10_17_100000_create_rider_decision_audits_table.php
-A  ../../database/migrations/2026_10_20_120000_create_logistics_workflow_records.php
+ M ../../app/Http/Controllers/Logistics/ParcelAssignmentController.php
+ M ../../app/Http/Controllers/Logistics/RiderDeliveryController.php
+ M ../../app/Http/Controllers/Logistics/RiderPickupController.php
+ M ../../app/Http/Controllers/SellerConversationController.php
+ M ../../app/Http/Middleware/EnsureBuyer.php
+ M ../../app/Services/HubTransport.php
+ M ../../app/Services/PickupDispatch.php
+ M ../../app/Services/RiderWorkload.php
+ M ../../app/Services/SupervisedHandover.php
+ M ../../config/checkout.php
  M ../../docs/DELIVERY_FINANCE.md
- M ../../docs/DELIVERY_FINANCE_DEPLOYMENT.md
- M ../../docs/LOGISTICS_REGISTRATION_HANDOFF.md
- M ../../docs/SORTING_CENTER_INTEGRATION.md
-AM ../../docs/testing/results/LOGISTICS_TEST_PROGRESS.md
- M ../../resources/js/Components/AppFooter.vue
-A  ../../resources/js/Components/BuyerDeliveryOtp.vue
-A  ../../resources/js/Components/Logistics/CodCashPanel.vue
-A  ../../resources/js/Components/Logistics/CodDiscrepancyPanel.vue
-A  ../../resources/js/Components/Logistics/LogisticsClaimPanel.vue
-A  ../../resources/js/Components/Logistics/LogisticsReviewNotice.vue
-AM ../../resources/js/Components/Logistics/ParcelHandoverPanel.vue
-AM ../../resources/js/Components/Logistics/ParcelOperationsPanel.vue
-AM ../../resources/js/Components/Logistics/PickupDispatchPanel.vue
-A  ../../resources/js/Components/Logistics/ReturnToSellerPanel.vue
-A  ../../resources/js/Components/Logistics/SellerPickupLocation.vue
-A  ../../resources/js/Components/Logistics/SellerReturnReceipt.vue
-MM ../../resources/js/Layouts/ScLayout.vue
-M  ../../resources/js/Pages/Admin/Reports.vue
- M ../../resources/js/Pages/Admin/Settings.vue
- M ../../resources/js/Pages/Auth/LogisticsRegistration.vue
-MM ../../resources/js/Pages/Buyer/Checkout.vue
-MM ../../resources/js/Pages/Buyer/OrderDetails.vue
-M  ../../resources/js/Pages/Logistics/Dashboard.vue
-M  ../../resources/js/Pages/Logistics/DeliveryManagement.vue
-MM ../../resources/js/Pages/Logistics/DeliveryMonitoring.vue
-M  ../../resources/js/Pages/Logistics/DeliveryReports.vue
-MM ../../resources/js/Pages/Logistics/OrderManagement.vue
-M  ../../resources/js/Pages/Logistics/PickupRequestManagement.vue
-M  ../../resources/js/Pages/Logistics/RiderAssignment.vue
-A  ../../resources/js/Pages/Logistics/RiderManagement.vue
-M  ../../resources/js/Pages/Seller/OrderDetails.vue
-M  ../../resources/js/Pages/Seller/Returns.vue
-MM ../../resources/js/logistics.js
-A  ../../resources/views/sorting-center/rider-management.blade.php
-MM ../../routes/api.php
-M  ../../routes/buyer.php
- M ../../routes/console.php
-MM ../../routes/logistics.php
-M  ../../routes/seller.php
- M ../../tests/Feature/BuyerOrderTrackingTest.php
- M ../../tests/Feature/BuyerPaymentTest.php
- M ../../tests/Feature/BuyerStoreTest.php
- M ../../tests/Feature/ExampleTest.php
- M ../../tests/Feature/GuestMarketplaceTest.php
-A  ../../tests/Feature/Logistics/BatchOneAccessTest.php
-AM ../../tests/Feature/Logistics/BuyerOtpTest.php
-AM ../../tests/Feature/Logistics/CheckoutCoverageTest.php
-A  ../../tests/Feature/Logistics/CodLedgerTest.php
-A  ../../tests/Feature/Logistics/CompleteWorkflowTest.php
-A  ../../tests/Feature/Logistics/DashboardDateFilterTest.php
-M  ../../tests/Feature/Logistics/DashboardTest.php
-M  ../../tests/Feature/Logistics/DeliveryPhotoIntegrityTest.php
-M  ../../tests/Feature/Logistics/EcommerceSortingIntegrationTest.php
-M  ../../tests/Feature/Logistics/IncomingParcelTest.php
- M ../../tests/Feature/Logistics/LogisticsRegistrationWorkbookTest.php
-AM ../../tests/Feature/Logistics/NearestPickupOfferTest.php
-A  ../../tests/Feature/Logistics/OutboundParcelTest.php
-M  ../../tests/Feature/Logistics/ParcelAssignmentTest.php
-A  ../../tests/Feature/Logistics/ParcelMonitoringSearchTest.php
-A  ../../tests/Feature/Logistics/ParcelOperationsTest.php
-A  ../../tests/Feature/Logistics/ParcelSummaryTest.php
-A  ../../tests/Feature/Logistics/PickupDispatchTest.php
-A  ../../tests/Feature/Logistics/PickupTrackingTest.php
-A  ../../tests/Feature/Logistics/ReportExportTest.php
-AM ../../tests/Feature/Logistics/ReturnToSellerTest.php
- M ../../tests/Feature/Logistics/RiderBlackBoxTest.php
-A  ../../tests/Feature/Logistics/RiderCoverageTest.php
-AM ../../tests/Feature/Logistics/RiderDecisionAuditTest.php
-MM ../../tests/Feature/Logistics/RiderDeliveryCompletionTest.php
-M  ../../tests/Feature/Logistics/RiderPickupFlowTest.php
-A  ../../tests/Feature/Logistics/RiderPresenceTest.php
-M  ../../tests/Feature/Logistics/RiderProfileTest.php
-A  ../../tests/Feature/Logistics/RiderRejectionTest.php
-A  ../../tests/Feature/Logistics/RiderSuspensionTest.php
-A  ../../tests/Feature/Logistics/RiderWorkloadTest.php
-M  ../../tests/Feature/Logistics/SellerDeliveryNotificationTest.php
-MM ../../tests/Feature/Logistics/SellerShipmentFinanceTest.php
-A  ../../tests/Feature/Logistics/SupervisedHandoverTest.php
-A  ../../tests/Feature/Logistics/SuspensionReleaseTest.php
- M ../../tests/Feature/OrderVariantFlowTest.php
- M ../../tests/Feature/SellerFulfillmentWaybillAndPickupTest.php
- M ../../tests/Feature/SellerNotificationsAlertsTest.php
- M ../../tests/Feature/SellerProductManagementTest.php
- M ../../tests/Feature/SellerReportsAndEarningsTest.php
- M ../../tests/Feature/StockAdjustmentAuditLoggingTest.php
-M  ../../tests/TestCase.php
- M ../../tests/Unit/Logistics/EnsureSortingCenterApprovedTest.php
-M  ../../tests/frontend/data-flow.test.mjs
- M ../../tests/frontend/onboarding.test.mjs
- M ../../vite.config.js
-?? ../../.agents/
-?? ../../AGENTS.md
-?? ../../TEAMMATE_AI_HANDOFF.md
-?? ../../app/Http/Controllers/Logistics/DeliveryRateController.php
-?? ../../app/Http/Controllers/Logistics/HubNetworkController.php
-?? ../../app/Http/Controllers/Logistics/HubStaffController.php
-?? ../../app/Http/Controllers/Logistics/HubWorkspaceController.php
-?? ../../app/Http/Middleware/EnforceLogisticsIdleTimeout.php
-?? ../../app/Http/Middleware/EnsureHubOperator.php
-?? ../../app/Http/Middleware/UseLocalSessionCookies.php
-?? ../../app/Models/HubTransfer.php
-?? ../../app/Models/LogisticsHub.php
-?? ../../app/Models/LogisticsHubStaff.php
-?? ../../app/Models/LogisticsRoute.php
-?? ../../app/Models/ParcelHubJourney.php
-?? ../../app/Services/HubAccess.php
-?? ../../app/Services/HubNetwork.php
-?? ../../app/Services/HubOperations.php
-?? ../../app/Services/HubTransport.php
-?? ../../app/Services/HubWorkspace.php
-?? ../../app/Services/LogisticsSessionLifetime.php
-?? ../../app/Services/ShippingRates.php
-?? ../../app/Services/SortingCenterSession.php
-?? ../../config/logistics_hubs.php
-?? ../../database/migrations/2026_10_29_100000_create_logistics_hub_network.php
-?? ../../database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php
-?? ../../docs/LOGISTICS_HUB_NETWORK.md
-?? ../../docs/LOGISTICS_TEAM_UPDATE.md
-?? ../../docs/LOGISTICS_WORKBOOK_READINESS.md
-?? ../../docs/TEAMMATE_AI_PROMPT.md
-?? ../../docs/testing/Blackbox_Test_Cases_Logistics_Modules-1.xlsx
-?? ../../docs/testing/results/LOGISTICS_BATCH_1_EXECUTION.md
-?? ../../docs/testing/results/LOGISTICS_COMMIT_READINESS.md
-?? ../../docs/testing/results/LOGISTICS_IMPLEMENTATION_BATCH_1.md
-?? ../../docs/testing/results/LOGISTICS_MISSING_FEATURES.md
-?? ../../docs/testing/results/LOGISTICS_REQUIREMENT_CONFLICTS.md
-?? ../../docs/testing/results/LOGISTICS_TEST_ANALYSIS.md
-?? ../../docs/testing/results/ORDER_FLOW_REVIEW.md
-?? ../../docs/upgrade/
-?? ../
-?? ../../resources/js/Pages/Logistics/DeliveryRates.vue
-?? ../../resources/js/Pages/Logistics/HubNetwork.vue
-?? ../../resources/js/Pages/Logistics/HubStaff.vue
-?? ../../resources/js/Pages/Logistics/HubWorkspace.vue
-?? ../../resources/js/logisticsSession.js
-?? ../../resources/js/requestKey.js
-?? ../../resources/views/sorting-center/delivery-rates.blade.php
-?? ../../resources/views/sorting-center/hub-staff.blade.php
-?? ../../resources/views/sorting-center/hub-workspace.blade.php
-?? ../../resources/views/sorting-center/hubs.blade.php
-?? ../../scripts/verify-logistics.cjs
-?? ../../scripts/verify-system.cjs
-?? ../../tests/Feature/Auth/LocalSessionCookieTest.php
-?? ../../tests/Feature/Logistics/CheckoutToDeliveryTest.php
-?? ../../tests/Feature/Logistics/HubNetworkTest.php
-?? ../../tests/Feature/Logistics/HubStaffWorkflowTest.php
-?? ../../tests/Feature/Logistics/LogisticsIdleSessionTest.php
-?? ../../tests/Feature/Logistics/WorkbookRatesTest.php
-?? ../../tests/Support/
-?? ../../tests/Unit/Logistics/OnboardingApiContractTest.php
-?? ../../tests/Unit/Logistics/PasswordApiContractTest.php
-?? ../../tests/Unit/Logistics/RiderActivationTokenExposureTest.php
-?? ../../tests/Unit/Logistics/RiderDocumentApiContractTest.php
-?? ../../tests/Unit/Logistics/VerificationEmailApiContractTest.php
-?? ../../tests/browser/
-?? ../../tests/frontend/dev-server-security.test.mjs
-?? ../../tests/frontend/hub-network.test.mjs
-?? ../../tests/frontend/hub-workspace.test.mjs
-?? ../../tests/frontend/logistics-session.test.mjs
-?? ../../tests/frontend/workbook-readiness.test.mjs
+ M ../../docs/LOGISTICS_TEAM_UPDATE.md
+ M ../../docs/TEAMMATE_AI_PROMPT.md
+ M ../../docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json
+ M ../README.md
+ M docs/ARCHITECTURE.md
+ M docs/CURRENT_STATE.md
+ M docs/DECISIONS.md
+ M docs/PROJECT_CONTEXT.md
+ M docs/integration/CHANGELOG.md
+ M docs/integration/CHANGELOG.md.previous
+ M docs/integration/CHECKPOINT.md
+ M docs/integration/CHECKPOINT.md.previous
+ M docs/integration/PROGRESS.md
+ M docs/integration/PROGRESS.md.previous
+ M docs/integration/RESUME.md
+ M docs/integration/RESUME.md.previous
+ M docs/integration/checkpoint-state.json
+ M docs/integration/checkpoint-state.json.previous
+ M lib/pages/rider_notifications_page.dart
+ M lib/pages/rider_portal_page.dart
+ M lib/pages/rider_shell_page.dart
+ M scripts/integration_checkpoint.cjs
+ M test/rider_earnings_test.dart
+ M ../../package.json
+ M ../../resources/js/Layouts/ScLayout.vue
+ M ../../resources/js/Pages/Buyer/Checkout.vue
+ M ../../resources/js/logistics.js
+ M ../../routes/api.php
+ M ../../routes/logistics.php
+ M ../../scripts/verify-system.cjs
+ M ../../tests/frontend/workbook-readiness.test.mjs
+?? ../../app/Http/Controllers/Logistics/RiderPayController.php
+?? ../../app/Models/RiderPayBatch.php
+?? ../../app/Models/RiderPayDestination.php
+?? ../../app/Models/RiderPayEarning.php
+?? ../../app/Models/RiderPaySetting.php
+?? ../../app/Models/RiderPayTrip.php
+?? ../../app/Services/ConversationOrderAccess.php
+?? ../../app/Services/RiderJobPay.php
+?? ../../database/migrations/2026_10_31_000001_create_rider_job_payments.php
+?? ../../docs/RIDER_PAY_IMPLEMENTATION.md
+?? ../../docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md
+?? ../../docs/testing/results/POST_IMPLEMENTATION_REVIEW.md
+?? ../../docs/testing/results/RIDER_PAY_REVIEW.md
+?? ../alona_mobile/
+?? lib/pages/job_earnings_page.dart
+?? lib/services/rider_job_pay_api.dart
+?? test/job_earnings_test.dart
+?? ../../resources/js/Pages/Logistics/RiderPayouts.vue
+?? ../../resources/views/sorting-center/payouts.blade.php
+?? ../../tests/Feature/BuyerMobileAuthSecurityTest.php
+?? ../../tests/Feature/BuyerMobileCheckoutTest.php
+?? ../../tests/Feature/BuyerMobileParityTest.php
+?? ../../tests/Feature/Logistics/RiderJobPayTest.php
+?? ../../tests/frontend/rider-payouts.test.mjs
 ```
 
 No automatic commit or push. ALONA tracked status above includes all existing changes; ownership must be checked before committing. Rider changes are tracked by Git; HEAD and working-tree status above distinguish committed/local work.
 
 KNOWN ISSUES:
 
+- Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.
+- Imported native launcher/icon PNGs are absent; platform resources and device packaging remain pending.
 - Android debug build failed with CXX1101: installed NDK28.2.13676358 lacks source.properties. No SDK deletion or project-version workaround performed.
 - Teammates actual schema not supplied/certified; last recorded local staff migration was pending. This review did not requery or mutate shared/development databases.
 - Existing chronological fresh MySQL bootstrap has order_items/product_variants foreign-key ordering risk; no existing migration file changed to conceal it.
 - SQLite memory proves contracts/rollback, not MySQL contention or live deployment. Required real-device, SMTP, native signing and actual-operator acceptance remain pending.
-- Rider notices remain best-effort after-commit without durable replay/background push; existing finance rules and limits are unchanged.
+- Rider notices remain best-effort after-commit without durable replay/background push. New opt-in job payroll is separate from the preserved historical Seller-funded ledger; actual rates/funding/rollout remain operator-controlled.
 - Earlier imported audit/database/test-count documents are historical. Current source, ORDER_FLOW_REVIEW.md and active integration bundle take precedence.
 
 INTERRUPTED OR RUNNING OPERATIONS:
 
 - None recorded.
 
-NEXT ACTION: Inspect Git HEAD/log for the explicitly authorized local commit and use TEAMMATE_AI_HANDOFF.md / docs/TEAMMATE_AI_PROMPT.md. No automatic push or database change. Native NDK and target-schema rollout limits remain.
+NEXT ACTION: Repeat compiled order-to-payout journey with updated app; audit preserved source/design and finalize review evidence
 
 RECOVERY NOTES:
 

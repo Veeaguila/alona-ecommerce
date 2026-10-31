@@ -82,6 +82,11 @@ Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(fu
     Route::get('/presence', [\App\Http\Controllers\Logistics\RiderPresenceController::class, 'show']);
     Route::post('/presence', [\App\Http\Controllers\Logistics\RiderPresenceController::class, 'update'])->middleware('throttle:120,1');
     Route::get('/earnings', [\App\Http\Controllers\DeliveryFinanceController::class, 'rider']);
+    Route::get('/job-pay', [\App\Http\Controllers\Logistics\RiderPayController::class, 'index']);
+    Route::post('/job-pay/destinations', [\App\Http\Controllers\Logistics\RiderPayController::class, 'destination'])->middleware('throttle:10,1');
+    Route::get('/job-pay/payouts/{id}', [\App\Http\Controllers\Logistics\RiderPayController::class, 'show'])->whereNumber('id');
+    Route::get('/job-pay/payouts/{id}/proof', [\App\Http\Controllers\Logistics\RiderPayController::class, 'proof'])->whereNumber('id');
+    Route::post('/job-pay/payouts/{id}/acknowledge', [\App\Http\Controllers\Logistics\RiderPayController::class, 'acknowledge'])->whereNumber('id')->middleware('throttle:20,1');
     Route::get('/pickups/available', [RiderPickupController::class, 'available']);
     Route::get('/pickups/mine', [RiderPickupController::class, 'mine']);
     Route::post('/pickups/{parcelId}/accept', [RiderPickupController::class, 'accept']);
@@ -107,6 +112,19 @@ Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(fu
 
 // Protected Sorting Center Management
 Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function () {
+    Route::prefix('sorting-center/payroll')->group(function () {
+        $pay = \App\Http\Controllers\Logistics\RiderPayController::class;
+        Route::get('/', [$pay, 'index']);
+        Route::put('/settings', [$pay, 'settings'])->middleware('throttle:10,1');
+        Route::get('/riders/{id}/review', [$pay, 'review'])->whereNumber('id');
+        Route::post('/payouts', [$pay, 'prepare'])->middleware('throttle:20,1');
+        Route::get('/payouts/{id}', [$pay, 'show'])->whereNumber('id');
+        Route::get('/payouts/{id}/proof', [$pay, 'proof'])->whereNumber('id');
+        Route::post('/payouts/{id}/pay', [$pay, 'pay'])->whereNumber('id')->middleware('throttle:10,1');
+        Route::post('/payouts/{id}/cancel', [$pay, 'cancel'])->whereNumber('id')->middleware('throttle:10,1');
+        Route::get('/trips', [$pay, 'trips']);
+        Route::post('/trips', [$pay, 'dispatchTrip'])->middleware('throttle:20,1');
+    });
     Route::get('/sorting-center/delivery-rates', [\App\Http\Controllers\Logistics\DeliveryRateController::class, 'index']);
     Route::post('/sorting-center/delivery-rates', [\App\Http\Controllers\Logistics\DeliveryRateController::class, 'save']);
     Route::put('/sorting-center/delivery-rates/{id}', [\App\Http\Controllers\Logistics\DeliveryRateController::class, 'save'])->whereNumber('id');
@@ -227,7 +245,7 @@ Route::prefix('buyer')->group(function () {
 });
 
 // Buyer Protected Endpoints (auth:sanctum)
-Route::middleware(['auth:sanctum'])->prefix('buyer')->group(function () {
+Route::middleware(['auth:sanctum', 'buyer'])->prefix('buyer')->group(function () {
     // Auth & Profile
     Route::get('/me', [BuyerAuthController::class, 'me']);
     Route::post('/profile', [BuyerAuthController::class, 'updateProfile']);
@@ -254,6 +272,10 @@ Route::middleware(['auth:sanctum'])->prefix('buyer')->group(function () {
     Route::post('/orders', [BuyerOrderApiController::class, 'store']);
     Route::get('/orders', [BuyerOrderApiController::class, 'index']);
     Route::get('/orders/{id}', [BuyerOrderApiController::class, 'show']);
+    Route::get('/orders/{order}/parcels/{parcel}/delivery-otp', [\App\Http\Controllers\BuyerDeliveryOtpController::class, 'show'])
+        ->whereNumber('order')->whereNumber('parcel')->middleware('throttle:30,1');
+    Route::post('/orders/{order}/parcels/{parcel}/delivery-otp/renew', [\App\Http\Controllers\BuyerDeliveryOtpController::class, 'renew'])
+        ->whereNumber('order')->whereNumber('parcel')->middleware('throttle:3,15');
     Route::post('/orders/{id}/cancel', [BuyerOrderApiController::class, 'cancel']);
     Route::post('/orders/{id}/receive', [BuyerOrderApiController::class, 'receive']);
     Route::post('/orders/{id}/reorder', [BuyerOrderApiController::class, 'reorder']);
@@ -266,6 +288,12 @@ Route::middleware(['auth:sanctum'])->prefix('buyer')->group(function () {
     Route::delete('/addresses/{id}', [BuyerAccountApiController::class, 'deleteAddress']);
 
     // Notifications
+    Route::get('/conversations', [\App\Http\Controllers\BuyerConversationController::class, 'mobileIndex']);
+    Route::post('/conversations/start/{product}', [\App\Http\Controllers\BuyerConversationController::class, 'start'])->whereNumber('product')->middleware('throttle:30,1');
+    Route::post('/conversations/start-seller/{seller}', [\App\Http\Controllers\BuyerConversationController::class, 'startWithSeller'])->whereNumber('seller')->middleware('throttle:30,1');
+    Route::get('/conversations/{conversation}', [\App\Http\Controllers\BuyerConversationController::class, 'show'])->whereNumber('conversation');
+    Route::post('/conversations/{conversation}', [\App\Http\Controllers\BuyerConversationController::class, 'store'])->whereNumber('conversation')->middleware('throttle:30,1');
+
     Route::get('/notifications', [BuyerAccountApiController::class, 'notifications']);
     Route::patch('/notifications/{id}/read', [BuyerAccountApiController::class, 'readNotification']);
     Route::post('/notifications/read-all', [BuyerAccountApiController::class, 'readAllNotifications']);

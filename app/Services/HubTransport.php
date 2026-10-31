@@ -47,6 +47,7 @@ class HubTransport
     {
         app(HubNetwork::class)->requireStorage();
         return DB::transaction(function () use ($actor, $centerId, $parcelId, $hubId): ParcelHubJourney {
+            app(RiderJobPay::class)->lockTrip($centerId, $parcelId);
             app(SellerShipmentFinance::class)->lockParcel($parcelId);
             $parcel = Parcel::where('sorting_center_id', $centerId)->whereKey($parcelId)->lockForUpdate()->firstOrFail();
             $journey = ParcelHubJourney::where('sorting_center_id', $centerId)->where('parcel_id', $parcel->id)->lockForUpdate()->firstOrFail();
@@ -60,6 +61,7 @@ class HubTransport
             $parcel->update(['status' => 'AT_SORTING_CENTER']);
             app(ParcelTrackingTimeline::class)->record($parcel, 'Received at destination hub: '.$journey->route_snapshot['destination_hub_name'].'.');
             app(LogisticsAudit::class)->record($actor, 'hub_transfer_received', $parcel, ['hub_id' => $hubId, 'transfer_id' => $transfer->id]);
+            app(RiderJobPay::class)->completeTrip($transfer->fresh(), $actor);
             return $journey->fresh('transfer');
         });
     }

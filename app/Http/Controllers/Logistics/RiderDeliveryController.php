@@ -158,6 +158,7 @@ class RiderDeliveryController extends Controller
     {
         $riderId = $request->user()->rider?->id;
         $parcel = DB::transaction(function () use ($request, $parcelId, $riderId, $status, $attributes): Parcel {
+            app(\App\Services\RiderJobPay::class)->groupedMembers($parcelId, (int) $request->user()->rider->sorting_center_id);
             $finance = app(\App\Services\SellerShipmentFinance::class);
             $shipment = $finance->lockParcel($parcelId);
             $parcel = Parcel::query()->whereKey($parcelId)->lockForUpdate()->first();
@@ -196,6 +197,7 @@ class RiderDeliveryController extends Controller
             if ($status === 'DELIVERED') {
                 app(\App\Services\SellerParcelDelivery::class)->notifyDelivered($parcel);
                 $finance->recognize($shipment);
+                app(\App\Services\RiderJobPay::class)->complete($parcel, 'delivery', $request->user());
             }
             return $parcel->fresh();
         });

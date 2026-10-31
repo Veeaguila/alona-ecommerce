@@ -10,7 +10,7 @@ import '../widgets/rider_content.dart';
 import 'delivery_dashboard_page.dart';
 import 'delivery_history_page.dart';
 import 'pickup_dashboard_page.dart';
-import 'profit_dashboard_page.dart';
+import 'job_earnings_page.dart';
 import 'rider_portal_page.dart'
     show RiderAccountPage, RiderChatPage, portalError;
 
@@ -122,7 +122,7 @@ class _RiderNotificationsPageState extends State<RiderNotificationsPage>
         'pickups' => PickupDashboardPage(session: riderSession),
         'deliveries' => DeliveryDashboardPage(session: riderSession),
         'history' => DeliveryHistoryPage(session: riderSession),
-        'earnings' => ProfitDashboardPage(session: riderSession),
+        'earnings' => JobEarningsPage(session: riderSession),
         'chat' => RiderChatPage(
           session: riderSession,
           conversationId: (data['conversation_id'] as num?)?.toInt(),

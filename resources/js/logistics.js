@@ -20,6 +20,7 @@ window.fetch = logisticsSessionFetch(window.fetch.bind(window), {
 });
 
 const components = {
+    'rider-payouts': () => import('./Pages/Logistics/RiderPayouts.vue'),
     'hub-workspace': () => import('./Pages/Logistics/HubWorkspace.vue'),
     'hub-staff': () => import('./Pages/Logistics/HubStaff.vue'),
     'delivery-rates': () => import('./Pages/Logistics/DeliveryRates.vue'),

@@ -62,7 +62,9 @@ for (let i = 0; i < files.length; i += 12) {
     run(label, 'php', ['-d', 'memory_limit=1024M', 'vendor/phpunit/phpunit/phpunit', '--configuration', target,
         '--do-not-cache-result', '--colors=never', '--log-junit', path.join(artifacts, label + '-results.xml')]);
 }
-run('frontend', 'node', ['--test', ...fs.readdirSync(path.join(root, 'tests/frontend'))
+// Bound worker load: concurrent Vite fixtures timed out on Windows while the same
+// security assertions and complete suite passed serially. Keep every check enabled.
+run('frontend', 'node', ['--test', '--test-concurrency=1', ...fs.readdirSync(path.join(root, 'tests/frontend'))
     .filter(file => file.endsWith('.test.mjs')).map(file => 'tests/frontend/' + file)]);
 run('checkpoint-helper', 'node', ['--test', 'mobile/rider/scripts/integration_checkpoint.test.cjs']);
 if (process.argv.includes('--mobile')) {
@@ -72,5 +74,8 @@ if (process.argv.includes('--mobile')) {
         : run(label, 'flutter', args, app);
     flutter('mobile-tests', ['test', '--no-pub', '--dart-define=API_BASE_URL=http://localhost:8000/api']);
     flutter('mobile-analysis', ['analyze', '--no-pub']);
+    const combined = path.join(root, 'mobile/alona_mobile');
+    run('buyer-logistics-tests', 'node', ['scripts/check.cjs','test'], combined);
+    run('buyer-logistics-analysis', 'node', ['scripts/check.cjs','analyze'], combined);
 }
 process.exitCode = results.every(result => result.status === 0) ? 0 : 1;

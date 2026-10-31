@@ -90,6 +90,7 @@ class SupervisedHandover
                     'target_acknowledged_at' => $current->target_acknowledged_at->toISOString(),
                 ], $target->id);
             }
+            app(RiderJobPay::class)->handoverPending($current, $members, $actor);
             $current->update(['status' => 'confirmed', 'confirmed_by' => $actor->id, 'confirmed_at' => now()]);
             $this->notify($current, $current->request_key.':confirmed', 'Logistics confirmed physical handover');
             return $current->fresh();

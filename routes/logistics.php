@@ -15,7 +15,7 @@ Route::get('/sorting-center/hub-workspace', [\App\Http\Controllers\Logistics\Hub
 
 // These views contain only the UI shell; every data endpoint requires an approved account.
 Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])->group(function () {
-    foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'rider-management', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests', 'hubs', 'delivery-rates', 'hub-staff'] as $page) {
+    foreach (['dashboard', 'order-management', 'delivery-management', 'rider-assignment', 'rider-management', 'delivery-monitoring', 'delivery-reports', 'messages', 'pickup-requests', 'hubs', 'delivery-rates', 'hub-staff', 'payouts'] as $page) {
         Route::get($page, function (Request $request) use ($page) {
             if ($request->header('X-Inertia')) {
                 return \Inertia\Inertia::location($request->fullUrl());

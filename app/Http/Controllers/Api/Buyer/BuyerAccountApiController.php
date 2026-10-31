@@ -40,38 +40,15 @@ class BuyerAccountApiController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'label' => ['required', 'string', 'max:50'],
-            'recipient_name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'regex:/^09\d{9}$/'],
-            'region' => ['nullable', 'string', 'max:100'],
-            'province' => ['nullable', 'string', 'max:100'],
-            'city' => ['required', 'string', 'max:100'],
-            'barangay' => ['required', 'string', 'max:100'],
-            'street' => ['required', 'string', 'max:250'],
-            'postal_code' => ['nullable', 'string', 'max:10'],
-            'is_default' => ['nullable', 'boolean'],
-        ]);
-
+        $validated = $this->addressData($request);
         $isDefault = $user->addresses()->doesntExist() || ! empty($validated['is_default']);
 
         if ($isDefault) {
             $user->addresses()->update(['is_default' => false]);
         }
 
-        $address = $user->addresses()->create([
-            'label' => $validated['label'],
-            'recipient_name' => $validated['recipient_name'],
-            'phone' => $validated['phone'],
-            'region' => $validated['region'] ?? null,
-            'province' => $validated['province'] ?? null,
-            'city' => $validated['city'],
-            'barangay' => $validated['barangay'],
-            'street' => $validated['street'],
-            'postal_code' => $validated['postal_code'] ?? null,
-            'is_default' => $isDefault,
-        ]);
-
+        $validated['is_default'] = $isDefault;
+        $address = $user->addresses()->create($validated);
         return response()->json([
             'message' => 'Address added successfully.',
             'address' => $address,
@@ -83,29 +60,30 @@ class BuyerAccountApiController extends Controller
         $user = $request->user();
         $address = $user->addresses()->whereKey($id)->firstOrFail();
 
-        $validated = $request->validate([
-            'label' => ['required', 'string', 'max:50'],
-            'recipient_name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'regex:/^09\d{9}$/'],
-            'region' => ['nullable', 'string', 'max:100'],
-            'province' => ['nullable', 'string', 'max:100'],
-            'city' => ['required', 'string', 'max:100'],
-            'barangay' => ['required', 'string', 'max:100'],
-            'street' => ['required', 'string', 'max:250'],
-            'postal_code' => ['nullable', 'string', 'max:10'],
-            'is_default' => ['nullable', 'boolean'],
-        ]);
-
+        $validated = $this->addressData($request);
         if (! empty($validated['is_default'])) {
             $user->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
 
+        if ($address->is_default && !$request->boolean('is_default')) $validated['is_default'] = true;
         $address->update($validated);
 
         return response()->json([
             'message' => 'Address updated successfully.',
             'address' => $address,
         ]);
+    }
+
+    /** Map the original mobile form to the existing web schema and validator. */
+    private function addressData(Request $request): array
+    {
+        $request->merge([
+            'recipient_phone' => $request->input('phone', $request->input('recipient_phone')),
+            'municipality' => $request->input('city', $request->input('municipality')),
+            'street_address' => $request->input('street', $request->input('street_address')),
+            'address' => null, // Rebuild the snapshot after every structured edit.
+        ]);
+        return app(\App\Http\Controllers\BuyerAddressController::class)->validateAddress($request);
     }
 
     public function setDefaultAddress(Request $request, int $id): JsonResponse
@@ -190,40 +168,8 @@ class BuyerAccountApiController extends Controller
 
     public function storeReview(Request $request, int $productId): JsonResponse
     {
-        $user = $request->user();
         $product = Product::where('status', 'approved')->findOrFail($productId);
-
-        $validated = $request->validate([
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['nullable', 'string', 'max:1000'],
-            'order_id' => ['nullable', 'integer'],
-        ]);
-
-        $review = Review::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'product_id' => $product->id,
-            ],
-            [
-                'rating' => $validated['rating'],
-                'comment' => $validated['comment'] ?? null,
-                'order_id' => $validated['order_id'] ?? null,
-                'status' => 'approved',
-            ]
-        );
-
-        // Recalculate product rating
-        $avg = Review::where('product_id', $product->id)->where('status', 'approved')->avg('rating');
-        $count = Review::where('product_id', $product->id)->where('status', 'approved')->count();
-        $product->update([
-            'rating' => round($avg, 2),
-            'reviews_count' => $count,
-        ]);
-
-        return response()->json([
-            'message' => 'Thank you for your review!',
-            'review' => $review,
-        ], 201);
+        return app(\App\Http\Controllers\BuyerReviewController::class)->store($request, $product);
     }
 
     /**

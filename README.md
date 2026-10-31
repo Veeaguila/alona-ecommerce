@@ -14,6 +14,12 @@ The [copyable AI prompt](docs/TEAMMATE_AI_PROMPT.md) covers source setup and a b
 local database upgrade. The [migration manifest](docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json)
 indexes the reviewed changes; preserve your existing data and compare your actual schema.
 Flutter Rider source is included at [`mobile/rider`](mobile/rider).
+The Buyer/Logistics Flutter source is at [`mobile/alona_mobile`](mobile/alona_mobile).
+Read its [Logistics parity notes](mobile/alona_mobile/docs/LOGISTICS_PARITY.md) for
+verified scope and pending device work. The [mobile order-flow review](docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md)
+records Buyer checkout through Seller, Logistics and delivery.
+The [Rider pay guide](docs/RIDER_PAY_IMPLEMENTATION.md) covers configured shipment
+jobs, complete transfer manifests and grouped manual payouts on web and mobile.
 
 ## About Laravel
 

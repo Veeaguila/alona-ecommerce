@@ -15,7 +15,15 @@ starting point. Do not replace them with the author's database or a full SQL dum
   [schema manifest](docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json),
   [order-flow review](docs/testing/results/ORDER_FLOW_REVIEW.md) and, if changing
   Rider, `mobile/rider/docs/CURRENT_STATE.md` and its integration bundle.
-- The manifest identifies the four migrations newly included in this release and
+- Read [Rider pay implementation](docs/RIDER_PAY_IMPLEMENTATION.md). The latest
+  addition is configured per-Seller-shipment job pay, explicit complete transfer
+  manifests and grouped manual company payouts across web and Flutter. Rates start
+  disabled and blank; do not seed PocketFinds/test rates or backfill past work.
+  The new migration creates six empty payroll tables and adds nullable
+  `hub_transfers.rider_pay_trip_id`. Preserve APP_KEY for encrypted instructions,
+  private payout proof uploads, existing finance history and COD records. It has
+  a preserving-rollback requirement; no automatic down/rollback.
+- The manifest identifies the five migrations newly included in this release and
   fingerprints **all** migration files. Older migrations can also be missing on a
   teammate's machine. A fingerprint or the author's old migration status does not
   establish what has been applied to the teammate's database.
@@ -94,8 +102,9 @@ rows into this repository or include credentials in the upgrade report.
    changes, with the exact migration paths, dependencies, data effects and risks.
    Do not infer that the teammate shares the author's local migration state.
 
-The four newly included migrations create 15 tables. The hub migration also adds
-`riders.logistics_hub_id` and `order_items.hub_route_plan`. Full column/key definitions
+The five newly included migrations create 21 tables. The hub migration also adds
+`riders.logistics_hub_id` and `order_items.hub_route_plan`; payroll adds nullable
+`hub_transfers.rider_pay_trip_id`. Full column/key definitions
 remain in the migration files; the manifest is an index, not executable SQL or a
 replacement for target inspection. The Rider import, inactivity timeout, registration
 retry, dev-server protection and Buyer history read fix require no extra new schema.
@@ -136,7 +145,32 @@ Proceed only within the teammate owner's explicit authorization for that target.
 Do not fabricate hubs, staff/Rider accounts, balances, GPS locations, shipment links,
 historical membership or application records to satisfy tests or remove an error.
 
-## 5. Finish application and Rider setup
+## 5. Finish application and mobile setup
+
+The additional Buyer/Logistics Flutter source is now in `mobile/alona_mobile`
+(upstream4277995). Install its locked dependencies separately; read its README and
+`mobile/alona_mobile/docs/LOGISTICS_PARITY.md`. Logistics reuses the existing backend/process with no
+new migration. Buyer checkout now shares canonical server quoting/booking; read
+`docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md`. Update backend and mobile together,
+use the same reachable API, and retain the configured shared lock-capable cache for
+checkout retry receipts. Online payment completion remains in web and native/device
+release verification is pending. No Seller Flutter
+module is present. `verify-system.cjs --mobile` includes both Flutter applications.
+
+The broader Buyer review also fixes OTP authentication, purchase reviews, voucher
+eligibility, cart/reorder, shared Buyer/Seller chat and mobile lifecycle races.
+Deploy matching backend/mobile changes together. Mobile Google sign-in currently
+returns an honest unavailable notice/503: the imported email/Google-ID form did
+not verify a provider identity and must not be re-enabled as authentication.
+
+If the old public OTP/Google endpoints were previously reachable/used, inventory
+potentially affected Buyer sessions and prepare a scoped revocation/reauthentication
+plan for explicit owner approval. The patch does not revoke old tokens. Google
+tokens used `alona-buyer-mobile`; OTP and legitimate password tokens both used
+`buyer-mobile-token`, so names alone cannot distinguish that exposure. Do not
+mass-delete tokens or approve legacy Google-created `active` accounts automatically.
+The bounded schema-upgrade authorization below/inside the teammate prompt does
+not authorize session deletion or account-status changes.
 
 - Run `npm run build` for the local installation. Preserve an existing build until
   a successful replacement is ready. Restart a running Vite server after its config
@@ -182,10 +216,13 @@ private logs under `.local/system-verification`. Never replace the memory DB wit
 the teammate's configured database to get a test to run. No test accounts/seeders
 should be added to their real data.
 
-Latest author evidence: 948 backend tests, 123 frontend tests, 123 Rider tests, clean
-analyzer and a successful compiled browser checkout→Seller→Logistics→two Rider legs→
-photo/Buyer OTP→Delivered. Separate tests cover COD, returns/restock, store pickup
-and Buyer activity history. These are reference results, not automatic certification
+Latest author evidence includes the full 980-test backend run (57,272 assertions),
+48 combined Flutter tests, clean analyzer/rebuilt profile, 124 frontend tests,
+7 checkpoint-helper tests and a successful compiled mobile Buyer checkout→Seller web→
+Logistics web/mobile→Rider APIs→photo/Buyer mobile OTP→Delivered. Current mobile
+counts/build evidence are in `mobile/alona_mobile/docs/CURRENT_STATE.md`; the prior
+unchanged Rider suite passed 123 tests. Separate tests cover COD, returns/restock,
+store pickup and Buyer activity history. These are reference results, not automatic certification
 of a different laptop, real device, shared schema or actual payment service.
 
 Complete local authorized acceptance with agreed accounts/test data: pickup, center

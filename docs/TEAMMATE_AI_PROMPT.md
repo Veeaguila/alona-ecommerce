@@ -22,12 +22,30 @@ remote yet, report that it must first be pushed by the author.
 
 After updating, read TEAMMATE_AI_HANDOFF.md, docs/LOGISTICS_TEAM_UPDATE.md,
 docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json and docs/testing/results/ORDER_FLOW_REVIEW.md.
-The Flutter Rider is already included in mobile/rider. Do not clone another nested
-repository or create a separate mobile database.
+Flutter source is already included in mobile/rider and mobile/alona_mobile. Do not
+clone another nested repository or create a separate mobile database. Install locked
+dependencies in each app separately. Read mobile/alona_mobile/docs/LOGISTICS_PARITY.md:
+its Logistics uses the current web process and Buyer checkout shares the canonical
+server quote/booking flow. Read docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md.
+Read docs/RIDER_PAY_IMPLEMENTATION.md and its current verification evidence.
+The new payroll migration creates six empty tables plus nullable
+hub_transfers.rider_pay_trip_id. Compare it with my actual schema and include only
+genuinely pending compatible deltas. Keep rates disabled/unconfigured until my
+company owner supplies approved amounts; do not copy example/PocketFinds rates,
+guess past earnings, offset COD, or treat recorded payout proof as a provider
+transfer. Preserve APP_KEY, encrypted receiving instructions and private proof files.
+Update backend and mobile together; configure the same reachable API. Native device
+release acceptance and actual online-payment completion remain separate checks.
+Buyer chat shares Seller web threads. Mobile Google sign-in is currently unavailable
+until a real provider integration exists; never restore the imported email/Google-ID
+form as authentication. Read the handoff's OTP/Google session-exposure note. If those
+old endpoints were reachable/used, report a scoped existing-token revocation and
+reauthentication plan for explicit owner approval; do not delete tokens or approve
+legacy Google-created accounts automatically under this schema-upgrade authorization.
 
 I authorize upgrading ONLY MY OWN CONFIRMED LOCAL DEVELOPMENT DATABASE after you:
 1. Verify the actual target/ownership and compare its schema AND migrations ledger
-   against all pending files and prerequisites (not just the four release additions).
+   against all pending files and prerequisites (not just the five release additions).
 2. Make and verify a private database/upload backup and rehearse the exact reviewed
    plan on a separate disposable copy using the same database engine.
 3. Confirm existing records survive and apply only genuinely pending compatible

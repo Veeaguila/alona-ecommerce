@@ -90,11 +90,13 @@ class HubWorkspaceController extends Controller
             } elseif ($input['action'] === 'receive_destination') {
                 app(HubTransport::class)->receive($actor, $company, $parcelId, (int) $input['hub_id']);
             } else {
+                app(\App\Services\RiderJobPay::class)->groupedMembers($parcelId, $company);
                 app(SellerShipmentFinance::class)->lockParcel($parcelId);
                 $parcel = Parcel::where('sorting_center_id', $company)->whereKey($parcelId)->lockForUpdate()->firstOrFail();
                 abort_unless($parcel->status === 'PICKED_UP', 409, 'The parcel has already moved. Look it up again.');
                 app(HubNetwork::class)->receiveOrigin($parcel, (int) $input['hub_id'], $actor);
                 $parcel->update(['status' => 'AT_SORTING_CENTER']);
+                app(\App\Services\RiderJobPay::class)->complete($parcel, 'pickup', $actor);
             }
             return app(HubWorkspace::class)->lookup($actor, $reference, (int) $input['hub_id']);
         });

@@ -57,6 +57,8 @@ class IncomingParcelController extends Controller
 
         $actor = $request->user();
         $parcel = DB::transaction(function () use ($validated, $sortingCenterId, $actor): Parcel {
+            $jobParcelId = Parcel::where('order_id', $validated['order_id'])->value('id');
+            if ($jobParcelId) app(\App\Services\RiderJobPay::class)->groupedMembers((int) $jobParcelId, (int) $sortingCenterId);
             $parcel = Parcel::query()
                 ->where('order_id', $validated['order_id'])
                 ->lockForUpdate()
@@ -89,6 +91,7 @@ class IncomingParcelController extends Controller
                 'sorting_center_id' => $sortingCenterId,
                 'status' => 'AT_SORTING_CENTER',
             ]);
+            app(\App\Services\RiderJobPay::class)->complete($parcel, 'pickup', $actor);
 
             return $parcel->fresh();
         });

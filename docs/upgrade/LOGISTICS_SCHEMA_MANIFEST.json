@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "releaseDate": "2026-10-29",
+  "releaseDate": "2026-10-31",
   "repository": "https://github.com/Veeaguila/alona-ecommerce.git",
   "branch": "feature/logistics-completion",
   "baseCommitBeforeThisRelease": "c69d1abccc57a9e80bbe55498a490e8ac02fb723",
@@ -11,7 +11,7 @@
   "copyablePrompt": "docs/TEAMMATE_AI_PROMPT.md",
   "rules": [
     "Preserve existing records, private uploads, APP_KEY and configuration.",
-    "Classify all pending migrations and inspect prerequisites, not just these four additions.",
+    "Classify all pending migrations and inspect prerequisites, not just these five additions.",
     "Existing object with missing migration ledger entry is drift; no blind create or fabricated ledger entry.",
     "No fresh/refresh/reset/schema replacement, seeders or automatic rollback.",
     "Apply only approved compatible pending changes after verified backup and matching-engine copy rehearsal.",
@@ -124,6 +124,42 @@
         "2026_10_29_100000_create_logistics_hub_network"
       ],
       "dataEffects": "Creates empty new tables; hub migration adds nullable columns to existing tables. No seeding/backfill in this file. Historical/other pending migrations need their own review."
+    },
+    {
+      "migration": "2026_10_31_000001_create_rider_job_payments",
+      "path": "database/migrations/2026_10_31_000001_create_rider_job_payments.php",
+      "sha256_lf": "70a27112556823c5dbcd6d80476e78f67d58a68dd897c0c738a619a1d496d4ee",
+      "purpose": "Configured per-Seller-shipment Rider job earnings, complete transfer manifests and grouped manual company payroll records",
+      "createsTables": [
+        "rider_pay_settings",
+        "rider_pay_destinations",
+        "rider_pay_trips",
+        "rider_pay_batches",
+        "rider_pay_earnings",
+        "rider_pay_batch_items"
+      ],
+      "altersExistingTables": [
+        {
+          "table": "hub_transfers",
+          "addsColumns": [
+            "rider_pay_trip_id (nullable foreign key to rider_pay_trips, restrict delete)"
+          ]
+        }
+      ],
+      "requiresExistingTables": [
+        "users",
+        "sorting_centers",
+        "riders",
+        "logistics_hubs",
+        "hub_transfers",
+        "parcels",
+        "logistics_audit_events"
+      ],
+      "dependsOnReleaseMigrations": [
+        "2026_10_20_120000_create_logistics_workflow_records",
+        "2026_10_29_100000_create_logistics_hub_network"
+      ],
+      "dataEffects": "Creates six empty tables and one nullable transfer FK; no default rates, seed, backfill or historical money changes. Down explicitly refuses automatic payment-history destruction; prepare a preserving rollback separately."
     }
   ],
   "allRepositoryMigrations": [
@@ -719,6 +755,12 @@
       "migration": "2026_10_29_150000_create_logistics_hub_staff_table",
       "path": "database/migrations/2026_10_29_150000_create_logistics_hub_staff_table.php",
       "sha256_lf": "cbde0b2df3a30fcb815e93dafdf36b479c36b91664a979a004d5c3138e8c1fc0",
+      "addedInThisRelease": true
+    },
+    {
+      "migration": "2026_10_31_000001_create_rider_job_payments",
+      "path": "database/migrations/2026_10_31_000001_create_rider_job_payments.php",
+      "sha256_lf": "70a27112556823c5dbcd6d80476e78f67d58a68dd897c0c738a619a1d496d4ee",
       "addedInThisRelease": true
     }
   ],

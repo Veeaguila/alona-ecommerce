@@ -28,9 +28,18 @@ app; the checkpoint helper resolves that parent. No submodule or separate databa
   validates ownership, IDs, parcel sets/timestamp and clears stale rows on failure.
 - rider_presence_session.dart shares foreground availability heartbeats. geolocator
   14.0.2 supports explicitly consented one-shot pickup locations, not background GPS.
-- Earnings use typed backend decimal totals through RiderEarningsApi. Historical
-  seller-funded earnings stay separate from new buyer-funded checkout shipping.
-  The app never calculates compensation or assumes cash due from an order total.
+- My Earnings uses typed backend decimal job totals through RiderJobPayApi and
+  `/api/rider/job-pay`. Its existing Earnings tab refreshes on entry/resume; failed
+  reads hide stale amounts. Receiving instructions are Rider-provided and encrypted
+  on the backend; paid batches need explicit actual-receipt confirmation. Pending
+  writes/dialogs block duplicates. There is no provider transfer or local rate math.
+- Historical Seller-funded earnings remain available through RiderEarningsApi and
+  the separate historical page. No historical ledger or COD offsets are inferred.
+  New configured pay is one pickup/delivery rate per Seller shipment and one per
+  complete explicit transfer manifest, snapshotted/earned by the shared backend.
+  Confirmed supervised handover atomically continues only the pending leg for the
+  receiving Rider, preserving its original rate/revision and linked cancelled
+  history. Earned/paid legs stay with their recorded recipient.
 - Account, notifications and chat use existing scoped ALONA endpoints.
 - test/ uses synthetic HTTP. Parent OrderJourney uses actual routes and isolated
   SQLite memory. Safe verifier: node scripts/verify-system.cjs --mobile from ALONA.

@@ -1,8 +1,8 @@
 # Resume ALONA / Rider integration
 
 Projects: Rider `C:\Users\user\alona-ecommerce-integration\mobile\rider`; ALONA `C:\Users\user\alona-ecommerce-integration`.
-Current phase: 10. Objective: shared ALONA API integration with safe disk checkpoints.
-Last successful checkpoint: 2026-10-29T12:03:58.758Z.
+Current phase: 11. Objective: shared ALONA API integration with safe disk checkpoints.
+Last successful checkpoint: 2026-10-30T20:43:43.969Z.
 
 ## NEXT CODEX SESSION
 
@@ -10,7 +10,7 @@ Last successful checkpoint: 2026-10-29T12:03:58.758Z.
 2. Check Git branch/status in both projects. Rider is Git-tracked; preserve existing commits and local changes.
 3. Run `node scripts/integration_checkpoint.cjs --verify` from Rider. Inspect only changed/incomplete files; trust verified source over notes.
 4. Treat commands listed as running/interrupted as UNKNOWN. Rerun only affected focused checks; never repeat migrations or destructive actions automatically.
-5. Next exact task: Inspect Git HEAD/log for the explicitly authorized local commit and use TEAMMATE_AI_HANDOFF.md / docs/TEAMMATE_AI_PROMPT.md. No automatic push or database change. Native NDK and target-schema rollout limits remain.
+5. Next exact task: Read docs/testing/results/POST_IMPLEMENTATION_REVIEW.md and docs/RIDER_PAY_IMPLEMENTATION.md. Operator rates, target-schema comparison/rehearsal and native-device acceptance remain; no automatic commit/push/migration.
 6. Save a checkpoint before each phase, meaningful edit batch, risky edit, long test/build, and after each phase. Use --update with a JSON update file; complete content is flushed to a same-directory temporary file, atomically replaced and verified. Use --run for test/build commands; running and confirmed outcomes are saved automatically. If bundle IDs disagree, use --recover to verify and restore the complete previous bundle while archiving interrupted notes. Inspect RECOVERY_NOTES.md and changed source before continuing. Do not edit checkpoint documents manually.
 
 Dependencies: existing ALONA Sanctum, partner registration/address/coverage contracts, Rider approval and parcel authorization. No extra backend/database.
@@ -19,12 +19,14 @@ Verification commands: `node --test scripts/integration_checkpoint.test.cjs`; `f
 
 Blockers / decisions:
 
+- Proper mobile Google provider/token verification is pending; email/password/verification/reset remain available. If vulnerable old endpoints were reachable/used, owner must assess existing Buyer sessions/legacy Google-created accounts and authorize scoped revocation; no automatic token deletion or approval changes.
+- Imported native launcher/icon PNGs are absent; platform resources and device packaging remain pending.
 - Android debug build failed with CXX1101: installed NDK28.2.13676358 lacks source.properties. No SDK deletion or project-version workaround performed.
 - Teammates actual schema not supplied/certified; last recorded local staff migration was pending. This review did not requery or mutate shared/development databases.
 - Existing chronological fresh MySQL bootstrap has order_items/product_variants foreign-key ordering risk; no existing migration file changed to conceal it.
 - SQLite memory proves contracts/rollback, not MySQL contention or live deployment. Required real-device, SMTP, native signing and actual-operator acceptance remain pending.
-- Rider notices remain best-effort after-commit without durable replay/background push; existing finance rules and limits are unchanged.
+- Rider notices remain best-effort after-commit without durable replay/background push. New opt-in job payroll is separate from the preserved historical Seller-funded ledger; actual rates/funding/rollout remain operator-controlled.
 - Earlier imported audit/database/test-count documents are historical. Current source, ORDER_FLOW_REVIEW.md and active integration bundle take precedence.
 
-Authorization: continue Phases 4-10 where safe per the latest user request. Phase 3 is completed; do not reimplement it. Commits require explicit permission. No permission to invent rider earnings or payout rules.
+Authorization: follow the latest user instructions and confirmed decisions in ../DECISIONS.md. Phases 1-3 are completed; do not reimplement them. Current payroll work uses the confirmed per-Seller-shipment unit and owner-configured rates; do not invent numeric rates, funding balances or historical earnings. No automatic commit, push, deployment or application migration.
 Limitations: no automatic Codex launch after reboot, unsaved edit/process recovery, protection against disk corruption/deletion, or off-device backup. Existing valid files are preserved if atomic replacement fails.

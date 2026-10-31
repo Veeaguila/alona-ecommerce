@@ -46,6 +46,16 @@ test('free shipping uses the same before-voucher threshold as placement and pick
   assert.equal(state.rawShippingFee.value, 0);
   state.form.shipping_method = 'pickup'; assert.equal(state.rawShippingFee.value, 0);
 });
+
+test('split-store checkout previews the same per-store free-shipping threshold as saved orders', () => {
+  const props = fixture(); props.items[0].price = 1100;
+  props.items.push({ id: 3, quantity: 1, price: 1100, product: { seller_id: 10, weight: 1 } }); props.selected_items.push(3);
+  const state = checkout(props);
+  assert.equal(state.rawShippingFee.value, 110);
+  state.submit(); assert.equal(state.posted().expected_shipping_fee, 110);
+  props.items[0].price = 2000;
+  assert.equal(checkout(props).rawShippingFee.value, 55);
+});
 test('a configured remote zone can be selected while unsupported delivery never posts an order', () => {
   const props = fixture(); props.addresses[0].address = 'Itbayat, Batanes';
   const state = checkout(props); state.submit(); assert.ok(state.posted());
