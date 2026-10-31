@@ -24,7 +24,7 @@ class AiProductVerificationService
     {
         $this->provider = (string) config('services.ai.provider', env('AI_PROVIDER', 'gemini'));
         $this->geminiKey = (string) config('services.gemini.api_key', env('GEMINI_API_KEY', ''));
-        $this->geminiModel = (string) config('services.gemini.model', env('GEMINI_MODEL', 'gemini-1.5-flash'));
+        $this->geminiModel = (string) config('services.gemini.model', env('GEMINI_MODEL', 'gemini-2.5-flash'));
         $this->openAiKey = (string) config('services.openai.api_key', env('OPENAI_API_KEY', ''));
         $this->openAiModel = (string) config('services.openai.model', env('OPENAI_MODEL', 'gpt-4o-mini'));
 
@@ -77,7 +77,7 @@ class AiProductVerificationService
      */
     public function verifyAndProcess(Product $product): array
     {
-        if (function_exists('set_time_limit')) {
+        if (! app()->environment('testing') && function_exists('set_time_limit')) {
             @set_time_limit(120);
         }
 

@@ -69,6 +69,10 @@ class PartnerProfileController extends Controller
             && $reviewer->sortingCenter?->approval_status === 'approved'
             && $user->rider?->sorting_center_id === $reviewer->sortingCenter?->id;
         abort_unless($reviewer->id === $user->id || ($reviewer->usertype === 'admin' && $reviewer->status === 'approved') || $ownsRider, 403);
+
+        $allowedDocuments = ['id', 'business_permit', 'government_id', 'permit_doc', 'id_doc', 'sec_doc', 'bir_doc', 'license_doc', 'or_cr_doc', 'dti_certificate', 'sec_certificate', 'bir_2303'];
+        abort_unless(in_array($document, $allowedDocuments, true), 404);
+
         $path = $user->partnerApplication?->documents[$document] ?? null;
         if (! $path) {
             if ($document === 'business_permit') {
@@ -82,7 +86,15 @@ class PartnerProfileController extends Controller
             : (($path && Storage::disk('public')->exists($path)) ? 'public' : null);
         abort_unless($path && $disk, 404);
 
-        return response()->file(Storage::disk($disk)->path($path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'])->setPrivate();
+        $filePath = Storage::disk($disk)->path($path);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        abort_if(in_array($extension, ['php', 'html', 'htm', 'js', 'svg'], true), 403, 'Unsupported or restricted document format.');
+
+        return response()->file($filePath, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+        ])->setPrivate();
     }
 
     public function rider(Request $request)

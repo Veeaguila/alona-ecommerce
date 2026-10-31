@@ -53,10 +53,7 @@ class LogisticsRegistrationController extends Controller
                 // An idempotency key is not authentication; never resume an existing account with it.
                 return response()->json(['message' => 'This application was already submitted. Sign in with your account credentials.'], 409);
             }
-            Auth::login(User::findOrFail($existing->user_id));
-            $request->session()->regenerate();
-
-            return redirect()->route('application.status');
+            return redirect('/?auth=login')->withErrors(['email' => 'This application was already submitted. Please sign in with your account credentials.']);
         }
         try {
             $form = app(LogisticsRegistrationRequest::class);
@@ -68,10 +65,7 @@ class LogisticsRegistrationController extends Controller
                 // An idempotency key is not authentication; never resume an existing account with it.
                 return response()->json(['message' => 'This application was already submitted. Sign in with your account credentials.'], 409);
             }
-            Auth::login(User::findOrFail($existing->user_id));
-                $request->session()->regenerate();
-
-                return redirect()->route('application.status');
+            return redirect('/?auth=login')->withErrors(['email' => 'This application was already submitted. Please sign in with your account credentials.']);
             }
             throw $exception;
         }

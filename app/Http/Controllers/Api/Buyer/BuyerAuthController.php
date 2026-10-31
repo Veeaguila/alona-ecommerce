@@ -225,7 +225,7 @@ class BuyerAuthController extends Controller
             if ($user->hasVerifiedEmail()) {
                 throw ValidationException::withMessages(['otp' => 'Your email is already verified. Sign in with your password.']);
             }
-            if (!is_string($user->otp_code) || !hash_equals($user->otp_code, $request->input('otp'))) {
+            if (! $user->verifyOtp($request->input('otp'))) {
                 throw ValidationException::withMessages(['otp' => 'Invalid verification code.']);
             }
             if (!$user->otp_expires_at || now()->greaterThanOrEqualTo($user->otp_expires_at)) {
@@ -430,4 +430,3 @@ class BuyerAuthController extends Controller
         ];
     }
 }
-

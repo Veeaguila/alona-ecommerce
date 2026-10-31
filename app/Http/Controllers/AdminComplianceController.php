@@ -423,7 +423,7 @@ class AdminComplianceController extends Controller
         Request $request,
         Product $product
     ): RedirectResponse {
-        if (function_exists('set_time_limit')) {
+        if (! app()->environment('testing') && function_exists('set_time_limit')) {
             @set_time_limit(120);
         }
 

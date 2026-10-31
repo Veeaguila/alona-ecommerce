@@ -10,7 +10,10 @@ class EnsureHubOperator
 {
     public function handle(Request $request, Closure $next)
     {
-        app(HubAccess::class)->context($request->user());
+        $user = $request->user();
+        abort_unless($user, 401, 'Unauthenticated.');
+        $context = app(HubAccess::class)->context($user);
+        abort_unless($context && !empty($context['center']), 403, 'Unauthorized hub operator access.');
         return $next($request);
     }
 }

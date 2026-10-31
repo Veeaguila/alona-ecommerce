@@ -92,6 +92,17 @@ use Laravel\Sanctum\HasApiTokens;
     'password',
     'remember_token',
     'otp_code',
+    'pending_email_otp',
+    'pending_email_otp_expires_at',
+    'pending_phone_otp',
+    'pending_phone_otp_expires_at',
+    'bank_account_number',
+    'tin',
+    'id_path',
+    'business_permit_path',
+    'dti_certificate_path',
+    'sec_certificate_path',
+    'bir_2303_path',
 ])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -348,7 +359,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $this->forceFill([
-            'otp_code' => $otp,
+            'otp_code' => \Illuminate\Support\Facades\Hash::make($otp),
             'otp_expires_at' => now()->addMinutes(5),
         ])->save();
 
@@ -359,6 +370,27 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $otp;
+    }
+
+    public function verifyOtp(string $otp): bool
+    {
+        $storedOtp = $this->otp_code;
+        if (! is_string($storedOtp) || $storedOtp === '') {
+            return false;
+        }
+
+        if ((password_get_info($storedOtp)['algoName'] ?? 'unknown') !== 'unknown') {
+            return \Illuminate\Support\Facades\Hash::check($otp, $storedOtp);
+        }
+
+        if (! preg_match('/^\d{6}$/D', $storedOtp)) {
+            return false;
+        }
+
+        $matches = hash_equals($storedOtp, $otp);
+        $this->forceFill(['otp_code' => \Illuminate\Support\Facades\Hash::make($storedOtp)])->save();
+
+        return $matches;
     }
 
     /*

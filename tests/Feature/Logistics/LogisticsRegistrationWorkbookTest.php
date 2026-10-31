@@ -283,7 +283,8 @@ class LogisticsRegistrationWorkbookTest extends TestCase
         $p = $this->payload();
         $this->submit($p)->assertRedirect(route('application.status'));
         $this->post('/logout');
-        $this->submit($p)->assertRedirect(route('application.status'));
+        $this->submit($p)->assertRedirect('/?auth=login')->assertSessionHasErrors('email');
+        $this->assertGuest();
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseCount('logistics_registrations', 1);
         Notification::assertCount(1);
