@@ -252,15 +252,28 @@ class BuyerService {
     required String paymentMethod,
     String? buyerNote,
     String? voucherCode,
+    Map<String, dynamic>? quote,
+    String? requestKey,
   }) async {
-    final res = await ApiClient.post('api/buyer/orders', body: {
+    final body = <String, dynamic>{
       'cart_item_ids': cartItemIds,
       'shipping_address': shippingAddress,
       'shipping_method': shippingMethod,
       'payment_method': paymentMethod,
       if (buyerNote != null && buyerNote.isNotEmpty) 'buyer_note': buyerNote,
       if (voucherCode != null && voucherCode.isNotEmpty) 'voucher_code': voucherCode,
-    });
+      if (requestKey != null && requestKey.isNotEmpty) 'request_key': requestKey,
+    };
+    if (quote != null) {
+      if (quote['total'] != null) body['expected_total'] = quote['total'];
+      if (quote['shipping_fee_before_discount'] != null) {
+        body['expected_shipping_fee'] = quote['shipping_fee_before_discount'];
+      } else if (quote['shipping_fee'] != null) {
+        body['expected_shipping_fee'] = quote['shipping_fee'];
+      }
+      if (quote['expected_prices'] != null) body['expected_prices'] = quote['expected_prices'];
+    }
+    final res = await ApiClient.post('api/buyer/orders', body: body);
     return res as Map<String, dynamic>;
   }
 
@@ -273,8 +286,10 @@ class BuyerService {
     required String paymentMethod,
     String? buyerNote,
     String? voucherCode,
+    Map<String, dynamic>? quote,
+    String? requestKey,
   }) async {
-    final res = await ApiClient.post('api/buyer/orders', body: {
+    final body = <String, dynamic>{
       'buy_now': true,
       'product_id': productId,
       'product_variant_id': ?variantId,
@@ -284,17 +299,41 @@ class BuyerService {
       'payment_method': paymentMethod,
       if (buyerNote != null && buyerNote.isNotEmpty) 'buyer_note': buyerNote,
       if (voucherCode != null && voucherCode.isNotEmpty) 'voucher_code': voucherCode,
-    });
+      if (requestKey != null && requestKey.isNotEmpty) 'request_key': requestKey,
+    };
+    if (quote != null) {
+      if (quote['total'] != null) body['expected_total'] = quote['total'];
+      if (quote['shipping_fee_before_discount'] != null) {
+        body['expected_shipping_fee'] = quote['shipping_fee_before_discount'];
+      } else if (quote['shipping_fee'] != null) {
+        body['expected_shipping_fee'] = quote['shipping_fee'];
+      }
+      if (quote['expected_prices'] != null) body['expected_prices'] = quote['expected_prices'];
+    }
+    final res = await ApiClient.post('api/buyer/orders', body: body);
     return res as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> getOrders({String status = 'all'}) async {
-    final res = await ApiClient.get('api/buyer/orders', queryParameters: {'status': status});
+  static Future<Map<String, dynamic>> getDeliveryOtp(int orderId, int parcelId, {bool renew = false}) async {
+    final endpoint = renew
+        ? 'api/buyer/orders/$orderId/parcels/$parcelId/delivery-otp/renew'
+        : 'api/buyer/orders/$orderId/parcels/$parcelId/delivery-otp';
+    final res = renew
+        ? await ApiClient.post(endpoint)
+        : await ApiClient.get(endpoint);
+    return res as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> getOrders({String status = 'all', int page = 1}) async {
+    final res = await ApiClient.get('api/buyer/orders', queryParameters: {
+      'status': status,
+      'page': page,
+    });
     final data = res as Map<String, dynamic>;
 
     final rawOrders = (data['orders'] is Map && data['orders']['data'] is List)
         ? data['orders']['data'] as List
-        : [];
+        : (data['orders'] is List ? data['orders'] as List : []);
 
     final orders = rawOrders
         .map((o) => OrderModel.fromJson(Map<String, dynamic>.from(o)))
@@ -303,6 +342,8 @@ class BuyerService {
     return {
       'orders': orders,
       'counts': data['counts'] ?? {},
+      'current_page': data['orders'] is Map ? data['orders']['current_page'] ?? page : page,
+      'last_page': data['orders'] is Map ? data['orders']['last_page'] ?? 1 : 1,
     };
   }
 
