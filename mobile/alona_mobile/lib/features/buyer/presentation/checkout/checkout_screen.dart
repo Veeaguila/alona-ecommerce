@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:alona_mobile/core/utils/request_key.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
@@ -19,7 +16,11 @@ class CheckoutScreen extends StatefulWidget {
   final List<int>? selectedCartItemIds;
   final DirectBuyModel? directBuy;
 
-  const CheckoutScreen({super.key, this.selectedCartItemIds, this.directBuy});
+  const CheckoutScreen({
+    super.key,
+    this.selectedCartItemIds,
+    this.directBuy,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -30,20 +31,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<AddressModel> _addresses = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
-  bool _isQuoting = false;
-  int _quoteRevision = 0;
-  Map<String, dynamic>? _quote;
-  String? _requestKey, _submissionFingerprint;
-
+  
   AddressModel? _selectedAddress;
-
+  
   String _shippingMethod = 'standard';
   String _paymentMethod = 'cod';
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _voucherController = TextEditingController();
 
   double _subtotal = 0.0;
-  double _shippingFee = 0.0;
+  double _shippingFee = 50.0;
   double _discount = 0.0;
   double _total = 0.0;
   String? _appliedVoucherCode;
@@ -51,6 +48,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.directBuy != null) {
+      _subtotal = widget.directBuy!.unitPrice * widget.directBuy!.quantity;
+      _total = _subtotal + _shippingFee;
+    }
     _loadInitialData();
   }
 
@@ -69,13 +70,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     try {
       final addresses = await BuyerService.getAddresses();
-      if (!mounted) return;
       _addresses = addresses;
       if (_addresses.isNotEmpty) {
-        _selectedAddress = _addresses.firstWhere(
-          (a) => a.isDefault,
-          orElse: () => _addresses.first,
-        );
+        _selectedAddress = _addresses.firstWhere((a) => a.isDefault, orElse: () => _addresses.first);
       }
 
       await _recalculatePreview();
@@ -93,86 +90,92 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Future<bool> _recalculatePreview() async {
-    if (!mounted || _isSubmitting) return false;
-    final revision = ++_quoteRevision;
-    setState(() {
-      _quote = null;
-      _isQuoting = true;
-    });
-    if (_selectedAddress == null) {
-      setState(() => _isQuoting = false);
-      return false;
-    }
+  Future<void> _recalculatePreview() async {
     try {
       final preview = widget.directBuy != null
           ? await BuyerService.previewCheckoutDirect(
-              shippingAddress: _selectedAddress!.fullAddress,
               productId: widget.directBuy!.productId,
               variantId: widget.directBuy!.productVariantId,
               quantity: widget.directBuy!.quantity,
               shippingMethod: _shippingMethod,
+              shippingAddress: _selectedAddress?.fullAddress,
               voucherCode: _appliedVoucherCode,
             )
           : await BuyerService.previewCheckout(
-              shippingAddress: _selectedAddress!.fullAddress,
               cartItemIds: widget.selectedCartItemIds ?? [],
               shippingMethod: _shippingMethod,
+              shippingAddress: _selectedAddress?.fullAddress,
               voucherCode: _appliedVoucherCode,
             );
 
-      if (!mounted || revision != _quoteRevision) return false;
+      if (!mounted) return;
       setState(() {
-        _quote = preview;
-        _isQuoting = false;
         _subtotal = parseDouble(preview['subtotal']);
         _shippingFee = parseDouble(preview['shipping_fee']);
         _discount = parseDouble(preview['discount']);
         _total = parseDouble(preview['total']);
       });
-      return true;
     } catch (e) {
-      if (!mounted || revision != _quoteRevision) return false;
-      setState(() => _isQuoting = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
       );
-      return false;
     }
   }
 
   Future<void> _applyVoucher() async {
-    if (_isSubmitting || _isQuoting) return;
     final code = _voucherController.text.trim();
     if (code.isEmpty) return;
 
-    final previous = _appliedVoucherCode;
-    setState(() => _appliedVoucherCode = code);
-    final applied = await _recalculatePreview();
-    if (!mounted) return;
-    if (applied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Voucher applied successfully!'),
-          backgroundColor: AppColors.success,
-        ),
+    try {
+      if (widget.directBuy != null) {
+        // Direct buy voucher testing through preview
+        setState(() {
+          _appliedVoucherCode = code;
+        });
+        await _recalculatePreview();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Voucher applied successfully!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        return;
+      }
+
+      final res = await BuyerService.validateVoucher(
+        code: code,
+        cartItemIds: widget.selectedCartItemIds ?? [],
+        shippingMethod: _shippingMethod,
       );
-    } else {
-      setState(() => _appliedVoucherCode = previous);
-      await _recalculatePreview();
+
+      if (res['valid'] == true) {
+        if (!mounted) return;
+        setState(() {
+          _appliedVoucherCode = code;
+        });
+        await _recalculatePreview();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Voucher applied successfully!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+      );
     }
   }
 
   Future<void> _submitOrder() async {
-    if (_isSubmitting || _isQuoting || _quote == null) return;
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please add a delivery address to complete your order.',
-          ),
-          backgroundColor: AppColors.error,
-        ),
+        const SnackBar(content: Text('Please add a delivery address to complete your order.'), backgroundColor: AppColors.error),
       );
       await Navigator.push(
         context,
@@ -186,23 +189,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _isSubmitting = true;
     });
 
-    final fingerprint = jsonEncode([
-      _quote,
-      _selectedAddress!.fullAddress,
-      _shippingMethod,
-      _paymentMethod,
-      _appliedVoucherCode,
-      _noteController.text.trim(),
-    ]);
-    if (_submissionFingerprint != fingerprint) {
-      _submissionFingerprint = fingerprint;
-      _requestKey = newRequestKey();
-    }
     try {
       final res = widget.directBuy != null
           ? await BuyerService.placeOrderDirect(
-              quote: _quote!,
-              requestKey: _requestKey!,
               productId: widget.directBuy!.productId,
               variantId: widget.directBuy!.productVariantId,
               quantity: widget.directBuy!.quantity,
@@ -213,8 +202,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               voucherCode: _appliedVoucherCode,
             )
           : await BuyerService.placeOrder(
-              quote: _quote!,
-              requestKey: _requestKey!,
               cartItemIds: widget.selectedCartItemIds ?? [],
               shippingAddress: _selectedAddress!.fullAddress,
               shippingMethod: _shippingMethod,
@@ -234,12 +221,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => OrderConfirmationScreen(
-            order: order,
-            orders: (res['orders'] as List? ?? [orderData])
-                .map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e)))
-                .toList(),
-          ),
+          builder: (_) => OrderConfirmationScreen(order: order),
         ),
       );
     } catch (e) {
@@ -271,19 +253,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Text(
                     'Select Address',
-                    style: GoogleFonts.figtree(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: GoogleFonts.figtree(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
                     onPressed: () async {
                       Navigator.pop(ctx);
                       await Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const AddressManagementScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const AddressManagementScreen()),
                       );
                       if (mounted) _loadInitialData();
                     },
@@ -300,18 +277,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     final addr = _addresses[index];
                     final isSelected = _selectedAddress?.id == addr.id;
                     return ListTile(
-                      title: Text(
-                        addr.recipientName,
-                        style: GoogleFonts.figtree(fontWeight: FontWeight.w600),
-                      ),
+                      title: Text(addr.recipientName, style: GoogleFonts.figtree(fontWeight: FontWeight.w600)),
                       subtitle: Text(addr.fullAddress),
-                      trailing: isSelected
-                          ? const Icon(Icons.check, color: AppColors.primary)
-                          : null,
+                      trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
                       onTap: () {
                         setState(() => _selectedAddress = addr);
                         Navigator.pop(ctx);
-                        _recalculatePreview();
                       },
                     );
                   },
@@ -328,14 +299,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
-    if (!ApiClient.isAuthenticated ||
-        (_error != null && _error!.toLowerCase().contains('unauthenticated'))) {
+    if (!ApiClient.isAuthenticated || (_error != null && _error!.toLowerCase().contains('unauthenticated'))) {
       return Scaffold(
         appBar: AppBar(title: const Text('Checkout')),
         body: Center(
@@ -344,27 +312,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.lock_outline_rounded,
-                  size: 52,
-                  color: AppColors.primary,
-                ),
+                const Icon(Icons.lock_outline_rounded, size: 52, color: AppColors.primary),
                 const SizedBox(height: 16),
                 Text(
                   'Sign In Required',
-                  style: GoogleFonts.figtree(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: GoogleFonts.figtree(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Please sign in to proceed with your checkout.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.figtree(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 20),
                 AlonaButton(
@@ -375,9 +333,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     if (!context.mounted) return;
                     final loggedIn = await Navigator.push<bool>(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => BuyerLoginScreen(authState: auth),
-                      ),
+                      MaterialPageRoute(builder: (_) => BuyerLoginScreen(authState: auth)),
                     );
                     if (loggedIn == true && mounted) {
                       _loadInitialData();
@@ -400,22 +356,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: AppColors.error,
-                ),
+                const Icon(Icons.error_outline, size: 48, color: AppColors.error),
                 const SizedBox(height: 16),
                 Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: GoogleFonts.figtree(fontSize: 14, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 20),
-                AlonaButton(text: 'Retry', onPressed: _loadInitialData),
+                AlonaButton(
+                  text: 'Retry',
+                  onPressed: _loadInitialData,
+                ),
               ],
             ),
           ),
@@ -424,16 +376,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh checkout',
-            onPressed: _isSubmitting || _isQuoting ? null : _recalculatePreview,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Checkout')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -466,20 +409,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             widget.directBuy!.productName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.figtree(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w700),
                           ),
-                          if (widget.directBuy!.variantLabel != null &&
-                              widget.directBuy!.variantLabel!.isNotEmpty) ...[
+                          if (widget.directBuy!.variantLabel != null && widget.directBuy!.variantLabel!.isNotEmpty) ...[
                             const SizedBox(height: 3),
                             Text(
                               'Variation: ${widget.directBuy!.variantLabel}',
-                              style: GoogleFonts.figtree(
-                                fontSize: 12,
-                                color: AppColors.textMuted,
-                              ),
+                              style: GoogleFonts.figtree(fontSize: 12, color: AppColors.textMuted),
                             ),
                           ],
                           const SizedBox(height: 4),
@@ -487,22 +423,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                CurrencyFormatter.format(
-                                  widget.directBuy!.unitPrice,
-                                ),
-                                style: GoogleFonts.figtree(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primary,
-                                ),
+                                CurrencyFormatter.format(widget.directBuy!.unitPrice),
+                                style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary),
                               ),
                               Text(
                                 'x${widget.directBuy!.quantity}',
-                                style: GoogleFonts.figtree(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
+                                style: GoogleFonts.figtree(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                             ],
                           ),
@@ -527,11 +453,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
+                      const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         'Delivery Address',
@@ -544,15 +466,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const Spacer(),
                       TextButton(
                         onPressed: () async {
-                          if (_isSubmitting) return;
                           if (_addresses.isNotEmpty) {
                             _showAddressSelector();
                           } else {
                             await Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddressManagementScreen(),
-                              ),
+                              MaterialPageRoute(builder: (_) => const AddressManagementScreen()),
                             );
                             if (mounted) _loadInitialData();
                           }
@@ -570,31 +489,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const Divider(height: 16),
                   if (_selectedAddress != null) ...[
-                    if (_selectedAddress!.recipientName.isNotEmpty ||
-                        _selectedAddress!.phone.isNotEmpty)
-                      Row(
-                        children: [
-                          if (_selectedAddress!.recipientName.isNotEmpty)
-                            Flexible(
-                              child: Text(
-                                _selectedAddress!.recipientName,
-                                style: GoogleFonts.figtree(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(width: 8),
-                          if (_selectedAddress!.phone.isNotEmpty)
-                            Text(
-                              '(${_selectedAddress!.phone})',
-                              style: GoogleFonts.figtree(
-                                fontSize: 13,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                        ],
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          _selectedAddress!.recipientName,
+                          style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${_selectedAddress!.phone})',
+                          style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       _selectedAddress!.fullAddress,
@@ -607,10 +514,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ] else ...[
                     Text(
                       'No address selected. Please add or select your shipping address.',
-                      style: GoogleFonts.figtree(
-                        color: AppColors.error,
-                        fontSize: 13,
-                      ),
+                      style: GoogleFonts.figtree(color: AppColors.error, fontSize: 13),
                     ),
                   ],
                 ],
@@ -632,26 +536,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Text(
                     'Shipping Option',
-                    style: GoogleFonts.figtree(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
                   _buildShippingOption(
                     title: 'Standard Delivery',
                     subtitle: 'Arrives in 3-7 days',
-                    fee: _shippingMethod == 'standard' && _quote != null
-                        ? CurrencyFormatter.format(_shippingFee)
-                        : 'Calculated',
+                    fee: '₱50.00 / store',
                     value: 'standard',
                   ),
                   _buildShippingOption(
                     title: 'Express Delivery',
                     subtitle: 'Arrives in 1-3 days',
-                    fee: _shippingMethod == 'express' && _quote != null
-                        ? CurrencyFormatter.format(_shippingFee)
-                        : 'Calculated',
+                    fee: '₱120.00 / store',
                     value: 'express',
                   ),
                   _buildShippingOption(
@@ -679,18 +576,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.confirmation_number_outlined,
-                        color: AppColors.accentGold,
-                        size: 20,
-                      ),
+                      const Icon(Icons.confirmation_number_outlined, color: AppColors.accentGold, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         'Platform or Seller Voucher',
-                        style: GoogleFonts.figtree(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
@@ -700,14 +590,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Expanded(
                         child: TextField(
                           controller: _voucherController,
-                          enabled: !_isSubmitting,
                           textCapitalization: TextCapitalization.characters,
                           decoration: const InputDecoration(
                             hintText: 'Enter Voucher Code',
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
                         ),
                       ),
@@ -720,13 +606,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             backgroundColor: AppColors.surfaceAlt,
                             foregroundColor: const Color(0xFF334155),
                             elevation: 0,
-                            side: const BorderSide(
-                              color: Color(0xFF334155),
-                              width: 1,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            side: const BorderSide(color: Color(0xFF334155), width: 1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           child: const Text('Apply'),
                         ),
@@ -737,11 +618,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: AppColors.success,
-                          size: 16,
-                        ),
+                        const Icon(Icons.check_circle, color: AppColors.success, size: 16),
                         const SizedBox(width: 6),
                         Text(
                           'Applied voucher: $_appliedVoucherCode (-${CurrencyFormatter.format(_discount)})',
@@ -773,32 +650,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Text(
                     'Payment Method',
-                    style: GoogleFonts.figtree(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-                  _buildPaymentOption(
-                    'Cash on Delivery (COD)',
-                    'cod',
-                    Icons.payments_outlined,
-                  ),
-                  _buildPaymentOption(
-                    'GCash e-Wallet',
-                    'gcash',
-                    Icons.account_balance_wallet_outlined,
-                  ),
-                  _buildPaymentOption(
-                    'Maya',
-                    'maya',
-                    Icons.credit_card_outlined,
-                  ),
-                  _buildPaymentOption(
-                    'Credit / Debit Card',
-                    'card',
-                    Icons.credit_card_rounded,
-                  ),
+                  _buildPaymentOption('Cash on Delivery (COD)', 'cod', Icons.payments_outlined),
+                  _buildPaymentOption('GCash e-Wallet', 'gcash', Icons.account_balance_wallet_outlined),
+                  _buildPaymentOption('Maya', 'maya', Icons.credit_card_outlined),
+                  _buildPaymentOption('Credit / Debit Card', 'card', Icons.credit_card_rounded),
+                  _buildPaymentOption('Bank Transfer', 'bank_transfer', Icons.account_balance_outlined),
                 ],
               ),
             ),
@@ -808,13 +667,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             // Buyer Note
             TextField(
               controller: _noteController,
-              enabled: !_isSubmitting,
               decoration: const InputDecoration(
                 hintText: 'Order note / instructions for seller (optional)',
-                prefixIcon: Icon(
-                  Icons.note_alt_outlined,
-                  color: AppColors.textMuted,
-                ),
+                prefixIcon: Icon(Icons.note_alt_outlined, color: AppColors.textMuted),
               ),
             ),
 
@@ -833,21 +688,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   Text(
                     'Payment Details',
-                    style: GoogleFonts.figtree(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-                  _summaryRow(
-                    'Merchandise Subtotal',
-                    CurrencyFormatter.format(_subtotal),
-                  ),
+                  _summaryRow('Merchandise Subtotal', CurrencyFormatter.format(_subtotal)),
                   const SizedBox(height: 8),
-                  _summaryRow(
-                    'Shipping Fee',
-                    CurrencyFormatter.format(_shippingFee),
-                  ),
+                  _summaryRow('Shipping Fee', CurrencyFormatter.format(_shippingFee)),
                   if (_discount > 0) ...[
                     const SizedBox(height: 8),
                     _summaryRow(
@@ -862,10 +708,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       Text(
                         'Total Payment',
-                        style: GoogleFonts.figtree(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: GoogleFonts.figtree(fontSize: 16, fontWeight: FontWeight.w800),
                       ),
                       Text(
                         CurrencyFormatter.format(_total),
@@ -903,13 +746,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Total Amount',
-                    style: GoogleFonts.figtree(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
+                  Text('Total Amount', style: GoogleFonts.figtree(fontSize: 12, color: AppColors.textMuted)),
                   Text(
                     CurrencyFormatter.format(_total),
                     style: GoogleFonts.figtree(
@@ -924,9 +761,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               SizedBox(
                 width: 170,
                 child: AlonaButton(
-                  text: _isQuoting ? 'Updating…' : 'Place Order',
+                  text: 'Place Order',
                   isLoading: _isSubmitting,
-                  onPressed: _quote == null || _isQuoting ? null : _submitOrder,
+                  onPressed: _submitOrder,
                 ),
               ),
             ],
@@ -945,7 +782,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final isSelected = _shippingMethod == value;
     return GestureDetector(
       onTap: () {
-        if (_isSubmitting) return;
         setState(() => _shippingMethod = value);
         _recalculatePreview();
       },
@@ -953,9 +789,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryLight.withValues(alpha: 0.4)
-              : AppColors.surfaceAlt,
+          color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.4) : AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -974,20 +808,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.figtree(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.figtree(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
+                  Text(title, style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(subtitle, style: GoogleFonts.figtree(fontSize: 11, color: AppColors.textMuted)),
                 ],
               ),
             ),
@@ -996,9 +818,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: GoogleFonts.figtree(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: fee == 'Free'
-                    ? AppColors.success
-                    : AppColors.textPrimary,
+                color: fee == 'Free' ? AppColors.success : AppColors.textPrimary,
               ),
             ),
           ],
@@ -1010,16 +830,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildPaymentOption(String title, String value, IconData icon) {
     final isSelected = _paymentMethod == value;
     return GestureDetector(
-      onTap: () {
-        if (!_isSubmitting) setState(() => _paymentMethod = value);
-      },
+      onTap: () => setState(() => _paymentMethod = value),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryLight.withValues(alpha: 0.4)
-              : AppColors.surfaceAlt,
+          color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.4) : AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -1036,13 +852,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(width: 10),
             Icon(icon, size: 20, color: AppColors.textPrimary),
             const SizedBox(width: 10),
-            Text(
-              title,
-              style: GoogleFonts.figtree(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
+            Text(title, style: GoogleFonts.figtree(fontWeight: FontWeight.w600, fontSize: 13)),
           ],
         ),
       ),
@@ -1053,13 +863,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.figtree(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-          ),
-        ),
+        Text(label, style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textSecondary)),
         Text(
           value,
           style: GoogleFonts.figtree(

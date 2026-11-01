@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
@@ -35,8 +34,7 @@ class BuyerChatDetailScreen extends StatefulWidget {
   State<BuyerChatDetailScreen> createState() => _BuyerChatDetailScreenState();
 }
 
-class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
-    with WidgetsBindingObserver {
+class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -46,8 +44,6 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
   bool _isSending = false;
   String? _error;
   Timer? _pollTimer;
-  bool _loadingMessages = false, _paused = false;
-  int _messageRevision = 0;
 
   int _buyerId = 0;
   int _sellerId = 0;
@@ -55,8 +51,6 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _textController.addListener(_onDraftChanged);
     if (widget.sellerId != null && widget.sellerId! > 0) {
       _sellerId = widget.sellerId!;
     }
@@ -67,41 +61,21 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onDraftChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _paused = state != AppLifecycleState.resumed;
-    if (_paused) {
-      _pollTimer?.cancel();
-      _messageRevision++;
-    } else {
-      _loadMessages();
-      _startPolling();
-    }
-  }
-
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted && !_paused && (ModalRoute.of(context)?.isCurrent ?? true)) {
+      if (mounted) {
         _loadMessages(initial: false);
       }
     });
   }
 
   Future<void> _loadMessages({bool initial = false}) async {
-    if (!mounted || _loadingMessages || _isSending || _paused) return;
-    _loadingMessages = true;
-    final revision = ++_messageRevision;
     if (initial) {
       setState(() {
         _isLoading = true;
@@ -115,7 +89,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
       final newMessages = res['messages'] as List<ConversationMessageModel>;
       final conv = res['conversation'] as ConversationModel?;
 
-      if (!mounted || revision != _messageRevision) return;
+      if (!mounted) return;
       final hadFewerMessages = newMessages.length > _messages.length;
 
       setState(() {
@@ -124,8 +98,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
           _buyerId = conv.buyerId;
           _sellerId = conv.sellerId;
         }
-        _isLoading = false;
-        _error = null;
+        if (initial) _isLoading = false;
         _isConnecting = false;
       });
 
@@ -133,22 +106,20 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
         _scrollToBottom();
       }
     } catch (e) {
-      if (!mounted || revision != _messageRevision) return;
-      if (initial || _isLoading) {
+      if (!mounted) return;
+      if (initial) {
         setState(() {
           _error = e.toString();
           _isLoading = false;
           _isConnecting = false;
         });
       }
-    } finally {
-      _loadingMessages = false;
     }
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _scrollController.hasClients) {
+      if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
@@ -160,13 +131,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
   Future<void> _handleSend({String? explicitText, int? orderId}) async {
     final text = explicitText ?? _textController.text.trim();
-    if ((text.isEmpty && orderId == null) ||
-        _isSending ||
-        _isLoading ||
-        _error != null) {
-      return;
-    }
-    _messageRevision++;
+    if ((text.isEmpty && orderId == null) || _isSending) return;
 
     setState(() => _isSending = true);
     if (explicitText == null) {
@@ -182,17 +147,12 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
       if (!mounted) return;
       setState(() {
-        if (!_messages.any((message) => message.id == sent.id)) {
-          _messages.add(sent);
-        }
+        _messages.add(sent);
         _isSending = false;
       });
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      if (explicitText == null && _textController.text.isEmpty) {
-        _textController.text = text;
-      }
       setState(() => _isSending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -205,8 +165,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
   void _sendProductInquiry() {
     if (widget.productName != null) {
-      final msg =
-          'Hello, I have an inquiry about "${widget.productName}". Is this still available?';
+      final msg = 'Hello, I have an inquiry about "${widget.productName}". Is this still available?';
       _handleSend(explicitText: msg);
     }
   }
@@ -245,55 +204,28 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                 const SizedBox(height: 12),
                 if (widget.productName != null)
                   ListTile(
-                    leading: const Icon(
-                      Icons.inventory_2_outlined,
-                      color: AppColors.alonaTeal,
-                    ),
-                    title: Text(
-                      'Inquire About Product',
-                      style: GoogleFonts.figtree(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      widget.productName!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    leading: const Icon(Icons.inventory_2_outlined, color: AppColors.alonaTeal),
+                    title: Text('Inquire About Product', style: GoogleFonts.figtree(fontSize: 14)),
+                    subtitle: Text(widget.productName!, maxLines: 1, overflow: TextOverflow.ellipsis),
                     onTap: () {
                       Navigator.pop(ctx);
                       _sendProductInquiry();
                     },
                   ),
                 ListTile(
-                  leading: const Icon(
-                    Icons.local_shipping_outlined,
-                    color: AppColors.alonaTeal,
-                  ),
-                  title: Text(
-                    'Ask Shipping Status',
-                    style: GoogleFonts.figtree(fontSize: 14),
-                  ),
+                  leading: const Icon(Icons.local_shipping_outlined, color: AppColors.alonaTeal),
+                  title: Text('Ask Shipping Status', style: GoogleFonts.figtree(fontSize: 14)),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleSend(
-                      explicitText: 'Hi, when will my parcel be shipped?',
-                    );
+                    _handleSend(explicitText: 'Hi, when will my parcel be shipped?');
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
-                    Icons.verified_outlined,
-                    color: AppColors.alonaTeal,
-                  ),
-                  title: Text(
-                    'Ask about Warranty / Return',
-                    style: GoogleFonts.figtree(fontSize: 14),
-                  ),
+                  leading: const Icon(Icons.verified_outlined, color: AppColors.alonaTeal),
+                  title: Text('Ask about Warranty / Return', style: GoogleFonts.figtree(fontSize: 14)),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleSend(
-                      explicitText:
-                          'Hi, what is the warranty policy for this item?',
-                    );
+                    _handleSend(explicitText: 'Hi, what is the warranty policy for this item?');
                   },
                 ),
               ],
@@ -391,20 +323,11 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                       border: Border.all(color: AppColors.border, width: 0.8),
                     ),
                     child: ClipOval(
-                      child:
-                          widget.sellerAvatarUrl != null &&
-                              widget.sellerAvatarUrl!.isNotEmpty
-                          ? NetworkImageBox(
-                              imageUrl: widget.sellerAvatarUrl,
-                              width: 36,
-                              height: 36,
-                              fit: BoxFit.cover,
-                            )
+                      child: widget.sellerAvatarUrl != null && widget.sellerAvatarUrl!.isNotEmpty
+                          ? NetworkImageBox(imageUrl: widget.sellerAvatarUrl, width: 36, height: 36, fit: BoxFit.cover)
                           : Center(
                               child: Text(
-                                widget.title.isNotEmpty
-                                    ? widget.title[0].toUpperCase()
-                                    : 'S',
+                                widget.title.isNotEmpty ? widget.title[0].toUpperCase() : 'S',
                                 style: GoogleFonts.figtree(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -414,22 +337,15 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                             ),
                     ),
                   ),
-                  if (widget.sellerBadge != null &&
-                      widget.sellerBadge!.isNotEmpty)
+                  if (widget.sellerBadge != null && widget.sellerBadge!.isNotEmpty)
                     Positioned(
                       bottom: -3,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 0.5,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
                         decoration: BoxDecoration(
                           color: AppColors.alonaTeal,
                           borderRadius: BorderRadius.circular(3),
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 0.8,
-                          ),
+                          border: Border.all(color: AppColors.white, width: 0.8),
                         ),
                         child: Text(
                           widget.sellerBadge!,
@@ -506,10 +422,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.storefront_outlined,
-              color: AppColors.textPrimary,
-            ),
+            icon: const Icon(Icons.storefront_outlined, color: AppColors.textPrimary),
             tooltip: 'Visit Store',
             onPressed: () {
               if (_sellerId > 0) {
@@ -550,14 +463,11 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: const BoxDecoration(
                 color: AppColors.white,
-                border: Border(
-                  bottom: BorderSide(color: AppColors.border, width: 0.8),
-                ),
+                border: Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),
               ),
               child: Row(
                 children: [
-                  if (widget.productImage != null &&
-                      widget.productImage!.isNotEmpty)
+                  if (widget.productImage != null && widget.productImage!.isNotEmpty)
                     NetworkImageBox(
                       imageUrl: widget.productImage,
                       width: 44,
@@ -598,26 +508,15 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                     onPressed: _sendProductInquiry,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.alonaTeal,
-                      side: const BorderSide(
-                        color: AppColors.alonaTeal,
-                        width: 1,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
+                      side: const BorderSide(color: AppColors.alonaTeal, width: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                     child: Text(
                       'Send Link',
-                      style: GoogleFonts.figtree(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: GoogleFonts.figtree(fontSize: 11.5, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -627,100 +526,87 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
           // Messages List with Date Separators
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.alonaTeal,
-                    ),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: AppColors.alonaTeal))
                 : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          style: const TextStyle(color: AppColors.sale),
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_error!, style: const TextStyle(color: AppColors.sale)),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () => _loadMessages(initial: true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.alonaTeal,
+                                foregroundColor: AppColors.white,
+                              ),
+                              child: const Text('Retry'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: () => _loadMessages(initial: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.alonaTeal,
-                            foregroundColor: AppColors.white,
-                          ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                : _messages.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(28),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: const BoxDecoration(
-                              color: AppColors.lightTeal,
-                              shape: BoxShape.circle,
+                      )
+                    : _messages.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(28),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.lightTeal,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.chat_bubble_outline_rounded,
+                                      color: AppColors.alonaTeal,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'Start the conversation',
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Ask about stock, variation, or shipping details.',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.figtree(fontSize: 12, color: AppColors.mutedText),
+                                  ),
+                                ],
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              color: AppColors.alonaTeal,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Start the conversation',
-                            style: GoogleFonts.figtree(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Ask about stock, variation, or shipping details.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.figtree(
-                              fontSize: 12,
-                              color: AppColors.mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            itemCount: _messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = _messages[index];
 
-                      // Accurate sender detection
-                      final bool isMe =
-                          (_buyerId > 0 && msg.senderId == _buyerId) ||
-                          (_sellerId > 0 && msg.senderId != _sellerId);
+                              // Accurate sender detection
+                              final bool isMe = (_buyerId > 0 && msg.senderId == _buyerId) ||
+                                  (_sellerId > 0 && msg.senderId != _sellerId);
 
-                      // Date separator pill check
-                      final showDatePill = _shouldShowDatePill(index);
+                              // Date separator pill check
+                              final showDatePill = _shouldShowDatePill(index);
 
-                      return Column(
-                        children: [
-                          if (showDatePill) _buildDateSeparator(msg.createdAt),
-                          _buildMessageBubble(msg, isMe),
-                        ],
-                      );
-                    },
-                  ),
+                              return Column(
+                                children: [
+                                  if (showDatePill)
+                                    _buildDateSeparator(msg.createdAt),
+                                  _buildMessageBubble(msg, isMe),
+                                ],
+                              );
+                            },
+                          ),
           ),
 
           // Bottom Bar matching reference screenshot layout
@@ -733,9 +619,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
             ),
             decoration: const BoxDecoration(
               color: AppColors.white,
-              border: Border(
-                top: BorderSide(color: AppColors.border, width: 0.8),
-              ),
+              border: Border(top: BorderSide(color: AppColors.border, width: 0.8)),
             ),
             child: SafeArea(
               top: false,
@@ -744,11 +628,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                 children: [
                   // (+) Add attachment icon button
                   IconButton(
-                    icon: const Icon(
-                      Icons.add_circle_outline_rounded,
-                      color: AppColors.mutedText,
-                      size: 24,
-                    ),
+                    icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.mutedText, size: 24),
                     padding: const EdgeInsets.all(8),
                     constraints: const BoxConstraints(),
                     onPressed: _showQuickActionsSheet,
@@ -756,11 +636,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
                   // Shopping bag icon button
                   IconButton(
-                    icon: const Icon(
-                      Icons.shopping_bag_outlined,
-                      color: AppColors.mutedText,
-                      size: 24,
-                    ),
+                    icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.mutedText, size: 24),
                     padding: const EdgeInsets.all(8),
                     constraints: const BoxConstraints(),
                     onPressed: () {
@@ -774,7 +650,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
                   const SizedBox(width: 4),
 
-                  // Rounded Message Input
+                  // Rounded Message Input with embedded Emoji Icon
                   Expanded(
                     child: Container(
                       height: 40,
@@ -797,51 +673,38 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                             fontSize: 13,
                             color: AppColors.mutedText,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
+                          contentPadding: const EdgeInsets.only(left: 14, right: 6, top: 9, bottom: 9),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.sentiment_satisfied_outlined, color: AppColors.mutedText, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: _showEmojiSheet,
                           ),
                           border: InputBorder.none,
                           isDense: true,
                         ),
+                        onChanged: (_) => setState(() {}),
                         onSubmitted: (_) => _handleSend(),
                       ),
                     ),
                   ),
 
-                  const SizedBox(width: 4),
-
-                  // Emoji button or Send button
-                  _textController.text.trim().isEmpty && !_isSending
-                      ? IconButton(
-                          icon: const Icon(
-                            Icons.sentiment_satisfied_outlined,
-                            color: AppColors.mutedText,
-                            size: 24,
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(),
-                          onPressed: _showEmojiSheet,
-                        )
-                      : IconButton(
-                          icon: _isSending
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    color: AppColors.alonaTeal,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.send_rounded,
-                                  color: AppColors.alonaTeal,
-                                  size: 22,
-                                ),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(),
-                          onPressed: _isSending ? null : () => _handleSend(),
-                        ),
+                  // Send button (appears when text is typed or sending)
+                  if (_textController.text.trim().isNotEmpty || _isSending) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: _isSending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(color: AppColors.alonaTeal, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded, color: AppColors.alonaTeal, size: 22),
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(),
+                      onPressed: _isSending ? null : () => _handleSend(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -860,9 +723,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
     try {
       final prev = DateTime.parse(prevDate).toLocal();
       final curr = DateTime.parse(currDate).toLocal();
-      return prev.day != curr.day ||
-          prev.month != curr.month ||
-          prev.year != curr.year;
+      return prev.day != curr.day || prev.month != curr.month || prev.year != curr.year;
     } catch (_) {
       return false;
     }
@@ -878,24 +739,11 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
 
         if (diffDays == 0 && now.day == dt.day) {
           label = 'Today';
-        } else if (diffDays == 1 ||
-            (now.day - dt.day == 1 && now.month == dt.month)) {
+        } else if (diffDays == 1 || (now.day - dt.day == 1 && now.month == dt.month)) {
           label = 'Yesterday';
         } else {
           final months = [
-            '',
-            'Jan',
-            'Feb',
-            'Mar',
-            'Apr',
-            'May',
-            'Jun',
-            'Jul',
-            'Aug',
-            'Sep',
-            'Oct',
-            'Nov',
-            'Dec',
+            '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
           ];
           final dayStr = dt.day.toString().padLeft(2, '0');
           final monthStr = months[dt.month];
@@ -939,9 +787,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
         decoration: BoxDecoration(
           color: isMe ? AppColors.alonaTeal : AppColors.white,
@@ -951,7 +797,12 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
             bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
-          border: isMe ? null : Border.all(color: AppColors.border, width: 1),
+          border: isMe
+              ? null
+              : Border.all(
+                  color: AppColors.border,
+                  width: 1,
+                ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -961,9 +812,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
           ],
         ),
         child: Column(
-          crossAxisAlignment: isMe
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             // Image Attachment if present
             if (msg.attachmentUrl != null && msg.attachmentUrl!.isNotEmpty)
@@ -982,19 +831,12 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
             if (msg.orderNumber != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isMe
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : AppColors.background,
+                  color: isMe ? Colors.white.withValues(alpha: 0.16) : AppColors.background,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: isMe
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : AppColors.border,
+                    color: isMe ? Colors.white.withValues(alpha: 0.28) : AppColors.border,
                   ),
                 ),
                 child: Row(
@@ -1043,17 +885,13 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
                     style: GoogleFonts.figtree(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
-                      color: isMe
-                          ? Colors.white.withValues(alpha: 0.75)
-                          : AppColors.mutedText,
+                      color: isMe ? Colors.white.withValues(alpha: 0.75) : AppColors.mutedText,
                     ),
                   ),
                 if (isMe) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    msg.readAt != null
-                        ? Icons.done_all_rounded
-                        : Icons.done_rounded,
+                    msg.readAt != null ? Icons.done_all_rounded : Icons.done_rounded,
                     size: 14,
                     color: Colors.white,
                   ),

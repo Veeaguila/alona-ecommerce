@@ -49,7 +49,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: 1); // default to Products tab
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 1); // default to Products tab
     _loadStoreData();
   }
 
@@ -303,6 +303,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                 ),
                                 const Tab(text: 'Reviews'),
                                 const Tab(text: 'Categories'),
+                                const Tab(text: 'Live'),
                               ],
                             ),
                           ),
@@ -317,6 +318,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                       _buildProductsTab(),
                       _buildReviewsTab(),
                       _buildCategoriesTab(),
+                      _buildLiveTab(),
                     ],
                   ),
                 ),
@@ -439,7 +441,28 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                   ],
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 6),
+
+                // Slide down to enter live hint matching reference layout
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.white, size: 16),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Slide down to enter the live',
+                        style: GoogleFonts.figtree(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
 
                 // Store info row: Avatar + Name/Stats + Follow/Chat Buttons
                 Row(
@@ -1239,6 +1262,110 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
           },
         );
       },
+    );
+  }
+
+  // 5. Live Tab Widget matching screenshot 3
+  Widget _buildLiveTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          width: double.infinity,
+          height: 220,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1F2937),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.videocam_outlined, color: AppColors.white, size: 28),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Live Stream Offline',
+                      style: GoogleFonts.figtree(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_storeName is not currently streaming.',
+                      style: GoogleFonts.figtree(
+                        fontSize: 12.5,
+                        color: AppColors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.sale,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sensors_rounded, color: AppColors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        'LIVE',
+                        style: GoogleFonts.figtree(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: _toggleFollow,
+            icon: Icon(
+              _isFollowing ? Icons.check_rounded : Icons.notifications_active_outlined,
+              color: AppColors.alonaTeal,
+              size: 16,
+            ),
+            label: Text(
+              _isFollowing ? 'Notifying You on Next Live' : 'Follow for Live Notifications',
+              style: GoogleFonts.figtree(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.alonaTeal,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.alonaTeal),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

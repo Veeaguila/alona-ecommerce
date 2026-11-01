@@ -777,7 +777,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    Navigator.pop(ctx, false);
                     final authState = AuthState();
                     await authState.init();
                     if (!mounted) return;
@@ -787,8 +786,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         builder: (_) => BuyerLoginScreen(authState: authState),
                       ),
                     );
-                    if (loggedIn == true && mounted) {
-                      _addToCart();
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, loggedIn == true);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -2334,8 +2333,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton(
-                onPressed: currentStock > 0 && !isPurchaseLimitReached && !p.sellerIsOnVacation
-                    ? () => _openVariantBottomSheet(buyNow: false)
+                onPressed: currentStock > 0 && !isPurchaseLimitReached && !p.sellerIsOnVacation && !_isAddingToCart
+                    ? () => _addToCart(buyNow: false)
                     : null,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2358,7 +2357,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Expanded(
               child: ElevatedButton(
                 onPressed: currentStock > 0 && !isPurchaseLimitReached && !p.sellerIsOnVacation
-                    ? () => _openVariantBottomSheet(buyNow: true)
+                    ? () => _addToCart(buyNow: true)
                     : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
