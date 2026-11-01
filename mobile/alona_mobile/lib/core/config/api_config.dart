@@ -5,7 +5,7 @@ class ApiConfig {
   // Configure the target explicitly; opening the app must not target production.
   static const String fallbackBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: '',
+    defaultValue: 'https://shopalona.online',
   );
   static String _baseUrl = fallbackBaseUrl;
 
@@ -23,9 +23,8 @@ class ApiConfig {
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('custom_base_url');
-    _baseUrl = _cleanBaseUrl(
-      fallbackBaseUrl.isNotEmpty ? fallbackBaseUrl : (saved ?? ''),
-    );
+    final target = (saved != null && saved.trim().isNotEmpty) ? saved : fallbackBaseUrl;
+    _baseUrl = _cleanBaseUrl(target);
   }
 
   static Future<void> setBaseUrl(String url) async {
