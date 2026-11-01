@@ -96,6 +96,7 @@
               <label :for="`rider-${parcel.id}`" class="block text-sm font-semibold text-gray-700 mb-1">
                 Assign Rider
               </label>
+              <p v-if="!loadingRiders[parcel.id] && !riders[parcel.id]?.length" class="mb-3 text-sm text-amber-800" role="status">{{ riderReasons[parcel.id] || 'No eligible Rider covers this destination. Configure delivery areas in Rider Management.' }}</p>
               <div class="flex flex-col gap-3 sm:flex-row">
                 <select
                   :id="`rider-${parcel.id}`"
@@ -165,6 +166,7 @@ export default {
     const riders = reactive({});
     const selectedRiders = reactive({});
     const loadingRiders = reactive({});
+    const riderReasons = reactive({});
     const loading = ref(false);
     const assigningId = ref(null);
     const feedback = reactive({ message: '', type: 'success' });
@@ -203,6 +205,7 @@ export default {
       try {
         const data = await requestJson(`/api/sorting-center/parcels/${parcelId}/eligible-riders`);
         riders[parcelId] = data.data || [];
+        riderReasons[parcelId] = data.meta?.empty_reason || '';
       } catch (error) {
         riders[parcelId] = [];
         feedback.message = error.message;
@@ -249,6 +252,7 @@ export default {
       riders,
       selectedRiders,
       loadingRiders,
+      riderReasons,
       loading,
       assigningId,
       feedback,

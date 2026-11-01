@@ -51,7 +51,7 @@ class FooterService
                     'links' => [
                         ['label' => 'Become a Seller', 'url' => '/register/seller'],
                         ['label' => 'Become a Rider', 'url' => '/register'],
-                        ['label' => 'Logistics Partner', 'url' => '/register'],
+                        ['label' => 'Logistics Partner', 'url' => '/register/logistics'],
                         ['label' => 'My Account', 'url' => '/buyer/dashboard'],
                     ],
                 ],

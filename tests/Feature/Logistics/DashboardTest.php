@@ -60,6 +60,26 @@ class DashboardTest extends TestCase
             ->assertJsonPath('data.active_approved_riders', 0);
     }
 
+    // LOG-DASH-004: existing owned parcel counters; shared pickup pool is unchanged.
+    public function test_parcel_counters_exclude_every_other_company_workflow_queue(): void
+    {
+        $center = $this->approvedSortingCenter();
+        $other = $this->approvedSortingCenter('Other Center');
+        foreach ([$center, $other] as $index => $owner) {
+            $area = Area::create(['sorting_center_id' => $owner->sortingCenter->id, 'name' => 'Area '.$index]);
+            for ($i = 0; $i <= $index; $i++) {
+                $this->parcel(null, 'AT_SORTING_CENTER', sortingCenterId: $owner->sortingCenter->id);
+                $this->parcel($area, 'AT_SORTING_CENTER');
+                $this->parcel($area, 'OUT_FOR_DELIVERY');
+            }
+        }
+        Sanctum::actingAs($center);
+        $this->getJson('/api/sorting-center/dashboard')->assertOk()
+            ->assertJsonPath('data.parcels_awaiting_sorting', 1)
+            ->assertJsonPath('data.parcels_awaiting_rider_assignment', 1)
+            ->assertJsonPath('data.parcels_out_for_delivery', 1);
+    }
+
     private function approvedSortingCenter(string $businessName = 'Approved Center'): User
     {
         $user = User::factory()->create(['status' => 'approved', 'usertype' => 'sorting_center']);

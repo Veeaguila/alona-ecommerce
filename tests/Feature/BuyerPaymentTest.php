@@ -40,7 +40,7 @@ class BuyerPaymentTest extends TestCase
 
         $this->category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'payment-test-electronics',
         ]);
 
         $this->product = Product::create([

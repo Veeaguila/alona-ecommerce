@@ -30,6 +30,9 @@ Route::middleware([
     'auth',
     'seller',
 ])->group(function () {
+    Route::post('/seller/logistics-returns/{id}/receive', [\App\Http\Controllers\Logistics\ReturnToSellerController::class, 'receive'])
+        ->whereNumber('id')->name('seller.logistics-returns.receive');
+    Route::post('/seller/orders/{orderItem}/pickup-location', [\App\Http\Controllers\Logistics\PickupLocationController::class, 'seller'])->name('seller.orders.pickup-location');
 
     /*
     |--------------------------------------------------------------------------

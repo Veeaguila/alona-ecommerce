@@ -74,7 +74,8 @@ class RiderBlackBoxTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('data.approval_status', 'pending_activation')
-            ->assertJsonPath('data.is_active', false);
+            ->assertJsonPath('data.is_active', false)
+            ->assertJsonMissingPath('data.activation_token');
 
         $this->assertDatabaseHas('users', [
             'email' => 'pedrojose.garcia@example.com',
@@ -687,8 +688,10 @@ class RiderBlackBoxTest extends TestCase
         $resend = $this->actingAs($this->logisticsUser)
             ->postJson("/api/sorting-center/riders/{$rider->id}/resend-activation");
 
-        $resend->assertStatus(200);
-        $secondToken = $resend->json('data.activation_token');
+        $resend->assertStatus(200)
+            ->assertJsonMissingPath('data.activation_token');
+        // The invitation credential is delivered by mail, never the Logistics API.
+        $secondToken = Notification::sent($user, RiderActivationNotification::class)->sole()->token;
 
         $this->assertNotEquals($firstToken, $secondToken);
 

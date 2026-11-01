@@ -453,7 +453,7 @@ class AiProductApprovalTest extends TestCase
     {
         Config::set('services.ai.provider', 'gemini');
         Config::set('services.gemini.api_key', 'test-gemini-key-12345');
-        Config::set('services.gemini.model', 'gemini-1.5-flash');
+        Config::set('services.gemini.model', 'gemini-2.5-flash');
 
         Http::fake([
             'https://generativelanguage.googleapis.com/*' => Http::response([

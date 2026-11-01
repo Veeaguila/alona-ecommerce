@@ -29,7 +29,7 @@ class StockAdjustmentAuditLoggingTest extends TestCase
 
         $this->category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'stock-test-electronics',
         ]);
     }
 

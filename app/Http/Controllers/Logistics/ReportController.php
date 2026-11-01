@@ -122,6 +122,50 @@ class ReportController extends Controller
         $perPage = $validated['per_page'] ?? 50;
         $sortingCenterId = $request->user()->sortingCenter->id;
 
+        $query = $this->transactionQuery($sortingCenterId, $validated);
+
+        $parcels = $query->orderByDesc('parcels.sorted_at')->orderByDesc('parcels.id')->paginate($perPage, ['*'], 'page', $page);
+
+        $data = $parcels->map(fn ($parcel) => $this->transactionRow($parcel));
+
+        return response()->json([
+            'message' => 'Transactions retrieved successfully.',
+            'data' => $data,
+            'pagination' => [
+                'total' => $parcels->total(),
+                'per_page' => $parcels->perPage(),
+                'current_page' => $parcels->currentPage(),
+                'last_page' => $parcels->lastPage(),
+                'from' => $parcels->firstItem(),
+                'to' => $parcels->lastItem(),
+            ],
+        ]);
+    }
+
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $validated = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'format' => ['required', 'in:csv,xlsx'],
+            'dataset' => ['sometimes', 'in:deliveries'],
+        ]);
+        if ($validated['format'] === 'xlsx') abort_unless(class_exists(\ZipArchive::class) && class_exists(\XMLWriter::class), 503, 'XLSX export is unavailable on this server.');
+        $query = $this->transactionQuery((int) $request->user()->sortingCenter->id, $validated);
+        $records = $query->orderByDesc('parcels.sorted_at')->orderByDesc('parcels.id')->lazy(500)
+            ->map(fn ($parcel) => $this->transactionRow($parcel));
+        $format = $validated['format'];
+        $type = $format === 'csv' ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        return response()->streamDownload(function () use ($records, $format): void {
+            $output = fopen('php://output', 'wb');
+            try { app(\App\Services\LogisticsReportExport::class)->write($output, $records, $format); }
+            finally { fclose($output); }
+        }, 'deliveries-'.$validated['from'].'-to-'.$validated['to'].'.'.$format,
+            ['Content-Type' => $type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    private function transactionQuery(int $sortingCenterId, array $validated): \Illuminate\Database\Eloquent\Builder
+    {
         $query = Parcel::query()
             ->inSortingCenterWorkflow($sortingCenterId)
             ->with(['assignedRider', 'buyer', 'seller'])
@@ -149,9 +193,11 @@ class ReportController extends Controller
             $query->where('parcels.sorted_at', '<=', $to);
         }
 
-        $parcels = $query->orderByDesc('parcels.sorted_at')->paginate($perPage, ['*'], 'page', $page);
+        return $query;
+    }
 
-        $data = $parcels->map(function ($parcel) {
+    private function transactionRow(Parcel $parcel): array
+    {
             $deliveredAt = null;
             if ($parcel->status === 'DELIVERED') {
                 $deliveredAt = $parcel->delivered_at?->format('Y-m-d H:i:s');
@@ -170,20 +216,6 @@ class ReportController extends Controller
                 'sorted_at' => $parcel->sorted_at?->format('Y-m-d H:i:s'),
                 'delivered_at' => $deliveredAt,
             ];
-        });
-
-        return response()->json([
-            'message' => 'Transactions retrieved successfully.',
-            'data' => $data,
-            'pagination' => [
-                'total' => $parcels->total(),
-                'per_page' => $parcels->perPage(),
-                'current_page' => $parcels->currentPage(),
-                'last_page' => $parcels->lastPage(),
-                'from' => $parcels->firstItem(),
-                'to' => $parcels->lastItem(),
-            ],
-        ]);
     }
 
     private function formatDuration(int $seconds): string

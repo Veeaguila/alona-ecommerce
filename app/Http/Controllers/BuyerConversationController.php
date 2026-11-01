@@ -13,6 +13,18 @@ use Inertia\Response;
 
 class BuyerConversationController extends Controller
 {
+    /** Mobile lists show previews only; opening a thread marks its messages read. */
+    public function mobileIndex(Request $request): JsonResponse
+    {
+        $buyer = $request->user();
+        $conversations = $buyer->conversationsAsBuyer()
+            ->with(['seller:id,name,store_name', 'product:id,name,image_path,price',
+                'order' => fn ($query) => $query->where('user_id', $buyer->id),
+                'messages' => fn ($query) => $query->latest('created_at')->latest('id')->limit(1)])
+            ->withCount(['messages as unread_count' => fn ($query) => $query->whereNull('read_at')->where('sender_id', '!=', $buyer->id)])
+            ->orderByDesc('last_message_at')->get();
+        return response()->json(['conversations' => $conversations]);
+    }
     /**
      * Display the buyer conversations and the selected conversation
      * on the same page.
@@ -30,7 +42,7 @@ class BuyerConversationController extends Controller
             ->with([
                 'seller:id,name,store_name',
                 'product:id,name,image_path,price',
-                'order:id,order_number,status',
+                'order' => fn ($query) => $query->where('user_id', $buyer->id)->select(['id', 'order_number', 'status']),
 
                 // Only load the latest message for the conversation preview.
                 'messages' => fn ($q) => $q
@@ -94,10 +106,10 @@ class BuyerConversationController extends Controller
             $selectedConversation->load([
                 'seller:id,name,store_name,avatar',
                 'product:id,name,image_path,price',
-                'order' => fn ($q) => $q->with([
+                'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $selectedConversation)->with([
                     'items.product:id,name,image_path,price',
-                    'items.variant:id,title,price',
-                    'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                    'items.variant:id,product_id,color,size,price',
+                    'items.parcel:id,order_item_id,order_id,status',
                 ]),
             ]);
 
@@ -122,10 +134,10 @@ class BuyerConversationController extends Controller
                 ->messages()
                 ->with([
                     'sender:id,name,avatar',
-                    'order' => fn ($q) => $q->with([
+                    'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $selectedConversation)->with([
                         'items.product:id,name,image_path,price',
-                        'items.variant:id,title,price',
-                        'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                        'items.variant:id,product_id,color,size,price',
+                        'items.parcel:id,order_item_id,order_id,status',
                     ]),
                 ])
                 ->orderBy('created_at')
@@ -153,7 +165,7 @@ class BuyerConversationController extends Controller
         | Render ONE Vue page
         |--------------------------------------------------------------------------
         */
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'conversations' => $conversations,
                 'selectedConversation' => $selectedConversation,
@@ -200,16 +212,16 @@ class BuyerConversationController extends Controller
                 'read_at' => now(),
             ]);
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             $conversation->load([
                 'seller:id,name,store_name',
                 'product:id,name,image_path,price',
-                'order:id,order_number,status,created_at',
+                'order' => fn ($query) => app(\App\Services\ConversationOrderAccess::class)->scope($query, $conversation)->select(['id', 'order_number', 'status', 'total', 'created_at']),
             ]);
 
             $messages = $conversation
                 ->messages()
-                ->with('sender:id,name')
+                ->with(['sender:id,name', 'order' => fn ($query) => app(\App\Services\ConversationOrderAccess::class)->scope($query, $conversation)->select(['id', 'order_number', 'status', 'total'])])
                 ->orderBy('created_at')
                 ->get();
 
@@ -291,6 +303,8 @@ class BuyerConversationController extends Controller
             'attachment.mimetypes' => 'The attachment must be a valid JPG or PNG image (executable or non-image content is rejected).',
         ]);
 
+        app(\App\Services\ConversationOrderAccess::class)->assertCanShare($conversation, isset($data['order_id']) ? (int) $data['order_id'] : null);
+
         $attachmentPath = null;
         $attachmentName = null;
         $attachmentType = null;
@@ -350,14 +364,14 @@ class BuyerConversationController extends Controller
             } catch (\Throwable $e) {}
         }
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'message' => $message->load([
                     'sender:id,name,avatar',
-                    'order' => fn ($q) => $q->with([
+                    'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $conversation)->with([
                         'items.product:id,name,image_path,price',
-                        'items.variant:id,title,price',
-                        'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                        'items.variant:id,product_id,color,size,price',
+                        'items.parcel:id,order_item_id,order_id,status',
                     ]),
                 ]),
                 'conversation_id' => $conversation->id,
@@ -389,7 +403,7 @@ class BuyerConversationController extends Controller
         |--------------------------------------------------------------------------
         */
         abort_unless(
-            $product->seller_id,
+            $product->seller_id && $product->status === 'approved',
             404
         );
 
@@ -426,7 +440,7 @@ class BuyerConversationController extends Controller
             ]);
         }
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'conversation_id' => $conversation->id,
             ]);
@@ -460,7 +474,7 @@ class BuyerConversationController extends Controller
             ]
         );
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'conversation_id' => $conversation->id,
             ]);

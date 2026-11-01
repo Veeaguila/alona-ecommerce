@@ -107,7 +107,7 @@ class BuyerReviewController extends Controller
     public function store(
         Request $request,
         Product $product
-    ): RedirectResponse {
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
         $user = $request->user();
 
         $validated = $request->validate([
@@ -117,6 +117,8 @@ class BuyerReviewController extends Controller
                 'min:1',
                 'max:5',
             ],
+            'order_id' => ['nullable', 'integer'],
+            'order_item_id' => ['nullable', 'integer'],
             'comment' => [
                 'nullable',
                 'string',
@@ -143,6 +145,7 @@ class BuyerReviewController extends Controller
             });
 
         $eligibleItem = (clone $eligibleItemQuery)
+            ->when($request->filled('order_id'), fn ($q) => $q->where('order_id', $request->integer('order_id')))
             ->when($request->filled('order_item_id'), fn ($q) => $q->where('id', $request->order_item_id))
             ->latest('id')
             ->first();
@@ -171,8 +174,8 @@ class BuyerReviewController extends Controller
             'user_id' => $user->id,
             'product_id' => $product->id,
             'order_item_id' => $eligibleItem->id,
-            'variant_id' => $eligibleItem->variant_id,
-            'variant_name' => $eligibleItem->variant_name,
+            'variant_id' => $eligibleItem->product_variant_id,
+            'variant_name' => $eligibleItem->variant_label,
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
             'media' => $mediaPaths,
@@ -182,6 +185,10 @@ class BuyerReviewController extends Controller
         $this->recalculateProductRating($product);
 
         \App\Services\SellerNotificationService::sendProductReviewAlert($review);
+
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
+            return response()->json(['message' => 'Your review has been submitted successfully.', 'review' => $review], 201);
+        }
 
         return back()->with(
             'status',

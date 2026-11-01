@@ -30,6 +30,7 @@
                 <input
                   id="report-from"
                   v-model="form.from"
+                  :disabled="loading || exporting || rowsLoading"
                   type="date"
                   required
                   class="mt-2 w-full app-input"
@@ -40,6 +41,7 @@
                 <input
                   id="report-to"
                   v-model="form.to"
+                  :disabled="loading || exporting || rowsLoading"
                   type="date"
                   required
                   class="mt-2 w-full app-input"
@@ -47,7 +49,7 @@
               </div>
               <button
                 type="submit"
-                :disabled="loading || !form.from || !form.to"
+                :disabled="loading || exporting || rowsLoading || !form.from || !form.to"
                 class="disabled:cursor-not-allowed disabled:opacity-50 app-button-primary"
               >
                 {{ loading ? 'Generating…' : 'Generate Report' }}
@@ -56,6 +58,31 @@
             <p class="text-xs text-[var(--app-text-muted)]">The date filter selects parcels sorted within the specified interval.</p>
           </form>
         </div>
+
+        <section v-if="appliedRange" class="app-panel app-panel--padded space-y-4" aria-labelledby="delivery-export-heading">
+          <h3 id="delivery-export-heading" class="app-section-title">Delivery records and exports</h3>
+          <p class="app-description">Applied sorting-date range: {{ appliedRange.from }} to {{ appliedRange.to }}. Exports include all {{ rowsPagination.total }} matching parcel records.</p>
+          <p class="text-sm text-amber-800">Delivery exports contain parcel details. COD cash events and confirmation are reported separately below.</p>
+          <div class="flex flex-wrap gap-3">
+            <button type="button" class="app-button-secondary" :disabled="loading || rowsLoading || exporting" @click="exportReport('csv')">Export delivery CSV</button>
+            <button type="button" class="app-button-secondary" :disabled="loading || rowsLoading || exporting" @click="exportReport('xlsx')">Export delivery XLSX</button>
+            <span v-if="exporting" role="status">Preparing download...</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="app-data-table">
+              <caption class="sr-only">Delivery records for the applied date range</caption>
+              <thead><tr><th>Parcel ID</th><th>Tracking reference</th><th>Buyer</th><th>Seller</th><th>Delivery Rider</th><th>Status</th><th>Province</th><th>City</th><th>Sorted at</th><th>Delivered at</th></tr></thead>
+              <tbody><tr v-for="row in transactions" :key="row.parcel_id"><td>{{ row.parcel_id }}</td><td>{{ row.order_id }}</td><td>{{ row.buyer_name }}</td><td>{{ row.seller_name }}</td><td>{{ row.rider_name }}</td><td>{{ row.status }}</td><td>{{ row.delivery_province }}</td><td>{{ row.delivery_municipality }}</td><td>{{ row.sorted_at || 'Not recorded' }}</td><td>{{ row.delivered_at || 'Not recorded' }}</td></tr></tbody>
+            </table>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span>{{ rowsPagination.total }} records · Page {{ rowsPagination.current_page }} of {{ rowsPagination.last_page }}</span>
+            <button type="button" class="app-button-secondary" :disabled="loading || rowsLoading || exporting || rowsPagination.current_page <= 1" @click="loadRows(rowsPagination.current_page - 1)">Previous records</button>
+            <button type="button" class="app-button-secondary" :disabled="loading || rowsLoading || exporting || rowsPagination.current_page >= rowsPagination.last_page" @click="loadRows(rowsPagination.current_page + 1)">Next records</button>
+          </div>
+        </section>
+
+        <cod-cash-panel v-if="appliedRange" :range="appliedRange" :token="token" />
 
         <!-- Feedback Notification -->
         <div
@@ -176,10 +203,11 @@
 import { reactive, ref, nextTick, onBeforeUnmount } from 'vue';
 import Chart from 'chart.js/auto';
 import ScLayout from '@/Layouts/ScLayout.vue';
+import CodCashPanel from '@/Components/Logistics/CodCashPanel.vue';
 
 export default {
   name: 'DeliveryReports',
-  components: { ScLayout },
+  components: { ScLayout, CodCashPanel },
   setup() {
     const token = ref(localStorage.getItem('logistics_auth_token'));
 
@@ -194,6 +222,13 @@ export default {
     const report = ref(null);
     const loading = ref(false);
     const hasSearched = ref(false);
+    const appliedRange = ref(null);
+    const transactions = ref([]);
+    const rowsPagination = ref({ total: 0, current_page: 1, last_page: 1 });
+    const rowsLoading = ref(false);
+    const exporting = ref(false);
+    let disposed = false;
+    let exportAbort = null;
     const feedback = reactive({ message: '', type: 'success' });
 
     const statusOrder = ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_RETURNED'];
@@ -321,8 +356,11 @@ export default {
     }
 
     async function generateReport() {
+      if (disposed || loading.value || rowsLoading.value || exporting.value) return;
       loading.value = true;
       report.value = null;
+      appliedRange.value = null;
+      transactions.value = [];
       hasSearched.value = true;
       feedback.message = '';
       destroyCharts();
@@ -335,6 +373,10 @@ export default {
         const json = await response.json();
         if (!response.ok) throw new Error(json.message || 'The report could not be generated.');
 
+        if (disposed) return;
+        if (!json.data || json.data.from !== form.from || json.data.to !== form.to) throw new Error('Unexpected report date range. Please try again.');
+        appliedRange.value = { from: json.data.from, to: json.data.to };
+        if (!await loadRows(1)) throw new Error('Delivery records could not be loaded. Please try again.');
         report.value = json.data;
         feedback.message = json.message || 'Report generated successfully.';
         feedback.type = 'success';
@@ -345,10 +387,62 @@ export default {
           renderCharts(json.data);
         }
       } catch (error) {
+        appliedRange.value = null;
         feedback.message = error.message;
         feedback.type = 'error';
       } finally {
         loading.value = false;
+      }
+    }
+
+    async function loadRows(page = 1) {
+      if (disposed || rowsLoading.value || !appliedRange.value || !Number.isInteger(page) || page < 1) return false;
+      rowsLoading.value = true;
+      try {
+        const params = new URLSearchParams({ ...appliedRange.value, page, per_page: 50 });
+        const response = await fetch(`/api/sorting-center/reports/transactions?${params}`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token.value}` },
+        });
+        const json = await response.json();
+        if (!response.ok || !Array.isArray(json.data) || !Number.isInteger(json.pagination?.total)) throw new Error(json.message || 'Unable to load delivery records.');
+        if (disposed) return false;
+        transactions.value = json.data; rowsPagination.value = json.pagination;
+        return true;
+      } catch (error) {
+        if (!disposed) { feedback.type = 'error'; feedback.message = error.message; }
+        return false;
+      } finally { rowsLoading.value = false; }
+    }
+
+    async function exportReport(format) {
+      if (disposed || loading.value || rowsLoading.value || exporting.value || !appliedRange.value || !['csv', 'xlsx'].includes(format)) return;
+      const range = { ...appliedRange.value };
+      exporting.value = true; feedback.message = ''; exportAbort = new AbortController();
+      let url = null;
+      try {
+        const params = new URLSearchParams({ ...range, format, dataset: 'deliveries' });
+        const response = await fetch(`/api/sorting-center/reports/export?${params}`, {
+          headers: { Accept: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', Authorization: `Bearer ${token.value}` },
+          signal: exportAbort.signal,
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          throw new Error(error?.message || 'Unable to export this report. Please retry.');
+        }
+        const expected = format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        if (!response.headers.get('Content-Type')?.startsWith(expected)) throw new Error('Unexpected export response. Please log in again or retry.');
+        const blob = await response.blob();
+        if (disposed) return;
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a'); link.href = url;
+        link.download = `deliveries-${range.from}-to-${range.to}.${format}`;
+        document.body.appendChild(link); link.click(); link.remove();
+        feedback.type = 'success'; feedback.message = 'Delivery report downloaded.';
+      } catch (error) {
+        if (!disposed) { feedback.type = 'error'; feedback.message = error.message || 'Unable to export this report.'; }
+      } finally {
+        if (url) URL.revokeObjectURL(url);
+        exporting.value = false; exportAbort = null;
       }
     }
 
@@ -363,12 +457,13 @@ export default {
     }
 
     // Clean up Chart.js instances when component unmounts
-    onBeforeUnmount(destroyCharts);
+    onBeforeUnmount(() => { disposed = true; exportAbort?.abort(); destroyCharts(); });
 
     return {
       token,
       form,
       report,
+      appliedRange, transactions, rowsPagination, rowsLoading, exporting, loadRows, exportReport,
       loading,
       hasSearched,
       feedback,

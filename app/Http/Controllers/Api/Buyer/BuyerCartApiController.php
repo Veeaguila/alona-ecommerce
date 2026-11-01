@@ -62,7 +62,10 @@ class BuyerCartApiController extends Controller
                 'unit_price' => $price,
                 'total_price' => round($price * (int) $item->quantity, 2),
                 'stock' => $stock,
-                'is_in_stock' => $stock >= (int) $item->quantity,
+                'is_in_stock' => $product?->status === 'approved' && !$item->is_unavailable
+                    && !$product?->seller?->vacation_mode
+                    && (!$variant || (int) $variant->product_id === (int) $product->id)
+                    && $stock >= (int) $item->quantity,
                 'seller_id' => $product?->seller_id,
                 'seller_name' => $product?->seller?->store_name ?: $product?->seller?->name,
             ];
@@ -98,7 +101,11 @@ class BuyerCartApiController extends Controller
 
         $quantity = max(1, (int) ($validated['quantity'] ?? 1));
         $variantId = $validated['product_variant_id'] ?? null;
-        $variant = $variantId ? ProductVariant::find($variantId) : null;
+        $variant = $variantId ? $product->variants()->whereKey($variantId)->firstOrFail() : null;
+
+        if (! $variant && $product->variants()->exists()) {
+            return response()->json(['message' => 'Please select an available product variation.'], 422);
+        }
 
         $availableStock = $variant ? (int) $variant->stock : (int) $product->stock;
         if ($availableStock < $quantity) {
@@ -108,6 +115,7 @@ class BuyerCartApiController extends Controller
         }
 
         $user = $request->user();
+        $this->assertPurchaseLimit($user, $product, $quantity);
         $cartItem = CartItem::where('user_id', $user->id)
             ->where('product_id', $product->id)
             ->where('product_variant_id', $variantId)
@@ -150,7 +158,12 @@ class BuyerCartApiController extends Controller
         ]);
 
         $user = $request->user();
-        $cartItem = $user->cartItems()->whereKey($id)->with(['product', 'variant'])->firstOrFail();
+        $cartItem = $user->cartItems()->whereKey($id)->with(['product.variants', 'product.seller', 'variant'])->firstOrFail();
+        if (!$cartItem->product || $cartItem->is_unavailable || $cartItem->product->seller?->vacation_mode
+            || ($cartItem->variant && (int) $cartItem->variant->product_id !== (int) $cartItem->product_id)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['quantity' => 'This product or variation is currently unavailable.']);
+        }
+        $this->assertPurchaseLimit($user, $cartItem->product, $validated['quantity'], $cartItem->id);
 
         $stock = $cartItem->variant ? (int) $cartItem->variant->stock : (int) ($cartItem->product?->stock ?? 0);
         if ($validated['quantity'] > $stock) {
@@ -180,6 +193,17 @@ class BuyerCartApiController extends Controller
             'message' => 'Item removed from cart.',
             'cart_count' => $user->cartItems()->sum('quantity'),
         ]);
+    }
+
+    private function assertPurchaseLimit($user, Product $product, int $quantity, ?int $excludedCartId = null): void
+    {
+        $limit = $product->effective_per_buyer_limit;
+        if (!$limit) return;
+        $otherQuantity = $user->cartItems()->where('product_id', $product->id)
+            ->when($excludedCartId !== null, fn ($query) => $query->whereKeyNot($excludedCartId))->sum('quantity');
+        if ($product->purchasedUnitsCountFor($user) + $otherQuantity + $quantity > $limit) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['quantity' => "Purchase limit of {$limit} unit(s) exceeded for this product."]);
+        }
     }
 
     /**

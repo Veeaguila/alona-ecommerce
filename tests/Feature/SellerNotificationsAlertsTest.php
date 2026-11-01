@@ -50,7 +50,7 @@ class SellerNotificationsAlertsTest extends TestCase
 
         $this->category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'notification-test-electronics',
         ]);
 
         $this->product = Product::create([

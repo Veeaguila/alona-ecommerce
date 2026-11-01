@@ -43,7 +43,18 @@ class HandleInertiaRequests extends Middleware
             |--------------------------------------------------------------------------
             */
             'auth' => [
-                'user' => $user,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'usertype' => $user->usertype,
+                    'status' => $user->status,
+                    'avatar' => $user->avatar,
+                    'contact_no' => $user->contact_no,
+                    'store_name' => $user->store_name,
+                ] : null,
                 'destination' => $user ? route(app(AccountDestination::class)->route($user)) : null,
                 'googleOnboarding' => fn () => collect($request->session()->get('onboarding.google', []))->only(['name', 'email', 'role'])->all(),
             ],

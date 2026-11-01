@@ -768,7 +768,7 @@ const hasActiveFilters = computed(() => {
                                         </span>
                                     </div>
 
-                                    <div v-if="req.return_tracking_number" class="text-slate-600">
+                                    <div v-if="req.return_tracking_number && !req.logistics_execution_blocked" class="text-slate-600">
                                         <div class="font-mono font-bold text-slate-900">{{ req.return_carrier }}: {{ req.return_tracking_number }}</div>
                                         <div class="flex items-center gap-2 mt-1">
                                             <button
@@ -788,7 +788,7 @@ const hasActiveFilters = computed(() => {
                                         </div>
                                     </div>
 
-                                    <div v-else class="text-[11px] text-slate-400">
+                                    <div v-else-if="!req.logistics_execution_blocked" class="text-[11px] text-slate-400">
                                         No carrier tracking recorded yet.
                                         <button
                                             type="button"
@@ -804,7 +804,8 @@ const hasActiveFilters = computed(() => {
                                 <div class="pt-2 space-y-2">
 
                                     <!-- STAGE 1: PENDING SELLER DECISION (SELLER-38) -->
-                                    <template v-if="req.status === 'pending'">
+                                    <p v-if="req.logistics_execution_blocked" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Logistics refund review pending. No refund has been issued. Execution is blocked until the authorized payment workflow is verified and approved.</p>
+                                    <template v-else-if="req.status === 'pending'">
                                         <button
                                             type="button"
                                             @click="openDecisionModal(req, 'approved')"

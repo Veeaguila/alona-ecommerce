@@ -6,6 +6,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class GuestMarketplaceTest extends TestCase
@@ -14,7 +17,8 @@ class GuestMarketplaceTest extends TestCase
 
     public function test_a_seller_listing_is_publicly_browsable_and_searchable(): void
     {
-        $seller = User::factory()->create(['usertype' => 'seller']);
+        Storage::fake('public');
+        $seller = User::factory()->create(['usertype' => 'seller', 'status' => 'approved']);
         $category = Category::create(['name' => 'Home & Living', 'slug' => 'home-living']);
 
         $this->actingAs($seller)
@@ -23,6 +27,8 @@ class GuestMarketplaceTest extends TestCase
                 'category_id' => $category->id,
                 'price' => 1250,
                 'stock' => 4,
+                'weight' => 0.6,
+                'images' => [UploadedFile::fake()->image('lantern.jpg', 600, 600)],
                 'description' => 'A handcrafted bamboo lantern.',
                 'status' => 'approved',
             ])
@@ -30,6 +36,8 @@ class GuestMarketplaceTest extends TestCase
 
         $product = Product::where('name', 'Handmade Lantern')->firstOrFail();
         $this->assertSame($seller->id, $product->seller_id);
+        $this->assertSame('pending', $product->status);
+        $product->update(['status' => 'approved']);
 
         auth()->logout();
 
@@ -66,7 +74,8 @@ class GuestMarketplaceTest extends TestCase
 
         $this->get(route('buyer.product', $product))
             ->assertOk()
-            ->assertSee('Maria Seller')
-            ->assertSee('7 items available');
+            ->assertInertia(fn (Assert $page) => $page->component('Buyer/Show')
+                ->where('product.seller.name', 'Maria Seller')
+                ->where('product.stock', 7));
     }
 }
