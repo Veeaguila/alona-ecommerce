@@ -131,6 +131,36 @@ class ParcelAssignmentTest extends TestCase
         }
     }
 
+    public static function notReadyParcels(): array
+    {
+        return [
+            'packed/preparing' => ['PREPARING', true],
+            'placed' => ['PLACED', true],
+            'picked up but not received' => ['PICKED_UP', true],
+            'arrived but unsorted' => ['AT_SORTING_CENTER', false],
+        ];
+    }
+
+    // LOG-DISP-008 / LOG-HUB-006 guard subset: direct requests cannot skip hub readiness.
+    #[DataProvider('notReadyParcels')]
+    public function test_unready_parcels_are_absent_from_assignment_queue_and_cannot_be_assigned(string $status, bool $sorted): void
+    {
+        $center = $this->approvedSortingCenter();
+        $area = Area::create(['sorting_center_id' => $center->sortingCenter->id, 'name' => 'Area A']);
+        $rider = $this->rider('approved', true, $center->sortingCenter->id);
+        $rider->areas()->attach($area->id);
+        $parcel = $this->parcel($area, $status);
+        if (! $sorted) $parcel->update(['sorted_area_id' => null, 'sorted_at' => null]);
+        $before = $parcel->fresh()->getAttributes();
+        Sanctum::actingAs($center);
+        $this->getJson('/api/sorting-center/parcels?status=sorted-unassigned')->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson('/api/sorting-center/parcels/'.$parcel->id.'/assign', ['rider_id' => $rider->id])
+            ->assertUnprocessable();
+        $this->assertSame($before, $parcel->fresh()->getAttributes());
+        $this->assertDatabaseCount('seller_delivery_charges', 0);
+        $this->assertDatabaseCount('rider_delivery_earnings', 0);
+    }
+
     private function approvedSortingCenter(): User
     {
         $user = User::factory()->create(['status' => 'approved', 'usertype' => 'sorting_center']);

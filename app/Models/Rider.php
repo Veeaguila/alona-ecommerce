@@ -37,6 +37,9 @@ class Rider extends Model
         'is_active',
     ];
 
+    // Activation credentials must stay out of API and nested model serialization.
+    protected $hidden = ['activation_token'];
+
     protected function casts(): array
     {
         return [

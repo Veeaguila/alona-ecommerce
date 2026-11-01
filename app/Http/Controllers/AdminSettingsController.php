@@ -731,7 +731,7 @@ class AdminSettingsController extends Controller
             'sections.*.badge' => ['nullable', 'string', 'max:50'],
             'sections.*.links' => ['nullable', 'array'],
             'sections.*.links.*.label' => ['required', 'string', 'max:100'],
-            'sections.*.links.*.url' => ['required', 'string', 'max:255'],
+            'sections.*.links.*.url' => ['required', 'string', 'max:255', "regex:/^(https?:\/\/[a-zA-Z0-9_\-\.\/?&=%+#]+|#|\/[a-zA-Z0-9_\-\.\/?&=%+#]*)$/"],
         ]);
 
         $payload = [

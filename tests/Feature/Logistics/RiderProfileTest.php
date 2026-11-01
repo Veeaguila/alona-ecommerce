@@ -23,10 +23,10 @@ class RiderProfileTest extends TestCase
         $this->seq = 0;
     }
 
-    private function fixture(): User
+    private function fixture(?string $contact = null): User
     {
         $this->seq++;
-        $contact = $this->seq === 1 ? '09170000001' : sprintf('0917%07d', $this->seq);
+        $contact ??= $this->seq === 1 ? '09170000001' : sprintf('0917%07d', $this->seq);
         $plate = $this->seq === 1 ? 'TEST-1' : 'TEST-'.$this->seq;
         $user = User::factory()->create(['usertype' => 'rider', 'status' => 'approved', 'name' => 'Actual Rider',
             'contact_no' => $contact, 'birthday' => '2000-01-02', 'address' => 'Existing address']);
@@ -99,7 +99,7 @@ class RiderProfileTest extends TestCase
         $this->postJson('/api/rider/profile-photo', ['photo' => $this->image()])->assertOk();
         Storage::disk('local')->assertMissing($first);
         $this->postJson('/api/rider/profile-photo', ['photo' => UploadedFile::fake()->createWithContent('bad.svg', '<svg/>')])->assertUnprocessable();
-        $other = $this->fixture();
+        $other = $this->fixture('09170000002');
         $this->getJson('/api/rider/profile-photo')->assertNotFound();
         $this->assertNotSame($user->id, $other->id);
         Sanctum::actingAs(User::factory()->create(['usertype' => 'buyer']));

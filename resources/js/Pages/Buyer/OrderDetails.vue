@@ -1,9 +1,11 @@
 <!-- Buyer Order Details with tracking milestones, cancellation, reordering, and return/refund requests. -->
 <script setup>
+import LogisticsReviewNotice from '@/Components/Logistics/LogisticsReviewNotice.vue'
 import Icon from '@/Components/Icon.vue'
 import { ref, computed } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import BuyerAccountLayout from '@/Layouts/BuyerAccountLayout.vue'
+import BuyerDeliveryOtp from '@/Components/BuyerDeliveryOtp.vue'
 
 const props = defineProps({
     order: {
@@ -52,6 +54,13 @@ const formatDateShort = value => {
         day: 'numeric',
     })
 }
+
+// Arrival belongs to each parcel/item; the parent order may span several shipments.
+const sortingCenterArrivals = item =>
+    Array.isArray(item.status_histories)
+        ? item.status_histories.filter(history =>
+            history.note === 'Arrived at Sorting Center.' && history.created_at)
+        : []
 
 const formatPaymentMethod = value => {
     if (!value) return 'Payment method unavailable'
@@ -807,6 +816,31 @@ const getItemShopName = item => {
                                                 </button>
                                             </div>
 
+                                            <div
+                                                v-if="sortingCenterArrivals(item).length"
+                                                role="group"
+                                                :aria-label="`Parcel tracking for ${item.tracking_number}`"
+                                                class="mt-3 rounded-xl border border-[#D9F0EF] bg-[#E8F7F6] p-3 text-xs"
+                                            >
+                                                <ol class="space-y-2">
+                                                    <li v-for="event in sortingCenterArrivals(item)" :key="event.id">
+                                                        <p class="font-extrabold text-[#087F8C]">Arrived at Sorting Center</p>
+                                                        <time :datetime="event.created_at" class="text-[#64748B]">{{ formatDate(event.created_at) }}</time>
+                                                    </li>
+                                                </ol>
+                                            </div>
+
+                                            <ol v-if="(item.status_histories || []).some(event => /^(Received at (origin|destination) hub:|Dispatched from )/.test(event.note || ''))" class="mt-3 space-y-1 text-sm" aria-label="Hub transfer timeline">
+                                                <li v-for="event in (item.status_histories || []).filter(event => /^(Received at (origin|destination) hub:|Dispatched from )/.test(event.note || ''))" :key="event.id">
+                                                    {{ event.note }} <time :datetime="event.created_at">{{ formatDate(event.created_at) }}</time>
+                                                </li>
+                                            </ol>
+                                            <p v-if="item.pickup_assignment_label" class="mt-2 text-sm font-semibold">Pickup: {{ item.pickup_assignment_label }}</p>
+                                            <p v-if="item.return_to_seller" class="mt-2 text-sm font-semibold">{{ ['handed_over', 'received'].includes(item.return_to_seller.status) ? 'Cancelled (failed delivery) · Returned to Seller' : 'Return to Seller · ' + item.return_to_seller.status.replaceAll('_', ' ') }}</p>
+                                            <ol v-if="item.pickup_assignment_label" class="mt-2 text-sm" aria-label="Pickup assignment timeline"><li v-for="event in (item.status_histories || []).filter(event => event.note?.startsWith('Pickup Rider assigned to ') || event.note?.startsWith('Pickup Rider reassigned from '))" :key="event.id">{{ event.note }} · {{ new Date(event.created_at).toLocaleString() }}</li></ol>
+                                            <p v-if="['LOST', 'DAMAGED'].includes(item.delivery_parcel_status)" class="mt-2 font-semibold">Courier status: {{ item.delivery_parcel_status }}</p>
+                                            <LogisticsReviewNotice :review="item.logistics_review" />
+                                            <BuyerDeliveryOtp v-if="item.delivery_parcel_id && item.delivery_parcel_status === 'OUT_FOR_DELIVERY' && !item.return_to_seller" :order-id="order.id" :parcel-id="item.delivery_parcel_id" />
                                             <!-- RETURN/REFUND STATUS DISPLAY (BUYER-23) -->
                                             <div
                                                 v-if="item.active_return_request || item.latest_return_request"

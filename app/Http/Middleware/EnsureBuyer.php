@@ -14,6 +14,7 @@ class EnsureBuyer
         abort_unless($user?->usertype === 'buyer', 403);
 
         if (! $user->hasVerifiedEmail()) {
+            abort_if($request->expectsJson() || $request->is('api/*'), 403, 'Verify your email before using your Buyer account.');
             return redirect()->route('verification.otp');
         }
 

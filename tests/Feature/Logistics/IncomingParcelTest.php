@@ -115,6 +115,45 @@ class IncomingParcelTest extends TestCase
             ->assertJsonPath('order_id', $parcel->order_id);
     }
 
+    // LOG-HUB-005: unknown lookup and confirmation must not create a record.
+    public function test_unknown_tracking_reference_has_no_parcel_side_effects(): void
+    {
+        Sanctum::actingAs($this->approvedSortingCenter());
+        $before = Parcel::count();
+        $this->getJson('/api/sorting-center/parcels/lookup/TRK-0000000')->assertNotFound();
+        $this->postJson('/api/sorting-center/parcels/mark-arrived', ['order_id' => 'TRK-0000000'])
+            ->assertUnprocessable()->assertJsonPath('order_id', 'TRK-0000000');
+        $this->assertSame($before, Parcel::count());
+    }
+
+    // LOG-HUB-004 guard subset: no new event ledger or replay-success contract.
+    public function test_repeat_arrival_preserves_the_record_and_existing_rejection_contract(): void
+    {
+        Sanctum::actingAs($this->approvedSortingCenter());
+        $parcel = $this->parcel('PICKED_UP');
+        $url = '/api/sorting-center/parcels/mark-arrived';
+        $this->postJson($url, ['order_id' => '  '.$parcel->order_id.'  '])->assertOk();
+        $before = $parcel->fresh()->getAttributes();
+        $this->postJson($url, ['order_id' => $parcel->order_id])->assertUnprocessable()
+            ->assertJsonPath('current_status', 'AT_SORTING_CENTER');
+        $this->assertSame($before, $parcel->fresh()->getAttributes());
+        $this->assertDatabaseCount('parcels', 1);
+    }
+
+    // LOG-HUB-007: foreign picked-up parcel cannot be claimed or changed.
+    public function test_foreign_picked_up_reference_is_hidden_and_unchanged(): void
+    {
+        $owner = $this->approvedSortingCenter();
+        $parcel = $this->parcel('PICKED_UP');
+        $parcel->update(['sorting_center_id' => $owner->sortingCenter->id]);
+        $before = $parcel->fresh()->getAttributes();
+        Sanctum::actingAs($this->approvedSortingCenter('Other Center'));
+        $this->getJson('/api/sorting-center/parcels/lookup/'.$parcel->order_id)->assertNotFound();
+        $this->postJson('/api/sorting-center/parcels/mark-arrived', ['order_id' => $parcel->order_id])
+            ->assertConflict();
+        $this->assertSame($before, $parcel->fresh()->getAttributes());
+    }
+
     private function approvedSortingCenter(string $businessName = 'Approved Center'): User
     {
         $user = User::factory()->create(['status' => 'approved', 'usertype' => 'sorting_center']);

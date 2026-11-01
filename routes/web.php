@@ -313,18 +313,44 @@ require __DIR__ . '/logistics.php';
 | ARCHITECTURE & SECURITY SPECIFICATION DOWNLOAD ROUTES
 |--------------------------------------------------------------------------
 */
-Route::get('/docs/architecture', function () {
-    return response()->file(public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.html'));
-})->name('docs.architecture');
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/docs/architecture', function () {
+        $path = storage_path('app/docs/SYSTEM_ARCHITECTURE_AND_SECURITY.html');
+        if (! file_exists($path)) {
+            $path = public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.html');
+        }
+        abort_unless(file_exists($path), 404, 'Architecture documentation not found.');
 
-Route::get('/docs/architecture/download', function () {
-    return response()->download(public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.html'), 'Alona_System_Architecture_and_Security.html');
-})->name('docs.architecture.download');
+        return response()->file($path, ['Content-Type' => 'text/html; charset=UTF-8']);
+    })->name('docs.architecture');
 
-Route::get('/docs/architecture/markdown', function () {
-    return response()->download(public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.md'), 'Alona_System_Architecture_and_Security.md');
-})->name('docs.architecture.markdown');
+    Route::get('/docs/architecture/download', function () {
+        $path = storage_path('app/docs/SYSTEM_ARCHITECTURE_AND_SECURITY.html');
+        if (! file_exists($path)) {
+            $path = public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.html');
+        }
+        abort_unless(file_exists($path), 404, 'Architecture documentation not found.');
 
-Route::get('/docs/architecture/docx', function () {
-    return response()->download(public_path('Alona_System_Architecture_and_Security.docx'), 'Alona_System_Architecture_and_Security.docx');
-})->name('docs.architecture.docx');
+        return response()->download($path, 'Alona_System_Architecture_and_Security.html');
+    })->name('docs.architecture.download');
+
+    Route::get('/docs/architecture/markdown', function () {
+        $path = storage_path('app/docs/SYSTEM_ARCHITECTURE_AND_SECURITY.md');
+        if (! file_exists($path)) {
+            $path = public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.md');
+        }
+        abort_unless(file_exists($path), 404, 'Architecture documentation not found.');
+
+        return response()->download($path, 'Alona_System_Architecture_and_Security.md');
+    })->name('docs.architecture.markdown');
+
+    Route::get('/docs/architecture/docx', function () {
+        $path = storage_path('app/docs/SYSTEM_ARCHITECTURE_AND_SECURITY.docx');
+        if (! file_exists($path)) {
+            $path = public_path('SYSTEM_ARCHITECTURE_AND_SECURITY.docx');
+        }
+        abort_unless(file_exists($path), 404, 'Architecture documentation not found.');
+
+        return response()->download($path, 'Alona_System_Architecture_and_Security.docx');
+    })->name('docs.architecture.docx');
+});

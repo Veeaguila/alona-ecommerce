@@ -13,6 +13,7 @@ const props = defineProps({
 const failure = ref('')
 const errorSummary = ref(null)
 const currentStep = ref(1)
+const documentInputVersion = ref(0)
 
 const form = useForm({
     request_key: props.requestKey,
@@ -96,12 +97,60 @@ const documents = [
 
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
+const mobileMaxLength = computed(() => form.contact_no.startsWith('+') ? 13 : 11)
+const mobileFormatMessage = 'Use 11 digits starting with 09 (09171234567), or +639 followed by 9 digits (+639171234567).'
+const tinFormatMessage = 'Enter 12 digits, with or without hyphens (for example, 123-456-789-000).'
+
+function validateTin() {
+    const value = form.tin.trim()
+    const digits = value.replace(/[\s\u2010-\u2015\u2212-]/g, '')
+    if (!/^[0-9]{12}$/.test(digits)) {
+        form.setError('tin', tinFormatMessage)
+        return false
+    }
+    form.tin = digits.match(/[0-9]{3}/g).join('-')
+    form.clearErrors('tin')
+    return true
+}
+
+function validateMobileNumber() {
+    if (!/^(09[0-9]{9}|\+639[0-9]{9})$/.test(form.contact_no)) {
+        form.setError('contact_no', mobileFormatMessage)
+        return false
+    }
+    form.clearErrors('contact_no')
+    return true
+}
+
+function checkMobilePaste(event) {
+    const pasted = event.clipboardData?.getData('text')
+    if (!pasted) return
+    const input = event.target
+    const next = form.contact_no.slice(0, input.selectionStart) + pasted + form.contact_no.slice(input.selectionEnd)
+    const limit = next.startsWith('+') ? 13 : 11
+    if (next.length > limit || !/^\+?[0-9]*$/.test(next)) {
+        event.preventDefault()
+        form.setError('contact_no', mobileFormatMessage)
+        return
+    }
+    // Apply accepted pastes ourselves so an empty field's local limit does not truncate +63 numbers.
+    const caret = input.selectionStart + pasted.length
+    event.preventDefault()
+    form.contact_no = next
+    input.value = next
+    form.clearErrors('contact_no')
+    nextTick(() => input.setSelectionRange?.(caret, caret))
+}
 
 function validateStep(step) {
     failure.value = ''
     if (step === 1) {
         if (!form.first_name || !form.last_name || !form.email || !form.contact_no) {
             failure.value = 'Please fill out your name, email, and mobile number before continuing.'
+            return false
+        }
+        if (!validateMobileNumber()) {
+            failure.value = mobileFormatMessage
             return false
         }
         if (!props.google && (!form.password || !form.password_confirmation)) {
@@ -115,6 +164,10 @@ function validateStep(step) {
     } else if (step === 2) {
         if (!form.business_name || !form.registration_number || !form.tin) {
             failure.value = 'Please provide your company name, SEC registration, and TIN.'
+            return false
+        }
+        if (!validateTin()) {
+            failure.value = tinFormatMessage
             return false
         }
         if (!form.city_code || !form.barangay_code || !form.street) {
@@ -136,6 +189,16 @@ function goToStep(step) {
 function submit() {
     if (form.processing) return
     failure.value = ''
+    if (!validateMobileNumber()) {
+        currentStep.value = 1
+        showFailure(mobileFormatMessage)
+        return
+    }
+    if (!validateTin()) {
+        currentStep.value = 2
+        showFailure(tinFormatMessage)
+        return
+    }
 
     try {
         form.post(route('register.logistics', {}, false), {
@@ -163,6 +226,8 @@ function submit() {
                         : `Check the highlighted fields and choose your documents again. ${Object.values(errors).join(' ')}`
                 )
                 form.reset('password', 'password_confirmation', 'id_doc', 'sec_doc', 'bir_doc', 'permit_doc')
+                // File inputs cannot be bound with v-model. Clear their native selections too.
+                documentInputVersion.value++
             },
         })
     } catch {
@@ -467,6 +532,17 @@ function submit() {
                                             v-model="form.contact_no"
                                             required
                                             type="tel"
+                                            inputmode="tel"
+                                            autocomplete="tel"
+                                            aria-label="Philippine mobile number"
+                                            :maxlength="mobileMaxLength"
+                                            :minlength="mobileMaxLength"
+                                            pattern="(09[0-9]{9}|\+639[0-9]{9})"
+                                            :aria-invalid="!!form.errors.contact_no"
+                                            :aria-describedby="form.errors.contact_no ? 'contact_no-help contact_no-error' : 'contact_no-help'"
+                                            @input="form.clearErrors('contact_no')"
+                                            @blur="validateMobileNumber"
+                                            @paste="checkMobilePaste"
                                             placeholder="Mobile (09171234567) *"
                                             class="field-input"
                                         />
@@ -486,8 +562,14 @@ function submit() {
                                         />
                                     </div>
                                 </div>
-                                <p v-if="form.errors.contact_no || form.errors.position" class="text-[11px] font-semibold text-rose-600">
-                                    {{ form.errors.contact_no || form.errors.position }}
+                                <p id="contact_no-help" class="text-[10px] text-slate-500">
+                                    Mobile: 11 digits starting with 09, or +639 followed by 9 digits. No spaces or hyphens.
+                                </p>
+                                <p v-if="form.errors.contact_no" id="contact_no-error" role="alert" class="text-[11px] font-semibold text-rose-600">
+                                    {{ form.errors.contact_no }}
+                                </p>
+                                <p v-if="form.errors.position" class="text-[11px] font-semibold text-rose-600">
+                                    {{ form.errors.position }}
                                 </p>
 
                                 <!-- Password & Confirm (if not Google) -->
@@ -601,13 +683,25 @@ function submit() {
                                             v-model="form.tin"
                                             required
                                             type="text"
+                                            inputmode="numeric"
+                                            aria-label="TIN with branch code"
+                                            :aria-invalid="!!form.errors.tin"
+                                            :aria-describedby="form.errors.tin ? 'tin-help tin-error' : 'tin-help'"
+                                            @input="form.clearErrors('tin')"
+                                            @blur="validateTin"
                                             placeholder="TIN (000-000-000-000) *"
                                             class="field-input"
                                         />
                                     </div>
                                 </div>
-                                <p v-if="form.errors.registration_number || form.errors.tin" class="text-[11px] font-semibold text-rose-600">
-                                    {{ form.errors.registration_number || form.errors.tin }}
+                                <p id="tin-help" class="text-[10px] text-slate-500">
+                                    Enter all 12 digits, including the branch code. Hyphens are added automatically when you leave this field.
+                                </p>
+                                <p v-if="form.errors.registration_number" class="text-[11px] font-semibold text-rose-600">
+                                    {{ form.errors.registration_number }}
+                                </p>
+                                <p v-if="form.errors.tin" id="tin-error" role="alert" class="text-[11px] font-semibold text-rose-600">
+                                    {{ form.errors.tin }}
                                 </p>
 
                                 <!-- Logistics Address Selector (PSGC) -->
@@ -701,6 +795,7 @@ function submit() {
                                         >
                                             <span class="block font-bold text-slate-700 truncate">{{ doc.label }}</span>
                                             <input
+                                                :key="`${doc.name}-${documentInputVersion}`"
                                                 :id="doc.name"
                                                 type="file"
                                                 accept=".jpg,.jpeg,.png,.pdf"

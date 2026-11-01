@@ -24,7 +24,7 @@ class BuyerStoreTest extends TestCase
 
         $category = Category::create([
             'name' => 'Electronics',
-            'slug' => 'electronics',
+            'slug' => 'store-test-electronics',
         ]);
 
         Product::create([

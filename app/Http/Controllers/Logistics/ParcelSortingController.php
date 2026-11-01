@@ -26,7 +26,9 @@ class ParcelSortingController extends Controller
             ->with('orderItem.order:id,shipping_method')
             ->where('sorting_center_id', $sortingCenterId)
             ->where('status', 'AT_SORTING_CENTER')
-            ->whereNull('sorted_area_id')
+            ->when($request->query('status') === 'sorted',
+                fn ($query) => $query->whereNotNull('sorted_area_id'),
+                fn ($query) => $query->whereNull('sorted_area_id'))
             ->orderByDesc('updated_at')
             ->get([
                 'id',
@@ -67,6 +69,8 @@ class ParcelSortingController extends Controller
                     $city = $cities[$area->city_code] ?? null;
 
                     return array_merge($area->toArray(), ['city_name' => $city['name'] ?? $area->name,
+                        'region_code' => $city['region_code'] ?? null,
+                        'region_label' => ($city['region_code'] ?? null) === '1300000000' ? 'NCR' : ($regions[$city['region_code'] ?? ''] ?? 'Unmapped service area'),
                         'province_name' => $provinces[$city['province_code'] ?? ''] ?? null,
                         'label' => $city ? implode(' · ', array_filter([$city['name'], $provinces[$city['province_code']] ?? null, $regions[$city['region_code']]])) : $area->name]);
                 }),

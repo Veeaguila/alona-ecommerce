@@ -24,6 +24,7 @@ class BuyerVoucherApiController extends Controller
         $claimedVouchers = UserVoucher::query()
             ->where('user_id', $user->id)
             ->where('status', 'claimed')
+            ->whereHas('voucher', fn ($query) => $this->availableNow($query))
             ->with(['voucher.seller:id,name'])
             ->get()
             ->map(fn ($uv) => $this->formatVoucher($uv->voucher, true));
@@ -37,6 +38,8 @@ class BuyerVoucherApiController extends Controller
         $browseVouchers = Voucher::query()
             ->with(['seller:id,name'])
             ->where('is_active', true)
+            ->whereNull('ended_at')
+            ->where(fn ($query) => $query->whereNull('display_mode')->orWhere('display_mode', '!=', 'code_only'))
             ->whereNotIn('id', $claimedIds)
             ->where(function ($q) use ($today) {
                 $q->whereNull('starts_at')->orWhereDate('starts_at', '<=', $today);
@@ -64,7 +67,10 @@ class BuyerVoucherApiController extends Controller
     public function claim(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $voucher = Voucher::where('is_active', true)->findOrFail($id);
+        $voucher = Voucher::findOrFail($id);
+        if (!$voucher->isClaimableByBuyer()) {
+            return response()->json(['message' => 'This voucher is no longer active or cannot be claimed directly.'], 422);
+        }
 
         $exists = UserVoucher::where('user_id', $user->id)
             ->where('voucher_id', $voucher->id)
@@ -78,12 +84,16 @@ class BuyerVoucherApiController extends Controller
             return response()->json(['message' => 'This voucher has reached its usage limit.'], 422);
         }
 
-        UserVoucher::create([
+        $claim = UserVoucher::firstOrCreate([
             'user_id' => $user->id,
             'voucher_id' => $voucher->id,
+        ], [
             'status' => 'claimed',
             'claimed_at' => now(),
         ]);
+        if (!$claim->wasRecentlyCreated) {
+            return response()->json(['message' => 'You have already claimed this voucher.'], 422);
+        }
 
         return response()->json([
             'message' => 'Voucher claimed successfully!',
@@ -96,68 +106,18 @@ class BuyerVoucherApiController extends Controller
      */
     public function validateCode(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string'],
-            'cart_item_ids' => ['required', 'array', 'min:1'],
-            'shipping_method' => ['nullable', 'string'],
-        ]);
+        $request->validate(['code' => ['required', 'string', 'max:50']]);
+        $request->merge(['voucher_code' => $request->input('code')]);
+        $quote = app(BuyerOrderApiController::class)->checkoutPreview($request)->getData(true);
+        return response()->json(['valid' => true, 'voucher' => $quote['voucher'][0]]);
+    }
 
-        $code = strtoupper(trim($data['code']));
-        $user = $request->user();
-
-        $voucher = Voucher::where('code', $code)->where('is_active', true)->first();
-        if (! $voucher) {
-            return response()->json(['valid' => false, 'message' => 'Invalid or inactive voucher code.'], 422);
-        }
-
-        if ($voucher->starts_at && now()->lt($voucher->starts_at)) {
-            return response()->json(['valid' => false, 'message' => 'This voucher is not active yet.'], 422);
-        }
-
-        if ($voucher->expires_at && now()->gt($voucher->expires_at)) {
-            return response()->json(['valid' => false, 'message' => 'This voucher has expired.'], 422);
-        }
-
-        $items = $user->cartItems()
-            ->whereIn('id', $data['cart_item_ids'])
-            ->with(['product', 'variant'])
-            ->get();
-
-        $subtotal = $items->sum(function ($item) {
-            $price = $item->variant ? (float) $item->variant->price : (float) ($item->product?->price ?? 0);
-            return $price * (int) $item->quantity;
-        });
-
-        if ($voucher->min_spend !== null && $subtotal < (float) $voucher->min_spend) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Minimum spend of ₱' . number_format($voucher->min_spend, 2) . ' is required for this voucher.',
-            ], 422);
-        }
-
-        $discount = 0.0;
-        if ($voucher->type === 'percentage') {
-            $discount = ($subtotal * (float) $voucher->value) / 100;
-            if ($voucher->max_discount !== null && $discount > (float) $voucher->max_discount) {
-                $discount = (float) $voucher->max_discount;
-            }
-        } elseif ($voucher->type === 'fixed') {
-            $discount = min($subtotal, (float) $voucher->value);
-        } elseif ($voucher->type === 'free_shipping') {
-            $discount = min(50.0, (float) $voucher->value ?: 50.0);
-        }
-
-        return response()->json([
-            'valid' => true,
-            'voucher' => [
-                'id' => $voucher->id,
-                'code' => $voucher->code,
-                'type' => $voucher->type,
-                'value' => (float) $voucher->value,
-                'discount' => round($discount, 2),
-                'min_spend' => (float) ($voucher->min_spend ?? 0),
-            ],
-        ]);
+    private function availableNow($query)
+    {
+        return $query->where('is_active', true)->whereNull('ended_at')
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhereDate('starts_at', '<=', now()->toDateString()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhereDate('expires_at', '>=', now()->toDateString()))
+            ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'));
     }
 
     private function formatVoucher(?Voucher $v, bool $isClaimed): ?array

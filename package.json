@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:frontend": "node --test tests/frontend/*.test.mjs"
+        "test:frontend": "node --test --test-concurrency=1 tests/frontend/*.test.mjs"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",

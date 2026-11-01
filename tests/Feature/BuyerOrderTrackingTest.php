@@ -25,6 +25,29 @@ class BuyerOrderTrackingTest extends TestCase
     protected Category $category;
     protected Product $product;
 
+    public function test_checkout_history_keeps_distinct_item_events_and_explicit_timestamp_timezone(): void
+    {
+        $order = $this->createOrder();
+        $first = $order->items->sole();
+        $second = $first->replicate();
+        $second->product_name = 'Second parcel';
+        $second->save();
+        OrderStatusHistory::forceCreate(['order_id' => $order->id, 'status' => 'pending',
+            'note' => 'Order placed.', 'created_at' => '2026-10-29 01:00:00']);
+        foreach ([$first, $second] as $item) {
+            OrderItemStatusHistory::forceCreate(['order_item_id' => $item->id, 'status' => 'packed', 'note' => 'Seller packed this parcel.',
+                'created_at' => '2026-10-29 01:00:01']);
+        }
+        $this->actingAs($this->buyer)->get(route('buyer.orders.show', $order))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('order.status_histories', 3)
+                ->where('order.status_histories.0.note', 'Order placed.')
+                ->where('order.status_histories.0.created_at', '2026-10-29T01:00:00.000000Z')
+                ->where('order.status_histories.1.order_item_id', $first->id)
+                ->where('order.status_histories.1.note', $first->product_name.': Seller packed this parcel.')
+                ->where('order.status_histories.2.order_item_id', $second->id)
+                ->where('order.status_histories.2.note', 'Second parcel: Seller packed this parcel.'));
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

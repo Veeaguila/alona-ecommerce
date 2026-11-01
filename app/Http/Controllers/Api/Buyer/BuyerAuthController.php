@@ -47,6 +47,10 @@ class BuyerAuthController extends Controller
             ], 403);
         }
 
+        if (!in_array($user->status, ['approved', 'unverified'], true)) {
+            return response()->json(['message' => 'Your Buyer account is restricted.'], 403);
+        }
+
         if ($user->status === 'unverified' || ! $user->hasVerifiedEmail()) {
             // Re-send OTP if needed
             if (! $user->otp_code || ! $user->otp_expires_at || now()->greaterThan($user->otp_expires_at)) {
@@ -214,45 +218,24 @@ class BuyerAuthController extends Controller
         ]);
 
         $email = Str::lower(trim((string) $request->input('email')));
-        $user = User::where('usertype', 'buyer')->where('email', $email)->first();
-
-        if (! $user) {
-            return response()->json(['message' => 'Invalid email address.'], 404);
-        }
-
-        if ($user->hasVerifiedEmail() && $user->status === 'approved') {
-            $token = $user->createToken('buyer-mobile-token')->plainTextToken;
-            return response()->json([
-                'message' => 'Your email is already verified.',
-                'token' => $token,
-                'user' => $this->formatUser($user),
-            ]);
-        }
-
-        if (! $user->otp_code || $user->otp_code !== $request->input('otp')) {
-            return response()->json(['message' => 'Invalid verification code.'], 422);
-        }
-
-        if (! $user->otp_expires_at || now()->greaterThan($user->otp_expires_at)) {
-            return response()->json(['message' => 'Verification code has expired. Please request a new code.'], 422);
-        }
-
-        $user->forceFill([
-            'email_verified_at' => now(),
-            'status' => 'approved',
-            'otp_code' => null,
-            'otp_expires_at' => null,
-        ])->save();
-
-        event(new Verified($user));
-
-        $token = $user->createToken('buyer-mobile-token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Email verified successfully!',
-            'token' => $token,
-            'user' => $this->formatUser($user),
-        ]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $email): JsonResponse {
+            $user = User::where('usertype', 'buyer')->where('email', $email)->lockForUpdate()->first();
+            abort_unless($user, 404, 'Invalid email address.');
+            abort_unless(in_array($user->status, ['unverified', 'approved'], true), 403, 'This Buyer account is restricted.');
+            if ($user->hasVerifiedEmail()) {
+                throw ValidationException::withMessages(['otp' => 'Your email is already verified. Sign in with your password.']);
+            }
+            if (! $user->verifyOtp($request->input('otp'))) {
+                throw ValidationException::withMessages(['otp' => 'Invalid verification code.']);
+            }
+            if (!$user->otp_expires_at || now()->greaterThanOrEqualTo($user->otp_expires_at)) {
+                throw ValidationException::withMessages(['otp' => 'Verification code has expired. Please request a new code.']);
+            }
+            $user->forceFill(['email_verified_at' => now(), 'status' => 'approved', 'otp_code' => null, 'otp_expires_at' => null])->save();
+            event(new Verified($user));
+            return response()->json(['message' => 'Email verified successfully!',
+                'token' => $user->createToken('buyer-mobile-token')->plainTextToken, 'user' => $this->formatUser($user)]);
+        });
     }
 
     /**
@@ -267,6 +250,11 @@ class BuyerAuthController extends Controller
 
         if (! $user) {
             return response()->json(['message' => 'No account found with this email.'], 404);
+        }
+
+        abort_unless(in_array($user->status, ['unverified', 'approved'], true), 403, 'This Buyer account is restricted.');
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages(['email' => 'Your email is already verified. Sign in with your password.']);
         }
 
         $user->generateAndSendOtp();
@@ -384,67 +372,9 @@ class BuyerAuthController extends Controller
      */
     public function googleLogin(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'id_token' => ['nullable', 'string'],
-            'email' => ['required', 'string', 'email'],
-            'google_id' => ['required', 'string'],
-            'first_name' => ['nullable', 'string'],
-            'last_name' => ['nullable', 'string'],
-            'avatar' => ['nullable', 'string'],
-        ]);
-
-        $email = Str::lower(trim((string) $validated['email']));
-
-        $byIdentity = User::where('google_id', $validated['google_id'])->first();
-        $byEmail = User::where('email', $email)->first();
-
-        if (($byIdentity && $byEmail && $byIdentity->id !== $byEmail->id)
-            || ($byEmail?->google_id && $byEmail->google_id !== $validated['google_id'])) {
-            return response()->json([
-                'message' => 'This Google identity is already associated with another account.',
-            ], 422);
-        }
-
-        $user = $byIdentity ?? $byEmail;
-
-        if ($user) {
-            if ($user->usertype !== 'buyer') {
-                return response()->json([
-                    'message' => 'Access denied. This Google account belongs to a ' . $user->usertype . '.',
-                ], 403);
-            }
-
-            $user->update([
-                'google_id' => $validated['google_id'],
-                'avatar' => $user->avatar ?: ($validated['avatar'] ?? null),
-                'email_verified_at' => $user->email_verified_at ?: now(),
-                'status' => 'active',
-            ]);
-        } else {
-            $firstName = $validated['first_name'] ?? 'Google';
-            $lastName = $validated['last_name'] ?? 'User';
-
-            $user = User::create([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'name' => trim($firstName . ' ' . $lastName),
-                'email' => $email,
-                'google_id' => $validated['google_id'],
-                'usertype' => 'buyer',
-                'status' => 'active',
-                'email_verified_at' => now(),
-                'password' => Hash::make(Str::random(32)),
-                'avatar' => $validated['avatar'] ?? null,
-            ]);
-        }
-
-        $token = $user->createToken('alona-buyer-mobile')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Google sign-in successful.',
-            'token' => $token,
-            'user' => $this->formatUser($user),
-        ]);
+        // The imported app has no Google provider/token-verification integration.
+        // Never treat a client-supplied email or identity string as authentication.
+        return response()->json(['message' => 'Google sign-in is not available in this app yet. Use email and password, or reset your password.'], 503);
     }
 
     /**
@@ -500,4 +430,3 @@ class BuyerAuthController extends Controller
         ];
     }
 }
-

@@ -26,31 +26,12 @@ class LoginSortingCenterController extends Controller
         }
 
         if (!in_array($user->status, ['approved', 'pending'], true)) {
-            return response()->json(['message' => 'Your account is unavailable.'], 403);
+            $onboarding = ($user->partnerApplication?->details['registration_version'] ?? null) === 2;
+            if (!$onboarding || !in_array($user->status, ['unverified', 'rejected'], true)) {
+                return response()->json(['message' => 'Your account is unavailable.'], 403);
+            }
         }
-
-        // Get linked sorting center record and approval status
-        $sortingCenter = $user->sortingCenter;
-        $approvalStatus = $sortingCenter ? $sortingCenter->approval_status : 'pending';
-
-        // Issue Sanctum token
-        $token = $user->createToken('sorting-center-token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login successful.',
-            'token' => $token,
-            'approval_status' => $approvalStatus,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->usertype,
-            ],
-            'sorting_center' => $sortingCenter ? [
-                'id' => $sortingCenter->id,
-                'business_name' => $sortingCenter->business_name,
-                'approval_status' => $sortingCenter->approval_status,
-            ] : null,
-        ], 200);
+        // Approval middleware still denies operations; this permits only authenticated onboarding.
+        return response()->json(app(\App\Services\SortingCenterSession::class)->issue($user));
     }
 }

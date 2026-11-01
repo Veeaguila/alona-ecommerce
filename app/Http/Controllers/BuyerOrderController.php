@@ -245,6 +245,11 @@ class BuyerOrderController extends Controller
                 ->values()
                 ->all(),
 
+            'address_serviceability' => app(\App\Services\HubNetwork::class)
+                ->checkoutCoverage($items, $request->user()->addresses()->pluck('address', 'id')->all()),
+            'hub_routes_required' => app(\App\Services\HubNetwork::class)->enforced(),
+            'shipping_rate_cards' => app(\App\Services\ShippingRates::class)->cards($request->user()->addresses()->pluck('address', 'id')->all(), $items),
+
             'seller_count' => max(1, $sellerCount),
 
             'free_shipping_threshold' => config('checkout.free_shipping_threshold'),
@@ -280,101 +285,21 @@ class BuyerOrderController extends Controller
         string $method,
         $items,
         float $merchandiseTotal,
-        ?string $shippingAddress = null
+        ?string $shippingAddress = null,
+        ?array $hubPlans = null
     ): float {
-        if ($method === 'pickup') {
-            return 0.0;
+        $sellerGroups = collect($items)->groupBy(fn ($item) => (int) ($item->product?->seller_id ?? 0));
+        if ($sellerGroups->count() > 1) {
+            // Checkout creates separate store orders. Preview must use the same
+            // threshold for each store as the persisted order calculation.
+            return round($sellerGroups->sum(function ($group) use ($method, $shippingAddress, $hubPlans) {
+                $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($group);
+                return app(\App\Services\ShippingRates::class)->calculate(
+                    $method, $group, (float) $evaluation['subtotal_after_promotions'], $shippingAddress, $hubPlans
+                );
+            }), 2);
         }
-
-        $freeThreshold = config('checkout.free_shipping_threshold');
-        if ($method !== 'express' && $freeThreshold !== null && $merchandiseTotal >= (float) $freeThreshold) {
-            return 0.0;
-        }
-
-        $shippingMethods = config('checkout.shipping_methods', []);
-        $methodConfig = $shippingMethods[$method] ?? [];
-        $isExpress = ($method === 'express');
-
-        // Group items by seller
-        $sellerGroups = ($items instanceof \Illuminate\Support\Collection ? $items : collect($items))
-            ->groupBy(fn ($item) => is_object($item) && isset($item->product) ? (int) ($item->product?->seller_id ?? 0) : 0);
-
-        if ($sellerGroups->isEmpty()) {
-            return 50.0;
-        }
-
-        $totalShippingFee = 0.0;
-        $addressLower = strtolower(trim((string) ($shippingAddress ?? '')));
-
-        foreach ($sellerGroups as $sellerId => $sellerItems) {
-            // 1. Calculate weight
-            $sellerWeight = 0.0;
-            $hasExplicitWeight = false;
-            foreach ($sellerItems as $item) {
-                if (is_object($item) && isset($item->product)) {
-                    $w = (float) ($item->product?->weight ?? 0.0);
-                    $qty = (int) ($item->quantity ?? 1);
-                    if ($w > 0) {
-                        $sellerWeight += $w * $qty;
-                        $hasExplicitWeight = true;
-                    }
-                }
-            }
-
-            // BUY-CHK-003: 1.0 kg charged ₱60; 1.2 kg rounded up to 2 kg (₱80)
-            $billedKg = $hasExplicitWeight ? max(1, (int) ceil($sellerWeight)) : 1;
-
-            // 2. Determine base rate and per-kg rate
-            // Check DeliveryZone from database
-            $matchedZone = null;
-            if (Schema::hasTable('delivery_zones') && !empty($addressLower)) {
-                $activeZones = \App\Models\DeliveryZone::where('is_active', true)->get();
-                foreach ($activeZones as $z) {
-                    if (
-                        str_contains($addressLower, strtolower($z->name)) ||
-                        (!empty($z->province) && str_contains($addressLower, strtolower($z->province)))
-                    ) {
-                        $matchedZone = $z;
-                        break;
-                    }
-                }
-            }
-
-            $isNcr = str_contains($addressLower, 'ncr') ||
-                str_contains($addressLower, 'metro manila') ||
-                str_contains($addressLower, 'manila') ||
-                str_contains($addressLower, 'quezon city');
-
-            $isVisayas = str_contains($addressLower, 'visayas') ||
-                str_contains($addressLower, 'cebu') ||
-                str_contains($addressLower, 'leyte');
-
-            if ($matchedZone) {
-                $baseRate = (float) $matchedZone->base_shipping_rate;
-                $perKgRate = (float) ($matchedZone->per_kg_rate ?? 20.0);
-            } elseif ($isVisayas) {
-                // BUY-CHK-002: Visayas shipping is ₱120
-                $baseRate = 120.0;
-                $perKgRate = 25.0;
-            } elseif ($isNcr) {
-                // BUY-CHK-002: NCR shipping is ₱50
-                $baseRate = 50.0;
-                $perKgRate = 20.0;
-            } else {
-                // BUY-CHK-003: Standard tier base ₱60 (first 1 kg), or method config
-                $baseRate = $hasExplicitWeight ? 60.0 : (float) ($methodConfig['fee_per_seller'] ?? 50.0);
-                $perKgRate = 20.0;
-            }
-
-            if ($isExpress) {
-                $baseRate = max($baseRate, 120.0);
-            }
-
-            $sellerFee = $baseRate + max(0, $billedKg - 1) * $perKgRate;
-            $totalShippingFee += $sellerFee;
-        }
-
-        return round($totalShippingFee, 2);
+        return app(\App\Services\ShippingRates::class)->calculate($method, $items, $merchandiseTotal, $shippingAddress, $hubPlans);
     }
 
     /**
@@ -382,19 +307,8 @@ class BuyerOrderController extends Controller
      */
     private function validateCourierCoverage(string $address): void
     {
-        $unserviceableLocations = [
-            'batanes',
-            'kalayaan',
-            'pag-asa island',
-        ];
-
-        $lower = strtolower($address);
-        foreach ($unserviceableLocations as $location) {
-            if (str_contains($lower, $location)) {
-                throw ValidationException::withMessages([
-                    'shipping_address' => 'The selected delivery address is outside courier serviceable coverage.',
-                ]);
-            }
+        if (app(\App\Services\ShippingRates::class)->remoteExcluded($address)) {
+            throw ValidationException::withMessages(['shipping_address' => 'The selected delivery address is outside courier serviceable coverage.']);
         }
     }
 
@@ -405,7 +319,7 @@ class BuyerOrderController extends Controller
     public function show(
         Request $request,
         Order $order
-    ): Response {
+    ): Response|\Illuminate\Http\JsonResponse {
         Order::autoCancelExpiredUnpaidOrders();
         Order::autoCompleteDeliveredOrders();
         OrderReturnRequest::autoApproveExpiredPendingRequests();
@@ -423,6 +337,7 @@ class BuyerOrderController extends Controller
             'items.product.images',
             'items.variant',
             'items.statusHistories',
+            'items.parcel:id,order_item_id,status,pickup_rider_id',
             'items.returnRequests',
             'returnRequests',
         ]);
@@ -431,16 +346,28 @@ class BuyerOrderController extends Controller
             ? DB::table('order_status_histories')
                 ->where('order_id', $order->id)
                 ->orderBy('created_at', 'asc')
+                ->orderBy('id', 'asc')
                 ->get()
             : collect();
 
-        if ($orderStatusHistories->isEmpty()) {
-            $orderStatusHistories = $order->items
-                ->flatMap(fn ($item) => $item->statusHistories)
-                ->unique(fn ($history) => $history->status . '_' . ($history->created_at?->format('Y-m-d H:i') ?? ''))
-                ->sortBy('created_at')
-                ->values();
-        }
+        // A checkout history must not hide later Seller/Logistics item events.
+        // Keep distinct item records even when their status/time are identical.
+        $orderStatusHistories = $orderStatusHistories->map(fn ($history) => [
+            'id' => $history->id,
+            'status' => $history->status,
+            'note' => $history->note,
+            'order_item_id' => null,
+            'created_at' => $history->created_at ? Carbon::parse($history->created_at)->toISOString() : null,
+        ])->concat($order->items->flatMap(function ($item) use ($order) {
+            return $item->statusHistories->sortBy('id')->map(fn ($history) => [
+                'id' => $history->id,
+                'status' => $history->status,
+                'note' => ($order->items->count() > 1 ? $item->product_name.': ' : '')
+                    .($history->note ?: 'Status changed to '.str_replace('_', ' ', $history->status)),
+                'order_item_id' => $item->id,
+                'created_at' => $history->created_at?->toISOString(),
+            ]);
+        }))->sortBy('created_at')->values();
 
         // Calculate order cancellability:
         // Allowed if order is in pending, processing, packed and not shipped/ready for pickup
@@ -451,6 +378,7 @@ class BuyerOrderController extends Controller
             });
 
         // Add item-level metadata
+        if (Schema::hasTable('parcel_returns')) $order->load('items.parcel.returnToSeller');
         $itemsWithMeta = $order->items->map(function ($item) use ($order) {
             $itemStatus = strtolower((string) ($item->status ?? 'pending'));
             $isDelivered = in_array($itemStatus, ['delivered', 'completed'], true)
@@ -484,27 +412,42 @@ class BuyerOrderController extends Controller
                 ->first();
 
             return array_merge($item->toArray(), [
-                'can_confirm_delivery' => $itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'),
+                'delivery_parcel_id' => $item->parcel?->id,
+                'delivery_parcel_status' => $item->parcel?->status,
+                'return_to_seller' => $item->parcel?->relationLoaded('returnToSeller') ? $item->parcel->returnToSeller : null,
+                'logistics_review' => $item->parcel && in_array($item->parcel->status, ['LOST', 'FAILED_RETURNED'], true)
+                    ? app(\App\Services\LogisticsRefundReview::class)->details($item->parcel) : null,
+                'pickup_assignment_label' => $item->parcel?->pickup_rider_id && in_array($item->parcel->status, ['PLACED', 'PREPARING'], true) ? 'Assigned' : null,
+                'can_confirm_delivery' => ($itemStatus === 'delivered' || (strtolower((string) $order->status) === 'delivered' && $itemStatus !== 'completed' && $itemStatus !== 'cancelled'))
+                    && !($item->parcel?->relationLoaded('returnToSeller') && $item->parcel->returnToSeller),
                 'can_review' => $isDelivered,
                 'has_reviewed' => (bool) $userReview,
                 'user_review' => $userReview,
                 'can_return' => $canReturn,
                 'can_reorder' => $isProductAvailable,
-                'return_deadline' => $isDelivered ? $returnDeadline->toIso8601String() : null,
+                'return_deadline' => $isDelivered ? $returnDeadline?->toIso8601String() : null,
                 'return_policy_days' => $returnDays,
                 'active_return_request' => $activeReturn,
                 'latest_return_request' => $item->returnRequests->first(),
             ]);
         });
 
-        return Inertia::render('Buyer/OrderDetails', [
+        $payload = [
             'order' => array_merge($order->toArray(), [
                 'items' => $itemsWithMeta,
                 'can_cancel' => $canCancelOrder,
                 'can_mark_received' => strtolower((string) $order->status) === 'delivered',
                 'status_histories' => $orderStatusHistories,
             ]),
-        ]);
+        ];
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
+            return response()->json($payload + [
+                'can_cancel' => $canCancelOrder,
+                'can_mark_received' => strtolower((string) $order->status) === 'delivered',
+                'status_histories' => $orderStatusHistories,
+            ]);
+        }
+        return Inertia::render('Buyer/OrderDetails', $payload);
     }
 
     /*
@@ -890,7 +833,7 @@ class BuyerOrderController extends Controller
      */
     public function store(
         Request $request
-    ): RedirectResponse {
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
         if (! $request->filled('buyer_note')) {
             if ($request->filled('note')) {
                 $request->merge(['buyer_note' => $request->input('note')]);
@@ -905,6 +848,9 @@ class BuyerOrderController extends Controller
                 'string',
                 'max:2000',
             ],
+
+            'expected_shipping_fee' => ['nullable', 'numeric', 'min:0'],
+            'expected_total' => ['nullable', 'numeric', 'min:0'],
 
             'buyer_note' => [
                 'nullable',
@@ -960,7 +906,7 @@ class BuyerOrderController extends Controller
             ],
         ]);
 
-        $this->validateCourierCoverage($data['shipping_address']);
+        if ($data['shipping_method'] !== 'pickup' && !app(\App\Services\HubNetwork::class)->enforced()) $this->validateCourierCoverage($data['shipping_address']);
 
         $selectedIds = $this->normalizeSelectedIds(
             $data['selected_items']
@@ -980,6 +926,8 @@ class BuyerOrderController extends Controller
         | TRANSACTION
         |--------------------------------------------------------------------------
         */
+
+        if ($data['shipping_method'] !== 'pickup' && !app(\App\Services\HubNetwork::class)->enforced()) app(\App\Services\CheckoutServiceability::class)->assertServiceable($data['shipping_address']);
 
         $order = DB::transaction(
             function () use (
@@ -1032,6 +980,7 @@ class BuyerOrderController extends Controller
                     if ($item->product_variant_id) {
                         $lockedVariant = \App\Models\ProductVariant::query()
                             ->whereKey($item->product_variant_id)
+                            ->where('product_id', $item->product_id)
                             ->lockForUpdate()
                             ->first();
                         $item->setRelation('variant', $lockedVariant);
@@ -1146,217 +1095,17 @@ class BuyerOrderController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
-                $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
-                $subtotal = (float) $evaluation['subtotal_after_promotions'];
-
-                /*
-                |--------------------------------------------------------------------------
-                | Vouchers (Stacking: 1 Store + 1 Platform + 1 Free Shipping)
-                |--------------------------------------------------------------------------
-                */
-
-                $rawCodes = [];
-                if (!empty($data['voucher_codes']) && is_array($data['voucher_codes'])) {
-                    $rawCodes = $data['voucher_codes'];
-                } elseif (!empty($data['voucher_code'])) {
-                    $rawCodes = explode(',', (string) $data['voucher_code']);
-                }
-                $voucherCodes = array_values(array_unique(array_filter(array_map('trim', $rawCodes))));
-
-                $shippingMethod = $data['shipping_method'];
-                $shippingFeeBeforeDiscount = $this->calculateShippingFee(
-                    $shippingMethod,
-                    $items,
-                    $subtotal,
-                    $data['shipping_address']
-                );
-
-                $itemDiscount = 0.0;
-                $shippingDiscount = 0.0;
-                $appliedVouchersMeta = [];
-                $vouchers = collect();
-
-                if (!empty($voucherCodes)) {
-                    $vouchers = Voucher::query()
-                        ->where(function ($q) use ($voucherCodes) {
-                            foreach ($voucherCodes as $vc) {
-                                $q->orWhereRaw('LOWER(code) = ?', [strtolower($vc)]);
-                            }
-                        })
-                        ->lockForUpdate()
-                        ->get();
-
-                    if ($vouchers->count() !== count($voucherCodes)) {
-                        throw ValidationException::withMessages([
-                            'voucher_code' => 'One or more voucher codes not found.',
-                        ]);
-                    }
-
-                    $usedCategories = [];
-                    foreach ($vouchers as $v) {
-                        $cat = $v->getStackCategory();
-                        if (isset($usedCategories[$cat])) {
-                            $catLabel = match ($cat) {
-                                'store' => 'store',
-                                'platform' => 'platform',
-                                'shipping' => 'free shipping',
-                                default => $cat,
-                            };
-                            throw ValidationException::withMessages([
-                                'voucher_code' => "Only one {$catLabel} voucher can be applied per order.",
-                            ]);
-                        }
-                        $usedCategories[$cat] = $v;
-                    }
-
-                    foreach ($vouchers as $v) {
-                        if (
-                            (Schema::hasColumn('vouchers', 'is_active') && !$v->is_active) ||
-                            (Schema::hasColumn('vouchers', 'ended_at') && $v->ended_at !== null)
-                        ) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' => "Voucher {$v->code} is no longer active.",
-                            ]);
-                        }
-
-                        if (Schema::hasColumn('vouchers', 'starts_at') && $v->starts_at) {
-                            $startsAt = Carbon::parse($v->starts_at)->toDateString();
-                            if (now()->toDateString() < $startsAt) {
-                                throw ValidationException::withMessages([
-                                    'voucher_code' => "Voucher {$v->code} is not active yet.",
-                                ]);
-                            }
-                        }
-
-                        if (Schema::hasColumn('vouchers', 'expires_at') && $v->expires_at) {
-                            $expiresAt = Carbon::parse($v->expires_at)->toDateString();
-                            if (now()->toDateString() > $expiresAt) {
-                                throw ValidationException::withMessages([
-                                    'voucher_code' => "Voucher {$v->code} has expired.",
-                                ]);
-                            }
-                        }
-
-                        if (Schema::hasColumn('vouchers', 'usage_limit') && $v->usage_limit !== null) {
-                            $usedCount = Schema::hasColumn('vouchers', 'used_count') ? (int) $v->used_count : 0;
-                            if ($usedCount >= (int) $v->usage_limit) {
-                                throw ValidationException::withMessages([
-                                    'voucher_code' => "Voucher {$v->code} has reached its usage limit.",
-                                ]);
-                            }
-                        }
-
-                        if (Schema::hasColumn('vouchers', 'per_customer_limit') && $v->per_customer_limit !== null) {
-                            $userOrdersWithVoucher = Order::query()
-                                ->where('user_id', $user->id)
-                                ->where(function ($q) use ($v) {
-                                    $q->where('voucher_id', $v->id)
-                                        ->orWhereJsonContains('applied_vouchers', ['id' => $v->id]);
-                                })
-                                ->where('status', '!=', 'cancelled')
-                                ->count();
-
-                            if ($userOrdersWithVoucher >= (int) $v->per_customer_limit) {
-                                throw ValidationException::withMessages([
-                                    'voucher_code' => "You have reached the maximum usage limit ({$v->per_customer_limit}) for voucher {$v->code}.",
-                                ]);
-                            }
-                        }
-
-                        $eligibleItems = $items->filter(function ($item) use ($v) {
-                            if (!$item->product) return false;
-                            if (Schema::hasColumn('vouchers', 'seller_id') && $v->seller_id !== null) {
-                                if ((int) $item->product->seller_id !== (int) $v->seller_id) {
-                                    return false;
-                                }
-                            }
-                            if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'product' && !empty($v->targeted_product_ids)) {
-                                $targeted = array_map('intval', (array) $v->targeted_product_ids);
-                                if (!in_array((int) $item->product_id, $targeted, true)) {
-                                    return false;
-                                }
-                            }
-                            if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'category' && !empty($v->targeted_category_ids)) {
-                                $targetedCats = array_map('intval', (array) $v->targeted_category_ids);
-                                if (!in_array((int) $item->product->category_id, $targetedCats, true)) {
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-
-                        if ($eligibleItems->isEmpty()) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' => "Voucher {$v->code} does not apply to the selected products.",
-                            ]);
-                        }
-
-                        $eligibleSubtotal = $eligibleItems->sum(function ($item) {
-                            return $this->itemPrice($item) * (int) $item->quantity;
-                        });
-
-                        if (Schema::hasColumn('vouchers', 'min_spend') && $v->min_spend !== null && $eligibleSubtotal < (float) $v->min_spend) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' => 'Minimum spend of ' . $this->money($v->min_spend) . " is required for voucher {$v->code}.",
-                            ]);
-                        }
-
-                        $cat = $v->getStackCategory();
-                        if ($cat === 'shipping') {
-                            $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, $shippingFeeBeforeDiscount);
-                            $shippingDiscount += $vDiscount;
-                        } else {
-                            $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, 0);
-                            $itemDiscount += $vDiscount;
-                        }
-
-                        if ($vDiscount <= 0) {
-                            throw ValidationException::withMessages([
-                                'voucher_code' => "Voucher {$v->code} does not provide a valid discount.",
-                            ]);
-                        }
-
-                        $appliedVouchersMeta[] = [
-                            'id' => $v->id,
-                            'code' => $v->code,
-                            'type' => $v->type,
-                            'category' => $cat,
-                            'seller_id' => $v->seller_id,
-                            'is_platform' => (bool) $v->is_platform,
-                            'value' => (float) $v->value,
-                            'discount' => round($vDiscount, 2),
-                            'min_spend' => (float) ($v->min_spend ?? 0),
-                            'max_discount' => (float) ($v->max_discount ?? 0),
-                        ];
-
-                        if (Schema::hasColumn('vouchers', 'used_count')) {
-                            $v->increment('used_count');
-                            $v->refresh();
-                        }
-
-                        if (Schema::hasTable('user_vouchers')) {
-                            UserVoucher::where('user_id', $user->id)
-                                ->where('voucher_id', $v->id)
-                                ->where('status', 'claimed')
-                                ->update([
-                                    'status' => 'used',
-                                    'used_at' => now(),
-                                ]);
-                        }
-                    }
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | Final totals
-                |--------------------------------------------------------------------------
-                */
-
-                $itemDiscount = round(min($subtotal, $itemDiscount), 2);
-                $shippingDiscount = round(min($shippingFeeBeforeDiscount, $shippingDiscount), 2);
-                $finalShippingFee = round(max(0, $shippingFeeBeforeDiscount - $shippingDiscount), 2);
-                $total = round(max(0, $subtotal - $itemDiscount) + $finalShippingFee, 2);
-
+                $quote = $this->checkoutQuote($items, $data, $user, true);
+                $hubPlans = $quote['hubPlans'];
+                $evaluation = $quote['evaluation'];
+                $subtotal = $quote['subtotal'];
+                $shippingMethod = $quote['shippingMethod'];
+                $shippingFeeBeforeDiscount = $quote['shippingFeeBeforeDiscount'];
+                $itemDiscount = $quote['itemDiscount'];
+                $shippingDiscount = $quote['shippingDiscount'];
+                $finalShippingFee = $quote['finalShippingFee'];
+                $total = $quote['total'];
+                $appliedVouchersMeta = $quote['appliedVouchersMeta'];
                 $savedPaymentMethod = null;
 
                 if (!empty($data['payment_method_id'])) {
@@ -1378,52 +1127,23 @@ class BuyerOrderController extends Controller
 
                 $sellerGroups = $items->groupBy(fn ($item) => (int) ($item->product?->seller_id ?? 0));
 
+                $storeQuotes = $this->checkoutStoreQuotes($items, $quote);
+                if (isset($data['expected_total']) && abs((float) $data['expected_total'] - array_sum(array_column($storeQuotes, 'storeTotal'))) >= 0.005) {
+                    throw ValidationException::withMessages(['total' => 'Checkout totals changed. Refresh checkout and review the current total before ordering.']);
+                }
+
                 if ($sellerGroups->count() > 1) {
                     $createdOrders = [];
-                    $totalSubtotal = $subtotal;
-                    $remainingShippingDiscount = $shippingDiscount;
 
                     foreach ($sellerGroups as $sellerId => $sellerItems) {
-                        $sellerEval = app(\App\Services\CartPromotionCalculator::class)->evaluate($sellerItems);
-                        $storeSubtotal = (float) $sellerEval['subtotal_after_promotions'];
-                        $storeShippingBeforeDiscount = $this->calculateShippingFee(
-                            $shippingMethod,
-                            $sellerItems,
-                            $storeSubtotal,
-                            $data['shipping_address']
-                        );
-
-                        $storeDiscount = 0.0;
-                        $storeShippingDiscount = 0.0;
-                        $storeAppliedVouchers = [];
-
-                        foreach ($appliedVouchersMeta as $vMeta) {
-                            $cat = $vMeta['category'] ?? null;
-                            if ($cat === 'store') {
-                                if ((int) ($vMeta['seller_id'] ?? 0) === (int) $sellerId) {
-                                    $vDisc = min($storeSubtotal, (float) ($vMeta['discount'] ?? 0.0));
-                                    $storeDiscount += $vDisc;
-                                    $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($vDisc, 2)]);
-                                }
-                            } elseif ($cat === 'platform') {
-                                $ratio = $totalSubtotal > 0 ? ($storeSubtotal / $totalSubtotal) : (1.0 / $sellerGroups->count());
-                                $platDisc = round((float) ($vMeta['discount'] ?? 0.0) * $ratio, 2);
-                                $storeDiscount += $platDisc;
-                                $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($platDisc, 2)]);
-                            } elseif ($cat === 'shipping') {
-                                $shipDisc = min($storeShippingBeforeDiscount, $remainingShippingDiscount);
-                                $storeShippingDiscount += $shipDisc;
-                                $remainingShippingDiscount = max(0.0, $remainingShippingDiscount - $shipDisc);
-                                if ($shipDisc > 0) {
-                                    $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($shipDisc, 2)]);
-                                }
-                            }
-                        }
-
-                        $storeDiscount = round(min($storeSubtotal, $storeDiscount), 2);
-                        $storeShippingDiscount = round(min($storeShippingBeforeDiscount, $storeShippingDiscount), 2);
-                        $storeFinalShippingFee = round(max(0, $storeShippingBeforeDiscount - $storeShippingDiscount), 2);
-                        $storeTotal = round(max(0, $storeSubtotal - $storeDiscount) + $storeFinalShippingFee, 2);
+                        $sellerEval = $storeQuotes[$sellerId]['sellerEval'];
+                        $storeSubtotal = $storeQuotes[$sellerId]['storeSubtotal'];
+                        $storeShippingBeforeDiscount = $storeQuotes[$sellerId]['storeShippingBeforeDiscount'];
+                        $storeDiscount = $storeQuotes[$sellerId]['storeDiscount'];
+                        $storeShippingDiscount = $storeQuotes[$sellerId]['storeShippingDiscount'];
+                        $storeFinalShippingFee = $storeQuotes[$sellerId]['storeFinalShippingFee'];
+                        $storeTotal = $storeQuotes[$sellerId]['storeTotal'];
+                        $storeAppliedVouchers = $storeQuotes[$sellerId]['storeAppliedVouchers'];
 
                         $storeOrder = new Order();
                         $storeOrder->order_number = $this->generateOrderNumber();
@@ -1437,7 +1157,7 @@ class BuyerOrderController extends Controller
                         $storeOrder->shipping_fee = $storeFinalShippingFee;
                         $storeOrder->shipping_fee_before_discount = $storeShippingBeforeDiscount;
                         $storeOrder->shipping_discount = $storeShippingDiscount;
-                        $storeOrder->delivery_fee_payer = 'seller';
+                        $storeOrder->delivery_fee_payer = 'buyer';
                         $storeOrder->payment_status = 'unpaid';
                         $storeOrder->payment_method_id = $savedPaymentMethod?->id;
                         $storeOrder->subtotal = $storeSubtotal;
@@ -1493,6 +1213,10 @@ class BuyerOrderController extends Controller
                                     $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
                                 }
 
+                                if (isset($hubPlans[$product->seller_id])) {
+                                    $orderItemData['hub_route_plan'] = $hubPlans[$product->seller_id];
+                                    $orderItemData['courier_name'] = $hubPlans[$product->seller_id]['company_name'];
+                                }
                                 OrderItem::create($orderItemData);
 
                                 if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
@@ -1537,7 +1261,7 @@ class BuyerOrderController extends Controller
                 $order->shipping_fee = $finalShippingFee;
                 $order->shipping_fee_before_discount = $shippingFeeBeforeDiscount;
                 $order->shipping_discount = $shippingDiscount;
-                $order->delivery_fee_payer = 'seller';
+                $order->delivery_fee_payer = 'buyer';
                 $order->payment_status = 'unpaid';
                 $order->payment_method_id = $savedPaymentMethod?->id;
                 $order->subtotal = $subtotal;
@@ -1604,6 +1328,10 @@ class BuyerOrderController extends Controller
                             $orderItemData['subtotal'] = round($lineUnitPrice * $lineQty, 2);
                         }
 
+                        if (isset($hubPlans[$product->seller_id])) {
+                            $orderItemData['hub_route_plan'] = $hubPlans[$product->seller_id];
+                            $orderItemData['courier_name'] = $hubPlans[$product->seller_id]['company_name'];
+                        }
                         OrderItem::create($orderItemData);
 
                         if (!empty($lineRow['is_flash_sale']) && !empty($lineRow['flash_sale_id']) && Schema::hasTable('flash_sales')) {
@@ -1697,6 +1425,14 @@ class BuyerOrderController extends Controller
         $statusMsg = $orderCount > 1
             ? "Your checkout was split into {$orderCount} store orders."
             : 'Order placed successfully.';
+
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
+            return response()->json([
+                'message' => $statusMsg,
+                'order' => $primaryOrder->load('items.product'),
+                'orders' => collect($allOrders)->map(fn ($created) => $created->load('items.product')),
+            ], 201);
+        }
 
         return redirect()
             ->route(
@@ -1895,6 +1631,10 @@ class BuyerOrderController extends Controller
             403
         );
 
+        if (Schema::hasTable('parcel_returns') && $item->parcel?->returnToSeller()->exists()) {
+            abort(422, 'A parcel in Return to Seller tracking cannot be confirmed as Buyer delivery.');
+        }
+
         if ($item->seller_shipment_id) {
             $parcel = $item->parcel;
             abort_unless($parcel && $parcel->status === 'DELIVERED'
@@ -2007,7 +1747,7 @@ class BuyerOrderController extends Controller
 
         $this->createOrderStatusHistory($order, 'completed');
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'message' => 'Order marked as received and completed.',
                 'order' => $order->fresh(),
@@ -2029,7 +1769,7 @@ class BuyerOrderController extends Controller
     public function cancel(
         Request $request,
         Order $order
-    ): RedirectResponse {
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
         abort_unless(
             (int) $order->user_id ===
             (int) $request->user()->id,
@@ -2156,7 +1896,7 @@ class BuyerOrderController extends Controller
             }
         });
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'message' => 'Order cancelled successfully.',
                 'order' => $order->fresh(),
@@ -2181,14 +1921,14 @@ class BuyerOrderController extends Controller
     public function reorder(
         Request $request,
         Order $order
-    ): RedirectResponse {
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
         abort_unless(
             (int) $order->user_id ===
             (int) $request->user()->id,
             404
         );
 
-        $order->load('items.product', 'items.variant');
+        $order->load('items.product.variants', 'items.product.seller', 'items.variant');
         $user = $request->user();
         $addedCount = 0;
 
@@ -2200,6 +1940,11 @@ class BuyerOrderController extends Controller
             }
 
             if (Schema::hasColumn('products', 'status') && $product->status !== 'approved') {
+                continue;
+            }
+            if ($product->seller?->vacation_mode
+                || ($item->product_variant_id && (!$item->variant || (int) $item->variant->product_id !== (int) $product->id))
+                || (!$item->product_variant_id && ($item->variant_label || $product->variants->isNotEmpty()))) {
                 continue;
             }
 
@@ -2244,14 +1989,18 @@ class BuyerOrderController extends Controller
         }
 
         if ($addedCount === 0) {
+            if ($request->wantsJson() || $request->is('api/buyer/*')) {
+                throw ValidationException::withMessages(['reorder' => 'None of the items from this order are currently available in stock.']);
+            }
             return back()->withErrors([
                 'reorder' => 'None of the items from this order are currently available in stock.',
             ]);
         }
 
-        return redirect()
-            ->route('buyer.cart')
-            ->with('status', "Added {$addedCount} item(s) from this order to your cart.");
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
+            return response()->json(['message' => "Added {$addedCount} item(s) from this order to your cart.", 'cart_count' => $user->cartItems()->sum('quantity')]);
+        }
+        return redirect()->route('buyer.cart')->with('status', "Added {$addedCount} item(s) from this order to your cart.");
     }
 
     /**
@@ -2454,7 +2203,7 @@ class BuyerOrderController extends Controller
             ]);
         }
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'message' => 'Return / refund request submitted successfully.',
                 'return_request' => $returnRequest,
@@ -2490,7 +2239,7 @@ class BuyerOrderController extends Controller
             'status' => 'cancelled',
         ]);
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() || $request->is('api/buyer/*')) {
             return response()->json([
                 'message' => 'Return request has been cancelled.',
                 'return_request' => $returnRequest->fresh(),
@@ -2622,6 +2371,330 @@ class BuyerOrderController extends Controller
      * Example:
      * ALN-20260925-583214
      */
+
+    /** Shared read-only pricing; voucher consumption happens only in the booking transaction. */
+    private function checkoutQuote($items, array $data, $user, bool $consume = false): array
+    {
+        $hubPlans = app(\App\Services\HubNetwork::class)->checkoutPlans($items, $data['shipping_address'], $data['shipping_method']);
+        $evaluation = app(\App\Services\CartPromotionCalculator::class)->evaluate($items);
+        $subtotal = (float) $evaluation['subtotal_after_promotions'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Vouchers (Stacking: 1 Store + 1 Platform + 1 Free Shipping)
+        |--------------------------------------------------------------------------
+        */
+
+        $rawCodes = [];
+        if (!empty($data['voucher_codes']) && is_array($data['voucher_codes'])) {
+            $rawCodes = $data['voucher_codes'];
+        } elseif (!empty($data['voucher_code'])) {
+            $rawCodes = explode(',', (string) $data['voucher_code']);
+        }
+        $voucherCodes = array_values(array_unique(array_filter(array_map('trim', $rawCodes))));
+
+        $shippingMethod = $data['shipping_method'];
+        $shippingFeeBeforeDiscount = $this->calculateShippingFee(
+            $shippingMethod,
+            $items,
+            $subtotal,
+            $data['shipping_address'],
+            $hubPlans
+        );
+
+        if (isset($data['expected_shipping_fee']) && abs((float) $data['expected_shipping_fee'] - $shippingFeeBeforeDiscount) >= 0.005) {
+            throw ValidationException::withMessages(['shipping_fee' => 'Shipping rates changed. Refresh checkout to review the current delivery fee before ordering.']);
+        }
+
+        $itemDiscount = 0.0;
+        $shippingDiscount = 0.0;
+        $appliedVouchersMeta = [];
+        $vouchers = collect();
+
+        if (!empty($voucherCodes)) {
+            $vouchers = Voucher::query()
+                ->where(function ($q) use ($voucherCodes) {
+                    foreach ($voucherCodes as $vc) {
+                        $q->orWhereRaw('LOWER(code) = ?', [strtolower($vc)]);
+                    }
+                })
+                ->lockForUpdate()
+                ->get();
+
+            if ($vouchers->count() !== count($voucherCodes)) {
+                throw ValidationException::withMessages([
+                    'voucher_code' => 'One or more voucher codes not found.',
+                ]);
+            }
+
+            $usedCategories = [];
+            foreach ($vouchers as $v) {
+                $cat = $v->getStackCategory();
+                if (isset($usedCategories[$cat])) {
+                    $catLabel = match ($cat) {
+                        'store' => 'store',
+                        'platform' => 'platform',
+                        'shipping' => 'free shipping',
+                        default => $cat,
+                    };
+                    throw ValidationException::withMessages([
+                        'voucher_code' => "Only one {$catLabel} voucher can be applied per order.",
+                    ]);
+                }
+                $usedCategories[$cat] = $v;
+            }
+
+            foreach ($vouchers as $v) {
+                if (
+                    (Schema::hasColumn('vouchers', 'is_active') && !$v->is_active) ||
+                    (Schema::hasColumn('vouchers', 'ended_at') && $v->ended_at !== null)
+                ) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => "Voucher {$v->code} is no longer active.",
+                    ]);
+                }
+
+                if (Schema::hasColumn('vouchers', 'starts_at') && $v->starts_at) {
+                    $startsAt = Carbon::parse($v->starts_at)->toDateString();
+                    if (now()->toDateString() < $startsAt) {
+                        throw ValidationException::withMessages([
+                            'voucher_code' => "Voucher {$v->code} is not active yet.",
+                        ]);
+                    }
+                }
+
+                if (Schema::hasColumn('vouchers', 'expires_at') && $v->expires_at) {
+                    $expiresAt = Carbon::parse($v->expires_at)->toDateString();
+                    if (now()->toDateString() > $expiresAt) {
+                        throw ValidationException::withMessages([
+                            'voucher_code' => "Voucher {$v->code} has expired.",
+                        ]);
+                    }
+                }
+
+                if (Schema::hasColumn('vouchers', 'usage_limit') && $v->usage_limit !== null) {
+                    $usedCount = Schema::hasColumn('vouchers', 'used_count') ? (int) $v->used_count : 0;
+                    if ($usedCount >= (int) $v->usage_limit) {
+                        throw ValidationException::withMessages([
+                            'voucher_code' => "Voucher {$v->code} has reached its usage limit.",
+                        ]);
+                    }
+                }
+
+                if (Schema::hasColumn('vouchers', 'per_customer_limit') && $v->per_customer_limit !== null) {
+                    $userOrdersWithVoucher = Order::query()
+                        ->where('user_id', $user->id)
+                        ->where(function ($q) use ($v) {
+                            $q->where('voucher_id', $v->id)
+                                ->orWhereJsonContains('applied_vouchers', ['id' => $v->id]);
+                        })
+                        ->where('status', '!=', 'cancelled')
+                        ->count();
+
+                    if ($userOrdersWithVoucher >= (int) $v->per_customer_limit) {
+                        throw ValidationException::withMessages([
+                            'voucher_code' => "You have reached the maximum usage limit ({$v->per_customer_limit}) for voucher {$v->code}.",
+                        ]);
+                    }
+                }
+
+                $eligibleItems = $items->filter(function ($item) use ($v) {
+                    if (!$item->product) return false;
+                    if (Schema::hasColumn('vouchers', 'seller_id') && $v->seller_id !== null) {
+                        if ((int) $item->product->seller_id !== (int) $v->seller_id) {
+                            return false;
+                        }
+                    }
+                    if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'product' && !empty($v->targeted_product_ids)) {
+                        $targeted = array_map('intval', (array) $v->targeted_product_ids);
+                        if (!in_array((int) $item->product_id, $targeted, true)) {
+                            return false;
+                        }
+                    }
+                    if (Schema::hasColumn('vouchers', 'target_type') && $v->target_type === 'category' && !empty($v->targeted_category_ids)) {
+                        $targetedCats = array_map('intval', (array) $v->targeted_category_ids);
+                        if (!in_array((int) $item->product->category_id, $targetedCats, true)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
+                if ($eligibleItems->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => "Voucher {$v->code} does not apply to the selected products.",
+                    ]);
+                }
+
+                $eligibleSubtotal = $eligibleItems->sum(function ($item) {
+                    return $this->itemPrice($item) * (int) $item->quantity;
+                });
+
+                if (Schema::hasColumn('vouchers', 'min_spend') && $v->min_spend !== null && $eligibleSubtotal < (float) $v->min_spend) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => 'Minimum spend of ' . $this->money($v->min_spend) . " is required for voucher {$v->code}.",
+                    ]);
+                }
+
+                $cat = $v->getStackCategory();
+                if ($cat === 'shipping') {
+                    $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, $shippingFeeBeforeDiscount);
+                    $shippingDiscount += $vDiscount;
+                } else {
+                    $vDiscount = $this->calculateVoucherDiscount($v, $eligibleSubtotal, 0);
+                    $itemDiscount += $vDiscount;
+                }
+
+                if ($vDiscount <= 0) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => "Voucher {$v->code} does not provide a valid discount.",
+                    ]);
+                }
+
+                $appliedVouchersMeta[] = [
+                    'id' => $v->id,
+                    'code' => $v->code,
+                    'type' => $v->type,
+                    'category' => $cat,
+                    'seller_id' => $v->seller_id,
+                    'is_platform' => (bool) $v->is_platform,
+                    'value' => (float) $v->value,
+                    'discount' => round($vDiscount, 2),
+                    'min_spend' => (float) ($v->min_spend ?? 0),
+                    'max_discount' => (float) ($v->max_discount ?? 0),
+                ];
+
+                if ($consume && Schema::hasColumn('vouchers', 'used_count')) {
+                    $v->increment('used_count');
+                    $v->refresh();
+                }
+
+                if ($consume && Schema::hasTable('user_vouchers')) {
+                    UserVoucher::where('user_id', $user->id)
+                        ->where('voucher_id', $v->id)
+                        ->where('status', 'claimed')
+                        ->update([
+                            'status' => 'used',
+                            'used_at' => now(),
+                        ]);
+                }
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Final totals
+        |--------------------------------------------------------------------------
+        */
+
+        $itemDiscount = round(min($subtotal, $itemDiscount), 2);
+        $shippingDiscount = round(min($shippingFeeBeforeDiscount, $shippingDiscount), 2);
+        $finalShippingFee = round(max(0, $shippingFeeBeforeDiscount - $shippingDiscount), 2);
+        $total = round(max(0, $subtotal - $itemDiscount) + $finalShippingFee, 2);
+
+
+        return compact('hubPlans', 'evaluation', 'subtotal', 'shippingMethod', 'shippingFeeBeforeDiscount', 'itemDiscount', 'shippingDiscount', 'finalShippingFee', 'total', 'appliedVouchersMeta') + ['shippingAddress' => $data['shipping_address']];
+    }
+
+    /** Use the same per-store shipping/discount allocation for the quote and saved orders. */
+    private function checkoutStoreQuotes($items, array $quote): array
+    {
+        $hubPlans = $quote['hubPlans'];
+        $evaluation = $quote['evaluation'];
+        $subtotal = $quote['subtotal'];
+        $shippingMethod = $quote['shippingMethod'];
+        $shippingFeeBeforeDiscount = $quote['shippingFeeBeforeDiscount'];
+        $itemDiscount = $quote['itemDiscount'];
+        $shippingDiscount = $quote['shippingDiscount'];
+        $finalShippingFee = $quote['finalShippingFee'];
+        $total = $quote['total'];
+        $appliedVouchersMeta = $quote['appliedVouchersMeta'];
+        $data = ['shipping_address' => $quote['shippingAddress'] ?? null];
+        $sellerGroups = $items->groupBy(fn ($item) => (int) ($item->product?->seller_id ?? 0));
+        if ($sellerGroups->count() === 1) {
+            return [$sellerGroups->keys()->first() => [
+                'storeSubtotal' => $subtotal, 'storeFinalShippingFee' => $finalShippingFee,
+                'storeDiscount' => $itemDiscount, 'storeTotal' => $total,
+            ]];
+        }
+        $totalSubtotal = $subtotal;
+        $remainingShippingDiscount = $shippingDiscount;
+        $result = [];
+        foreach ($sellerGroups as $sellerId => $sellerItems) {
+            $sellerEval = app(\App\Services\CartPromotionCalculator::class)->evaluate($sellerItems);
+            $storeSubtotal = (float) $sellerEval['subtotal_after_promotions'];
+            $storeShippingBeforeDiscount = $this->calculateShippingFee(
+                $shippingMethod,
+                $sellerItems,
+                $storeSubtotal,
+                $data['shipping_address'],
+                $hubPlans
+            );
+
+            $storeDiscount = 0.0;
+            $storeShippingDiscount = 0.0;
+            $storeAppliedVouchers = [];
+
+            foreach ($appliedVouchersMeta as $vMeta) {
+                $cat = $vMeta['category'] ?? null;
+                if ($cat === 'store') {
+                    if ((int) ($vMeta['seller_id'] ?? 0) === (int) $sellerId) {
+                        $vDisc = min($storeSubtotal, (float) ($vMeta['discount'] ?? 0.0));
+                        $storeDiscount += $vDisc;
+                        $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($vDisc, 2)]);
+                    }
+                } elseif ($cat === 'platform') {
+                    $ratio = $totalSubtotal > 0 ? ($storeSubtotal / $totalSubtotal) : (1.0 / $sellerGroups->count());
+                    $platDisc = round((float) ($vMeta['discount'] ?? 0.0) * $ratio, 2);
+                    $storeDiscount += $platDisc;
+                    $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($platDisc, 2)]);
+                } elseif ($cat === 'shipping') {
+                    $shipDisc = min($storeShippingBeforeDiscount, $remainingShippingDiscount);
+                    $storeShippingDiscount += $shipDisc;
+                    $remainingShippingDiscount = max(0.0, $remainingShippingDiscount - $shipDisc);
+                    if ($shipDisc > 0) {
+                        $storeAppliedVouchers[] = array_merge($vMeta, ['discount' => round($shipDisc, 2)]);
+                    }
+                }
+            }
+
+            $storeDiscount = round(min($storeSubtotal, $storeDiscount), 2);
+            $storeShippingDiscount = round(min($storeShippingBeforeDiscount, $storeShippingDiscount), 2);
+            $storeFinalShippingFee = round(max(0, $storeShippingBeforeDiscount - $storeShippingDiscount), 2);
+            $storeTotal = round(max(0, $storeSubtotal - $storeDiscount) + $storeFinalShippingFee, 2);
+
+
+            $result[$sellerId] = compact('sellerEval', 'storeSubtotal', 'storeShippingBeforeDiscount', 'storeDiscount', 'storeShippingDiscount', 'storeFinalShippingFee', 'storeTotal', 'storeAppliedVouchers');
+        }
+        return $result;
+    }
+
+    /** Mobile preview uses the exact pricing and route planning used when booking web orders. */
+    public function mobileCheckoutPreview(Request $request, $items): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'shipping_address' => ['required', 'string', 'max:2000'],
+            'shipping_method' => ['required', 'in:'.implode(',', array_keys(config('checkout.shipping_methods')))],
+            'voucher_code' => ['nullable', 'string', 'max:255'],
+        ]);
+        if ($data['shipping_method'] !== 'pickup' && !app(\App\Services\HubNetwork::class)->enforced()) {
+            $this->validateCourierCoverage($data['shipping_address']);
+            app(\App\Services\CheckoutServiceability::class)->assertServiceable($data['shipping_address']);
+        }
+        $quote = $this->checkoutQuote($items, $data, $request->user());
+        $stores = $this->checkoutStoreQuotes($items, $quote);
+        return response()->json([
+            'subtotal' => round(array_sum(array_column($stores, 'storeSubtotal')), 2),
+            'shipping_fee' => round(array_sum(array_column($stores, 'storeFinalShippingFee')), 2),
+            'shipping_fee_before_discount' => $quote['shippingFeeBeforeDiscount'],
+            'discount' => round(array_sum(array_column($stores, 'storeDiscount')), 2),
+            'total' => round(array_sum(array_column($stores, 'storeTotal')), 2),
+            'seller_count' => count($stores),
+            'expected_prices' => $items->mapWithKeys(fn ($item) => [(string) $item->id => $this->itemPrice($item)]),
+            'voucher' => $quote['appliedVouchersMeta'],
+        ]);
+    }
+
     private function generateOrderNumber(): string
     {
         do {

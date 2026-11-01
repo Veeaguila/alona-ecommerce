@@ -663,7 +663,10 @@ class SellerBlackBoxTest extends TestCase
         $response->assertSessionHasNoErrors();
         $seller->refresh();
         $firstCode = '482913';
-        $secondCode = $seller->otp_code;
+        $secondCode = Notification::sent(
+            $seller,
+            \App\Notifications\BuyerOtpVerificationNotification::class
+        )->last()->otpCode;
         $this->assertNotSame($firstCode, $secondCode);
 
         // First code rejected

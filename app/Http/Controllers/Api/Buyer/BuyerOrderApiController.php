@@ -23,558 +23,113 @@ use Illuminate\Validation\ValidationException;
 
 class BuyerOrderApiController extends Controller
 {
-    /**
-     * Preview and calculate checkout totals before placing order.
-     */
+    /** Quote without changing the buyer's saved cart or consuming vouchers. */
     public function checkoutPreview(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($request->boolean('buy_now')) {
-            $validated = $request->validate([
-                'product_id' => ['required', 'exists:products,id'],
-                'product_variant_id' => ['nullable', 'exists:product_variants,id'],
-                'quantity' => ['required', 'integer', 'min:1'],
-                'shipping_method' => ['nullable', 'string', 'in:standard,express,pickup'],
-                'voucher_code' => ['nullable', 'string'],
-            ]);
-
-            $product = Product::with('seller')->where('status', 'approved')->findOrFail($validated['product_id']);
-            $variant = !empty($validated['product_variant_id']) ? ProductVariant::find($validated['product_variant_id']) : null;
-            $quantity = (int) $validated['quantity'];
-
-            $price = $variant ? (float) $variant->price : (float) $product->price;
-            $subtotal = round($price * $quantity, 2);
-            $sellerCount = 1;
-            $shippingMethod = $validated['shipping_method'] ?? 'standard';
-            $feePerSeller = match ($shippingMethod) {
-                'express' => 120.0,
-                'pickup' => 0.0,
-                default => 50.0,
-            };
-            $shippingFee = $feePerSeller;
-
-            if ($shippingMethod !== 'express' && $subtotal >= 2000) {
-                $shippingFee = 0.0;
-            }
-
-            // Voucher discount
-            $discount = 0.0;
-            $voucherData = null;
-            if (!empty($validated['voucher_code'])) {
-                $code = strtoupper(trim($validated['voucher_code']));
-                $voucher = Voucher::where('code', $code)->where('is_active', true)->first();
-                if ($voucher && ($voucher->min_spend === null || $subtotal >= (float) $voucher->min_spend)) {
-                    if ($voucher->type === 'percentage') {
-                        $discount = ($subtotal * (float) $voucher->value) / 100;
-                        if ($voucher->max_discount !== null && $discount > (float) $voucher->max_discount) {
-                            $discount = (float) $voucher->max_discount;
-                        }
-                    } elseif ($voucher->type === 'fixed') {
-                        $discount = min($subtotal, (float) $voucher->value);
-                    } elseif ($voucher->type === 'free_shipping') {
-                        $discount = min($shippingFee, (float) $voucher->value ?: $shippingFee);
-                    }
-                    $voucherData = [
-                        'id' => $voucher->id,
-                        'code' => $voucher->code,
-                        'discount' => round($discount, 2),
-                    ];
-                }
-            }
-
-            $total = max(0, ($subtotal - $discount) + $shippingFee);
-
-            return response()->json([
-                'subtotal' => round($subtotal, 2),
-                'shipping_fee' => round($shippingFee, 2),
-                'discount' => round($discount, 2),
-                'total' => round($total, 2),
-                'seller_count' => $sellerCount,
-                'voucher' => $voucherData,
-            ]);
+        if (! $request->filled('shipping_address')) {
+            $defaultAddress = $request->user()?->addresses()->where('is_default', true)->value('address')
+                ?? $request->user()?->addresses()->value('address')
+                ?? 'Metro Manila, Philippines';
+            $request->merge(['shipping_address' => $defaultAddress]);
         }
-
-        $validated = $request->validate([
-            'cart_item_ids' => ['required', 'array', 'min:1'],
-            'cart_item_ids.*' => ['integer'],
-            'shipping_method' => ['nullable', 'string', 'in:standard,express,pickup'],
-            'voucher_code' => ['nullable', 'string'],
-        ]);
-
-        $user = $request->user();
-        $items = $user->cartItems()
-            ->whereIn('id', $validated['cart_item_ids'])
-            ->with(['product.seller', 'variant'])
-            ->get();
-
-        if ($items->isEmpty()) {
-            return response()->json(['message' => 'No items selected.'], 422);
+        if (! $request->filled('shipping_method')) {
+            $request->merge(['shipping_method' => 'standard']);
         }
-
-        $subtotal = 0.0;
-        $sellerIds = [];
-
-        foreach ($items as $item) {
-            $price = $item->variant ? (float) $item->variant->price : (float) ($item->product?->price ?? 0);
-            $subtotal += $price * (int) $item->quantity;
-            if ($item->product?->seller_id) {
-                $sellerIds[$item->product->seller_id] = true;
-            }
-        }
-
-        $sellerCount = max(1, count($sellerIds));
-        $shippingMethod = $validated['shipping_method'] ?? 'standard';
-        $feePerSeller = match ($shippingMethod) {
-            'express' => 120.0,
-            'pickup' => 0.0,
-            default => 50.0,
-        };
-        $shippingFee = $sellerCount * $feePerSeller;
-
-        // Free shipping threshold check (₱2000)
-        if ($shippingMethod !== 'express' && $subtotal >= 2000) {
-            $shippingFee = 0.0;
-        }
-
-        // Voucher discount
-        $discount = 0.0;
-        $voucherData = null;
-        if (! empty($validated['voucher_code'])) {
-            $code = strtoupper(trim($validated['voucher_code']));
-            $voucher = Voucher::where('code', $code)->where('is_active', true)->first();
-            if ($voucher && ($voucher->min_spend === null || $subtotal >= (float) $voucher->min_spend)) {
-                if ($voucher->type === 'percentage') {
-                    $discount = ($subtotal * (float) $voucher->value) / 100;
-                    if ($voucher->max_discount !== null && $discount > (float) $voucher->max_discount) {
-                        $discount = (float) $voucher->max_discount;
-                    }
-                } elseif ($voucher->type === 'fixed') {
-                    $discount = min($subtotal, (float) $voucher->value);
-                } elseif ($voucher->type === 'free_shipping') {
-                    $discount = min($shippingFee, (float) $voucher->value ?: $shippingFee);
-                }
-                $voucherData = [
-                    'id' => $voucher->id,
-                    'code' => $voucher->code,
-                    'discount' => round($discount, 2),
-                ];
-            }
-        }
-
-        $total = max(0, ($subtotal - $discount) + $shippingFee);
-
-        return response()->json([
-            'subtotal' => round($subtotal, 2),
-            'shipping_fee' => round($shippingFee, 2),
-            'discount' => round($discount, 2),
-            'total' => round($total, 2),
-            'seller_count' => $sellerCount,
-            'voucher' => $voucherData,
-        ]);
+        $items = $this->checkoutItems($request);
+        return app(\App\Http\Controllers\BuyerOrderController::class)->mobileCheckoutPreview($request, $items);
     }
 
-    /**
-     * Store new order with full backend business rules, stock validation, and transactions.
-     */
+    /** All mobile bookings use the web transaction, stock locks, route snapshots and finance membership. */
     public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($request->boolean('buy_now')) {
-            $validated = $request->validate([
-                'product_id' => ['required', 'exists:products,id'],
-                'product_variant_id' => ['nullable', 'exists:product_variants,id'],
-                'quantity' => ['required', 'integer', 'min:1'],
-                'shipping_address' => ['required', 'string', 'max:1000'],
-                'shipping_method' => ['required', 'string', 'in:standard,express,pickup'],
-                'payment_method' => ['required', 'string', 'in:cod,gcash,maya,card,bank_transfer'],
-                'buyer_note' => ['nullable', 'string', 'max:250'],
-                'voucher_code' => ['nullable', 'string', 'max:50'],
-            ]);
-
-            return DB::transaction(function () use ($validated, $user) {
-                $product = Product::with('seller')->lockForUpdate()->findOrFail($validated['product_id']);
-                $variant = !empty($validated['product_variant_id'])
-                    ? ProductVariant::where('product_id', $product->id)->lockForUpdate()->find($validated['product_variant_id'])
-                    : null;
-                $quantity = (int) $validated['quantity'];
-
-                if ($product->status !== 'approved') {
-                    throw ValidationException::withMessages(['stock' => "Product '{$product->name}' is no longer available."]);
-                }
-                if ($product->seller && $product->seller->vacation_mode) {
-                    throw ValidationException::withMessages(['vacation' => "Store '{$product->seller->store_name}' is on vacation mode."]);
-                }
-                $available = $variant ? (int) $variant->stock : (int) $product->stock;
-                if ($available < $quantity) {
-                    throw ValidationException::withMessages(['stock' => "Insufficient stock for '{$product->name}'. Available: {$available}."]);
-                }
-
-                $unitPrice = $variant ? (float) $variant->price : (float) $product->price;
-                $subtotal = round($unitPrice * $quantity, 2);
-
-                $feePerSeller = match ($validated['shipping_method']) {
-                    'express' => 120.0,
-                    'pickup' => 0.0,
-                    default => 50.0,
-                };
-                $shippingFee = $feePerSeller;
-                if ($validated['shipping_method'] !== 'express' && $subtotal >= 2000) {
-                    $shippingFee = 0.0;
-                }
-
-                // Voucher validation & application
-                $voucher = null;
-                $discount = 0.0;
-                if (!empty($validated['voucher_code'])) {
-                    $code = strtoupper(trim($validated['voucher_code']));
-                    $voucher = Voucher::where('code', $code)->where('is_active', true)->lockForUpdate()->first();
-                    if ($voucher && ($voucher->min_spend === null || $subtotal >= (float) $voucher->min_spend)) {
-                        if ($voucher->type === 'percentage') {
-                            $discount = ($subtotal * (float) $voucher->value) / 100;
-                            if ($voucher->max_discount !== null && $discount > (float) $voucher->max_discount) {
-                                $discount = (float) $voucher->max_discount;
-                            }
-                        } elseif ($voucher->type === 'fixed') {
-                            $discount = min($subtotal, (float) $voucher->value);
-                        } elseif ($voucher->type === 'free_shipping') {
-                            $discount = min($shippingFee, (float) $voucher->value ?: $shippingFee);
-                        }
-                        $voucher->increment('used_count');
-                        UserVoucher::where('user_id', $user->id)->where('voucher_id', $voucher->id)->update(['status' => 'used', 'used_at' => now()]);
-                    }
-                }
-
-                $total = max(0, ($subtotal - $discount) + $shippingFee);
-                $paymentStatus = ($validated['payment_method'] === 'cod') ? 'unpaid' : 'paid';
-
-                $order = Order::create([
-                    'user_id' => $user->id,
-                    'order_number' => 'ORD-' . strtoupper(Str::random(10)),
-                    'subtotal' => round($subtotal, 2),
-                    'shipping_fee' => round($shippingFee, 2),
-                    'discount' => round($discount, 2),
-                    'total' => round($total, 2),
-                    'shipping_address' => $validated['shipping_address'],
-                    'shipping_method' => $validated['shipping_method'],
-                    'payment_method' => $validated['payment_method'],
-                    'payment_status' => $paymentStatus,
-                    'buyer_note' => $validated['buyer_note'] ?? null,
-                    'voucher_id' => $voucher?->id,
-                    'voucher_code' => $voucher?->code,
-                    'status' => 'pending',
-                ]);
-
-                $variantLabel = $variant ? trim(($variant->color ?? '') . ' ' . ($variant->size ?? '')) : null;
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'product_variant_id' => $variant?->id,
-                    'product_name' => $product->name,
-                    'variant_label' => $variantLabel,
-                    'price' => $unitPrice,
-                    'quantity' => $quantity,
-                    'status' => 'pending',
-                ]);
-
-                if ($variant) {
-                    $variant->decrement('stock', $quantity);
-                }
-                $product->decrement('stock', $quantity);
-
-                if ($product->seller_id) {
-                    try {
-                        SellerNotification::create([
-                            'user_id' => $product->seller_id,
-                            'type' => 'order',
-                            'title' => 'New Order Received',
-                            'message' => "Order #{$order->order_number} has been placed for {$product->name}.",
-                            'url' => '/seller/orders',
-                        ]);
-                    } catch (\Throwable $e) {}
-                }
-
-                if (Schema::hasTable('order_status_histories')) {
-                    try {
-                        OrderStatusHistory::create([
-                            'order_id' => $order->id,
-                            'status' => 'pending',
-                            'notes' => 'Order placed successfully by buyer.',
-                            'created_at' => now(),
-                        ]);
-                    } catch (\Throwable $e) {}
-                }
-
-                try {
-                    BuyerNotification::create([
-                        'user_id' => $user->id,
-                        'type' => 'order',
-                        'title' => 'Order Placed Successfully',
-                        'message' => "Your order #{$order->order_number} of ₱" . number_format($total, 2) . " has been placed.",
-                        'action_url' => "/buyer/orders/{$order->id}",
-                    ]);
-                } catch (\Throwable $e) {}
-
-                $order->load(['items.product.images']);
-                $formattedOrder = [
-                    'id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'subtotal' => (float) $order->subtotal,
-                    'shipping_fee' => (float) $order->shipping_fee,
-                    'discount' => (float) $order->discount,
-                    'total' => (float) $order->total,
-                    'shipping_address' => $order->shipping_address,
-                    'shipping_method' => $order->shipping_method,
-                    'payment_method' => $order->payment_method,
-                    'payment_status' => $order->payment_status,
-                    'status' => $order->status,
-                    'buyer_status_label' => $order->buyer_status_label,
-                    'buyer_note' => $order->buyer_note,
-                    'created_at' => $order->created_at?->toIso8601String(),
-                    'items' => $order->items->map(function ($it) {
-                        $prod = $it->product;
-                        $imageUrl = asset('images/alona.png');
-                        if ($prod && $prod->image_path) {
-                            $imageUrl = asset('storage/' . $prod->image_path);
-                        } elseif ($prod && $prod->images->isNotEmpty()) {
-                            $imageUrl = asset('storage/' . $prod->images->first()->image_path);
-                        }
-                        return [
-                            'id' => $it->id,
-                            'order_id' => $it->order_id,
-                            'product_id' => $it->product_id,
-                            'product_name' => $it->product_name,
-                            'variant_label' => $it->variant_label,
-                            'unit_price' => (float) $it->price,
-                            'price' => (float) $it->price,
-                            'quantity' => (int) $it->quantity,
-                            'total_price' => round((float) $it->price * (int) $it->quantity, 2),
-                            'status' => $it->status,
-                            'image_url' => $imageUrl,
-                        ];
-                    })->values(),
-                ];
-
-                return response()->json([
-                    'message' => 'Order placed successfully!',
-                    'order' => $formattedOrder,
-                ], 201);
-            });
+        if (! $request->filled('request_key')) {
+            $request->merge(['request_key' => (string) Str::uuid()]);
         }
 
-        $validated = $request->validate([
-            'cart_item_ids' => ['required', 'array', 'min:1'],
-            'cart_item_ids.*' => ['integer'],
-            'shipping_address' => ['required', 'string', 'max:1000'],
-            'shipping_method' => ['required', 'string', 'in:standard,express,pickup'],
-            'payment_method' => ['required', 'string', 'in:cod,gcash,maya,card,bank_transfer'],
-            'buyer_note' => ['nullable', 'string', 'max:250'],
-            'voucher_code' => ['nullable', 'string', 'max:50'],
-        ]);
+        $items = $this->checkoutItems($request);
 
-        $user = $request->user();
-
-        return DB::transaction(function () use ($validated, $user) {
-            $items = $user->cartItems()
-                ->whereIn('id', $validated['cart_item_ids'])
-                ->with(['product.seller', 'variant'])
-                ->lockForUpdate()
-                ->get();
-
-            if ($items->isEmpty()) {
-                throw ValidationException::withMessages(['cart_item_ids' => 'Selected cart items not found.']);
-            }
-
-            // Stock validation
-            foreach ($items as $item) {
-                $product = $item->product;
-                if (! $product || $product->status !== 'approved') {
-                    throw ValidationException::withMessages(['stock' => "Product '{$product?->name}' is no longer available."]);
-                }
-                if ($product->seller && $product->seller->vacation_mode) {
-                    throw ValidationException::withMessages(['vacation' => "Store '{$product->seller->store_name}' is on vacation mode."]);
-                }
-                $available = $item->variant ? (int) $item->variant->stock : (int) $product->stock;
-                if ($available < (int) $item->quantity) {
-                    throw ValidationException::withMessages(['stock' => "Insufficient stock for '{$product->name}'. Available: {$available}."]);
-                }
-            }
-
-            // Calculations
-            $subtotal = 0.0;
-            $sellerIds = [];
-            foreach ($items as $item) {
-                $price = $item->variant ? (float) $item->variant->price : (float) $item->product->price;
-                $subtotal += $price * (int) $item->quantity;
-                if ($item->product->seller_id) {
-                    $sellerIds[$item->product->seller_id] = true;
-                }
-            }
-
-            $sellerCount = max(1, count($sellerIds));
-            $feePerSeller = match ($validated['shipping_method']) {
-                'express' => 120.0,
-                'pickup' => 0.0,
-                default => 50.0,
-            };
-            $shippingFee = $sellerCount * $feePerSeller;
-            if ($validated['shipping_method'] !== 'express' && $subtotal >= 2000) {
-                $shippingFee = 0.0;
-            }
-
-            // Voucher validation & application
-            $voucher = null;
-            $discount = 0.0;
-            if (! empty($validated['voucher_code'])) {
-                $code = strtoupper(trim($validated['voucher_code']));
-                $voucher = Voucher::where('code', $code)->where('is_active', true)->lockForUpdate()->first();
-                if ($voucher && ($voucher->min_spend === null || $subtotal >= (float) $voucher->min_spend)) {
-                    if ($voucher->type === 'percentage') {
-                        $discount = ($subtotal * (float) $voucher->value) / 100;
-                        if ($voucher->max_discount !== null && $discount > (float) $voucher->max_discount) {
-                            $discount = (float) $voucher->max_discount;
-                        }
-                    } elseif ($voucher->type === 'fixed') {
-                        $discount = min($subtotal, (float) $voucher->value);
-                    } elseif ($voucher->type === 'free_shipping') {
-                        $discount = min($shippingFee, (float) $voucher->value ?: $shippingFee);
-                    }
-                    $voucher->increment('used_count');
-                    UserVoucher::where('user_id', $user->id)->where('voucher_id', $voucher->id)->update(['status' => 'used', 'used_at' => now()]);
-                }
-            }
-
-            $total = max(0, ($subtotal - $discount) + $shippingFee);
-            $paymentStatus = ($validated['payment_method'] === 'cod') ? 'unpaid' : 'paid';
-
-            // Create Order
-            $order = Order::create([
-                'user_id' => $user->id,
-                'order_number' => 'ORD-' . strtoupper(Str::random(10)),
-                'subtotal' => round($subtotal, 2),
-                'shipping_fee' => round($shippingFee, 2),
-                'discount' => round($discount, 2),
-                'total' => round($total, 2),
-                'shipping_address' => $validated['shipping_address'],
-                'shipping_method' => $validated['shipping_method'],
-                'payment_method' => $validated['payment_method'],
-                'payment_status' => $paymentStatus,
-                'buyer_note' => $validated['buyer_note'] ?? null,
-                'voucher_id' => $voucher?->id,
-                'voucher_code' => $voucher?->code,
-                'status' => 'pending',
+        if ($request->missing('expected_total') || $request->missing('expected_prices') || $request->missing('expected_shipping_fee')) {
+            $preview = app(\App\Http\Controllers\BuyerOrderController::class)->mobileCheckoutPreview($request, $items);
+            $previewData = $preview->getData(true);
+            $request->merge([
+                'expected_shipping_fee' => $request->input('expected_shipping_fee', $previewData['shipping_fee_before_discount'] ?? 0),
+                'expected_total' => $request->input('expected_total', $previewData['total'] ?? 0),
+                'expected_prices' => $request->input('expected_prices', $previewData['expected_prices'] ?? []),
             ]);
+        }
 
-            // Create Order Items and decrease stock
-            foreach ($items as $item) {
-                $product = $item->product;
-                $variant = $item->variant;
-                $unitPrice = $variant ? (float) $variant->price : (float) $product->price;
-
-                $orderItem = OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'product_variant_id' => $item->product_variant_id,
-                    'product_name' => $product->name,
-                    'variant_label' => $item->variant_label,
-                    'price' => $unitPrice,
-                    'quantity' => (int) $item->quantity,
-                    'status' => 'pending',
-                ]);
-
-                // Decrease stock
-                if ($variant) {
-                    $variant->decrement('stock', (int) $item->quantity);
-                }
-                $product->decrement('stock', (int) $item->quantity);
-
-                // Notify seller
-                if ($product->seller_id) {
-                    try {
-                        SellerNotification::create([
-                            'user_id' => $product->seller_id,
-                            'type' => 'order',
-                            'title' => 'New Order Received',
-                            'message' => "Order #{$order->order_number} has been placed for {$product->name}.",
-                            'url' => '/seller/orders',
-                        ]);
-                    } catch (\Throwable $e) {}
-                }
+        $request->validate([
+            'expected_shipping_fee' => ['required', 'numeric', 'min:0'],
+            'expected_total' => ['required', 'numeric', 'min:0'],
+            'expected_prices' => ['required', 'array', 'min:1'],
+            'expected_prices.*' => ['required', 'numeric', 'min:0'],
+            'request_key' => ['required', 'uuid'],
+        ]);
+        $key = 'buyer-checkout:'.$request->user()->id.':'.$request->input('request_key');
+        $fingerprint = hash('sha256', json_encode($request->all()));
+        return \Illuminate\Support\Facades\Cache::lock($key.':lock', 60)->block(5, function () use ($request, $key, $fingerprint) {
+            $cached = \Illuminate\Support\Facades\Cache::get($key);
+            if ($cached) {
+                abort_unless(hash_equals($cached['fingerprint'], $fingerprint), 409, 'This checkout reference was already used with different details.');
+                return response()->json($cached['response'], 201);
             }
-
-            // Create status history
-            if (Schema::hasTable('order_status_histories')) {
-                try {
-                    OrderStatusHistory::create([
-                        'order_id' => $order->id,
-                        'status' => 'pending',
-                        'notes' => 'Order placed successfully by buyer.',
-                        'created_at' => now(),
-                    ]);
-                } catch (\Throwable $e) {}
-            }
-
-            // Create Buyer notification
-            try {
-                BuyerNotification::create([
-                    'user_id' => $user->id,
-                    'type' => 'order',
-                    'title' => 'Order Placed Successfully',
-                    'message' => "Your order #{$order->order_number} of ₱" . number_format($total, 2) . " has been placed.",
-                    'action_url' => "/buyer/orders/{$order->id}",
-                ]);
-            } catch (\Throwable $e) {}
-
-            // Remove processed items from cart
-            $user->cartItems()->whereIn('id', $validated['cart_item_ids'])->delete();
-
-            $order->load(['items.product.images']);
-
-            $formattedOrder = [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'subtotal' => (float) $order->subtotal,
-                'shipping_fee' => (float) $order->shipping_fee,
-                'discount' => (float) $order->discount,
-                'total' => (float) $order->total,
-                'shipping_address' => $order->shipping_address,
-                'shipping_method' => $order->shipping_method,
-                'payment_method' => $order->payment_method,
-                'payment_status' => $order->payment_status,
-                'status' => $order->status,
-                'buyer_status_label' => $order->buyer_status_label,
-                'buyer_note' => $order->buyer_note,
-                'created_at' => $order->created_at?->toIso8601String(),
-                'items' => $order->items->map(function ($it) {
-                    $prod = $it->product;
-                    $imageUrl = asset('images/alona.png');
-                    if ($prod && $prod->image_path) {
-                        $imageUrl = asset('storage/' . $prod->image_path);
-                    } elseif ($prod && $prod->images->isNotEmpty()) {
-                        $imageUrl = asset('storage/' . $prod->images->first()->image_path);
-                    }
-                    return [
-                        'id' => $it->id,
-                        'order_id' => $it->order_id,
-                        'product_id' => $it->product_id,
-                        'product_name' => $it->product_name,
-                        'variant_label' => $it->variant_label,
-                        'unit_price' => (float) $it->price,
-                        'price' => (float) $it->price,
-                        'quantity' => (int) $it->quantity,
-                        'total_price' => round((float) $it->price * (int) $it->quantity, 2),
-                        'status' => $it->status,
-                        'image_url' => $imageUrl,
-                    ];
-                })->values(),
-            ];
-
-            return response()->json([
-                'message' => 'Order placed successfully!',
-                'order' => $formattedOrder,
-            ], 201);
+            // The outer transaction also rolls back a temporary Buy Now row on any validation failure.
+            $response = DB::transaction(function () use ($request) {
+                $items = $this->checkoutItems($request);
+                if ($request->boolean('buy_now')) {
+                    $item = $items->sole();
+                    $expected = $request->input('expected_prices.0');
+                    abort_if($expected === null, 422, 'Refresh the Buy Now quote before ordering.');
+                    unset($item->id);
+                    $item->save();
+                    $request->merge(['expected_prices' => [(string) $item->id => $expected]]);
+                }
+                $request->merge(['selected_items' => $items->pluck('id')->all()]);
+                return app(\App\Http\Controllers\BuyerOrderController::class)->store($request);
+            });
+            \Illuminate\Support\Facades\Cache::put($key, ['fingerprint' => $fingerprint, 'response' => $response->getData(true)], now()->addDay());
+            return $response;
         });
+    }
+
+    private function checkoutItems(Request $request)
+    {
+        $data = $request->validate([
+            'buy_now' => ['nullable', 'boolean'],
+            'cart_item_ids' => ['required_unless:buy_now,true', 'array', 'min:1'],
+            'cart_item_ids.*' => ['required', 'integer', 'distinct'],
+            'product_id' => ['required_if:buy_now,true', 'integer'],
+            'product_variant_id' => ['nullable', 'integer'],
+            'quantity' => ['required_if:buy_now,true', 'integer', 'min:1'],
+        ]);
+        if ($request->boolean('buy_now')) {
+            $items = collect([new CartItem([
+                'user_id' => $request->user()->id, 'product_id' => $data['product_id'],
+                'product_variant_id' => $data['product_variant_id'] ?? null, 'quantity' => $data['quantity'],
+            ])]);
+            $items->sole()->id = 0; // Stable quote key; replaced by a transaction-local cart row on booking.
+            $items->sole()->load(['product.category', 'product.variants', 'product.seller', 'variant']);
+        } else {
+            $items = $request->user()->cartItems()->whereIn('id', $data['cart_item_ids'])
+                ->with(['product.category', 'product.variants', 'product.seller', 'variant'])->get();
+            if ($items->count() !== count($data['cart_item_ids'])) {
+                throw ValidationException::withMessages(['cart_item_ids' => 'Some selected cart items are no longer available.']);
+            }
+        }
+        foreach ($items as $item) {
+            if (!$item->product || $item->product->status !== 'approved' || $item->is_unavailable
+                || ($item->variant && (int) $item->variant->product_id !== (int) $item->product_id)) {
+                throw ValidationException::withMessages(['stock' => 'A selected product or variation is no longer available.']);
+            }
+            if ($item->product->seller?->vacation_mode) {
+                throw ValidationException::withMessages(['stock' => 'This store is currently on vacation mode.']);
+            }
+            $available = $item->variant ? (int) $item->variant->stock : (int) $item->product->stock;
+            if ($available < (int) $item->quantity) {
+                throw ValidationException::withMessages(['stock' => 'Insufficient stock. Refresh your cart before ordering.']);
+            }
+        }
+        return $items;
     }
 
     /**
@@ -623,30 +178,8 @@ class BuyerOrderApiController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $order = $user->orders()
-            ->whereKey($id)
-            ->with([
-                'items.product.seller',
-                'items.product.images',
-                'items.variant',
-                'items.returnRequests',
-            ])
-            ->firstOrFail();
-
-        $cancellableStatuses = ['pending', 'processing', 'packed'];
-        $canCancel = in_array(strtolower((string) $order->status), $cancellableStatuses, true);
-
-        $statusHistories = Schema::hasTable('order_status_histories')
-            ? DB::table('order_status_histories')->where('order_id', $order->id)->orderBy('created_at', 'asc')->get()
-            : [];
-
-        return response()->json([
-            'order' => $order,
-            'can_cancel' => $canCancel,
-            'can_mark_received' => strtolower((string) $order->status) === 'delivered',
-            'status_histories' => $statusHistories,
-        ]);
+        $order = $request->user()->orders()->whereKey($id)->firstOrFail();
+        return app(\App\Http\Controllers\BuyerOrderController::class)->show($request, $order);
     }
 
     /**
@@ -654,82 +187,14 @@ class BuyerOrderApiController extends Controller
      */
     public function cancel(Request $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:250'],
-        ]);
-
-        $user = $request->user();
-        $order = $user->orders()->whereKey($id)->with('items.product', 'items.variant')->firstOrFail();
-
-        $cancellableStatuses = ['pending', 'processing', 'packed'];
-        if (! in_array(strtolower((string) $order->status), $cancellableStatuses, true)) {
-            return response()->json(['message' => 'This order can no longer be cancelled as it is already being shipped.'], 422);
-        }
-
-        DB::transaction(function () use ($order, $validated) {
-            $order->update([
-                'status' => 'cancelled',
-                'cancellation_reason' => $validated['reason'],
-                'cancelled_at' => now(),
-            ]);
-
-            // Restore stocks
-            foreach ($order->items as $item) {
-                $item->update(['status' => 'cancelled']);
-                if ($item->variant) {
-                    $item->variant->increment('stock', (int) $item->quantity);
-                }
-                if ($item->product) {
-                    $item->product->increment('stock', (int) $item->quantity);
-                }
-            }
-
-            if (Schema::hasTable('order_status_histories')) {
-                OrderStatusHistory::create([
-                    'order_id' => $order->id,
-                    'status' => 'cancelled',
-                    'notes' => 'Cancelled by buyer: ' . $validated['reason'],
-                    'created_at' => now(),
-                ]);
-            }
-        });
-
-        return response()->json([
-            'message' => 'Order cancelled successfully.',
-            'order' => $order->fresh(),
-        ]);
+        $order = $request->user()->orders()->whereKey($id)->firstOrFail();
+        return app(\App\Http\Controllers\BuyerOrderController::class)->cancel($request, $order);
     }
 
-    /**
-     * Confirm receipt of delivered order.
-     */
     public function receive(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $order = $user->orders()->whereKey($id)->firstOrFail();
-
-        if (strtolower((string) $order->status) !== 'delivered') {
-            return response()->json(['message' => 'Only delivered orders can be confirmed as received.'], 422);
-        }
-
-        DB::transaction(function () use ($order) {
-            $order->update(['status' => 'completed']);
-            $order->items()->update(['status' => 'completed']);
-
-            if (Schema::hasTable('order_status_histories')) {
-                OrderStatusHistory::create([
-                    'order_id' => $order->id,
-                    'status' => 'completed',
-                    'notes' => 'Buyer confirmed receipt of order.',
-                    'created_at' => now(),
-                ]);
-            }
-        });
-
-        return response()->json([
-            'message' => 'Thank you for confirming receipt! Order is now completed.',
-            'order' => $order->fresh(),
-        ]);
+        $order = $request->user()->orders()->whereKey($id)->firstOrFail();
+        return app(\App\Http\Controllers\BuyerOrderController::class)->orderReceived($request, $order);
     }
 
     /**
@@ -737,32 +202,7 @@ class BuyerOrderApiController extends Controller
      */
     public function reorder(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $order = $user->orders()->whereKey($id)->with('items')->firstOrFail();
-
-        $addedCount = 0;
-        foreach ($order->items as $item) {
-            $product = Product::where('status', 'approved')->find($item->product_id);
-            if ($product && $product->stock > 0) {
-                CartItem::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'product_id' => $product->id,
-                        'product_variant_id' => $item->product_variant_id,
-                    ],
-                    [
-                        'quantity' => min((int) $item->quantity, (int) $product->stock),
-                        'variant_label' => $item->variant_label,
-                    ]
-                );
-                $addedCount++;
-            }
-        }
-
-        return response()->json([
-            'message' => "{$addedCount} items added to your cart.",
-            'cart_count' => $user->cartItems()->sum('quantity'),
-        ]);
+        $order = $request->user()->orders()->whereKey($id)->firstOrFail();
+        return app(\App\Http\Controllers\BuyerOrderController::class)->reorder($request, $order);
     }
 }
-

@@ -209,3 +209,122 @@ test('Rider popup still starts its existing registration steps', () => {
     assert.equal(state.currentStep.value, 1);
     assert.deepEqual(visits, []); stop();
 });
+
+function logisticsRegistration() {
+    const posts = [];
+    const result = setup('Pages/Auth/LogisticsRegistration.vue', { requestKey: 'test-key', regions: [], google: null }, {
+        router: { on: () => () => {} }, route: name => name,
+        useForm: initial => Vue.reactive({ ...initial, errors: {}, processing: false,
+            setError(field, message) { this.errors[field] = message; },
+            clearErrors(field) { delete this.errors[field]; },
+            post: url => posts.push(url),
+        }),
+        GuestLayout: {}, LogisticsAddressSelector: {},
+    });
+    Object.assign(result.state.form, { first_name: 'Test', last_name: 'Applicant', email: 'applicant@example.test', password: 'Password@123', password_confirmation: 'Password@123', tin: '123-456-789-000' });
+    return { ...result, posts };
+}
+
+test('Logistics registration blocks invalid mobile formats before leaving the account step', () => {
+    const { state, stop } = logisticsRegistration();
+    for (const mobile of ['0917123456', '091712345678', '+63917123456', '+6391712345678', '0917ABC4567', '12345678901', '0917-123-4567']) {
+        state.form.contact_no = mobile;
+        state.goToStep(2);
+        assert.equal(state.currentStep.value, 1, mobile);
+        assert.match(state.form.errors.contact_no, /11 digits starting with 09/);
+    }
+    stop();
+});
+
+test('Logistics registration accepts both supported mobile formats with the correct input limits', () => {
+    const { state, stop } = logisticsRegistration();
+    for (const [mobile, limit] of [['09171234567', 11], ['+639171234567', 13]]) {
+        state.currentStep.value = 1;
+        state.form.contact_no = mobile;
+        assert.equal(state.mobileMaxLength.value, limit);
+        state.goToStep(2);
+        assert.equal(state.currentStep.value, 2);
+        assert.equal(state.form.errors.contact_no, undefined);
+    }
+    stop();
+});
+
+test('Logistics registration rejects oversized or alphabetic pastes without truncating a contact', () => {
+    const { state, stop } = logisticsRegistration();
+    for (const pasted of ['091712345678', '+6391712345678', '0917ABC1234567']) {
+        state.form.contact_no = '';
+        let prevented = false;
+        state.checkMobilePaste({ clipboardData: { getData: () => pasted }, target: { selectionStart: 0, selectionEnd: 0 }, preventDefault: () => { prevented = true; } });
+        assert.equal(prevented, true);
+        assert.equal(state.form.contact_no, '');
+        assert.match(state.form.errors.contact_no, /11 digits/);
+    }
+    stop();
+});
+
+test('Logistics registration pastes an entire international number into an empty local-length field', () => {
+    const { state, stop } = logisticsRegistration();
+    assert.equal(state.mobileMaxLength.value, 11);
+    const input = { selectionStart: 0, selectionEnd: 0, value: '' };
+    let prevented = false;
+    state.checkMobilePaste({ clipboardData: { getData: () => '+639171234567' }, target: input, preventDefault: () => { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(state.form.contact_no, '+639171234567');
+    assert.equal(input.value, '+639171234567');
+    assert.equal(state.mobileMaxLength.value, 13);
+    assert.equal(state.validateMobileNumber(), true);
+    stop();
+});
+
+test('Logistics registration rechecks the mobile number before submitting from a later step', () => {
+    const { state, posts, stop } = logisticsRegistration();
+    state.currentStep.value = 3;
+    state.form.contact_no = '123';
+    state.submit();
+    assert.equal(state.currentStep.value, 1);
+    assert.deepEqual(posts, []);
+    state.form.contact_no = '+639171234567';
+    state.submit();
+    assert.deepEqual(posts, ['register.logistics']);
+    stop();
+});
+
+test('Logistics TIN accepts complete digits and common separators while clearing old format errors', () => {
+    const { state, stop } = logisticsRegistration();
+    for (const tin of ['123-456-789-000', '123456789000', ' 123 456 789 000 ', '123\u2011456\u2011789\u2011000']) {
+        state.form.tin = tin;
+        state.form.setError('tin', 'Old server validation error');
+        assert.equal(state.validateTin(), true, tin);
+        assert.equal(state.form.tin, '123-456-789-000');
+        assert.equal(state.form.errors.tin, undefined);
+    }
+    stop();
+});
+
+test('Logistics TIN rejects missing digits, extra digits and letters without silently changing the number', () => {
+    const { state, stop } = logisticsRegistration();
+    for (const tin of ['123-456-789-00', '123-456-789-0001', '123-456-78A-000', '1234567890009']) {
+        state.form.tin = tin;
+        assert.equal(state.validateTin(), false);
+        assert.equal(state.form.tin, tin);
+        assert.match(state.form.errors.tin, /Enter 12 digits/);
+    }
+    stop();
+});
+
+test('Logistics TIN validation blocks the company step and submission until corrected', () => {
+    const { state, posts, stop } = logisticsRegistration();
+    Object.assign(state.form, { contact_no: '09171234567', business_name: 'Test Logistics', registration_number: 'CS202012345', city_code: 'city', barangay_code: 'barangay', street: 'Test street', tin: '123' });
+    state.currentStep.value = 2;
+    state.goToStep(3);
+    assert.equal(state.currentStep.value, 2);
+    state.submit();
+    assert.deepEqual(posts, []);
+    state.form.tin = '123456789000';
+    state.goToStep(3);
+    assert.equal(state.currentStep.value, 3);
+    state.submit();
+    assert.deepEqual(posts, ['register.logistics']);
+    assert.equal(state.form.tin, '123-456-789-000');
+    stop();
+});

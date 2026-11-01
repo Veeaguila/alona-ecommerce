@@ -7,6 +7,20 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## ALONA teammate update
+
+For an existing installation, start with [TEAMMATE_AI_HANDOFF.md](TEAMMATE_AI_HANDOFF.md).
+The [copyable AI prompt](docs/TEAMMATE_AI_PROMPT.md) covers source setup and a bounded
+local database upgrade. The [migration manifest](docs/upgrade/LOGISTICS_SCHEMA_MANIFEST.json)
+indexes the reviewed changes; preserve your existing data and compare your actual schema.
+Flutter Rider source is included at [`mobile/rider`](mobile/rider).
+The Buyer/Logistics Flutter source is at [`mobile/alona_mobile`](mobile/alona_mobile).
+Read its [Logistics parity notes](mobile/alona_mobile/docs/LOGISTICS_PARITY.md) for
+verified scope and pending device work. The [mobile order-flow review](docs/testing/results/MOBILE_ORDER_FLOW_REVIEW.md)
+records Buyer checkout through Seller, Logistics and delivery.
+The [Rider pay guide](docs/RIDER_PAY_IMPLEMENTATION.md) covers configured shipment
+jobs, complete transfer manifests and grouped manual payouts on web and mobile.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

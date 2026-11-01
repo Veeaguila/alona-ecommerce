@@ -512,6 +512,7 @@ class SellerOrderController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
+        if ($orderItem->hub_route_plan) $validated['carrier_partner'] = $orderItem->hub_route_plan['company_name'];
         \Illuminate\Support\Facades\DB::transaction(function () use ($orderItem, $validated): void {
             $orderItem = OrderItem::query()->lockForUpdate()->findOrFail($orderItem->id);
 
