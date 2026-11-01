@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\FlashSale;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\RecentlyViewedProduct;
 use App\Models\Review;
@@ -193,6 +194,93 @@ class BuyerCatalogController extends Controller
             ->get()
             ->map(fn ($p) => $this->formatProductItem($p));
 
+        // Hero Banners & Platform Stats
+        $heroBannersSetting = PlatformSetting::where('key', 'home.hero_banners')->where('is_active', true)->first();
+        $heroBanners = null;
+        if ($heroBannersSetting && $heroBannersSetting->value) {
+            $heroBanners = json_decode($heroBannersSetting->value, true);
+        }
+
+        if (empty($heroBanners) || !is_array($heroBanners)) {
+            $heroBannerSetting = PlatformSetting::where('key', 'home.hero_banner')->where('is_active', true)->first();
+            if ($heroBannerSetting && $heroBannerSetting->value) {
+                $single = json_decode($heroBannerSetting->value, true);
+                if (is_array($single)) {
+                    $heroBanners = [$single];
+                }
+            }
+        }
+
+        if (empty($heroBanners) || !is_array($heroBanners)) {
+            $heroBanners = [
+                [
+                    'id' => 'banner_1',
+                    'is_active' => true,
+                    'theme' => 'teal',
+                    'layout_type' => 'split',
+                    'badge_text' => '',
+                    'title' => 'Welcome to',
+                    'title_highlight' => 'Alona.',
+                    'description' => 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.',
+                    'primary_button_text' => 'Shop Now',
+                    'primary_button_url' => '/products',
+                    'show_primary_button' => true,
+                    'show_primary_button_arrow' => true,
+                    'secondary_button_text' => 'Explore Categories',
+                    'secondary_button_url' => '#categories',
+                    'show_secondary_button' => true,
+                    'show_image' => true,
+                    'image_path' => '/images/Alogo.png',
+                    'overlay_text' => false,
+                    'show_floating_cards' => true,
+                    'card_1_title' => 'Products',
+                    'card_1_subtitle' => 'available',
+                    'card_2_title' => 'CATEGORIES',
+                    'card_2_subtitle' => 'to explore',
+                ],
+            ];
+        }
+
+        $activeHeroBanners = array_values(array_filter($heroBanners, function ($b) {
+            return !isset($b['is_active']) || $b['is_active'] === true;
+        }));
+
+        if (empty($activeHeroBanners)) {
+            $activeHeroBanners = $heroBanners;
+        }
+
+        foreach ($activeHeroBanners as &$bannerItem) {
+            if (empty($bannerItem['layout_type'])) {
+                $bannerItem['layout_type'] = 'split';
+            }
+            if (!isset($bannerItem['overlay_text'])) {
+                $bannerItem['overlay_text'] = false;
+            }
+            if (!isset($bannerItem['show_primary_button'])) {
+                $bannerItem['show_primary_button'] = !empty($bannerItem['primary_button_text']);
+            }
+            if (!isset($bannerItem['show_primary_button_arrow'])) {
+                $bannerItem['show_primary_button_arrow'] = true;
+            }
+            if (!isset($bannerItem['show_secondary_button'])) {
+                $bannerItem['show_secondary_button'] = !empty($bannerItem['secondary_button_text']);
+            }
+            if (!isset($bannerItem['show_image'])) {
+                $bannerItem['show_image'] = true;
+            }
+            if (!empty($bannerItem['image_path'])) {
+                $bannerItem['image_url'] = url($bannerItem['image_path']);
+            } else {
+                $bannerItem['image_url'] = null;
+            }
+        }
+        unset($bannerItem);
+
+        $heroStats = [
+            'products_count' => (int) Product::where('status', 'approved')->count(),
+            'categories_count' => (int) Category::whereNull('parent_id')->where('is_active', true)->count(),
+        ];
+
         return response()->json([
             'categories' => $categories,
             'featured_products' => $featured,
@@ -202,6 +290,8 @@ class BuyerCatalogController extends Controller
             'flash_sales' => $flashSales,
             'flash_sale_end_time' => $flashSaleEndTime,
             'promotions' => $promotions,
+            'hero_banners' => $activeHeroBanners,
+            'hero_stats' => $heroStats,
         ]);
     }
 

@@ -7,17 +7,18 @@ use App\Models\Product;
 use App\Models\Voucher;
 use App\Models\UserVoucher;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BuyerStoreController extends Controller
 {
-    public function show(Request $request, User $seller): Response
+    public function show(Request $request, User $seller): Response|JsonResponse
     {
         abort_unless(
-            $seller->usertype === 'seller' &&
-            in_array($seller->status, ['active', 'approved'], true),
+            in_array($seller->usertype, ['seller', 'both'], true) &&
+            (in_array($seller->status, ['active', 'approved'], true) || is_null($seller->status)),
             404
         );
 
@@ -28,6 +29,7 @@ class BuyerStoreController extends Controller
         $productsQuery = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
+            ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->when(
                 $search !== '',
                 fn ($query) => $query->where(function ($q) use ($search) {
@@ -73,6 +75,11 @@ class BuyerStoreController extends Controller
             case 'rating':
                 $productsQuery->orderByDesc('rating')->orderByDesc('reviews_count');
                 break;
+            case 'popular':
+            case 'top_sales':
+            case 'top-sales':
+                $productsQuery->orderByDesc('sold_total')->orderByDesc('rating');
+                break;
             default:
                 $productsQuery->latest();
                 break;
@@ -84,6 +91,7 @@ class BuyerStoreController extends Controller
         $recommendedProducts = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
+            ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->where('is_featured', true)
             ->limit(6)
             ->get();
@@ -92,6 +100,7 @@ class BuyerStoreController extends Controller
             $recommendedProducts = Product::query()
                 ->where('seller_id', $seller->id)
                 ->where('status', 'approved')
+                ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
                 ->orderByDesc('rating')
                 ->orderByDesc('reviews_count')
                 ->limit(6)
@@ -208,14 +217,54 @@ class BuyerStoreController extends Controller
                 ->exists();
         }
 
-        return Inertia::render('Buyer/SellerStore', [
+        $sellerProductIds = Product::where('seller_id', $seller->id)->pluck('id');
+        $ratingBreakdown = [];
+        $starTotal = 0;
+        for ($s = 5; $s >= 1; $s--) {
+            $countP = \App\Models\Review::whereIn('product_id', $sellerProductIds)->where('rating', $s)->count();
+            $countS = $seller->sellerReviewsReceived()->where('rating', $s)->count();
+            $cnt = $countP + $countS;
+            $starTotal += $cnt;
+            $ratingBreakdown[$s] = $cnt;
+        }
+
+        $formattedBreakdown = [];
+        for ($s = 5; $s >= 1; $s--) {
+            $cnt = $ratingBreakdown[$s];
+            $pct = $starTotal > 0 ? round($cnt / $starTotal, 2) : 0.0;
+            $formattedBreakdown[] = [
+                'stars' => $s,
+                'count' => $cnt,
+                'percentage' => $pct,
+            ];
+        }
+
+        $sellerReviews = \App\Models\Review::whereIn('product_id', $sellerProductIds)
+            ->with(['user:id,name,avatar', 'product:id,name'])
+            ->latest()
+            ->limit(25)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'user_name' => $r->user?->name ?? 'Verified Buyer',
+                'user_avatar' => $r->user?->avatar ? asset('storage/' . ltrim($r->user->avatar, '/')) : null,
+                'rating' => (int) $r->rating,
+                'comment' => $r->comment ?? '',
+                'created_at' => $r->created_at ? Carbon::parse($r->created_at)->diffForHumans() : 'Recently',
+                'product_name' => $r->product?->name,
+                'seller_reply' => $r->seller_reply,
+            ]);
+
+        $responseData = [
             'seller' => [
                 'id' => $seller->id,
                 'name' => $seller->name,
                 'store_name' => $seller->store_name ?: $seller->name,
                 'store_description' => $seller->store_description,
                 'store_logo_path' => $seller->store_logo_path,
+                'store_logo_url' => $seller->store_logo_path ? asset('storage/' . ltrim($seller->store_logo_path, '/')) : ($seller->avatar ? asset('storage/' . ltrim($seller->avatar, '/')) : null),
                 'store_banner_path' => $seller->store_banner_path,
+                'store_banner_url' => $seller->store_banner_path ? asset('storage/' . ltrim($seller->store_banner_path, '/')) : null,
                 'store_tagline' => $seller->store_tagline,
                 'operating_hours' => $seller->operating_hours ?: \App\Models\User::getDefaultOperatingHours(),
                 'response_time' => $seller->response_time ?: 'within_day',
@@ -231,6 +280,8 @@ class BuyerStoreController extends Controller
                 'line_of_business' => $seller->line_of_business,
                 'has_business_permit' => !empty($seller->business_permit_path),
                 'business_permit_path' => $seller->business_permit_path,
+                'is_mall' => !empty($seller->business_permit_path),
+                'badge_label' => !empty($seller->business_permit_path) ? 'Alona Mall' : (!empty($seller->store_name) ? 'Official' : null),
                 'created_at' => $seller->created_at,
                 'status' => $seller->status,
             ],
@@ -240,6 +291,7 @@ class BuyerStoreController extends Controller
             'vouchers' => $vouchers,
             'claimed_voucher_ids' => $claimedVoucherIds,
             'is_following' => $isFollowing,
+            'reviews' => $sellerReviews,
             'stats' => [
                 'total_products' => $totalProducts,
                 'avg_rating' => $avgRating,
@@ -249,13 +301,20 @@ class BuyerStoreController extends Controller
                 'has_bir' => !empty($seller->business_permit_path),
                 'return_policy_days' => $seller->return_policy_days ? (int) $seller->return_policy_days : 7,
                 'shipping_fee' => $seller->shipping_fee !== null ? (float) $seller->shipping_fee : null,
+                'rating_breakdown' => $formattedBreakdown,
             ],
             'filters' => [
                 'search' => $search,
                 'sort' => $sort,
                 'category' => $categorySlug,
             ],
-        ]);
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json($responseData);
+        }
+
+        return Inertia::render('Buyer/SellerStore', $responseData);
     }
 
     /**

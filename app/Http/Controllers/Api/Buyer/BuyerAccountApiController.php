@@ -27,7 +27,46 @@ class BuyerAccountApiController extends Controller
         $user = $request->user();
         $addresses = $user->addresses()->orderByDesc('is_default')->latest('id')->get();
 
-        return response()->json(['addresses' => $addresses]);
+        if ($addresses->isEmpty() && (!empty($user->street_address) || !empty($user->address) || !empty($user->barangay))) {
+            $street = $user->street_address ?: $user->address;
+            try {
+                $newAddr = $user->addresses()->create([
+                    'label' => 'Default Address',
+                    'recipient_name' => $user->name ?: 'Customer',
+                    'recipient_phone' => $user->contact_no ?: '09123456789',
+                    'region' => 'Region VII (Central Visayas)',
+                    'province' => $user->province ?: 'Bohol',
+                    'municipality' => $user->municipality ?: 'Tagbilaran City',
+                    'barangay' => $user->barangay ?: 'Poblacion',
+                    'street_address' => $street ?: 'Tagbilaran City',
+                    'address' => $street ?: 'Tagbilaran City',
+                    'postal_code' => $user->postal_code ?: '6300',
+                    'is_default' => true,
+                ]);
+                $addresses = collect([$newAddr]);
+            } catch (\Throwable $e) {}
+        }
+
+        $formatted = $addresses->map(function ($a) {
+            return [
+                'id' => $a->id,
+                'label' => $a->label,
+                'recipient_name' => $a->recipient_name,
+                'phone' => $a->recipient_phone ?: ($a->phone ?? ''),
+                'recipient_phone' => $a->recipient_phone ?: ($a->phone ?? ''),
+                'region' => $a->region,
+                'province' => $a->province,
+                'city' => $a->municipality ?: ($a->city ?? ''),
+                'municipality' => $a->municipality ?: ($a->city ?? ''),
+                'barangay' => $a->barangay,
+                'street' => $a->street_address ?: ($a->street ?? $a->address ?? ''),
+                'street_address' => $a->street_address ?: ($a->street ?? $a->address ?? ''),
+                'postal_code' => $a->postal_code,
+                'is_default' => (bool) $a->is_default,
+            ];
+        });
+
+        return response()->json(['addresses' => $formatted]);
     }
 
     public function storeAddress(Request $request): JsonResponse
@@ -62,19 +101,35 @@ class BuyerAccountApiController extends Controller
         $address = $user->addresses()->create([
             'label' => $validated['label'],
             'recipient_name' => $validated['recipient_name'],
-            'phone' => $validated['phone'],
+            'recipient_phone' => $validated['phone'],
             'region' => $validated['region'] ?? null,
             'province' => $validated['province'] ?? null,
-            'city' => $validated['city'],
+            'municipality' => $validated['city'],
             'barangay' => $validated['barangay'],
-            'street' => $validated['street'],
+            'street_address' => $validated['street'],
+            'address' => $validated['street'],
             'postal_code' => $validated['postal_code'] ?? null,
             'is_default' => $isDefault,
         ]);
 
         return response()->json([
             'message' => 'Address added successfully.',
-            'address' => $address,
+            'address' => [
+                'id' => $address->id,
+                'label' => $address->label,
+                'recipient_name' => $address->recipient_name,
+                'phone' => $address->recipient_phone,
+                'recipient_phone' => $address->recipient_phone,
+                'region' => $address->region,
+                'province' => $address->province,
+                'city' => $address->municipality,
+                'municipality' => $address->municipality,
+                'barangay' => $address->barangay,
+                'street' => $address->street_address,
+                'street_address' => $address->street_address,
+                'postal_code' => $address->postal_code,
+                'is_default' => (bool) $address->is_default,
+            ],
         ], 201);
     }
 
@@ -100,11 +155,38 @@ class BuyerAccountApiController extends Controller
             $user->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
 
-        $address->update($validated);
+        $address->update([
+            'label' => $validated['label'],
+            'recipient_name' => $validated['recipient_name'],
+            'recipient_phone' => $validated['phone'],
+            'region' => $validated['region'] ?? null,
+            'province' => $validated['province'] ?? null,
+            'municipality' => $validated['city'],
+            'barangay' => $validated['barangay'],
+            'street_address' => $validated['street'],
+            'address' => $validated['street'],
+            'postal_code' => $validated['postal_code'] ?? null,
+            'is_default' => ! empty($validated['is_default']),
+        ]);
 
         return response()->json([
             'message' => 'Address updated successfully.',
-            'address' => $address,
+            'address' => [
+                'id' => $address->id,
+                'label' => $address->label,
+                'recipient_name' => $address->recipient_name,
+                'phone' => $address->recipient_phone,
+                'recipient_phone' => $address->recipient_phone,
+                'region' => $address->region,
+                'province' => $address->province,
+                'city' => $address->municipality,
+                'municipality' => $address->municipality,
+                'barangay' => $address->barangay,
+                'street' => $address->street_address,
+                'street_address' => $address->street_address,
+                'postal_code' => $address->postal_code,
+                'is_default' => (bool) $address->is_default,
+            ],
         ]);
     }
 

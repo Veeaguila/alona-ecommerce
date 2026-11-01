@@ -202,14 +202,21 @@ class BuyerConversationController extends Controller
 
         if ($request->wantsJson()) {
             $conversation->load([
-                'seller:id,name,store_name',
+                'seller:id,name,store_name,avatar',
                 'product:id,name,image_path,price',
                 'order:id,order_number,status,created_at',
             ]);
 
             $messages = $conversation
                 ->messages()
-                ->with('sender:id,name')
+                ->with([
+                    'sender:id,name,avatar',
+                    'order' => fn ($q) => $q->with([
+                        'items.product:id,name,image_path,price',
+                        'items.variant:id,title,price',
+                        'items.parcel:id,order_item_id,tracking_number,status,carrier_name',
+                    ]),
+                ])
                 ->orderBy('created_at')
                 ->get();
 
