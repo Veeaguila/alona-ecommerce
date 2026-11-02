@@ -283,6 +283,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onTap: () {
                         setState(() => _selectedAddress = addr);
                         Navigator.pop(ctx);
+                        _recalculatePreview();
                       },
                     );
                   },

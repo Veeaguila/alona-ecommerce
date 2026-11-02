@@ -47,7 +47,7 @@ class CheckoutServiceability
             $zone = app(ShippingRates::class)->zone($address);
             $supported = $city && (in_array($city['code'], $known, true) || $zone?->sorting_center_id);
             if (app(ShippingRates::class)->remoteExcluded($address)) $supported = false;
-            $state = $supported ? 'supported' : ($city && $complete || app(ShippingRates::class)->remoteExcluded($address) ? 'unsupported' : 'unknown');
+            $state = $supported ? 'supported' : (app(ShippingRates::class)->remoteExcluded($address) ? 'unsupported' : 'unknown');
             $message = match ($state) {
                 'supported' => 'Delivery coverage is available for this destination.',
                 'unsupported' => 'This destination is not serviceable under current delivery coverage. Please choose another address.',

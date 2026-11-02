@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
-import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/splash/buyer_splash_welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +39,7 @@ class AlonaApp extends StatelessWidget {
   }
 
   Widget _buildHome() {
-    // Always launch the Buyer Module in alona_mobile
-    return BuyerMainScreen(authState: authState);
+    // Always launch with the Alona Splash & Welcome flow in alona_mobile
+    return BuyerSplashWelcomeScreen(authState: authState);
   }
 }
