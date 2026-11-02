@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
+import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
+import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/orders/order_list_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/wishlist/wishlist_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/buyer_settings_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
+import 'package:alona_mobile/features/buyer/presentation/products/product_list_screen.dart';
 
 class BuyerProfileScreen extends StatefulWidget {
   final AuthState authState;
@@ -24,6 +28,30 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   static const Color _cardBorder = Color(0xFFE2EBE9);
   static const Color _headingColor = Color(0xFF132228);
   static const Color _subtitleColor = Color(0xFF6B7C7C);
+
+  List<ProductModel> _recommendedProducts = [];
+  bool _isLoadingRecommended = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecommendations();
+  }
+
+  Future<void> _loadRecommendations() async {
+    setState(() => _isLoadingRecommended = true);
+    try {
+      final items = await BuyerService.getYouMayAlsoLike(limit: 8);
+      if (!mounted) return;
+      setState(() {
+        _recommendedProducts = items;
+        _isLoadingRecommended = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingRecommended = false);
+    }
+  }
 
   Future<void> _openSettings({String? initialPage}) async {
     await Navigator.push(
@@ -48,11 +76,15 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     return Scaffold(
       backgroundColor: _bgScaffold,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          onRefresh: _loadRecommendations,
+          color: _darkTeal,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Header Title + Settings Icon
               Padding(
                 padding: const EdgeInsets.only(left: 4, top: 8, bottom: 16),
@@ -320,10 +352,125 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 ),
               ),
 
+              // YOU MAY ALSO LIKE SECTION (Always visible)
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF5A711),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'You May Also Like',
+                          style: GoogleFonts.figtree(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: _headingColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'See all',
+                            style: GoogleFonts.figtree(
+                              fontWeight: FontWeight.w700,
+                              color: _darkTeal,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_rounded, size: 14, color: _darkTeal),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_isLoadingRecommended)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: CircularProgressIndicator(color: _darkTeal),
+                  ),
+                )
+              else if (_recommendedProducts.isNotEmpty)
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.65,
+                  ),
+                  itemCount: _recommendedProducts.length,
+                  itemBuilder: (context, index) {
+                    return ProductCard(
+                      product: _recommendedProducts[index],
+                      onReturn: _loadRecommendations,
+                    );
+                  },
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _cardBorder),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.storefront_outlined, size: 32, color: _darkTeal),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Discover more products',
+                        style: GoogleFonts.figtree(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _headingColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Browse the catalog to find items tailored for you.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.figtree(
+                          fontSize: 12,
+                          color: _subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               const SizedBox(height: 96),
             ],
           ),
         ),
+      ),
       ),
     );
   }

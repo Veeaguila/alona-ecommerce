@@ -62,7 +62,8 @@ class AuthState extends ChangeNotifier {
       }
       await prefs.setString('session_server', ApiConfig.baseUrl);
     }
-    _activeModule = prefs.getString('active_module') ?? 'buyer';
+    _activeModule = 'buyer';
+    await prefs.setString('active_module', 'buyer');
 
     _buyerToken = await sessionStore.read('buyer_token');
     final buyerUserStr = prefs.getString('buyer_user');

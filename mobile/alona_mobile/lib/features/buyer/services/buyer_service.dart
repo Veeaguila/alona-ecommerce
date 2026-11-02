@@ -114,6 +114,45 @@ class BuyerService {
         .toList();
   }
 
+  static Future<List<ProductModel>> getYouMayAlsoLike({
+    Set<int> excludeIds = const {},
+    int limit = 8,
+  }) async {
+    final Map<int, ProductModel> combined = {};
+
+    try {
+      final home = await getHome();
+      final recommended = home['recommended_products'] as List<ProductModel>? ?? [];
+      final featured = home['featured_products'] as List<ProductModel>? ?? [];
+      final topSelling = home['top_selling_products'] as List<ProductModel>? ?? [];
+
+      for (final p in [...recommended, ...featured, ...topSelling]) {
+        combined.putIfAbsent(p.id, () => p);
+      }
+    } catch (_) {}
+
+    if (combined.length < limit) {
+      try {
+        final res = await getProducts(page: 1);
+        final products = res['products'] as List<ProductModel>? ?? [];
+        for (final p in products) {
+          combined.putIfAbsent(p.id, () => p);
+        }
+      } catch (_) {}
+    }
+
+    final all = combined.values.toList();
+    if (excludeIds.isEmpty) {
+      return all.take(limit).toList();
+    }
+
+    final filtered = all.where((p) => !excludeIds.contains(p.id)).toList();
+    if (filtered.isNotEmpty) {
+      return filtered.take(limit).toList();
+    }
+    return all.take(limit).toList();
+  }
+
   // Cart
   static Future<Map<String, dynamic>> getCart() async {
     final res = await ApiClient.get('api/buyer/cart');

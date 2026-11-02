@@ -7,6 +7,7 @@ import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
+import 'package:alona_mobile/features/buyer/presentation/products/product_list_screen.dart';
 
 class WishlistScreen extends StatefulWidget {
   final VoidCallback? onBrowseProducts;
@@ -27,6 +28,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   bool _isLoading = true;
   String? _error;
   List<ProductModel> _items = [];
+  List<ProductModel> _recommendedProducts = [];
 
   @override
   void initState() {
@@ -57,27 +59,40 @@ class _WishlistScreenState extends State<WishlistScreen> {
       _error = null;
     });
 
+    List<ProductModel> wishlistItems = [];
+    String? wishlistError;
+
     try {
-      final items = await BuyerService.getWishlist();
-      if (!mounted) return;
-      setState(() {
-        _items = items;
-        _isLoading = false;
-      });
+      wishlistItems = await BuyerService.getWishlist();
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      wishlistError = e.toString();
     }
+
+    List<ProductModel> recommendations = [];
+    try {
+      recommendations = await BuyerService.getYouMayAlsoLike(
+        excludeIds: wishlistItems.map((e) => e.id).toSet(),
+        limit: 8,
+      );
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {
+      _items = wishlistItems;
+      _recommendedProducts = recommendations;
+      _error = wishlistError;
+      _isLoading = false;
+    });
   }
 
   void _handleBrowse() {
     if (widget.onBrowseProducts != null) {
       widget.onBrowseProducts!();
-    } else if (Navigator.canPop(context)) {
-      Navigator.pop(context);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductListScreen()),
+      );
     }
   }
 
@@ -179,113 +194,224 @@ class _WishlistScreenState extends State<WishlistScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                children: [
-                  Text(
-                    'My Wishlist',
-                    style: GoogleFonts.figtree(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: _headingColor,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  if (_items.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F3F1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${filtered.length}',
-                        style: GoogleFonts.figtree(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: _darkTeal,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: _darkTeal))
+            : RefreshIndicator(
+                onRefresh: _loadWishlist,
+                color: _darkTeal,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, right: 4, bottom: 12),
+                        child: Row(
+                          children: [
+                            Text(
+                              'My Wishlist',
+                              style: GoogleFonts.figtree(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: _headingColor,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            if (_items.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE3F3F1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${filtered.length}',
+                                  style: GoogleFonts.figtree(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: _darkTeal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
 
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: _darkTeal))
-                  : _error != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                      // Wishlist Content (or Empty State)
+                      if (_error != null && _items.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_error!, textAlign: TextAlign.center),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: _loadWishlist,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _darkTeal,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Try Again'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (filtered.isEmpty)
+                        EmptyStateView(
+                          icon: Icons.favorite_border_rounded,
+                          title: _searchQuery.isNotEmpty ? 'No matching items' : 'Your wishlist is empty',
+                          message: _searchQuery.isNotEmpty
+                              ? 'No saved products match "$_searchQuery".'
+                              : 'Save items you love by tapping the heart icon on any product.',
+                          buttonText: _searchQuery.isNotEmpty ? 'Clear Search' : 'Discover Products',
+                          onButtonPressed: _searchQuery.isNotEmpty
+                              ? () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                }
+                              : _handleBrowse,
+                        )
+                      else
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.65,
+                          ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            return ProductCard(
+                              product: filtered[index],
+                              onReturn: _loadWishlist,
+                            );
+                          },
+                        ),
+
+                      // YOU MAY ALSO LIKE SECTION (Always visible)
+                      const SizedBox(height: 28),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
                               children: [
-                                Text(_error!, textAlign: TextAlign.center),
-                                const SizedBox(height: 12),
-                                ElevatedButton(
-                                  onPressed: _loadWishlist,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _darkTeal,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    elevation: 0,
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF5A711),
+                                    shape: BoxShape.circle,
                                   ),
-                                  child: const Text('Try Again'),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'You May Also Like',
+                                  style: GoogleFonts.figtree(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: _headingColor,
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        )
-                      : filtered.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                              child: EmptyStateView(
-                                icon: Icons.favorite_border_rounded,
-                                title: _searchQuery.isNotEmpty ? 'No matching items' : 'Your wishlist is empty',
-                                message: _searchQuery.isNotEmpty
-                                    ? 'No saved products match "$_searchQuery".'
-                                    : 'Save items you love by tapping the heart icon on any product.',
-                                buttonText: _searchQuery.isNotEmpty ? 'Clear Search' : 'Discover Products',
-                                onButtonPressed: _searchQuery.isNotEmpty
-                                    ? () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                      }
-                                    : _handleBrowse,
-                              ),
-                            )
-                          : RefreshIndicator(
-                              onRefresh: _loadWishlist,
-                              color: _darkTeal,
-                              child: GridView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 0.65,
-                                ),
-                                itemCount: filtered.length,
-                                itemBuilder: (context, index) {
-                                  return ProductCard(
-                                    product: filtered[index],
-                                    onReturn: _loadWishlist,
-                                  );
-                                },
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                                );
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'See all',
+                                    style: GoogleFonts.figtree(
+                                      fontWeight: FontWeight.w700,
+                                      color: _darkTeal,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.arrow_forward_rounded, size: 14, color: _darkTeal),
+                                ],
                               ),
                             ),
-            ),
-          ],
-        ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_recommendedProducts.isNotEmpty)
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.65,
+                          ),
+                          itemCount: _recommendedProducts.length,
+                          itemBuilder: (context, index) {
+                            return ProductCard(
+                              product: _recommendedProducts[index],
+                              onReturn: _loadWishlist,
+                            );
+                          },
+                        )
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2EBE9)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.storefront_outlined, size: 32, color: _darkTeal),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Discover more products',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: _headingColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Browse the catalog to find items tailored for you.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.figtree(
+                                  fontSize: 12,
+                                  color: const Color(0xFF6B7C7C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
       ),
     );
   }
