@@ -8,6 +8,7 @@ import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_chat_detail_screen.dart';
 
@@ -431,11 +432,30 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.white, size: 20),
+                      tooltip: 'Message Seller',
+                      onPressed: _openChatWithSeller,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.white, size: 22),
+                      tooltip: 'Cart',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                        );
+                      },
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.more_vert, color: AppColors.white),
                       onPressed: _showStoreInfoSheet,
-                      padding: EdgeInsets.zero,
+                      padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(),
                     ),
                   ],

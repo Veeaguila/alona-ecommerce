@@ -4,6 +4,8 @@ import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
+import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -68,34 +70,102 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.categoryName ?? (widget.initialSearch != null ? 'Search Results' : 'All Products');
+    final canPop = Navigator.canPop(context);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(title),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: (_) => _fetchProducts(),
-              decoration: InputDecoration(
-                hintText: 'Search products, brands...',
-                prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textMuted),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
+        titleSpacing: canPop ? 0 : 16,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Row(
+          children: [
+            // Left side: Search Bar matching Home layout
+            Expanded(
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        onSubmitted: (_) => _fetchProducts(),
+                        style: GoogleFonts.figtree(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: widget.categoryName != null
+                              ? 'Search in ${widget.categoryName}...'
+                              : 'Search products, brands...',
+                          hintStyle: GoogleFonts.figtree(
+                            color: AppColors.textLight,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    if (_searchController.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
                           _searchController.clear();
+                          setState(() {});
                           _fetchProducts();
                         },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        child: const Icon(Icons.close_rounded, size: 18, color: AppColors.mutedText),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 4),
+
+            // Right side: Message and Cart icons
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              tooltip: 'Messages',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              tooltip: 'Cart',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
+            ),
+          ],
         ),
       ),
       body: Column(

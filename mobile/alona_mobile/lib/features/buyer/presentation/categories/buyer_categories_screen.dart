@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
+import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/products/product_list_screen.dart';
 
 class BuyerCategoriesScreen extends StatefulWidget {
@@ -59,23 +62,98 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     final list = _filteredCategories;
+    final canPop = Navigator.canPop(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
       appBar: AppBar(
+        titleSpacing: canPop ? 0 : 16,
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Shop by Category',
-          style: GoogleFonts.figtree(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1F2937),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1F2937)),
-          onPressed: () => Navigator.pop(context),
+        automaticallyImplyLeading: false,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1F2937)),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Row(
+          children: [
+            // Left side: Search Bar matching Home layout
+            Expanded(
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                        style: GoogleFonts.figtree(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search categories...',
+                          hintStyle: GoogleFonts.figtree(
+                            color: AppColors.textLight,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                        child: const Icon(Icons.close_rounded, color: AppColors.mutedText, size: 18),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+
+            // Right side: Message and Cart icons
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              tooltip: 'Messages',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              tooltip: 'Cart',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
+            ),
+          ],
         ),
       ),
       body: _isLoading
@@ -120,47 +198,6 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
                               color: const Color(0xFF64748B),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Search Input
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (val) => setState(() => _searchQuery = val),
-                              style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                              decoration: InputDecoration(
-                                hintText: 'Search categories...',
-                                hintStyle: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF94A3B8)),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                            ),
-                          ),
-                          if (_searchQuery.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                              child: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 18),
-                            ),
                         ],
                       ),
                     ),

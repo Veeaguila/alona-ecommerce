@@ -79,33 +79,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        titleSpacing: 8,
+        titleSpacing: 16,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            // Left side: Cart and Message icons
-            IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
-              tooltip: 'Cart',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
-              tooltip: 'Messages',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()),
-                );
-              },
-            ),
-            const SizedBox(width: 4),
-
-            // Top Search Bar (matching Web search bar)
+            // Left side: Top Search Bar
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -144,6 +125,25 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               ),
             ),
             const SizedBox(width: 4),
+
+            // Right side: Message and Cart icons
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              tooltip: 'Messages',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              tooltip: 'Cart',
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+              },
+            ),
           ],
         ),
       ),
