@@ -558,6 +558,43 @@ class BuyerCatalogController extends Controller
         return response()->json(['categories' => $categories]);
     }
 
+    /**
+     * Public Support Info (Contact settings, FAQs, and Policies from website).
+     */
+    public function supportInfo(): JsonResponse
+    {
+        $settings = Schema::hasTable('platform_settings')
+            ? PlatformSetting::query()
+                ->whereIn('key', ['support.email', 'support.phone', 'support.hours'])
+                ->where('is_active', true)
+                ->pluck('value', 'key')
+            : collect();
+
+        $faqs = Schema::hasTable('faqs')
+            ? \App\Models\Faq::query()
+                ->where('is_published', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'category', 'question', 'answer', 'sort_order'])
+            : collect();
+
+        $policies = Schema::hasTable('policies')
+            ? \App\Models\Policy::query()
+                ->where('is_published', true)
+                ->get(['id', 'title', 'content', 'version', 'updated_at'])
+            : collect();
+
+        return response()->json([
+            'contact_settings' => [
+                'email' => $settings->get('support.email') ?: 'support@alona.ph',
+                'phone' => $settings->get('support.phone') ?: '+63 (02) 8888-ALONA',
+                'hours' => $settings->get('support.hours') ?: 'Mon – Sat: 8:00 AM – 8:00 PM PHT',
+            ],
+            'faqs' => $faqs,
+            'policies' => $policies,
+        ]);
+    }
+
     private function formatProductItem(Product $p): array
     {
         return [

@@ -262,7 +262,6 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                         pinned: true,
                         delegate: _SliverAppBarDelegate(
                           Container(
-                            color: AppColors.white,
                             decoration: const BoxDecoration(
                               color: AppColors.white,
                               border: Border(bottom: BorderSide(color: AppColors.border, width: 0.8)),

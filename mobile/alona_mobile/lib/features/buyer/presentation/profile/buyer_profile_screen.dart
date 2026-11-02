@@ -12,6 +12,7 @@ import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_scree
 import 'package:alona_mobile/features/buyer/presentation/wishlist/wishlist_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/address_management_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/profile/buyer_settings_screen.dart';
 
 class BuyerProfileScreen extends StatefulWidget {
   final AuthState authState;
@@ -128,17 +129,44 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Title
+              // Header Title + Settings Icon
               Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 16),
-                child: Text(
-                  'My Account',
-                  style: GoogleFonts.figtree(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: _headingColor,
-                    letterSpacing: -0.5,
-                  ),
+                padding: const EdgeInsets.only(left: 4, top: 8, bottom: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'My Account',
+                      style: GoogleFonts.figtree(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: _headingColor,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _cardBorder),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.settings_outlined, size: 22, color: _headingColor),
+                        tooltip: 'Account Settings',
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BuyerSettingsScreen(authState: widget.authState),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -510,7 +538,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 96),
             ],
           ),
         ),

@@ -233,6 +233,7 @@ Route::prefix('marketplace')->group(function () {
     Route::get('/products/{id}', [BuyerCatalogController::class, 'show']);
     Route::get('/categories', [BuyerCatalogController::class, 'categories']);
     Route::get('/store/{seller}', [\App\Http\Controllers\BuyerStoreController::class, 'show']);
+    Route::get('/support-info', [BuyerCatalogController::class, 'supportInfo']);
 });
 
 // Buyer Public Auth
@@ -305,6 +306,11 @@ Route::middleware(['auth:sanctum', 'buyer'])->prefix('buyer')->group(function ()
 
     // Store Follow
     Route::post('/store/{sellerId}/toggle-follow', [BuyerAccountApiController::class, 'toggleFollowStore']);
+
+    // Support & Complaints
+    Route::get('/complaints', [BuyerAccountApiController::class, 'complaints']);
+    Route::post('/complaints', [BuyerAccountApiController::class, 'storeComplaint']);
+    Route::post('/support/contact', [BuyerAccountApiController::class, 'contactSupport']);
 
     // Conversations & Messages
     Route::get('/conversations', [\App\Http\Controllers\BuyerConversationController::class, 'index']);

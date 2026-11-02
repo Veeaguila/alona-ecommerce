@@ -524,4 +524,48 @@ class BuyerService {
     final res = await ApiClient.get('api/marketplace/store/$sellerId$qStr');
     return res as Map<String, dynamic>;
   }
+
+  // Support Info, FAQs, Policies & Complaints
+  static Future<Map<String, dynamic>> getSupportInfo() async {
+    final res = await ApiClient.get('api/marketplace/support-info');
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<Map<String, dynamic>> getComplaints({String status = 'all'}) async {
+    final res = await ApiClient.get(
+      'api/buyer/complaints',
+      queryParameters: {'status': status},
+    );
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<Map<String, dynamic>> submitComplaint({
+    required String subject,
+    required String description,
+    String type = 'complaint',
+    int? orderId,
+    String? contactEmail,
+  }) async {
+    final res = await ApiClient.post('api/buyer/complaints', body: {
+      'subject': subject,
+      'description': description,
+      'type': type,
+      if (orderId != null) 'order_id': orderId,
+      if (contactEmail != null && contactEmail.isNotEmpty) 'contact_email': contactEmail,
+    });
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<Map<String, dynamic>> submitSupportContact({
+    required String category,
+    required String subject,
+    required String message,
+  }) async {
+    final res = await ApiClient.post('api/buyer/support/contact', body: {
+      'category': category,
+      'subject': subject,
+      'message': message,
+    });
+    return res is Map<String, dynamic> ? res : {};
+  }
 }

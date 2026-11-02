@@ -279,5 +279,104 @@ class BuyerAccountApiController extends Controller
             'message' => $following ? 'You are now following this store.' : 'Unfollowed store.',
         ]);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPLAINTS & SUPPORT TICKETS
+    |--------------------------------------------------------------------------
+    */
+
+    public function complaints(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $statusTab = strtolower((string) $request->input('status', 'all'));
+
+        $query = \App\Models\Complaint::query()
+            ->where('buyer_id', $user->id)
+            ->with([
+                'seller:id,name,store_name',
+                'order:id,order_number',
+                'product:id,name',
+            ]);
+
+        if ($statusTab !== 'all' && in_array($statusTab, ['pending', 'reviewing', 'resolved', 'rejected'])) {
+            $query->where('status', $statusTab);
+        }
+
+        $items = $query->latest('id')->take(30)->get();
+
+        $counts = [
+            'all' => \App\Models\Complaint::where('buyer_id', $user->id)->count(),
+            'pending' => \App\Models\Complaint::where('buyer_id', $user->id)->where('status', 'pending')->count(),
+            'reviewing' => \App\Models\Complaint::where('buyer_id', $user->id)->where('status', 'reviewing')->count(),
+            'resolved' => \App\Models\Complaint::where('buyer_id', $user->id)->where('status', 'resolved')->count(),
+            'rejected' => \App\Models\Complaint::where('buyer_id', $user->id)->where('status', 'rejected')->count(),
+        ];
+
+        return response()->json([
+            'complaints' => $items,
+            'counts' => $counts,
+        ]);
+    }
+
+    public function storeComplaint(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'subject' => ['required', 'string', 'max:200'],
+            'type' => ['nullable', 'string', 'max:50'],
+            'description' => ['required', 'string', 'max:5000'],
+            'order_id' => ['nullable', 'integer', 'exists:orders,id'],
+            'contact_email' => ['nullable', 'email', 'max:150'],
+        ]);
+
+        $user = $request->user();
+        $complaint = \App\Models\Complaint::create([
+            'buyer_id' => $user->id,
+            'order_id' => $data['order_id'] ?? null,
+            'subject' => $data['subject'],
+            'type' => $data['type'] ?? 'complaint',
+            'description' => $data['description'],
+            'contact_email' => $data['contact_email'] ?? $user->email,
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Your complaint/support ticket has been submitted to the platform administration.',
+            'complaint' => $complaint,
+        ], 201);
+    }
+
+    public function contactSupport(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'subject' => ['required', 'string', 'max:200'],
+            'message' => ['required', 'string', 'max:4000'],
+            'category' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $user = $request->user();
+
+        \App\Models\Message::create([
+            'user_id' => $user->id,
+            'subject' => ! empty($data['category']) ? "[{$data['category']}] {$data['subject']}" : $data['subject'],
+            'message' => $data['message'],
+            'is_read' => false,
+        ]);
+
+        $complaint = \App\Models\Complaint::create([
+            'buyer_id' => $user->id,
+            'subject' => ! empty($data['category'])
+                ? "[Support Inquiry - {$data['category']}] {$data['subject']}"
+                : "[Support Inquiry] {$data['subject']}",
+            'type' => 'support_ticket',
+            'description' => $data['message'],
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Your message has been sent to Alona Customer Support. We will get back to you shortly.',
+            'ticket' => $complaint,
+        ], 201);
+    }
 }
 
