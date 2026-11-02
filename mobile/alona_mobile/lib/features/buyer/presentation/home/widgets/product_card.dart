@@ -9,23 +9,27 @@ import 'package:alona_mobile/features/buyer/presentation/products/product_detail
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   final bool isMall;
+  final VoidCallback? onReturn;
 
   const ProductCard({
     super.key,
     required this.product,
     this.isMall = false,
+    this.onReturn,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      behavior: HitTestBehavior.opaque,
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ProductDetailScreen(productId: product.id),
           ),
         );
+        onReturn?.call();
       },
       child: Container(
         decoration: BoxDecoration(

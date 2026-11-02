@@ -230,15 +230,20 @@ class BuyerCartApiController extends Controller
             }
 
             return [
-                'id' => $w->id,
+                'id' => $p->id,
+                'wishlist_id' => $w->id,
                 'product_id' => $p->id,
                 'name' => $p->name,
+                'slug' => $p->slug,
                 'price' => (float) $p->price,
+                'old_price' => $p->old_price ? (float) $p->old_price : null,
                 'stock' => (int) $p->stock,
                 'rating' => (float) ($p->rating ?? 0),
+                'reviews_count' => (int) ($p->reviews_count ?? 0),
                 'image_url' => $imageUrl,
                 'category_name' => $p->category?->name,
                 'seller_name' => $p->seller?->store_name ?: $p->seller?->name,
+                'in_wishlist' => true,
             ];
         })->filter()->values();
 

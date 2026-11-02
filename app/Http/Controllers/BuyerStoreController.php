@@ -29,6 +29,7 @@ class BuyerStoreController extends Controller
         $productsQuery = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->when(
                 $search !== '',
@@ -61,7 +62,11 @@ class BuyerStoreController extends Controller
 
                 $productsQuery->whereHas('storeCategories', fn ($q) => $q->whereIn('store_categories.id', $catIds));
             } else {
-                $productsQuery->whereHas('category', fn ($q) => $q->where('slug', $categorySlug));
+                $productsQuery->whereHas('category', function ($q) use ($categorySlug) {
+                    $q->where('slug', $categorySlug)
+                      ->orWhere('name', $categorySlug)
+                      ->orWhereHas('parent', fn ($pq) => $pq->where('slug', $categorySlug)->orWhere('name', $categorySlug));
+                });
             }
         }
 
@@ -91,6 +96,7 @@ class BuyerStoreController extends Controller
         $recommendedProducts = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->where('is_featured', true)
             ->limit(6)
@@ -100,6 +106,7 @@ class BuyerStoreController extends Controller
             $recommendedProducts = Product::query()
                 ->where('seller_id', $seller->id)
                 ->where('status', 'approved')
+                ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
                 ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
                 ->orderByDesc('rating')
                 ->orderByDesc('reviews_count')
@@ -145,22 +152,76 @@ class BuyerStoreController extends Controller
             ->where('seller_id', $seller->id)
             ->where('is_visible', true)
             ->whereNull('parent_id')
+            ->with(['children' => fn ($q) => $q->where('is_visible', true)->orderBy('sort_order')->select(['id', 'parent_id', 'name', 'slug'])])
             ->orderBy('sort_order')
             ->get(['id', 'name', 'slug']);
 
         if ($sellerStoreCategories->isNotEmpty()) {
-            $categories = $sellerStoreCategories;
+            $categories = $sellerStoreCategories->map(fn ($sc) => [
+                'id' => $sc->id,
+                'name' => $sc->name,
+                'slug' => $sc->slug,
+                'subcategories' => $sc->children->map(fn ($ch) => [
+                    'id' => $ch->id,
+                    'name' => $ch->name,
+                    'slug' => $ch->slug,
+                ])->values(),
+            ])->values();
         } else {
-            // Fallback to platform categories of active seller products
-            $categories = Product::query()
+            // Fallback to platform categories + subcategories of active seller products
+            $sellerProductsWithCats = Product::query()
                 ->where('seller_id', $seller->id)
                 ->where('status', 'approved')
-                ->with('category:id,name,slug')
-                ->get()
-                ->pluck('category')
-                ->filter()
-                ->unique('id')
-                ->values();
+                ->with(['category.parent:id,name,slug', 'category.activeSubcategories:id,parent_id,name,slug'])
+                ->get();
+
+            $catMap = [];
+            foreach ($sellerProductsWithCats as $prod) {
+                $cat = $prod->category;
+                if (! $cat) {
+                    continue;
+                }
+                if ($cat->parent) {
+                    $parentId = $cat->parent->id;
+                    if (! isset($catMap[$parentId])) {
+                        $catMap[$parentId] = [
+                            'id' => $cat->parent->id,
+                            'name' => $cat->parent->name,
+                            'slug' => $cat->parent->slug,
+                            'subcategories' => [],
+                        ];
+                    }
+                    $catMap[$parentId]['subcategories'][$cat->id] = [
+                        'id' => $cat->id,
+                        'name' => $cat->name,
+                        'slug' => $cat->slug,
+                    ];
+                } else {
+                    if (! isset($catMap[$cat->id])) {
+                        $subs = [];
+                        if ($cat->relationLoaded('activeSubcategories')) {
+                            foreach ($cat->activeSubcategories as $sub) {
+                                $subs[$sub->id] = [
+                                    'id' => $sub->id,
+                                    'name' => $sub->name,
+                                    'slug' => $sub->slug,
+                                ];
+                            }
+                        }
+                        $catMap[$cat->id] = [
+                            'id' => $cat->id,
+                            'name' => $cat->name,
+                            'slug' => $cat->slug,
+                            'subcategories' => $subs,
+                        ];
+                    }
+                }
+            }
+
+            $categories = collect($catMap)->map(function ($item) {
+                $item['subcategories'] = array_values($item['subcategories']);
+                return $item;
+            })->values();
         }
 
         // Authentic store vouchers (SEL-VOU-001, SEL-VOU-003: exclude code-only vouchers)

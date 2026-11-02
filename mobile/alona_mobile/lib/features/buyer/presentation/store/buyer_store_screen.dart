@@ -45,12 +45,13 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
 
   String _currentSort = 'popular';
   String? _selectedCategory;
+  String? _selectedSubcategory;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this, initialIndex: 1); // default to Products tab
+    _tabController = TabController(length: 4, vsync: this, initialIndex: 1); // Shop, Products, Reviews, Categories
     _loadStoreData();
   }
 
@@ -72,7 +73,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
         widget.sellerId,
         sort: _currentSort,
         search: _searchQuery,
-        category: _selectedCategory,
+        category: _selectedSubcategory ?? _selectedCategory,
       );
 
       final Map<String, dynamic> sellerData =
@@ -303,7 +304,6 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                 ),
                                 const Tab(text: 'Reviews'),
                                 const Tab(text: 'Categories'),
-                                const Tab(text: 'Live'),
                               ],
                             ),
                           ),
@@ -318,7 +318,6 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                       _buildProductsTab(),
                       _buildReviewsTab(),
                       _buildCategoriesTab(),
-                      _buildLiveTab(),
                     ],
                   ),
                 ),
@@ -460,28 +459,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                   ],
                 ),
 
-                const SizedBox(height: 6),
-
-                // Slide down to enter live hint matching reference layout
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.white, size: 16),
-                      const SizedBox(width: 2),
-                      Text(
-                        'Slide down to enter the live',
-                        style: GoogleFonts.figtree(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Store info row: Avatar + Name/Stats + Follow/Chat Buttons
                 Row(
@@ -1244,147 +1222,304 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
     );
   }
 
-  // 4. Categories Tab Widget
+  // 4. Categories Tab Widget: Categories + Subcategories + Sort + Products Grid
   Widget _buildCategoriesTab() {
-    if (_categories.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: EmptyStateView(
-          icon: Icons.category_outlined,
-          title: 'No categories available',
-          message: 'The seller has not organized their products into custom categories yet.',
-        ),
-      );
+    // Build dynamic categories from backend _categories + fallback from _products
+    final List<Map<String, dynamic>> categoryItems = [];
+    for (final rawCat in _categories) {
+      if (rawCat is Map) {
+        final name = rawCat['name']?.toString() ?? '';
+        final slug = rawCat['slug']?.toString() ?? name;
+        final subsRaw = rawCat['subcategories'] is List ? (rawCat['subcategories'] as List) : const [];
+        final subs = <Map<String, String>>[];
+        for (final s in subsRaw) {
+          if (s is Map && s['name'] != null) {
+            subs.add({
+              'name': s['name'].toString(),
+              'slug': (s['slug'] ?? s['name']).toString(),
+            });
+          }
+        }
+        if (name.isNotEmpty) {
+          categoryItems.add({
+            'name': name,
+            'slug': slug,
+            'subcategories': subs,
+          });
+        }
+      }
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _categories.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, indent: 16, color: AppColors.border),
-      itemBuilder: (context, index) {
-        final cat = _categories[index];
-        final name = cat['name']?.toString() ?? 'Category';
-        final slug = cat['slug']?.toString() ?? name;
+    // Also supplement from loaded products if backend categories list was empty
+    if (categoryItems.isEmpty && _products.isNotEmpty) {
+      final Map<String, Map<String, dynamic>> derived = {};
+      for (final p in _products) {
+        final parentName = p.parentCategoryName ?? p.categoryName;
+        final parentSlug = p.parentCategorySlug ?? p.categorySlug ?? parentName;
+        if (parentName != null && parentName.isNotEmpty && parentSlug != null) {
+          derived.putIfAbsent(parentSlug, () => {
+                'name': parentName,
+                'slug': parentSlug,
+                'subcategories': <Map<String, String>>[],
+              });
+          if (p.parentCategoryName != null &&
+              p.categoryName != null &&
+              p.categoryName != p.parentCategoryName) {
+            final subsList = derived[parentSlug]!['subcategories'] as List<Map<String, String>>;
+            final subSlug = p.categorySlug ?? p.categoryName!;
+            if (!subsList.any((s) => s['slug'] == subSlug)) {
+              subsList.add({
+                'name': p.categoryName!,
+                'slug': subSlug,
+              });
+            }
+          }
+        }
+      }
+      categoryItems.addAll(derived.values);
+    }
 
-        return ListTile(
-          title: Text(
-            name,
-            style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
-          trailing: const Icon(Icons.chevron_right, size: 18, color: AppColors.mutedText),
-          onTap: () {
-            setState(() {
-              _selectedCategory = slug;
-              _tabController.animateTo(1);
-            });
-            _loadStoreData();
-          },
-        );
-      },
-    );
-  }
+    // Collect subcategories for the currently selected category (or all subcategories if 'all')
+    final List<Map<String, String>> activeSubcategories = [];
+    for (final cat in categoryItems) {
+      final isSelectedCat = _selectedCategory == null ||
+          _selectedCategory == cat['slug'] ||
+          _selectedCategory == cat['name'];
+      if (isSelectedCat && cat['subcategories'] is List) {
+        for (final sub in (cat['subcategories'] as List)) {
+          if (sub is Map<String, String> &&
+              !activeSubcategories.any((s) => s['slug'] == sub['slug'])) {
+            activeSubcategories.add(sub);
+          }
+        }
+      }
+    }
 
-  // 5. Live Tab Widget matching screenshot 3
-  Widget _buildLiveTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          height: 220,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1F2937),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.videocam_outlined, color: AppColors.white, size: 28),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Live Stream Offline',
-                      style: GoogleFonts.figtree(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$_storeName is not currently streaming.',
-                      style: GoogleFonts.figtree(
-                        fontSize: 12.5,
-                        color: AppColors.white.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.sale,
-                    borderRadius: BorderRadius.circular(6),
+        // 1. Main Categories Filter Bar
+        if (categoryItems.isNotEmpty)
+          Container(
+            width: double.infinity,
+            color: AppColors.white,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CATEGORIES',
+                  style: GoogleFonts.figtree(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                    color: AppColors.mutedText,
                   ),
+                ),
+                const SizedBox(height: 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      const Icon(Icons.sensors_rounded, color: AppColors.white, size: 12),
+                      _buildCategoryChip(
+                        label: 'All Categories',
+                        selected: _selectedCategory == null,
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = null;
+                            _selectedSubcategory = null;
+                          });
+                          _loadStoreData();
+                        },
+                      ),
+                      ...categoryItems.map((cat) {
+                        final slug = cat['slug']?.toString() ?? '';
+                        final name = cat['name']?.toString() ?? 'Category';
+                        final selected = _selectedCategory == slug || _selectedCategory == name;
+                        return _buildCategoryChip(
+                          label: name,
+                          selected: selected,
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = selected ? null : slug;
+                              _selectedSubcategory = null;
+                            });
+                            _loadStoreData();
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+
+                // 2. Subcategories Filter Row
+                if (activeSubcategories.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.subdirectory_arrow_right_rounded, size: 15, color: AppColors.alonaTeal),
                       const SizedBox(width: 4),
                       Text(
-                        'LIVE',
+                        'Subcategory:',
                         style: GoogleFonts.figtree(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.alonaTeal,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildSubcategoryChip(
+                                label: 'All',
+                                selected: _selectedSubcategory == null,
+                                onTap: () {
+                                  setState(() => _selectedSubcategory = null);
+                                  _loadStoreData();
+                                },
+                              ),
+                              ...activeSubcategories.map((sub) {
+                                final subSlug = sub['slug'] ?? '';
+                                final subName = sub['name'] ?? '';
+                                final selected = _selectedSubcategory == subSlug || _selectedSubcategory == subName;
+                                return _buildSubcategoryChip(
+                                  label: subName,
+                                  selected: selected,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedSubcategory = selected ? null : subSlug;
+                                    });
+                                    _loadStoreData();
+                                  },
+                                );
+                              }),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
+              ],
+            ),
+          ),
+
+        // 3. Sort Bar: Popular | Latest | Top Sales | Price ⇅
+        Container(
+          color: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSortItem('Popular', 'popular'),
+              _buildSortItem('Latest', 'latest', showDot: true),
+              _buildSortItem('Top Sales', 'top_sales'),
+              _buildSortItem(
+                'Price ⇅',
+                _currentSort == 'price-low' ? 'price-high' : 'price-low',
+                isActive: _currentSort == 'price-low' || _currentSort == 'price-high',
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        Center(
-          child: OutlinedButton.icon(
-            onPressed: _toggleFollow,
-            icon: Icon(
-              _isFollowing ? Icons.check_rounded : Icons.notifications_active_outlined,
-              color: AppColors.alonaTeal,
-              size: 16,
+        const Divider(height: 1, thickness: 0.8, color: AppColors.border),
+
+        // 4. Products Grid inside Categories Tab
+        Expanded(
+          child: _products.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: EmptyStateView(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'No products in this category',
+                    message: 'Try selecting another category or subcategory filter above.',
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _products.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.68,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemBuilder: (context, index) {
+                    return ProductCard(
+                      product: _products[index],
+                      isMall: _isMall,
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.alonaTeal : AppColors.background,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.alonaTeal : AppColors.border,
             ),
-            label: Text(
-              _isFollowing ? 'Notifying You on Next Live' : 'Follow for Live Notifications',
-              style: GoogleFonts.figtree(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.alonaTeal,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.alonaTeal),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.figtree(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppColors.textPrimary,
             ),
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildSubcategoryChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.lightTeal : AppColors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? AppColors.alonaTeal : AppColors.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.figtree(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.alonaTeal : AppColors.mutedText,
+            ),
+          ),
+        ),
+      ),
     );
   }
 

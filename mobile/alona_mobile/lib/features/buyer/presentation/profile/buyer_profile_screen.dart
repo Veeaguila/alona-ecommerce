@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:alona_mobile/core/config/api_config.dart';
-import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
-import 'package:alona_mobile/shared/widgets/alona_text_field.dart';
-import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/orders/order_list_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/wishlist/wishlist_screen.dart';
-import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
-import 'package:alona_mobile/features/buyer/presentation/profile/address_management_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/buyer_settings_screen.dart';
 
 class BuyerProfileScreen extends StatefulWidget {
@@ -30,90 +24,20 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   static const Color _cardBorder = Color(0xFFE2EBE9);
   static const Color _headingColor = Color(0xFF132228);
   static const Color _subtitleColor = Color(0xFF6B7C7C);
-  static const Color _dangerColor = Color(0xFFB91C1C);
 
-  void _showServerSettingsDialog() {
-    final controller = TextEditingController(text: ApiConfig.baseUrl);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Server API Settings', style: GoogleFonts.figtree(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Set the Laravel backend base URL for API connections.',
-              style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 12),
-            AlonaTextField(
-              label: 'Base URL',
-              controller: controller,
-              hint: 'http://10.0.2.2:8000',
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '• Android Emulator: http://10.0.2.2:8000\n• Physical Device: http://<your-pc-ip>:8000\n• Live Production: https://shopalona.online',
-              style: GoogleFonts.figtree(fontSize: 11, color: AppColors.textLight, height: 1.4),
-            ),
-          ],
+  Future<void> _openSettings({String? initialPage}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyerSettingsScreen(
+          authState: widget.authState,
+          initialPage: initialPage,
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              try { await ApiConfig.setBaseUrl(controller.text); }
-              on FormatException catch (error) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content:Text(error.message)));
-                return;
-              }
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-              if (!mounted) return;
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('API URL updated to: ${ApiConfig.baseUrl}')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _darkTeal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            child: const Text('Save URL'),
-          ),
-        ],
       ),
     );
-  }
-
-  void _showEditProfileDialog(Map<String, dynamic>? user) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Account Details', style: GoogleFonts.figtree(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Username: ${user?['name'] ?? user?['username'] ?? 'Buyer'}', style: GoogleFonts.figtree(fontSize: 14)),
-            const SizedBox(height: 6),
-            Text('Email: ${user?['email'] ?? 'Not set'}', style: GoogleFonts.figtree(fontSize: 14)),
-            const SizedBox(height: 6),
-            Text('Role: Buyer', style: GoogleFonts.figtree(fontSize: 14, color: _darkTeal, fontWeight: FontWeight.w700)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -156,14 +80,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                         icon: const Icon(Icons.settings_outlined, size: 22, color: _headingColor),
                         tooltip: 'Account Settings',
                         padding: EdgeInsets.zero,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BuyerSettingsScreen(authState: widget.authState),
-                            ),
-                          );
-                        },
+                        onPressed: () => _openSettings(),
                       ),
                     ),
                   ],
@@ -262,8 +179,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                             ),
                             child: IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 20, color: _darkTeal),
+                              tooltip: 'Edit Profile',
                               padding: EdgeInsets.zero,
-                              onPressed: () => _showEditProfileDialog(user),
+                              onPressed: () => _openSettings(initialPage: 'profile'),
                             ),
                           ),
                         ],
@@ -367,7 +285,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
 
               const SizedBox(height: 16),
 
-              // Card 3: Menu List Card
+              // Card 3: Menu List Card (Wishlist & Vouchers)
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -384,14 +302,6 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 child: Column(
                   children: [
                     _menuTile(
-                      icon: Icons.location_on_outlined,
-                      title: 'Delivery Addresses',
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressManagementScreen()));
-                      },
-                    ),
-                    const Divider(height: 1, thickness: 1, color: Color(0xFFF2F6F6)),
-                    _menuTile(
                       icon: Icons.favorite_border_rounded,
                       title: 'My Wishlist',
                       onTap: () {
@@ -406,138 +316,10 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const VouchersScreen()));
                       },
                     ),
-                    const Divider(height: 1, thickness: 1, color: Color(0xFFF2F6F6)),
-                    _menuTile(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      title: 'Messages & Support',
-                      subtitle: 'Chat with sellers & track inquiries',
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()));
-                      },
-                    ),
-                    const Divider(height: 1, thickness: 1, color: Color(0xFFF2F6F6)),
-                    _menuTile(
-                      icon: Icons.dns_outlined,
-                      title: 'Server API Configuration',
-                      subtitle: ApiConfig.baseUrl,
-                      onTap: _showServerSettingsDialog,
-                    ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // Card 4: Logistics Portal Switcher Card
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                decoration: BoxDecoration(
-                  color: _darkTeal,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Logistics Portal',
-                            style: GoogleFonts.figtree(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Sorting center, parcels & riders',
-                            style: GoogleFonts.figtree(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Material(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () async {
-                          await widget.authState.switchModule('logistics');
-                          if (!context.mounted) return;
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => LogisticsMainScreen(authState: widget.authState)),
-                            (route) => false,
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                          child: Text(
-                            'Switch',
-                            style: GoogleFonts.figtree(
-                              color: _darkTeal,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Sign Out Section
-              if (isAuth) ...[
-                const SizedBox(height: 24),
-                Center(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () async {
-                      await widget.authState.clearBuyerSession();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Successfully logged out.')),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.logout_rounded, color: _dangerColor, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Sign Out',
-                            style: GoogleFonts.figtree(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: _dangerColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
               const SizedBox(height: 96),
             ],
           ),

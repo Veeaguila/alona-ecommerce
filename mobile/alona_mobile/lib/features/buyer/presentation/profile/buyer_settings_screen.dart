@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
+import 'package:alona_mobile/shared/widgets/alona_text_field.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
@@ -13,8 +15,13 @@ import 'package:alona_mobile/features/logistics/presentation/logistics_main_scre
 
 class BuyerSettingsScreen extends StatefulWidget {
   final AuthState authState;
+  final String? initialPage;
 
-  const BuyerSettingsScreen({super.key, required this.authState});
+  const BuyerSettingsScreen({
+    super.key,
+    required this.authState,
+    this.initialPage,
+  });
 
   @override
   State<BuyerSettingsScreen> createState() => _BuyerSettingsScreenState();
@@ -33,6 +40,13 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
   void initState() {
     super.initState();
     _loadLiveSupportInfo();
+    if (widget.initialPage == 'profile') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openEditProfilePage();
+        }
+      });
+    }
   }
 
   Future<void> _loadLiveSupportInfo() async {
@@ -129,7 +143,143 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _BuyerAccountDetailsPage(authState: widget.authState),
+        builder: (_) => _BuyerAccountDetailsPage(
+          authState: widget.authState,
+          onOpenProfile: _openEditProfilePage,
+          onOpenBanksAndCards: _openBanksAndCardsPage,
+          onOpenChangePassword: _openChangePasswordPage,
+          onOpenPrivacySettings: _openPrivacySettingsPage,
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _ensureAuthenticated() async {
+    if (widget.authState.isBuyerAuthenticated && ApiClient.isAuthenticated) {
+      return true;
+    }
+    final loggedIn = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyerLoginScreen(authState: widget.authState),
+      ),
+    );
+    if (!mounted) return false;
+    setState(() {});
+    return loggedIn == true || widget.authState.isBuyerAuthenticated;
+  }
+
+  Future<void> _openEditProfilePage() async {
+    if (!await _ensureAuthenticated() || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _BuyerEditProfilePage(authState: widget.authState),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openBanksAndCardsPage() async {
+    if (!await _ensureAuthenticated() || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _BuyerBanksAndCardsPage(authState: widget.authState),
+      ),
+    );
+  }
+
+  Future<void> _openAddressesPage() async {
+    if (!await _ensureAuthenticated() || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddressManagementScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openChangePasswordPage() async {
+    if (!await _ensureAuthenticated() || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _BuyerChangePasswordPage(authState: widget.authState),
+      ),
+    );
+  }
+
+  Future<void> _openPrivacySettingsPage() async {
+    if (!await _ensureAuthenticated() || !mounted) return;
+    final deleted = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _BuyerPrivacySettingsPage(authState: widget.authState),
+      ),
+    );
+    if (deleted == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  void _showServerSettingsDialog() {
+    final controller = TextEditingController(text: ApiConfig.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Server API Settings', style: GoogleFonts.figtree(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Set the Laravel backend base URL for API connections.',
+              style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            AlonaTextField(
+              label: 'Base URL',
+              controller: controller,
+              hint: 'http://10.0.2.2:8000',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '• Android Emulator: http://10.0.2.2:8000\n• Physical Device: http://<your-pc-ip>:8000\n• Live Production: https://shopalona.online',
+              style: GoogleFonts.figtree(fontSize: 11, color: AppColors.textLight, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await ApiConfig.setBaseUrl(controller.text);
+              } on FormatException catch (error) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(error.message)));
+                }
+                return;
+              }
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+              if (!mounted) return;
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('API URL updated to: ${ApiConfig.baseUrl}')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF087F8C),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text('Save URL'),
+          ),
+        ],
       ),
     );
   }
@@ -149,6 +299,8 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuth = widget.authState.isBuyerAuthenticated;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F7),
       appBar: AppBar(
@@ -187,9 +339,34 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: const EdgeInsets.only(bottom: 36),
         children: [
-          // SECTION 1: CUSTOMER SUPPORT
+          // SECTION 1: MY ACCOUNT (Matching Buyer Website Sidebar: Profile, Banks & Cards, Addresses, Change Password, Privacy Settings)
+          _buildSectionHeader('My Account'),
+          _buildSettingsGroup([
+            _SettingsRowItem(
+              label: 'Profile',
+              onTap: _openEditProfilePage,
+            ),
+            _SettingsRowItem(
+              label: 'Banks & Cards',
+              onTap: _openBanksAndCardsPage,
+            ),
+            _SettingsRowItem(
+              label: 'Addresses',
+              onTap: _openAddressesPage,
+            ),
+            _SettingsRowItem(
+              label: 'Change Password',
+              onTap: _openChangePasswordPage,
+            ),
+            _SettingsRowItem(
+              label: 'Privacy Settings',
+              onTap: _openPrivacySettingsPage,
+            ),
+          ]),
+
+          // SECTION 2: CUSTOMER SUPPORT
           _buildSectionHeader('Customer Support'),
           _buildSettingsGroup([
             _SettingsRowItem(
@@ -214,7 +391,7 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
             ),
           ]),
 
-          // SECTION 2: PARTNER & ACCOUNT
+          // SECTION 3: PARTNER & ACCOUNT
           _buildSectionHeader('Partner & Account'),
           _buildSettingsGroup([
             _SettingsRowItem(
@@ -235,7 +412,7 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
             ),
           ]),
 
-          // SECTION 3: POLICIES & INFORMATION
+          // SECTION 4: POLICIES & INFORMATION
           _buildSectionHeader('Policies & Information'),
           _buildSettingsGroup([
             _SettingsRowItem(
@@ -259,6 +436,49 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
               onTap: () => _openPolicyPage('payment'),
             ),
           ]),
+
+          // SECTION 5: SYSTEM & APP CONFIGURATION
+          _buildSectionHeader('System'),
+          _buildSettingsGroup([
+            _SettingsRowItem(
+              label: 'Server API Configuration',
+              subtitle: ApiConfig.baseUrl,
+              onTap: _showServerSettingsDialog,
+            ),
+          ]),
+
+          // SIGN OUT BUTTON
+          if (isAuth) ...[
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await widget.authState.clearBuyerSession();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Successfully logged out.')),
+                  );
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.logout_rounded, color: Color(0xFFB91C1C), size: 20),
+                label: Text(
+                  'Sign Out',
+                  style: GoogleFonts.figtree(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFB91C1C),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFFECACA)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2360,12 +2580,23 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
 }
 
 /* ============================================================================
- * 6. MY ACCOUNT OVERVIEW PAGE (From Partner & Account -> My Account)
+ * 6. MY ACCOUNT OVERVIEW PAGE + MY ACCOUNT SUB-PAGES
+ *    (Profile, Banks & Cards, Change Password, Privacy Settings)
  * ============================================================================ */
 class _BuyerAccountDetailsPage extends StatelessWidget {
   final AuthState authState;
+  final VoidCallback onOpenProfile;
+  final VoidCallback onOpenBanksAndCards;
+  final VoidCallback onOpenChangePassword;
+  final VoidCallback onOpenPrivacySettings;
 
-  const _BuyerAccountDetailsPage({required this.authState});
+  const _BuyerAccountDetailsPage({
+    required this.authState,
+    required this.onOpenProfile,
+    required this.onOpenBanksAndCards,
+    required this.onOpenChangePassword,
+    required this.onOpenPrivacySettings,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2468,10 +2699,38 @@ class _BuyerAccountDetailsPage extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
+                  leading: const Icon(Icons.person_outline_rounded, color: Color(0xFF087F8C)),
+                  title: Text('Profile', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+                  onTap: onOpenProfile,
+                ),
+                const Divider(height: 1, indent: 16, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  leading: const Icon(Icons.credit_card_outlined, color: Color(0xFF087F8C)),
+                  title: Text('Banks & Cards', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+                  onTap: onOpenBanksAndCards,
+                ),
+                const Divider(height: 1, indent: 16, color: Color(0xFFF1F5F9)),
+                ListTile(
                   leading: const Icon(Icons.location_on_outlined, color: Color(0xFF087F8C)),
-                  title: Text('Delivery Addresses', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
+                  title: Text('Addresses', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressManagementScreen())),
+                ),
+                const Divider(height: 1, indent: 16, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline_rounded, color: Color(0xFF087F8C)),
+                  title: Text('Change Password', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+                  onTap: onOpenChangePassword,
+                ),
+                const Divider(height: 1, indent: 16, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined, color: Color(0xFF087F8C)),
+                  title: Text('Privacy Settings', style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+                  onTap: onOpenPrivacySettings,
                 ),
                 const Divider(height: 1, indent: 16, color: Color(0xFFF1F5F9)),
                 ListTile(
@@ -2508,6 +2767,1286 @@ class _BuyerAccountDetailsPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/* ============================================================================
+ * 6A. MY PROFILE PAGE (Mirrors resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue)
+ * ============================================================================ */
+class _BuyerEditProfilePage extends StatefulWidget {
+  final AuthState authState;
+
+  const _BuyerEditProfilePage({required this.authState});
+
+  @override
+  State<_BuyerEditProfilePage> createState() => _BuyerEditProfilePageState();
+}
+
+class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
+  final _firstNameCtrl = TextEditingController();
+  final _middleNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _contactCtrl = TextEditingController();
+  final _birthdayCtrl = TextEditingController();
+
+  String _sex = '';
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _populateFromLocalAndRemote();
+  }
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _middleNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _emailCtrl.dispose();
+    _contactCtrl.dispose();
+    _birthdayCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyUserMap(Map<String, dynamic> u) {
+    var first = (u['first_name'] ?? '').toString().trim();
+    var middle = (u['middle_initial'] ?? '').toString().trim();
+    var last = (u['last_name'] ?? '').toString().trim();
+    final fullName = (u['name'] ?? '').toString().trim();
+
+    if (first.isEmpty && last.isEmpty && fullName.isNotEmpty) {
+      final parts = fullName.split(RegExp(r'\s+'));
+      if (parts.length == 1) {
+        first = parts[0];
+      } else if (parts.length == 2) {
+        first = parts[0];
+        last = parts[1];
+      } else {
+        first = parts.first;
+        last = parts.last;
+        middle = parts.sublist(1, parts.length - 1).join(' ');
+      }
+    }
+
+    _firstNameCtrl.text = first;
+    _middleNameCtrl.text = middle;
+    _lastNameCtrl.text = last;
+    _emailCtrl.text = (u['email'] ?? '').toString();
+    _contactCtrl.text = (u['contact_no'] ?? '').toString();
+    final rawBday = (u['birthday'] ?? '').toString();
+    _birthdayCtrl.text = rawBday.contains('T') ? rawBday.split('T').first : rawBday;
+    final rawSex = (u['sex'] ?? '').toString();
+    if (['Male', 'Female', 'Other'].contains(rawSex)) {
+      _sex = rawSex;
+    }
+  }
+
+  Future<void> _populateFromLocalAndRemote() async {
+    final localUser = widget.authState.buyerUser;
+    if (localUser != null) {
+      _applyUserMap(localUser);
+    }
+    try {
+      final fresh = await BuyerService.getMe();
+      if (!mounted) return;
+      if (fresh.isNotEmpty) {
+        setState(() {
+          _applyUserMap(fresh);
+          _isLoading = false;
+        });
+        if (widget.authState.buyerToken != null) {
+          await widget.authState.updateBuyerUser(fresh);
+        }
+        return;
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickBirthday() async {
+    final initial = DateTime.tryParse(_birthdayCtrl.text.trim()) ?? DateTime(2000, 1, 1);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isAfter(DateTime.now()) ? DateTime(2000, 1, 1) : initial,
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && mounted) {
+      final yyyy = picked.year.toString().padLeft(4, '0');
+      final mm = picked.month.toString().padLeft(2, '0');
+      final dd = picked.day.toString().padLeft(2, '0');
+      setState(() {
+        _birthdayCtrl.text = '$yyyy-$mm-$dd';
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final first = _firstNameCtrl.text.trim();
+    final last = _lastNameCtrl.text.trim();
+    final contact = _contactCtrl.text.trim();
+
+    if (first.isEmpty || last.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('First name and last name are required.'),
+          backgroundColor: AppColors.sale,
+        ),
+      );
+      return;
+    }
+
+    if (contact.isNotEmpty && !RegExp(r'^09\d{9}$').hasMatch(contact)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact number must be 11 digits starting with 09 (e.g., 09123456789).'),
+          backgroundColor: AppColors.sale,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final res = await BuyerService.updateProfile(
+        firstName: first,
+        middleInitial: _middleNameCtrl.text.trim(),
+        lastName: last,
+        sex: _sex.isNotEmpty ? _sex : null,
+        email: _emailCtrl.text.trim(),
+        contactNo: contact.isNotEmpty ? contact : null,
+        birthday: _birthdayCtrl.text.trim().isNotEmpty ? _birthdayCtrl.text.trim() : null,
+      );
+      if (!mounted) return;
+      if (res['user'] is Map && widget.authState.buyerToken != null) {
+        await widget.authState.updateBuyerUser(
+          Map<String, dynamic>.from(res['user'] as Map),
+        );
+      }
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message']?.toString() ?? 'Profile updated successfully.'),
+          backgroundColor: const Color(0xFF087F8C),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update profile: $e'), backgroundColor: AppColors.sale),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fullName = [
+      _firstNameCtrl.text.trim(),
+      _middleNameCtrl.text.trim(),
+      _lastNameCtrl.text.trim(),
+    ].where((s) => s.isNotEmpty).join(' ');
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Text(
+          'My Profile',
+          style: GoogleFonts.figtree(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF087F8C)))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Profile',
+                      style: GoogleFonts.figtree(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1F2937),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage and protect your account',
+                      style: GoogleFonts.figtree(
+                        fontSize: 13,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                    const Divider(height: 28, color: Color(0xFFF1F5F9)),
+
+                    // Avatar & Display Name summary
+                    Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F7F6),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFF087F8C).withValues(alpha: 0.25), width: 2),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
+                              style: GoogleFonts.figtree(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF087F8C),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            fullName.isNotEmpty ? fullName : 'Alona Buyer',
+                            style: GoogleFonts.figtree(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1F2937),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildInputField('First Name *', _firstNameCtrl, hint: 'First Name'),
+                    const SizedBox(height: 12),
+                    _buildInputField('Middle Name', _middleNameCtrl, hint: 'Middle Name (optional)'),
+                    const SizedBox(height: 12),
+                    _buildInputField('Last Name *', _lastNameCtrl, hint: 'Last Name'),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'Sex',
+                      style: GoogleFonts.figtree(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: ['Male', 'Female', 'Other'].map((option) {
+                        final selected = _sex == option;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () => setState(() => _sex = option),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                                decoration: BoxDecoration(
+                                  color: selected ? const Color(0xFFE8F7F6) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selected ? const Color(0xFF087F8C) : const Color(0xFFD1D5DB),
+                                    width: selected ? 1.5 : 1,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  option,
+                                  style: GoogleFonts.figtree(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected ? const Color(0xFF087F8C) : const Color(0xFF4B5563),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 14),
+                    _buildInputField(
+                      'Email',
+                      _emailCtrl,
+                      hint: 'you@example.com',
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInputField(
+                      'Contact Number',
+                      _contactCtrl,
+                      hint: '09XXXXXXXXX',
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _pickBirthday,
+                      child: AbsorbPointer(
+                        child: _buildInputField(
+                          'Birthday',
+                          _birthdayCtrl,
+                          hint: 'YYYY-MM-DD',
+                          suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF087F8C)),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _saveProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF087F8C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          _isSaving ? 'Saving...' : 'Save Profile',
+                          style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildInputField(
+    String label,
+    TextEditingController controller, {
+    String? hint,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.figtree(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.figtree(fontSize: 13, color: const Color(0xFF9CA3AF)),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF087F8C), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/* ============================================================================
+ * 6B. BANKS & CARDS PAGE (Mirrors resources/js/Pages/Buyer/PaymentMethods.vue)
+ * ============================================================================ */
+class _BuyerBanksAndCardsPage extends StatefulWidget {
+  final AuthState authState;
+
+  const _BuyerBanksAndCardsPage({required this.authState});
+
+  @override
+  State<_BuyerBanksAndCardsPage> createState() => _BuyerBanksAndCardsPageState();
+}
+
+class _BuyerBanksAndCardsPageState extends State<_BuyerBanksAndCardsPage> {
+  List<Map<String, dynamic>> _methods = [];
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  String _selectedType = 'card'; // 'card' | 'gcash' | 'maya'
+  final _holderNameCtrl = TextEditingController();
+  final _cardNumberCtrl = TextEditingController();
+  final _expMonthCtrl = TextEditingController();
+  final _expYearCtrl = TextEditingController();
+  final _cvvCtrl = TextEditingController();
+  final _walletNumberCtrl = TextEditingController();
+  bool _isDefault = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMethods();
+  }
+
+  @override
+  void dispose() {
+    _holderNameCtrl.dispose();
+    _cardNumberCtrl.dispose();
+    _expMonthCtrl.dispose();
+    _expYearCtrl.dispose();
+    _cvvCtrl.dispose();
+    _walletNumberCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMethods() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await BuyerService.getPaymentMethods();
+      if (!mounted) return;
+      setState(() {
+        _methods = list;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _savePaymentMethod() async {
+    final holder = _holderNameCtrl.text.trim();
+    if (holder.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter the account or cardholder name.'),
+          backgroundColor: AppColors.sale,
+        ),
+      );
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      'type': _selectedType,
+      'holder_name': holder,
+      'is_default': _isDefault,
+    };
+
+    if (_selectedType == 'card') {
+      payload['card_number'] = _cardNumberCtrl.text.trim();
+      payload['exp_month'] = _expMonthCtrl.text.trim();
+      payload['exp_year'] = _expYearCtrl.text.trim();
+      payload['cvv'] = _cvvCtrl.text.trim();
+    } else {
+      payload['wallet_number'] = _walletNumberCtrl.text.trim();
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final res = await BuyerService.addPaymentMethod(payload);
+      if (!mounted) return;
+      _holderNameCtrl.clear();
+      _cardNumberCtrl.clear();
+      _expMonthCtrl.clear();
+      _expYearCtrl.clear();
+      _cvvCtrl.clear();
+      _walletNumberCtrl.clear();
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message']?.toString() ?? 'Payment method saved.'),
+          backgroundColor: const Color(0xFF087F8C),
+        ),
+      );
+      await _loadMethods();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save payment method: $e'), backgroundColor: AppColors.sale),
+      );
+    }
+  }
+
+  Future<void> _removeMethod(int id) async {
+    try {
+      await BuyerService.deletePaymentMethod(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment method removed.'),
+          backgroundColor: Color(0xFF087F8C),
+        ),
+      );
+      await _loadMethods();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not remove method: $e'), backgroundColor: AppColors.sale),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Text(
+          'Banks & Cards',
+          style: GoogleFonts.figtree(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Saved Methods Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PAYMENTS',
+                  style: GoogleFonts.figtree(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: const Color(0xFF087F8C),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Banks & Cards',
+                  style: GoogleFonts.figtree(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Manage saved cards and e-wallets for faster checkout.',
+                  style: GoogleFonts.figtree(fontSize: 12.5, color: const Color(0xFF6B7280)),
+                ),
+                const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator(color: Color(0xFF087F8C))),
+                  )
+                else if (_methods.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAF9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.credit_card_outlined, color: Color(0xFF087F8C), size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No saved payment methods yet',
+                          style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1F2937)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Add a card, GCash, or Maya account below. Only the masked last four digits are stored.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.figtree(fontSize: 12, color: const Color(0xFF6B7280)),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ..._methods.map((m) {
+                    final isCard = m['type'] == 'card';
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAF9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F7F6),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              (m['brand'] ?? m['type'] ?? 'Card').toString().toUpperCase(),
+                              style: GoogleFonts.figtree(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF087F8C),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      isCard
+                                          ? '•••• ${m['last_four'] ?? ''}'
+                                          : '09•• ••• ${m['last_four'] ?? ''}',
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                    if (m['is_default'] == true) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD1FAE5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Default',
+                                          style: GoogleFonts.figtree(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF047857),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${m['holder_name'] ?? ''}'
+                                  '${isCard && m['exp_month'] != null ? ' • Expires ${m['exp_month']}/${m['exp_year']}' : ''}',
+                                  style: GoogleFonts.figtree(fontSize: 12, color: const Color(0xFF6B7280)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFB91C1C), size: 20),
+                            onPressed: () => _removeMethod((m['id'] as num).toInt()),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Add a Payment Method Form
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add a payment method',
+                  style: GoogleFonts.figtree(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    {'value': 'card', 'label': 'Credit / Debit'},
+                    {'value': 'gcash', 'label': 'GCash'},
+                    {'value': 'maya', 'label': 'Maya'},
+                  ].map((opt) {
+                    final active = _selectedType == opt['value'];
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: InkWell(
+                          onTap: () => setState(() => _selectedType = opt['value']!),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: active ? const Color(0xFFE8F7F6) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: active ? const Color(0xFF087F8C) : const Color(0xFFD1D5DB),
+                                width: active ? 1.5 : 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              opt['label']!,
+                              style: GoogleFonts.figtree(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: active ? const Color(0xFF087F8C) : const Color(0xFF4B5563),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                AlonaTextField(
+                  label: _selectedType == 'card' ? 'Cardholder name' : 'Account holder name',
+                  controller: _holderNameCtrl,
+                  hint: 'Juan Dela Cruz',
+                ),
+                const SizedBox(height: 12),
+                if (_selectedType == 'card') ...[
+                  AlonaTextField(
+                    label: 'Card number',
+                    controller: _cardNumberCtrl,
+                    hint: '4111 1111 1111 1111',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AlonaTextField(
+                          label: 'Exp. month',
+                          controller: _expMonthCtrl,
+                          hint: 'MM',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: AlonaTextField(
+                          label: 'Exp. year',
+                          controller: _expYearCtrl,
+                          hint: 'YYYY',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: AlonaTextField(
+                          label: 'CVV',
+                          controller: _cvvCtrl,
+                          hint: '•••',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  AlonaTextField(
+                    label: '${_selectedType == 'gcash' ? 'GCash' : 'Maya'} mobile number',
+                    controller: _walletNumberCtrl,
+                    hint: '09171234567',
+                    keyboardType: TextInputType.phone,
+                  ),
+                ],
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: _isDefault,
+                  onChanged: (v) => setState(() => _isDefault = v ?? true),
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: const Color(0xFF087F8C),
+                  title: Text(
+                    'Set as default payment method',
+                    style: GoogleFonts.figtree(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _savePaymentMethod,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF087F8C),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      _isSaving ? 'Saving...' : 'Save payment method',
+                      style: GoogleFonts.figtree(fontSize: 14.5, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ============================================================================
+ * 6C. CHANGE PASSWORD PAGE (Mirrors resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue)
+ * ============================================================================ */
+class _BuyerChangePasswordPage extends StatefulWidget {
+  final AuthState authState;
+
+  const _BuyerChangePasswordPage({required this.authState});
+
+  @override
+  State<_BuyerChangePasswordPage> createState() => _BuyerChangePasswordPageState();
+}
+
+class _BuyerChangePasswordPageState extends State<_BuyerChangePasswordPage> {
+  final _currentPasswordCtrl = TextEditingController();
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _currentPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitPasswordChange() async {
+    final cur = _currentPasswordCtrl.text;
+    final nw = _newPasswordCtrl.text;
+    final conf = _confirmPasswordCtrl.text;
+
+    if (cur.isEmpty || nw.isEmpty || conf.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all password fields.'), backgroundColor: AppColors.sale),
+      );
+      return;
+    }
+    if (nw != conf) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New password and confirmation do not match.'), backgroundColor: AppColors.sale),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final res = await BuyerService.changePassword(
+        currentPassword: cur,
+        password: nw,
+        passwordConfirmation: conf,
+      );
+      if (!mounted) return;
+      _currentPasswordCtrl.clear();
+      _newPasswordCtrl.clear();
+      _confirmPasswordCtrl.clear();
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message']?.toString() ?? 'Password changed successfully.'),
+          backgroundColor: const Color(0xFF087F8C),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update password: $e'), backgroundColor: AppColors.sale),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Text(
+          'Change Password',
+          style: GoogleFonts.figtree(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Update Password',
+                style: GoogleFonts.figtree(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Ensure your account is using a long, random password to stay secure.',
+                style: GoogleFonts.figtree(fontSize: 13, color: const Color(0xFF6B7280)),
+              ),
+              const Divider(height: 28, color: Color(0xFFF1F5F9)),
+              AlonaTextField(
+                label: 'Current Password',
+                controller: _currentPasswordCtrl,
+                isPassword: true,
+              ),
+              const SizedBox(height: 14),
+              AlonaTextField(
+                label: 'New Password',
+                controller: _newPasswordCtrl,
+                isPassword: true,
+              ),
+              const SizedBox(height: 14),
+              AlonaTextField(
+                label: 'Confirm Password',
+                controller: _confirmPasswordCtrl,
+                isPassword: true,
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _submitPasswordChange,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF087F8C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    _isSaving ? 'Saving...' : 'Save Password',
+                    style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================================================================
+ * 6D. PRIVACY SETTINGS PAGE (Mirrors resources/js/Pages/Profile/Edit.vue privacy section)
+ * ============================================================================ */
+class _BuyerPrivacySettingsPage extends StatefulWidget {
+  final AuthState authState;
+
+  const _BuyerPrivacySettingsPage({required this.authState});
+
+  @override
+  State<_BuyerPrivacySettingsPage> createState() => _BuyerPrivacySettingsPageState();
+}
+
+class _BuyerPrivacySettingsPageState extends State<_BuyerPrivacySettingsPage> {
+  void _confirmDeleteAccount() {
+    final passwordCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Delete Account',
+          style: GoogleFonts.figtree(fontWeight: FontWeight.w800, color: const Color(0xFFB91C1C)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm.',
+              style: GoogleFonts.figtree(fontSize: 13, color: const Color(0xFF4B5563), height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            AlonaTextField(
+              label: 'Password',
+              controller: passwordCtrl,
+              isPassword: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final pwd = passwordCtrl.text;
+              if (pwd.isEmpty) return;
+              try {
+                await BuyerService.deleteAccount(pwd);
+                await widget.authState.clearBuyerSession();
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Your account has been permanently deleted.')),
+                );
+                Navigator.pop(context, true);
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('Could not delete account: $e'), backgroundColor: AppColors.sale),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB91C1C),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Delete Account'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Text(
+          'Privacy Settings',
+          style: GoogleFonts.figtree(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Active Login Sessions Card matching ManageLoginSessions.vue
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Active Login Sessions',
+                  style: GoogleFonts.figtree(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Review the devices currently signed in to your Alona Buyer account.',
+                  style: GoogleFonts.figtree(fontSize: 12.5, color: const Color(0xFF6B7280)),
+                ),
+                const Divider(height: 24, color: Color(0xFFF1F5F9)),
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F7F6),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.phone_android_rounded, color: Color(0xFF087F8C)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Alona Mobile App',
+                            style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1F2937)),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Current Device • Active now',
+                            style: GoogleFonts.figtree(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF047857),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Delete Account Card matching DeleteUserForm.vue
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFECACA)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Delete Account',
+                  style: GoogleFonts.figtree(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.',
+                  style: GoogleFonts.figtree(
+                    fontSize: 12.5,
+                    color: const Color(0xFF6B7280),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _confirmDeleteAccount,
+                  icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                  label: Text(
+                    'Delete Account',
+                    style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 13.5),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB91C1C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

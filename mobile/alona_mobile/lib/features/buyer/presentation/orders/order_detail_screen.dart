@@ -9,6 +9,7 @@ import 'package:alona_mobile/shared/widgets/status_badge.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/orders/delivery_otp_dialog.dart';
+import 'package:alona_mobile/features/buyer/presentation/products/product_detail_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -64,9 +65,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         _order = res['order'] as OrderModel;
         _canCancel = res['can_cancel'] == true;
         _canMarkReceived = res['can_mark_received'] == true;
-        _histories = res['status_histories'] as List<dynamic>? ?? [];
-        _otpParcels = (res['delivery_parcels'] as List)
-            .cast<Map<String, dynamic>>();
+        _histories = res['status_histories'] is List
+            ? List<dynamic>.from(res['status_histories'] as List)
+            : [];
+        _otpParcels = res['delivery_parcels'] is List
+            ? (res['delivery_parcels'] as List)
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList()
+            : [];
         _isLoading = false;
       });
     } catch (e) {
@@ -347,54 +354,69 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                   ...order.items.map((item) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          NetworkImageBox(
-                            imageUrl: item.imageUrl,
-                            width: 56,
-                            height: 56,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.productName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.figtree(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: item.productId > 0
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProductDetailScreen(
+                                      productId: item.productId,
+                                    ),
                                   ),
-                                ),
-                                if (item.variantLabel != null)
+                                );
+                              }
+                            : null,
+                        child: Row(
+                          children: [
+                            NetworkImageBox(
+                              imageUrl: item.imageUrl,
+                              width: 56,
+                              height: 56,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    item.variantLabel!,
+                                    item.productName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.figtree(
-                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (item.variantLabel != null)
+                                    Text(
+                                      item.variantLabel!,
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  Text(
+                                    'x${item.quantity} • ${CurrencyFormatter.format(item.unitPrice)}',
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 12,
                                       color: AppColors.textMuted,
                                     ),
                                   ),
-                                Text(
-                                  'x${item.quantity} • ${CurrencyFormatter.format(item.unitPrice)}',
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 12,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            CurrencyFormatter.format(item.totalPrice),
-                            style: GoogleFonts.figtree(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                            Text(
+                              CurrencyFormatter.format(item.totalPrice),
+                              style: GoogleFonts.figtree(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }),

@@ -350,13 +350,41 @@ class BuyerService {
   static Future<Map<String, dynamic>> getOrderDetails(int id) async {
     final res = await ApiClient.get('api/buyer/orders/$id');
     final data = res as Map<String, dynamic>;
-    final order = OrderModel.fromJson(Map<String, dynamic>.from(data['order']));
+    final rawOrder = data['order'] is Map
+        ? Map<String, dynamic>.from(data['order'] as Map)
+        : <String, dynamic>{};
+    final order = OrderModel.fromJson(rawOrder);
+
+    final deliveryParcels = <Map<String, dynamic>>[];
+    if (data['delivery_parcels'] is List) {
+      for (final p in (data['delivery_parcels'] as List)) {
+        if (p is Map) {
+          deliveryParcels.add(Map<String, dynamic>.from(p));
+        }
+      }
+    } else if (rawOrder['items'] is List) {
+      for (final item in (rawOrder['items'] as List)) {
+        if (item is Map && item['delivery_parcel_id'] != null) {
+          final parcelStatus = (item['delivery_parcel_status'] ?? '').toString().toUpperCase();
+          if (parcelStatus == 'OUT_FOR_DELIVERY' ||
+              parcelStatus == 'IN_TRANSIT' ||
+              parcelStatus == 'ARRIVED_AT_DESTINATION_HUB') {
+            deliveryParcels.add({
+              'delivery_parcel_id': parseInt(item['delivery_parcel_id']),
+              'product_name': (item['product_name'] ?? 'Item').toString(),
+              'status': parcelStatus,
+            });
+          }
+        }
+      }
+    }
 
     return {
       'order': order,
-      'can_cancel': data['can_cancel'] == true,
-      'can_mark_received': data['can_mark_received'] == true,
-      'status_histories': data['status_histories'] ?? [],
+      'can_cancel': (data['can_cancel'] ?? rawOrder['can_cancel']) == true,
+      'can_mark_received': (data['can_mark_received'] ?? rawOrder['can_mark_received']) == true,
+      'status_histories': data['status_histories'] ?? rawOrder['status_histories'] ?? [],
+      'delivery_parcels': deliveryParcels,
     };
   }
 
@@ -565,6 +593,75 @@ class BuyerService {
       'category': category,
       'subject': subject,
       'message': message,
+    });
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  // My Account: Profile, Password, Banks & Cards, Privacy Settings
+  static Future<Map<String, dynamic>> getMe() async {
+    final res = await ApiClient.get('api/buyer/me');
+    if (res is Map<String, dynamic> && res['user'] is Map) {
+      return Map<String, dynamic>.from(res['user'] as Map);
+    }
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<Map<String, dynamic>> updateProfile({
+    required String firstName,
+    String? middleInitial,
+    required String lastName,
+    String? sex,
+    String? email,
+    String? contactNo,
+    String? birthday,
+  }) async {
+    final res = await ApiClient.post('api/buyer/profile', body: {
+      'first_name': firstName,
+      if (middleInitial != null) 'middle_initial': middleInitial,
+      'last_name': lastName,
+      if (sex != null && sex.isNotEmpty) 'sex': sex,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (contactNo != null && contactNo.isNotEmpty) 'contact_no': contactNo,
+      if (birthday != null && birthday.isNotEmpty) 'birthday': birthday,
+    });
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final res = await ApiClient.post('api/buyer/change-password', body: {
+      'current_password': currentPassword,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    });
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<List<Map<String, dynamic>>> getPaymentMethods() async {
+    final res = await ApiClient.get('api/buyer/payment-methods');
+    if (res is Map<String, dynamic> && res['payment_methods'] is List) {
+      return (res['payment_methods'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> addPaymentMethod(Map<String, dynamic> body) async {
+    final res = await ApiClient.post('api/buyer/payment-methods', body: body);
+    return res is Map<String, dynamic> ? res : {};
+  }
+
+  static Future<void> deletePaymentMethod(int id) async {
+    await ApiClient.delete('api/buyer/payment-methods/$id');
+  }
+
+  static Future<Map<String, dynamic>> deleteAccount(String password) async {
+    final res = await ApiClient.post('api/buyer/delete-account', body: {
+      'password': password,
     });
     return res is Map<String, dynamic> ? res : {};
   }

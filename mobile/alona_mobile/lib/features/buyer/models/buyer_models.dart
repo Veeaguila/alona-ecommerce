@@ -211,6 +211,10 @@ class ProductModel {
   final List<String> images;
   final List<ProductVariantModel> variants;
   final String? categoryName;
+  final String? categorySlug;
+  final String? parentCategoryName;
+  final String? parentCategorySlug;
+  final List<String> storeCategorySlugs;
   final String? sellerName;
   final int? sellerId;
   final String? sellerStoreName;
@@ -253,6 +257,10 @@ class ProductModel {
     this.images = const [],
     this.variants = const [],
     this.categoryName,
+    this.categorySlug,
+    this.parentCategoryName,
+    this.parentCategorySlug,
+    this.storeCategorySlugs = const [],
     this.sellerName,
     this.sellerId,
     this.sellerStoreName,
@@ -300,10 +308,13 @@ class ProductModel {
     var rawImages = <String>[];
     if (json['images'] is List) {
       for (var img in json['images']) {
-        if (img is Map && img['url'] != null) {
-          rawImages.add(img['url'].toString());
-        } else if (img is String) {
-          rawImages.add(img);
+        if (img is Map) {
+          final rawImgUrl = (img['url'] ?? img['image_url'] ?? img['image_path'] ?? '').toString();
+          if (rawImgUrl.isNotEmpty) {
+            rawImages.add(ApiConfig.imageUrl(rawImgUrl));
+          }
+        } else if (img is String && img.isNotEmpty) {
+          rawImages.add(ApiConfig.imageUrl(img));
         }
       }
     }
@@ -347,9 +358,36 @@ class ProductModel {
     final hasFs =
         json['has_flash_sale'] == true || json['has_active_flash_sale'] == true;
 
+    final rawPrimaryImg = (json['image_url'] ?? json['image_path'] ?? '').toString();
+    final resolvedImageUrl = rawPrimaryImg.isNotEmpty
+        ? ApiConfig.imageUrl(rawPrimaryImg)
+        : (rawImages.isNotEmpty ? rawImages.first : '');
+
+    final catMap = json['category'] is Map
+        ? Map<String, dynamic>.from(json['category'])
+        : null;
+    final parentCatMap = (catMap != null && catMap['parent'] is Map)
+        ? Map<String, dynamic>.from(catMap['parent'])
+        : null;
+
+    final storeCats = <String>[];
+    if (json['store_categories'] is List) {
+      for (final sc in (json['store_categories'] as List)) {
+        if (sc is Map) {
+          if (sc['slug'] != null) storeCats.add(sc['slug'].toString());
+          if (sc['name'] != null) storeCats.add(sc['name'].toString());
+          if (sc['parent'] is Map) {
+            final p = sc['parent'] as Map;
+            if (p['slug'] != null) storeCats.add(p['slug'].toString());
+            if (p['name'] != null) storeCats.add(p['name'].toString());
+          }
+        }
+      }
+    }
+
     return ProductModel(
-      id: parseInt(json['id']),
-      name: json['name'] ?? '',
+      id: parseInt(json['product_id'] ?? json['id']),
+      name: json['name'] ?? json['product_name'] ?? '',
       slug: json['slug'] ?? '',
       description: json['description'],
       price: parseDouble(json['price']),
@@ -359,12 +397,22 @@ class ProductModel {
       stock: parseInt(json['stock']),
       rating: parseDouble(json['rating']),
       reviewsCount: parseInt(json['reviews_count']),
-      imageUrl: json['image_url'] ?? '',
+      imageUrl: resolvedImageUrl,
       images: rawImages,
       variants: rawVariants,
       categoryName:
           json['category_name'] ??
-          (json['category'] is Map ? json['category']['name'] : null),
+          catMap?['name']?.toString(),
+      categorySlug:
+          json['category_slug']?.toString() ??
+          catMap?['slug']?.toString(),
+      parentCategoryName:
+          json['parent_category_name']?.toString() ??
+          parentCatMap?['name']?.toString(),
+      parentCategorySlug:
+          json['parent_category_slug']?.toString() ??
+          parentCatMap?['slug']?.toString(),
+      storeCategorySlugs: storeCats,
       sellerName: json['seller_name'] ?? sellerMap?['name'],
       sellerId: json['seller_id'] != null
           ? parseInt(json['seller_id'])
@@ -668,10 +716,18 @@ class OrderItemModel {
     } else if (json['product'] is Map &&
         json['product']['images'] is List &&
         (json['product']['images'] as List).isNotEmpty) {
-      img = json['product']['images'][0]['image_path'] ?? '';
+      final firstImg = (json['product']['images'] as List).first;
+      if (firstImg is Map) {
+        img = (firstImg['image_path'] ?? firstImg['url'] ?? firstImg['image_url'] ?? '').toString();
+      } else if (firstImg is String) {
+        img = firstImg;
+      }
     } else if (json['product'] is Map &&
         json['product']['image_path'] != null) {
-      img = json['product']['image_path'] ?? '';
+      img = json['product']['image_path'].toString();
+    }
+    if (img.isNotEmpty) {
+      img = ApiConfig.imageUrl(img);
     }
 
     final price = parseDouble(json['unit_price'] ?? json['price']);

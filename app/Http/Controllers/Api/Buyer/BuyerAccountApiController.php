@@ -378,5 +378,142 @@ class BuyerAccountApiController extends Controller
             'ticket' => $complaint,
         ], 201);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BANKS & CARDS (PAYMENT METHODS) & PRIVACY / ACCOUNT DELETION
+    |--------------------------------------------------------------------------
+    */
+
+    public function paymentMethods(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $methods = $user->paymentMethods()
+            ->orderByDesc('is_default')
+            ->latest('id')
+            ->get()
+            ->map(fn ($pm) => [
+                'id' => $pm->id,
+                'type' => $pm->type,
+                'brand' => $pm->brand,
+                'holder_name' => $pm->holder_name,
+                'last_four' => $pm->last_four,
+                'exp_month' => $pm->exp_month,
+                'exp_year' => $pm->exp_year,
+                'is_default' => (bool) $pm->is_default,
+            ]);
+
+        return response()->json(['payment_methods' => $methods]);
+    }
+
+    public function storePaymentMethod(Request $request): JsonResponse
+    {
+        $type = $request->input('type');
+
+        $rules = [
+            'type' => ['required', 'string', 'in:card,gcash,maya'],
+            'holder_name' => ['required', 'string', 'max:100'],
+            'is_default' => ['sometimes', 'boolean'],
+        ];
+
+        if ($type === 'card') {
+            $rules['card_number'] = ['required', 'string', 'regex:/^[\d\s-]{13,23}$/'];
+            $rules['exp_month'] = ['required', 'string', 'size:2', 'regex:/^(0[1-9]|1[0-2])$/'];
+            $rules['exp_year'] = ['required', 'string', 'size:4', 'regex:/^20[2-9]\d$/'];
+            $rules['cvv'] = ['required', 'string', 'regex:/^\d{3,4}$/'];
+        } else {
+            $rules['wallet_number'] = ['required', 'string', 'regex:/^09\d{9}$/'];
+        }
+
+        $validated = $request->validate($rules, [
+            'card_number.regex' => 'Please enter a valid 13 to 19 digit card number.',
+            'exp_month.regex' => 'Month must be between 01 and 12.',
+            'exp_year.regex' => 'Please enter a valid 4-digit expiry year.',
+            'cvv.regex' => 'CVV must be 3 or 4 digits.',
+            'wallet_number.regex' => 'Wallet number must be an 11-digit Philippine mobile number starting with 09.',
+        ]);
+
+        $user = $request->user();
+
+        if ($type === 'card') {
+            $digits = preg_replace('/\D/', '', $validated['card_number']);
+            $lastFour = substr($digits, -4);
+            $brand = match (true) {
+                str_starts_with($digits, '4') => 'Visa',
+                preg_match('/^5[1-5]/', $digits) === 1 => 'Mastercard',
+                preg_match('/^3[47]/', $digits) === 1 => 'Amex',
+                default => 'Card',
+            };
+        } else {
+            $digits = preg_replace('/\D/', '', $validated['wallet_number']);
+            $lastFour = substr($digits, -4);
+            $brand = $type === 'gcash' ? 'GCash' : 'Maya';
+        }
+
+        $isDefault = $request->boolean('is_default') || $user->paymentMethods()->count() === 0;
+        if ($isDefault) {
+            $user->paymentMethods()->update(['is_default' => false]);
+        }
+
+        $method = $user->paymentMethods()->create([
+            'type' => $type,
+            'brand' => $brand,
+            'holder_name' => $validated['holder_name'],
+            'last_four' => $lastFour,
+            'exp_month' => $validated['exp_month'] ?? null,
+            'exp_year' => $validated['exp_year'] ?? null,
+            'is_default' => $isDefault,
+        ]);
+
+        return response()->json([
+            'message' => 'Payment method saved successfully.',
+            'payment_method' => [
+                'id' => $method->id,
+                'type' => $method->type,
+                'brand' => $method->brand,
+                'holder_name' => $method->holder_name,
+                'last_four' => $method->last_four,
+                'exp_month' => $method->exp_month,
+                'exp_year' => $method->exp_year,
+                'is_default' => (bool) $method->is_default,
+            ],
+        ], 201);
+    }
+
+    public function deletePaymentMethod(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $method = $user->paymentMethods()->whereKey($id)->firstOrFail();
+        $wasDefault = $method->is_default;
+        $method->delete();
+
+        if ($wasDefault) {
+            $next = $user->paymentMethods()->latest()->first();
+            $next?->update(['is_default' => true]);
+        }
+
+        return response()->json(['message' => 'Payment method removed.']);
+    }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+        if (! \Illuminate\Support\Facades\Hash::check($request->input('password'), $user->password)) {
+            return response()->json([
+                'message' => 'The password you entered is incorrect.',
+            ], 422);
+        }
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Your account has been permanently deleted.',
+        ]);
+    }
 }
 

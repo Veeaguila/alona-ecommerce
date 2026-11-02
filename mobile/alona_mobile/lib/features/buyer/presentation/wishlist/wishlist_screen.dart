@@ -276,7 +276,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 ),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
-                                  return ProductCard(product: filtered[index]);
+                                  return ProductCard(
+                                    product: filtered[index],
+                                    onReturn: _loadWishlist,
+                                  );
                                 },
                               ),
                             ),

@@ -312,6 +312,12 @@ Route::middleware(['auth:sanctum', 'buyer'])->prefix('buyer')->group(function ()
     Route::post('/complaints', [BuyerAccountApiController::class, 'storeComplaint']);
     Route::post('/support/contact', [BuyerAccountApiController::class, 'contactSupport']);
 
+    // Banks & Cards (Payment Methods) & Account Deletion
+    Route::get('/payment-methods', [BuyerAccountApiController::class, 'paymentMethods']);
+    Route::post('/payment-methods', [BuyerAccountApiController::class, 'storePaymentMethod']);
+    Route::delete('/payment-methods/{id}', [BuyerAccountApiController::class, 'deletePaymentMethod'])->whereNumber('id');
+    Route::post('/delete-account', [BuyerAccountApiController::class, 'deleteAccount']);
+
     // Conversations & Messages
     Route::get('/conversations', [\App\Http\Controllers\BuyerConversationController::class, 'index']);
     Route::get('/conversations/{conversation}', [\App\Http\Controllers\BuyerConversationController::class, 'show']);
