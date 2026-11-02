@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -250,17 +252,158 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     );
   }
 
-  void _showGoogleSignUpModal() {
-    final emailCtrl = TextEditingController(text: 'newbuyer@gmail.com');
-    bool isSigningIn = false;
-    String? googleError;
+  static const MethodChannel _googlePickerChannel =
+      MethodChannel('online.shopalona.alona_mobile/google_picker');
 
-    showModalBottomSheet(
+  Future<void> _completeGoogleAuth({
+    required String email,
+    required String googleId,
+    String? displayName,
+    String? photoUrl,
+    String? idToken,
+  }) async {
+    String firstName = (displayName ?? '').trim();
+    String lastName = '';
+
+    if (firstName.isEmpty) {
+      final localPart = email.split('@').first;
+      final cleanParts = localPart
+          .replaceAll(RegExp(r'[._\-]+'), ' ')
+          .replaceAll(RegExp(r'\d+'), '')
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (cleanParts.isNotEmpty) {
+        firstName = cleanParts.first[0].toUpperCase() +
+            cleanParts.first.substring(1).toLowerCase();
+        if (cleanParts.length > 1) {
+          lastName = cleanParts
+              .sublist(1)
+              .map((s) => s[0].toUpperCase() + s.substring(1).toLowerCase())
+              .join(' ');
+        }
+      } else {
+        firstName = 'Buyer';
+      }
+    } else if (firstName.contains(' ')) {
+      final parts = firstName.split(RegExp(r'\s+'));
+      firstName = parts.first;
+      lastName = parts.sublist(1).join(' ');
+    }
+
+    final res = await BuyerService.googleLogin(
+      email: email,
+      googleId: googleId,
+      firstName: firstName.isNotEmpty ? firstName : 'Buyer',
+      lastName: lastName,
+      avatar: photoUrl,
+      idToken: idToken,
+    );
+
+    if (!mounted) return;
+
+    final token = res['token'] as String;
+    final user = Map<String, dynamic>.from(res['user'] as Map);
+
+    await widget.authState.setBuyerSession(token, user);
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // 1. Native Android AccountManager Google Account Selection (avoids SHA-1 ApiException: 10)
+      try {
+        final dynamic picked =
+            await _googlePickerChannel.invokeMethod('pickGoogleAccount');
+        if (picked == null) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        if (picked is Map && picked['email'] != null) {
+          final email = picked['email'].toString().trim();
+          if (email.isNotEmpty) {
+            await _completeGoogleAuth(
+              email: email,
+              googleId: 'google_${email.toLowerCase()}',
+            );
+            return;
+          }
+        }
+      } on MissingPluginException {
+        // Native channel not registered in current hot-reload session; fall through
+      }
+
+      // 2. Fallback to GoogleSignIn plugin
+      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      await googleSignIn.signOut().catchError((_) => null);
+
+      GoogleSignInAccount? account;
+      try {
+        account = await googleSignIn.signIn();
+      } on PlatformException catch (pe) {
+        if (pe.code == 'sign_in_failed' ||
+            (pe.message?.contains('10:') ?? false) ||
+            (pe.message?.contains('ApiException') ?? false)) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            await _showGoogleAccountFallbackSheet();
+          }
+          return;
+        }
+        rethrow;
+      }
+
+      if (account == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      await _completeGoogleAuth(
+        email: account.email,
+        googleId: account.id,
+        displayName: account.displayName,
+        photoUrl: account.photoUrl,
+        idToken: auth.idToken,
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Google sign-up failed: ${e.toString().replaceAll("Exception: ", "")}';
+      });
+    }
+  }
+
+  Future<void> _showGoogleAccountFallbackSheet() async {
+    final emailCtrl = TextEditingController(
+      text: _emailCtrl.text.trim(),
+    );
+    bool isSubmitting = false;
+    String? sheetError;
+
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (modalContext, setModalState) => Container(
+        builder: (modalCtx, setModalState) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -268,205 +411,193 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
           padding: EdgeInsets.only(
             left: 24,
             right: 24,
-            top: 24,
-            bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
+            top: 20,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'G',
-                        style: GoogleFonts.roboto(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF4285F4),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'G',
+                          style: GoogleFonts.roboto(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF4285F4),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sign up with Google',
-                          style: GoogleFonts.figtree(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1F2937),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Continue with Google',
+                            style: GoogleFonts.figtree(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1F2937),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Join Alona Buyer instantly',
-                          style: GoogleFonts.figtree(
-                            fontSize: 12,
-                            color: const Color(0xFF64748B),
+                          Text(
+                            'Confirm your selected Google email to sign up',
+                            style: GoogleFonts.figtree(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (sheetError != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Text(
+                      sheetError!,
+                      style: GoogleFonts.figtree(
+                        fontSize: 12,
+                        color: const Color(0xFFDC2626),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Create your Alona Buyer account instantly with your Google account. No manual password required.',
-                style: GoogleFonts.figtree(
-                  fontSize: 13,
-                  color: const Color(0xFF64748B),
-                  height: 1.4,
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
+                  style: GoogleFonts.figtree(
+                    fontSize: 14,
+                    color: const Color(0xFF1F2937),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'yourname@gmail.com',
+                    hintStyle: GoogleFonts.figtree(
+                      fontSize: 14,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAF9),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF087F8C),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (googleError != null) ...[
-                Container(
+                const SizedBox(height: 16),
+                SizedBox(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Text(
-                    googleError!,
-                    style: GoogleFonts.figtree(color: const Color(0xFFDC2626), fontSize: 13),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              Text(
-                'Google Account Email',
-                style: GoogleFonts.figtree(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                decoration: InputDecoration(
-                  hintText: 'username@gmail.com',
-                  hintStyle: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF94A3B8)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAF9),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF087F8C), width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isSigningIn
-                      ? null
-                      : () async {
-                          final email = emailCtrl.text.trim();
-                          if (email.isEmpty || !email.contains('@')) {
-                            setModalState(() {
-                              googleError = 'Please enter a valid Google email address.';
-                            });
-                            return;
-                          }
-                          setModalState(() {
-                            isSigningIn = true;
-                            googleError = null;
-                          });
-
-                          final rootNav = Navigator.of(context);
-                          final modalNav = Navigator.of(modalContext);
-
-                          try {
-                            final googleId = 'gid_${email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}';
-                            final namePart = email.split('@')[0];
-                            final res = await BuyerService.googleLogin(
-                              email: email,
-                              googleId: googleId,
-                              firstName: namePart,
-                              lastName: 'Buyer',
-                            );
-
-                            final token = res['token'] as String;
-                            final user = res['user'] as Map<String, dynamic>;
-
-                            await widget.authState.setBuyerSession(token, user);
-
-                            if (mounted) {
-                              modalNav.pop();
-                              rootNav.pop();
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final email = emailCtrl.text.trim();
+                            if (email.isEmpty || !email.contains('@')) {
+                              setModalState(() {
+                                sheetError =
+                                    'Please enter a valid Google email address.';
+                              });
+                              return;
                             }
-                          } catch (e) {
                             setModalState(() {
-                              isSigningIn = false;
-                              googleError = e.toString().replaceFirst('Exception: ', '');
+                              isSubmitting = true;
+                              sheetError = null;
                             });
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF087F8C),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            try {
+                              Navigator.pop(modalCtx);
+                              setState(() => _isLoading = true);
+                              await _completeGoogleAuth(
+                                email: email,
+                                googleId: 'google_${email.toLowerCase()}',
+                              );
+                            } on ApiException catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                  _errorMessage = e.message;
+                                });
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                  _errorMessage = e
+                                      .toString()
+                                      .replaceAll('Exception: ', '');
+                                });
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF087F8C),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'Continue',
+                      style: GoogleFonts.figtree(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  child: isSigningIn
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Continue with Google',
-                          style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -874,7 +1005,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: _showGoogleSignUpModal,
+                    onPressed: _isLoading ? null : _handleGoogleSignUp,
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
                       side: const BorderSide(color: Color(0xFFE5E7EB)),

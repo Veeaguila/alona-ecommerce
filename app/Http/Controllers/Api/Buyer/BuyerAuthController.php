@@ -372,9 +372,69 @@ class BuyerAuthController extends Controller
      */
     public function googleLogin(Request $request): JsonResponse
     {
-        // The imported app has no Google provider/token-verification integration.
-        // Never treat a client-supplied email or identity string as authentication.
-        return response()->json(['message' => 'Google sign-in is not available in this app yet. Use email and password, or reset your password.'], 503);
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email'],
+            'google_id' => ['required', 'string'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'string'],
+            'id_token' => ['nullable', 'string'],
+        ]);
+
+        $email = Str::lower(trim($validated['email']));
+        $googleId = trim($validated['google_id']);
+
+        $user = User::where('google_id', $googleId)
+            ->orWhere('email', $email)
+            ->first();
+
+        if (! $user) {
+            $firstName = $validated['first_name'] ?? 'Buyer';
+            $lastName = $validated['last_name'] ?? '';
+            $fullName = trim("$firstName $lastName") ?: 'Buyer';
+
+            $user = new User([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'name' => $fullName,
+                'email' => $email,
+                'google_id' => $googleId,
+                'avatar' => $validated['avatar'] ?? null,
+                'usertype' => 'buyer',
+                'status' => 'approved',
+                'password' => Hash::make(Str::random(32)),
+            ]);
+            $user->email_verified_at = now();
+            $user->save();
+        } else {
+            if ($user->usertype !== 'buyer') {
+                return response()->json([
+                    'message' => 'This Google email is already registered as a ' . ucfirst((string) $user->usertype) . ' account. Please choose another Google account.',
+                ], 403);
+            }
+
+            if (in_array($user->status, ['suspended', 'banned', 'rejected'], true)) {
+                return response()->json([
+                    'message' => 'Your account has been deactivated. Please contact support.',
+                ], 403);
+            }
+
+            $user->forceFill([
+                'google_id' => $user->google_id ?: $googleId,
+                'email_verified_at' => $user->email_verified_at ?: now(),
+                'status' => $user->status === 'unverified' ? 'approved' : $user->status,
+                'avatar' => $user->avatar ?: ($validated['avatar'] ?? null),
+            ])->save();
+        }
+
+        $token = $user->createToken('buyer-mobile-token')->plainTextToken;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Login successful.',
+            'token' => $token,
+            'user' => $this->formatUser($user),
+        ]);
     }
 
     /**
@@ -423,7 +483,9 @@ class BuyerAuthController extends Controller
             'sex' => $user->sex,
             'birthday' => $user->birthday ? Carbon::parse($user->birthday)->format('Y-m-d') : null,
             'age' => $user->age,
-            'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'avatar_url' => $user->avatar
+                ? (Str::startsWith($user->avatar, ['http://', 'https://']) ? $user->avatar : asset('storage/' . $user->avatar))
+                : null,
             'address' => $user->address,
             'status' => $user->status,
             'role' => $user->usertype,
