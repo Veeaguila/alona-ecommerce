@@ -617,7 +617,7 @@ class BuyerService {
       'subject': subject,
       'description': description,
       'type': type,
-      if (orderId != null) 'order_id': orderId,
+      'order_id': ?orderId,
       if (contactEmail != null && contactEmail.isNotEmpty) 'contact_email': contactEmail,
     });
     return res is Map<String, dynamic> ? res : {};
@@ -656,7 +656,7 @@ class BuyerService {
   }) async {
     final res = await ApiClient.post('api/buyer/profile', body: {
       'first_name': firstName,
-      if (middleInitial != null) 'middle_initial': middleInitial,
+      'middle_initial': ?middleInitial,
       'last_name': lastName,
       if (sex != null && sex.isNotEmpty) 'sex': sex,
       if (email != null && email.isNotEmpty) 'email': email,

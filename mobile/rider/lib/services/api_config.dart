@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+const _configuredBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://shopalona.online/api',
+);
 
 String normalizeApiBaseUrl(String value, {bool requireHttps = false}) {
   final base = value.trim().replaceFirst(RegExp(r'/+$'), '');
