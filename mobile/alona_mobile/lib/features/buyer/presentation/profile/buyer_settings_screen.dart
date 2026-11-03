@@ -12,6 +12,8 @@ import 'package:alona_mobile/features/buyer/presentation/orders/order_list_scree
 import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/address_management_screen.dart';
 import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
+import 'package:alona_mobile/features/rider/rider_entry_gate.dart';
 
 class BuyerSettingsScreen extends StatefulWidget {
   final AuthState authState;
@@ -2544,7 +2546,32 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
               ],
             ),
           ),
-          if (partnerType == 'rider' || partnerType == 'logistics') ...[
+          if (partnerType == 'rider') ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RiderEntryGate()),
+                  );
+                },
+                icon: const Icon(Icons.two_wheeler_rounded, size: 20),
+                label: Text(
+                  'Open Alona Rider Portal',
+                  style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF087F8C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ] else if (partnerType == 'logistics') ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -2552,15 +2579,18 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
                 onPressed: () async {
                   await authState.switchModule('logistics');
                   if (!context.mounted) return;
+                  final target = authState.isLogisticsAuthenticated
+                      ? LogisticsMainScreen(authState: authState)
+                      : LogisticsLoginScreen(authState: authState);
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => LogisticsMainScreen(authState: authState)),
+                    MaterialPageRoute(builder: (_) => target),
                     (route) => false,
                   );
                 },
                 icon: const Icon(Icons.local_shipping_outlined, size: 18),
                 label: Text(
-                  'Open Logistics & Rider Portal',
+                  'Open Sorting Center Portal',
                   style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
+import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
 
 /// Server approval remains authoritative. No background timer keeps tokens alive.
 class LogisticsAccessGate extends StatefulWidget {
@@ -75,6 +77,10 @@ class _LogisticsAccessGateState extends State<LogisticsAccessGate>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_approved) return _staff ? widget.staff : widget.owner;
+
+    final isUnauthenticated = !widget.authState.isLogisticsAuthenticated ||
+        (_message != null && _message!.toLowerCase().contains('unauthenticated'));
+
     return Scaffold(
       appBar: AppBar(title: const Text('Logistics account')),
       body: Padding(
@@ -82,17 +88,61 @@ class _LogisticsAccessGateState extends State<LogisticsAccessGate>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_message ?? 'Approval is required.'),
+            Icon(
+              isUnauthenticated ? Icons.lock_outline_rounded : Icons.pending_actions_outlined,
+              size: 54,
+              color: isUnauthenticated ? const Color(0xFF64748B) : const Color(0xFFD97706),
+            ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: _check, child: const Text('Check again')),
-            TextButton(
-              onPressed: () => widget.authState.switchModule('buyer'),
-              child: const Text('Back to Buyer'),
+            Text(
+              isUnauthenticated
+                  ? 'Sign in required to access Logistics Sorting Center tools.'
+                  : (_message ?? 'Approval is required.'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
-            TextButton(
-              onPressed: () => widget.authState.clearLogisticsSession(),
-              child: const Text('Sign out'),
+            const SizedBox(height: 24),
+            if (isUnauthenticated)
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LogisticsLoginScreen(authState: widget.authState),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Sign in to Logistics'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF087F8C),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              )
+            else
+              FilledButton(onPressed: _check, child: const Text('Check again')),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () async {
+                await widget.authState.switchModule('buyer');
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BuyerMainScreen(authState: widget.authState),
+                    ),
+                    (route) => false,
+                  );
+                }
+              },
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back to Buyer Home'),
             ),
+            if (widget.authState.isLogisticsAuthenticated)
+              TextButton(
+                onPressed: () => widget.authState.clearLogisticsSession(),
+                child: const Text('Sign out'),
+              ),
           ],
         ),
       ),

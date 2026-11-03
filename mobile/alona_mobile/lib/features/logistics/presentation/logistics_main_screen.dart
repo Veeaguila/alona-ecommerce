@@ -35,6 +35,9 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.authState.isLogisticsAuthenticated) {
+      return LogisticsLoginScreen(authState: widget.authState);
+    }
     return LogisticsAccessGate(
       authState: widget.authState,
       owner: _buildOwner(context),

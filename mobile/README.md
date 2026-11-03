@@ -1,20 +1,15 @@
-# Mobile applications
+# Mobile application
 
-`rider/` contains the active Flutter Rider client for the ALONA backend in `..`.
-`alona_mobile/` contains the imported Buyer/Logistics Flutter application. Its
-Logistics operations follow the same backend as web; see its README and
-docs/LOGISTICS_PARITY.md for verified Buyer/Logistics scope and remaining native work.
-Seller mobile is not included. Each client keeps its own Flutter dependencies, platforms,
-tests and documentation; the parent repository tracks their regular source files.
+`alona_mobile/` contains the unified Flutter application combining Buyer storefront,
+Logistics Sorting Center tools, and Rider delivery operations. All modules communicate
+with the ALONA backend via the REST API at `https://shopalona.online/api`.
 
 From the repository root:
 
 ```powershell
-cd mobile/rider
+cd mobile/alona_mobile
 flutter pub get
-flutter test --no-pub --dart-define=API_BASE_URL=http://localhost:8000/api
-flutter analyze --no-pub
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+flutter run
 ```
 
 Use a reachable API URL for the target device; release builds require HTTPS. The

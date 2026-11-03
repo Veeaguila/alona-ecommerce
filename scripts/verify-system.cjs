@@ -66,14 +66,18 @@ for (let i = 0; i < files.length; i += 12) {
 // security assertions and complete suite passed serially. Keep every check enabled.
 run('frontend', 'node', ['--test', '--test-concurrency=1', ...fs.readdirSync(path.join(root, 'tests/frontend'))
     .filter(file => file.endsWith('.test.mjs')).map(file => 'tests/frontend/' + file)]);
-run('checkpoint-helper', 'node', ['--test', 'mobile/rider/scripts/integration_checkpoint.test.cjs']);
+if (fs.existsSync(path.join(root, 'mobile/rider/scripts/integration_checkpoint.test.cjs'))) {
+    run('checkpoint-helper', 'node', ['--test', 'mobile/rider/scripts/integration_checkpoint.test.cjs']);
+}
 if (process.argv.includes('--mobile')) {
-    const app = path.join(root, 'mobile/rider');
-    const flutter = (label, args) => process.platform === 'win32'
-        ? run(label, 'cmd.exe', ['/d', '/c', 'flutter ' + args.join(' ')], app)
-        : run(label, 'flutter', args, app);
-    flutter('mobile-tests', ['test', '--no-pub', '--dart-define=API_BASE_URL=http://localhost:8000/api']);
-    flutter('mobile-analysis', ['analyze', '--no-pub']);
+    if (fs.existsSync(path.join(root, 'mobile/rider'))) {
+        const app = path.join(root, 'mobile/rider');
+        const flutter = (label, args) => process.platform === 'win32'
+            ? run(label, 'cmd.exe', ['/d', '/c', 'flutter ' + args.join(' ')], app)
+            : run(label, 'flutter', args, app);
+        flutter('mobile-tests', ['test', '--no-pub', '--dart-define=API_BASE_URL=http://localhost:8000/api']);
+        flutter('mobile-analysis', ['analyze', '--no-pub']);
+    }
     const combined = path.join(root, 'mobile/alona_mobile');
     run('buyer-logistics-tests', 'node', ['scripts/check.cjs','test'], combined);
     run('buyer-logistics-analysis', 'node', ['scripts/check.cjs','analyze'], combined);
