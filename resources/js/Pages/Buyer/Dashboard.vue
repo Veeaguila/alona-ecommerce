@@ -1676,6 +1676,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
+                v-if="flashSales && flashSales.length"
                 class="alona-reveal bg-[#FFFDF9] border-y border-amber-100/80"
             >
                 <div
@@ -1728,7 +1729,6 @@ onUnmounted(() => {
 
                     <!-- Flash Sales Active Grid -->
                     <div
-                        v-if="flashSales && flashSales.length"
                         class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
                     >
                         <Link
@@ -1806,37 +1806,6 @@ onUnmounted(() => {
                                 </div>
                             </div>
                         </Link>
-                    </div>
-
-                    <!-- Flash Sales Empty State -->
-                    <div
-                        v-else
-                        class="mt-7 rounded-[24px] border border-dashed border-amber-200/80 bg-white p-12 text-center"
-                    >
-                        <div
-                            class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF8E7] text-2xl text-amber-500"
-                        >
-                            <svg class="h-7 w-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-
-                        <h3 class="mt-4 text-sm font-extrabold text-gray-900">
-                            No active flash sales right now
-                        </h3>
-
-                        <p class="mx-auto mt-1 max-w-sm text-xs leading-5 text-gray-500">
-                            Check back soon for new limited-time flash deals and countdown specials from Alona sellers.
-                        </p>
-
-                        <div class="mt-5">
-                            <Link
-                                :href="safeRoute('buyer.products')"
-                                class="inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#066B76]"
-                            >
-                                Browse products →
-                            </Link>
-                        </div>
                     </div>
                 </div>
             </section>

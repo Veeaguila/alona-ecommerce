@@ -217,19 +217,20 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
                         const SizedBox(height: 24),
 
-                        // FLASH SALES SECTION (With Live Countdown)
-                        FlashSalesWidget(
-                          flashSales: _flashSales,
-                          endTime: _flashSaleEndTime,
-                          onBrowseProducts: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ProductListScreen()),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 28),
+                        // FLASH SALES SECTION (With Live Countdown - Only shown if active sales exist)
+                        if (_flashSales.isNotEmpty) ...[
+                          FlashSalesWidget(
+                            flashSales: _flashSales,
+                            endTime: _flashSaleEndTime,
+                            onBrowseProducts: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 28),
+                        ],
 
                         // CATEGORIES SECTION MATCHING WEBSITE DASHBOARD.VUE
                         if (_categories.isNotEmpty) ...[

@@ -81,6 +81,10 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.flashSales.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final hours = _twoDigits(_remaining.inHours);
     final minutes = _twoDigits(_remaining.inMinutes.remainder(60));
     final seconds = _twoDigits(_remaining.inSeconds.remainder(60));
