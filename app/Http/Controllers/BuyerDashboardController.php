@@ -570,6 +570,14 @@ if ($topSellingIds->isNotEmpty()) {
      */
     private function formatProduct(Product $product): array
     {
+        $imagePath = $product->image_path;
+        $image = null;
+        if ($imagePath) {
+            $image = (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))
+                ? $imagePath
+                : asset('storage/' . ltrim($imagePath, '/'));
+        }
+
         return [
             'id' => $product->id,
             'name' => $product->name,
@@ -584,6 +592,7 @@ if ($topSellingIds->isNotEmpty()) {
 
             'stock' => (int) $product->stock,
 
+            'image' => $image,
             'image_path' => $product->image_path,
 
             'is_featured' => (bool) $product->is_featured,
@@ -603,6 +612,7 @@ if ($topSellingIds->isNotEmpty()) {
                     'slug' => $product->category->slug,
                 ]
                 : null,
+            'category_name' => $product->category?->name ?? 'Product',
 
             'seller' => $product->seller
                 ? [

@@ -43,11 +43,12 @@ class BuyerCartApiController extends Controller
             $price = $variant ? (float) $variant->price : (float) ($product?->price ?? 0);
             $stock = $variant ? (int) $variant->stock : (int) ($product?->stock ?? 0);
 
+            $rawPath = $product?->image_path ?: $product?->images->first()?->image_path;
             $imageUrl = asset('images/alona.png');
-            if ($product && $product->image_path) {
-                $imageUrl = asset('storage/' . $product->image_path);
-            } elseif ($product && $product->images->isNotEmpty()) {
-                $imageUrl = asset('storage/' . $product->images->first()->image_path);
+            if ($rawPath) {
+                $imageUrl = (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://'))
+                    ? $rawPath
+                    : asset('storage/' . ltrim($rawPath, '/'));
             }
 
             return [
@@ -222,11 +223,12 @@ class BuyerCartApiController extends Controller
             $p = $w->product;
             if (! $p) return null;
 
+            $rawPath = $p->image_path ?: $p->images->first()?->image_path;
             $imageUrl = asset('images/alona.png');
-            if ($p->image_path) {
-                $imageUrl = asset('storage/' . $p->image_path);
-            } elseif ($p->images->isNotEmpty()) {
-                $imageUrl = asset('storage/' . $p->images->first()->image_path);
+            if ($rawPath) {
+                $imageUrl = (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://'))
+                    ? $rawPath
+                    : asset('storage/' . ltrim($rawPath, '/'));
             }
 
             return [

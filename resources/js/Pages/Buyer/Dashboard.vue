@@ -713,7 +713,7 @@ const recommendedProductsList = computed(() => {
 */
 
 const trendingProducts = computed(() => {
-    return props.featuredProducts
+    return featuredProductsList.value
         .filter((product) => product.id !== featuredProduct.value?.id)
         .slice(0, 6);
 });
@@ -1878,8 +1878,8 @@ onUnmounted(() => {
                             >
 
                                 <img
-                                    v-if="product.image"
-                                    :src="product.image"
+                                    v-if="product.image || product.image_path"
+                                    :src="product.image || imageUrl(product.image_path)"
                                     :alt="product.name"
                                     class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                     loading="lazy"
@@ -1921,7 +1921,7 @@ onUnmounted(() => {
                                 <p
                                     class="text-[10px] font-bold uppercase tracking-wider text-[#087F8C]"
                                 >
-                                    {{ product.category }}
+                                    {{ typeof product.category === 'object' && product.category ? (product.category.name || 'PRODUCT') : (product.category_name || product.category || 'PRODUCT') }}
                                 </p>
 
                                 <h3
@@ -1967,7 +1967,7 @@ onUnmounted(() => {
                                         }}
                                     </span>
 
-                                    <span>
+                                    <span v-if="product.reviews !== undefined && product.reviews !== null">
                                         ({{ product.reviews }})
                                     </span>
 

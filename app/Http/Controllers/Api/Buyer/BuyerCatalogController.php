@@ -484,7 +484,7 @@ class BuyerCatalogController extends Controller
                 'image_url' => $this->resolveProductImage($product),
                 'images' => $product->images->map(fn ($img) => [
                     'id' => $img->id,
-                    'url' => asset('storage/' . $img->image_path),
+                    'url' => $this->resolveImageUrl($img->image_path),
                 ]),
                 'variants' => $product->variants->map(fn ($v) => [
                     'id' => $v->id,
@@ -493,7 +493,7 @@ class BuyerCatalogController extends Controller
                     'price' => (float) $v->price,
                     'stock' => (int) $v->stock,
                     'sku' => $v->sku,
-                    'image_url' => $v->image_path ? asset('storage/' . $v->image_path) : null,
+                    'image_url' => $this->resolveImageUrl($v->image_path),
                 ]),
                 'category' => $product->category,
                 'seller' => [
@@ -501,7 +501,7 @@ class BuyerCatalogController extends Controller
                     'name' => $product->seller?->store_name ?: $product->seller?->name,
                     'store_name' => $product->seller?->store_name,
                     'store_description' => $product->seller?->store_description,
-                    'logo_url' => $product->seller?->store_logo_path ? asset('storage/' . $product->seller->store_logo_path) : null,
+                    'logo_url' => $this->resolveImageUrl($product->seller?->store_logo_path),
                     'response_time' => $product->seller?->response_time ?? 'Within a few hours',
                     'rating' => $sellerStats['avg_rating'],
                     'total_products' => $sellerStats['total_products'],
@@ -614,14 +614,22 @@ class BuyerCatalogController extends Controller
         ];
     }
 
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        return asset('storage/' . ltrim($path, '/'));
+    }
+
     private function resolveProductImage(Product $p): string
     {
-        if ($p->image_path) {
-            return asset('storage/' . $p->image_path);
-        }
-        $firstImage = $p->images?->first();
-        if ($firstImage && $firstImage->image_path) {
-            return asset('storage/' . $firstImage->image_path);
+        $path = $p->image_path ?: $p->images?->first()?->image_path;
+        if ($path) {
+            return $this->resolveImageUrl($path) ?: asset('images/alona.png');
         }
         return asset('images/alona.png');
     }

@@ -46,6 +46,7 @@ class Product extends Model
     ];
 
     protected $appends = [
+        'image_url',
         'regular_price',
         'min_price',
         'max_price',
@@ -97,6 +98,21 @@ class Product extends Model
             'ai_verified_at' => 'datetime',
             'ai_raw_response' => 'array',
         ];
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        $path = $this->image_path;
+        if (!$path && $this->relationLoaded('images')) {
+            $path = $this->images->first()?->image_path;
+        }
+        if (!$path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        return asset('storage/' . ltrim($path, '/'));
     }
 
     public function getEffectivePerBuyerLimitAttribute(): ?int
