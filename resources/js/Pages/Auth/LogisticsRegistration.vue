@@ -260,138 +260,111 @@ function submit() {
 
             <!-- MAIN TWO-PANEL SPLIT CARD -->
             <div
-                class="relative z-10 mx-auto flex w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_20px_50px_rgba(8,127,140,0.08)] md:flex-row md:min-h-[660px]"
+                class="relative z-10 mx-auto flex w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-teal-900/40 bg-[#05505A] shadow-2xl md:flex-row md:min-h-[660px]"
             >
-                
-                <!-- ================= LEFT PANEL: WELCOME BACK (SYSTEM PALETTE & ENHANCED DESIGN) ================= -->
-                <div
-                    class="relative flex w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#087F8C] via-[#0A8F9E] to-[#065F6B] p-8 text-white sm:p-10 md:w-[42%]"
-                >
-                    <!-- Background Logistics Decorative Elements -->
-                    <div
-                        class="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-2xl"
-                        aria-hidden="true"
-                    ></div>
-                    <div
-                        class="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full border border-white/15 bg-white/5"
-                        aria-hidden="true"
-                    ></div>
-                    <div
-                        class="pointer-events-none absolute top-1/4 right-4 h-24 w-24 rounded-3xl border border-white/10 bg-white/5 rotate-12 backdrop-blur-sm"
-                        aria-hidden="true"
-                    ></div>
+                <!-- ================= LEFT PANEL: BRANDED PANEL (MATCHING AUTH MODAL) ================= -->
+                <div class="relative hidden md:flex md:w-[340px] lg:w-[380px] shrink-0 flex-col justify-between overflow-hidden bg-white p-8 lg:p-10 text-slate-900 select-none">
+                    <!-- Decorative background ambient circles matching target design -->
+                    <div class="pointer-events-none absolute top-[55%] -left-14 h-44 w-44 rounded-full bg-[#F5A524]"></div>
+                    <div class="pointer-events-none absolute -bottom-14 -right-14 h-64 w-64 rounded-full bg-[#067A87]"></div>
 
-                    <!-- Top: Brand Logo & Partner Badge -->
-                    <div class="relative z-10 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 shadow-inner">
-                                <img
-                                    src="/images/Alogo.png"
-                                    alt="Alona"
-                                    class="h-7 w-7 object-contain drop-shadow"
-                                />
-                            </div>
-                            <div>
-                                <span class="block text-base font-extrabold tracking-wide text-white sm:text-lg leading-tight">
-                                    Alona Logistics
-                                </span>
-                                <span class="block text-[10px] font-semibold uppercase tracking-wider text-white/75">
-                                    Hub & 3PL Network
-                                </span>
-                            </div>
-                        </div>
-                        <span class="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white backdrop-blur-sm shadow-sm">
-                            PARTNER
-                        </span>
+                    <!-- Top: Full Official Alona Logo with Tagline -->
+                    <div class="relative z-10 flex items-center">
+                        <img src="/images/alona.png" alt="Alona" class="h-14 w-auto object-contain" />
                     </div>
 
-                    <!-- Center: Welcome Back & Ghost Sign In Button & Feature Highlights -->
-                    <div class="relative z-10 my-auto py-6 text-center">
-                        <div class="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-[11px] font-bold tracking-wider text-white backdrop-blur-sm mb-3">
-                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
-                            <span>OFFICIAL ONBOARDING</span>
-                        </div>
-
-                        <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                            Welcome Back!
-                        </h2>
-
-                        <p class="mx-auto mt-3 max-w-xs text-xs leading-relaxed text-white/90 sm:text-sm">
-                            To keep connected with our merchant fleet, please sign in with your partner credentials.
+                    <!-- Bottom: Contextual Hero Heading & Subtitle -->
+                    <div class="relative z-10 mt-auto pt-8">
+                        <h3 class="text-3xl lg:text-[34px] font-bold leading-[1.15] tracking-tight text-[#0F172A]">
+                            Partner with Alona Logistics.
+                        </h3>
+                        <p class="mt-3 text-sm leading-relaxed text-[#64748B]">
+                            Join our nationwide delivery network, manage sorting hubs, and power seamless fulfillment across the Philippines.
                         </p>
 
-                        <!-- Ghost Sign In Pill Button (Clean Centered Pill) -->
-                        <div class="mt-6">
-                            <a
-                                href="/?auth=login"
-                                class="inline-block rounded-full border-2 border-white px-10 py-2.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-sm transition-all duration-200 hover:bg-white hover:text-[#087F8C] active:scale-95"
-                            >
-                                SIGN IN
-                            </a>
-                        </div>
-
                         <!-- Logistics Feature Highlights with System Icons -->
-                        <div class="mt-8 space-y-2 text-left max-w-xs mx-auto">
-                            <div class="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-3.5 py-2 backdrop-blur-sm">
-                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 6h11v10H3V6Z" />
-                                        <path d="M14 10h4l3 3v3h-7v-6Z" />
-                                        <circle cx="7" cy="19" r="1.5" />
-                                        <circle cx="17" cy="19" r="1.5" />
+                        <div class="mt-6 space-y-2.5">
+                            <div class="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-2.5 shadow-sm">
+                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#05505A] text-[#F5A524]">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-xs font-bold text-white leading-none">Automated Dispatch</p>
-                                    <p class="text-[10px] text-white/75 truncate mt-0.5">Direct seller-to-hub parcel transfers</p>
+                                    <p class="text-xs font-bold text-slate-800">Automated Dispatch</p>
+                                    <p class="text-[11px] text-slate-500 truncate">Direct seller-to-hub parcel transfers</p>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-3.5 py-2 backdrop-blur-sm">
-                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11Z" />
-                                        <circle cx="12" cy="10" r="2.5" />
+                            <div class="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-2.5 shadow-sm">
+                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#05505A] text-[#F5A524]">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-xs font-bold text-white leading-none">Real-Time Manifests</p>
-                                    <p class="text-[10px] text-white/75 truncate mt-0.5">Live barcode scanning & tracking</p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-3.5 py-2 backdrop-blur-sm">
-                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" />
-                                        <path d="m9 12 2 2 4-4" />
-                                    </svg>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-xs font-bold text-white leading-none">Verified Consignments</p>
-                                    <p class="text-[10px] text-white/75 truncate mt-0.5">Protected payouts & dispute support</p>
+                                    <p class="text-xs font-bold text-slate-800">Verified Consignments</p>
+                                    <p class="text-[11px] text-slate-500 truncate">Protected payouts & dispute support</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ================= RIGHT PANEL: CREATE ACCOUNT (WHITE FORM) ================= -->
-                <div class="flex w-full flex-col justify-between bg-white p-6 sm:p-10 md:w-[58%] md:p-12">
+                <!-- ================= RIGHT PANEL: CREATE ACCOUNT (DARK TEAL FORM) ================= -->
+                <div class="flex w-full flex-col justify-between bg-[#05505A] p-6 sm:p-10 md:w-[60%] md:p-12 text-white">
                     <div>
-                        <!-- Title in System Brand Palette -->
-                        <h1 class="text-center text-2xl font-extrabold tracking-tight text-[#087F8C] sm:text-3xl lg:text-4xl">
-                            Create Account
-                        </h1>
+                        <!-- PROGRESS HEADER -->
+                        <div class="mb-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-sm font-semibold text-teal-300">
+                                    Step {{ currentStep }} of 3
+                                </span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/15">
+                                    Logistics Partner Onboarding
+                                </span>
+                            </div>
 
-                        <!-- Google Sign-In Option (Facebook & LinkedIn Removed) -->
-                        <div class="mt-4 flex items-center justify-center">
+                            <div class="flex gap-2">
+                                <div
+                                    v-for="stepNum in 3"
+                                    :key="stepNum"
+                                    class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                                    :class="stepNum <= currentStep ? 'bg-[#F5A524]' : 'bg-white/20'"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <!-- Title and Subtitle -->
+                        <div class="mb-6">
+                            <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                                {{
+                                    currentStep === 1
+                                        ? 'Account information'
+                                        : currentStep === 2
+                                            ? 'Company details & location'
+                                            : 'Compliance documents & coverage'
+                                }}
+                            </h2>
+                            <p class="mt-1 text-sm text-teal-100/70">
+                                {{
+                                    currentStep === 1
+                                        ? 'Create your Alona logistics enterprise credentials.'
+                                        : currentStep === 2
+                                            ? 'Provide your business registration and operating address.'
+                                            : 'Upload required accreditation documents and select coverage areas.'
+                                }}
+                            </p>
+                        </div>
+
+                        <!-- Google Sign-In Option (Step 1 only) -->
+                        <div v-if="currentStep === 1">
                             <a
                                 :href="route('google.redirect', { role: 'sorting_center' })"
-                                class="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white px-6 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#087F8C] hover:bg-[#F8FAF9] hover:text-[#087F8C] hover:shadow active:scale-95"
+                                class="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
                                 title="Continue with Google"
                             >
-                                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24">
                                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -399,19 +372,19 @@ function submit() {
                                 </svg>
                                 <span>Continue with Google</span>
                             </a>
-                        </div>
 
-                        <!-- Sub-caption -->
-                        <div class="mt-4 flex items-center justify-center gap-3">
-                            <span class="h-px w-12 bg-slate-200"></span>
-                            <span class="text-xs font-medium text-slate-400">or use your email for registration:</span>
-                            <span class="h-px w-12 bg-slate-200"></span>
+                            <!-- Sub-caption -->
+                            <div class="my-5 flex items-center gap-3 text-xs text-teal-200/60">
+                                <span class="h-px flex-1 bg-white/15"></span>
+                                <span>or use your email for registration</span>
+                                <span class="h-px flex-1 bg-white/15"></span>
+                            </div>
                         </div>
 
                         <!-- Google active banner -->
                         <div
                             v-if="google"
-                            class="mt-4 rounded-xl bg-[#E8F7F6] p-3 text-xs text-[#087F8C] font-semibold text-center"
+                            class="mb-4 rounded-xl bg-white/10 border border-white/20 p-3 text-xs text-teal-200 font-semibold text-center"
                         >
                             Continuing with Google as {{ google.email }}.
                         </div>
@@ -422,40 +395,9 @@ function submit() {
                             ref="errorSummary"
                             role="alert"
                             tabindex="-1"
-                            class="mt-4 rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs font-semibold text-rose-700"
+                            class="mb-4 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-800 shadow-sm"
                         >
                             {{ failure }}
-                        </div>
-
-                        <!-- STEP PROGRESS TABS (SYSTEM BRAND PALETTE) -->
-                        <div class="mt-6 flex items-center justify-center gap-2 border-b border-slate-100 pb-3">
-                            <button
-                                type="button"
-                                @click="goToStep(1)"
-                                class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition"
-                                :class="currentStep === 1 ? 'bg-[#087F8C] text-white shadow-sm ring-2 ring-[#087F8C]/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'"
-                            >
-                                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px]">1</span>
-                                <span>Account</span>
-                            </button>
-                            <button
-                                type="button"
-                                @click="goToStep(2)"
-                                class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition"
-                                :class="currentStep === 2 ? 'bg-[#087F8C] text-white shadow-sm ring-2 ring-[#087F8C]/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'"
-                            >
-                                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px]">2</span>
-                                <span>Company</span>
-                            </button>
-                            <button
-                                type="button"
-                                @click="goToStep(3)"
-                                class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition"
-                                :class="currentStep === 3 ? 'bg-[#087F8C] text-white shadow-sm ring-2 ring-[#087F8C]/20' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'"
-                            >
-                                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px]">3</span>
-                                <span>Documents</span>
-                            </button>
                         </div>
 
                         <!-- FORM -->
@@ -626,13 +568,13 @@ function submit() {
                                 </template>
 
                                 <!-- Step 1 Next Button -->
-                                <div class="pt-3 text-center">
+                                <div class="pt-3">
                                     <button
                                         type="button"
                                         @click="goToStep(2)"
-                                        class="rounded-full bg-[#087F8C] px-10 py-3 text-xs font-extrabold uppercase tracking-wider text-white shadow-md transition hover:bg-[#065F6B] active:scale-95"
+                                        class="w-full rounded-xl bg-[#F5A524] py-3.5 px-4 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99]"
                                     >
-                                        NEXT: COMPANY DETAILS →
+                                        Next: Company Details →
                                     </button>
                                 </div>
                             </div>
@@ -654,7 +596,7 @@ function submit() {
                                         class="field-input"
                                     />
                                 </div>
-                                <p v-if="form.errors.business_name" class="text-[11px] font-semibold text-rose-600">
+                                <p v-if="form.errors.business_name" class="text-[11px] font-semibold text-rose-300">
                                     {{ form.errors.business_name }}
                                 </p>
 
@@ -694,23 +636,23 @@ function submit() {
                                         />
                                     </div>
                                 </div>
-                                <p id="tin-help" class="text-[10px] text-slate-500">
+                                <p id="tin-help" class="text-[10px] text-teal-200/80">
                                     Enter all 12 digits, including the branch code. Hyphens are added automatically when you leave this field.
                                 </p>
-                                <p v-if="form.errors.registration_number" class="text-[11px] font-semibold text-rose-600">
+                                <p v-if="form.errors.registration_number" class="text-[11px] font-semibold text-rose-300">
                                     {{ form.errors.registration_number }}
                                 </p>
-                                <p v-if="form.errors.tin" id="tin-error" role="alert" class="text-[11px] font-semibold text-rose-600">
+                                <p v-if="form.errors.tin" id="tin-error" role="alert" class="text-[11px] font-semibold text-rose-300">
                                     {{ form.errors.tin }}
                                 </p>
 
                                 <!-- Logistics Address Selector (PSGC) -->
-                                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
-                                    <p class="mb-2 text-xs font-bold text-slate-700">Company Location (Philippine Address)</p>
+                                <div class="rounded-2xl border border-white/15 bg-white/5 p-4 text-slate-800">
+                                    <p class="mb-2 text-xs font-bold text-white">Company Location (Philippine Address)</p>
                                     <LogisticsAddressSelector :form="form" :regions="regions" />
                                     
                                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                        <div class="field-container bg-white">
+                                        <div class="field-container">
                                             <input
                                                 id="street"
                                                 v-model="form.street"
@@ -720,7 +662,7 @@ function submit() {
                                                 class="field-input"
                                             />
                                         </div>
-                                        <div class="field-container bg-white">
+                                        <div class="field-container">
                                             <input
                                                 id="postal_code"
                                                 v-model="form.postal_code"
@@ -731,26 +673,26 @@ function submit() {
                                             />
                                         </div>
                                     </div>
-                                    <p v-if="form.errors.street || form.errors.postal_code" class="mt-1 text-[11px] font-semibold text-rose-600">
+                                    <p v-if="form.errors.street || form.errors.postal_code" class="mt-1 text-[11px] font-semibold text-rose-300">
                                         {{ form.errors.street || form.errors.postal_code }}
                                     </p>
                                 </div>
 
                                 <!-- Step 2 Action Buttons -->
-                                <div class="flex items-center justify-between pt-3">
+                                <div class="flex items-center justify-between gap-3 pt-3">
                                     <button
                                         type="button"
                                         @click="currentStep = 1"
-                                        class="text-xs font-bold text-slate-500 hover:text-slate-800"
+                                        class="flex-1 rounded-xl bg-white px-4 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-100"
                                     >
-                                        ← Back to Account
+                                        Back
                                     </button>
                                     <button
                                         type="button"
                                         @click="goToStep(3)"
-                                        class="rounded-full bg-[#087F8C] px-10 py-3 text-xs font-extrabold uppercase tracking-wider text-white shadow-md transition hover:bg-[#065F6B] active:scale-95"
+                                        class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99]"
                                     >
-                                        NEXT: DOCUMENTS →
+                                        Next: Documents →
                                     </button>
                                 </div>
                             </div>
@@ -759,51 +701,51 @@ function submit() {
                             <div v-show="currentStep === 3" class="space-y-4">
                                 
                                 <!-- Service Areas -->
-                                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
-                                    <p class="text-xs font-bold text-slate-700">Service Coverage Areas *</p>
-                                    <p class="text-[11px] text-slate-500">Select at least one region your sorting center covers:</p>
+                                <div class="rounded-2xl border border-white/15 bg-white/5 p-4 text-white">
+                                    <p class="text-xs font-bold text-white">Service Coverage Areas *</p>
+                                    <p class="text-[11px] text-teal-100/70">Select at least one region your sorting center covers:</p>
                                     <div class="mt-2.5 grid max-h-36 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                                         <label
                                             v-for="region in regions"
                                             :key="region.code"
-                                            class="flex cursor-pointer items-center gap-2 rounded-lg bg-white p-2 text-xs font-medium text-slate-700 hover:bg-[#E8F7F6]"
+                                            class="flex cursor-pointer items-center gap-2 rounded-xl bg-white/10 p-2 text-xs font-medium text-white hover:bg-white/20 transition"
                                         >
                                             <input
                                                 v-model="form.service_region_codes"
                                                 type="checkbox"
                                                 :value="region.code"
-                                                class="rounded border-slate-300 text-[#087F8C] focus:ring-[#087F8C]"
+                                                class="rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]"
                                             />
                                             <span class="truncate">{{ region.name }}</span>
                                         </label>
                                     </div>
-                                    <p v-if="form.errors.service_region_codes" class="mt-1 text-[11px] font-semibold text-rose-600">
+                                    <p v-if="form.errors.service_region_codes" class="mt-1 text-[11px] font-semibold text-rose-300">
                                         {{ form.errors.service_region_codes }}
                                     </p>
                                 </div>
 
                                 <!-- Company Document Uploads -->
-                                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5">
-                                    <p class="text-xs font-bold text-slate-700">Company Compliance Documents *</p>
-                                    <p class="text-[11px] text-slate-500">PDF, JPG, or PNG up to 5MB each:</p>
+                                <div class="rounded-2xl border border-white/15 bg-white/5 p-4 text-white">
+                                    <p class="text-xs font-bold text-white">Company Compliance Documents *</p>
+                                    <p class="text-[11px] text-teal-100/70">PDF, JPG, or PNG up to 5MB each:</p>
                                     
                                     <div class="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                                         <div
                                             v-for="doc in documents"
                                             :key="doc.name"
-                                            class="rounded-xl border border-dashed border-slate-300 bg-white p-2.5 text-xs transition hover:border-[#087F8C]"
+                                            class="rounded-xl border border-dashed border-white/25 bg-white/10 p-3 text-xs transition hover:border-[#F5A524]"
                                         >
-                                            <span class="block font-bold text-slate-700 truncate">{{ doc.label }}</span>
+                                            <span class="block font-bold text-white truncate">{{ doc.label }}</span>
                                             <input
                                                 :key="`${doc.name}-${documentInputVersion}`"
                                                 :id="doc.name"
                                                 type="file"
                                                 accept=".jpg,.jpeg,.png,.pdf"
                                                 required
-                                                class="mt-1.5 block w-full text-[10px] text-slate-500 file:mr-2 file:rounded-md file:border-0 file:bg-[#E8F7F6] file:px-2 file:py-1 file:text-[10px] file:font-bold file:text-[#087F8C]"
+                                                class="mt-2 block w-full text-[10px] text-teal-100 file:mr-2 file:rounded-lg file:border-0 file:bg-[#F5A524] file:px-2.5 file:py-1 file:text-[10px] file:font-bold file:text-slate-900 shadow-sm"
                                                 @change="form[doc.name] = $event.target.files?.[0] || null"
                                             />
-                                            <p v-if="form.errors[doc.name]" class="mt-1 text-[10px] font-semibold text-rose-600">
+                                            <p v-if="form.errors[doc.name]" class="mt-1 text-[10px] font-semibold text-rose-300">
                                                 {{ form.errors[doc.name] }}
                                             </p>
                                         </div>
@@ -811,50 +753,61 @@ function submit() {
                                 </div>
 
                                 <!-- Terms & Privacy Checkboxes -->
-                                <div class="space-y-2 text-xs text-slate-600">
-                                    <label class="flex items-start gap-2">
+                                <div class="rounded-xl border border-white/15 bg-white/10 p-4 space-y-3">
+                                    <label class="flex items-start gap-3 cursor-pointer">
                                         <input
                                             v-model="form.terms"
                                             type="checkbox"
                                             required
-                                            class="mt-0.5 rounded border-slate-300 text-[#087F8C] focus:ring-[#087F8C]"
+                                            class="mt-0.5 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]"
                                         />
-                                        <span>I accept the <Link href="/policies" class="font-bold text-[#087F8C] hover:underline">Terms and Conditions</Link>.</span>
+                                        <span class="text-xs text-white">I accept the <Link href="/policies" class="font-semibold text-teal-300 underline hover:text-white">Terms and Conditions</Link>.</span>
                                     </label>
-                                    <label class="flex items-start gap-2">
+                                    <label class="flex items-start gap-3 cursor-pointer">
                                         <input
                                             v-model="form.privacy"
                                             type="checkbox"
                                             required
-                                            class="mt-0.5 rounded border-slate-300 text-[#087F8C] focus:ring-[#087F8C]"
+                                            class="mt-0.5 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]"
                                         />
-                                        <span>I accept the <Link href="/policies" class="font-bold text-[#087F8C] hover:underline">Privacy Policy</Link>.</span>
+                                        <span class="text-xs text-white">I accept the <Link href="/policies" class="font-semibold text-teal-300 underline hover:text-white">Privacy Policy</Link>.</span>
                                     </label>
-                                    <p v-if="form.errors.terms || form.errors.privacy" class="text-[11px] font-semibold text-rose-600">
+                                    <p v-if="form.errors.terms || form.errors.privacy" class="text-[11px] font-semibold text-rose-300">
                                         {{ form.errors.terms || form.errors.privacy }}
                                     </p>
                                 </div>
 
                                 <!-- Step 3 Actions: SIGN UP Pill Button (Matches Image!) -->
-                                <div class="flex items-center justify-between pt-2">
+                                <div class="flex items-center justify-between gap-3 pt-2">
                                     <button
                                         type="button"
                                         @click="currentStep = 2"
-                                        class="text-xs font-bold text-slate-500 hover:text-slate-800"
+                                        class="flex-1 rounded-xl bg-white px-4 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-100"
                                     >
-                                        ← Back to Company
+                                        Back
                                     </button>
                                     <button
                                         type="submit"
                                         :disabled="form.processing"
-                                        class="rounded-full bg-[#087F8C] px-12 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-md transition hover:bg-[#065F6B] hover:shadow-lg disabled:opacity-50 active:scale-95"
+                                        class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:opacity-50"
                                     >
-                                        {{ form.processing ? 'REGISTERING...' : 'SIGN UP' }}
+                                        {{ form.processing ? 'Submitting Application...' : 'Submit Application' }}
                                     </button>
                                 </div>
                             </div>
 
                         </form>
+
+                        <!-- FOOTER -->
+                        <div class="mt-6 text-center text-xs text-teal-100/70">
+                            Already have a partner account?
+                            <a
+                                href="/?auth=partner-login"
+                                class="font-semibold text-teal-300 hover:text-white hover:underline ml-1"
+                            >
+                                Log in
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -869,16 +822,15 @@ function submit() {
     align-items: center;
     gap: 0.75rem;
     border-radius: 0.75rem;
-    background-color: #F4F7F6;
-    padding: 0.65rem 1rem;
-    border: 1px solid transparent;
+    background-color: #FFFFFF;
+    padding: 0.75rem 1rem;
+    border: 0;
     transition: all 0.15s ease;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
 .field-container:focus-within {
-    border-color: #087F8C;
-    background-color: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(8, 127, 140, 0.15);
+    box-shadow: 0 0 0 2px #F5A524;
 }
 
 .field-icon {
@@ -894,9 +846,9 @@ function submit() {
     border: 0;
     background: transparent;
     padding: 0;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     line-height: 1.25rem;
-    color: #1F2937;
+    color: #0F172A;
     outline: none;
 }
 

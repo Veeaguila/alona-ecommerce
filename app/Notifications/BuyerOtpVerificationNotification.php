@@ -29,14 +29,20 @@ class BuyerOtpVerificationNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $name = trim(($notifiable->first_name ?? '') . ' ' . ($notifiable->last_name ?? ''));
+        if (! $name) {
+            $name = $notifiable->name ?? 'Valued Customer';
+        }
+
         return (new MailMessage)
-            ->subject('Your Alona 6-Digit Email Verification Code')
-            ->greeting('Hello ' . ($notifiable->first_name ?? $notifiable->name) . '!')
-            ->line('Thank you for registering on Alona.')
-            ->line('Please use the following 6-digit One-Time Password (OTP) to verify your email address:')
-            ->line('**' . $this->otpCode . '**')
-            ->line('This verification code will expire in 5 minutes.')
-            ->line('If you did not create an account, no further action is required.');
+            ->subject('Your Alona 6-Digit Email Verification Code: ' . $this->otpCode)
+            ->view('emails.otp-verification', [
+                'otpCode' => $this->otpCode,
+                'userName' => $name,
+                'title' => 'Verify Your Email Address',
+                'introText' => 'Thank you for registering on Alona. Please use the 6-digit One-Time Password (OTP) below to verify your email address and activate your account:',
+                'subject' => 'Your Alona 6-Digit Email Verification Code',
+            ]);
     }
 
     /**

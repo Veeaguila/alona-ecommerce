@@ -28,11 +28,12 @@ const activeTab = ref(props.initialTab || 'signup')
 const selectedRole = ref(props.initialRole === 'rider' ? 'rider' : 'logistics')
 const isRider = computed(() => selectedRole.value === 'rider')
 
-const registrationStarted = ref(false)
+const registrationStarted = ref(true)
 const currentStep = ref(1)
 const totalSteps = 4
 const stepError = ref('')
 const dialog = ref(null)
+const showLoginPassword = ref(false)
 
 let previouslyFocused
 let previousOverflow
@@ -340,7 +341,7 @@ const previousStep = () => {
         currentStep.value--
         dialog.value?.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-        registrationStarted.value = false
+        close()
     }
 }
 
@@ -356,7 +357,7 @@ const startRegistration = () => {
 }
 
 const resetAll = () => {
-    registrationStarted.value = false
+    registrationStarted.value = true
     currentStep.value = 1
     stepError.value = ''
     form.reset()
@@ -456,7 +457,7 @@ const submitApplication = () => {
     <Teleport to="body">
         <div
             v-if="show"
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1F2937]/55 px-4 py-6 backdrop-blur-sm"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1F2937]/60 p-4 sm:p-6 backdrop-blur-sm"
             @click="closeOnBackground"
         >
             <div
@@ -465,500 +466,450 @@ const submitApplication = () => {
                 aria-modal="true"
                 aria-label="Partner with Alona"
                 tabindex="-1"
-                class="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl"
+                class="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[28px] border border-teal-900/40 bg-[#05505A] shadow-2xl flex flex-col md:flex-row"
                 @keydown.esc="close"
                 @keydown="trapFocus"
             >
-                <!-- CLOSE BUTTON -->
-                <button
-                    type="button"
-                    class="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full text-[#64748B] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                    aria-label="Close"
-                    @click="close"
-                >
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
-                    </svg>
-                </button>
+                <!-- LEFT BRANDED PANEL (White background with logo and decorative circles matching AuthModal) -->
+                <div class="relative hidden md:flex md:w-[320px] lg:w-[355px] shrink-0 flex-col justify-between overflow-hidden bg-white p-8 lg:p-10 text-slate-900 select-none">
+                    <!-- Decorative background ambient circles matching target design -->
+                    <div class="pointer-events-none absolute top-[55%] -left-14 h-44 w-44 rounded-full bg-[#F5A524]"></div>
+                    <div class="pointer-events-none absolute -bottom-14 -right-14 h-64 w-64 rounded-full bg-[#067A87]"></div>
 
-                <div class="p-6 sm:p-8">
-                    <!-- HEADER -->
-                    <div class="text-center">
-                        <div class="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#E8F7F6] p-2">
-                            <img src="/images/Alogo.png" alt="Alona" class="h-full w-full object-contain" />
-                        </div>
+                    <!-- Top: Full Official Alona Logo with Tagline -->
+                    <div class="relative z-10 flex items-center">
+                        <img src="/images/alona.png" alt="Alona" class="h-14 w-auto object-contain" />
+                    </div>
 
-                        <h2 class="mt-4 text-2xl font-bold tracking-tight text-[#1F2937]">
+                    <!-- Bottom: Contextual Hero Heading & Subtitle -->
+                    <div class="relative z-10 mt-auto pt-8">
+                        <h3 class="text-3xl lg:text-[34px] font-bold leading-[1.15] tracking-tight text-[#0F172A]">
                             {{
                                 activeTab === 'login'
-                                    ? 'Partner Sign In'
-                                    : registrationStarted
-                                        ? stepTitle
-                                        : 'Partner with Alona'
+                                    ? 'Good to see you again.'
+                                    : isRider
+                                        ? 'Deliver with Alona.'
+                                        : 'Partner with Alona.'
                             }}
-                        </h2>
-
-                        <p class="mt-2 text-sm leading-5 text-[#64748B]">
+                        </h3>
+                        <p class="mt-3 text-sm leading-relaxed text-[#64748B]">
                             {{
                                 activeTab === 'login'
-                                    ? 'Access your sorting center or rider operations portal.'
-                                    : registrationStarted
-                                        ? stepDescription
-                                        : 'Choose your role to join our logistics and delivery network.'
+                                    ? 'Your deliveries, hubs and fleet operations are right where you left them.'
+                                    : isRider
+                                        ? 'Earn flexible income delivering orders across your city.'
+                                        : 'Join our nationwide delivery network and grow your logistics operations.'
                             }}
                         </p>
                     </div>
+                </div>
 
-                    <!-- PROGRESS BAR (WHEN REGISTRATION STARTED) -->
-                    <div v-if="activeTab === 'signup' && registrationStarted" class="mt-5">
-                        <div class="flex items-center justify-between text-xs font-medium text-[#64748B]">
-                            <span>Step {{ currentStep }} of {{ totalSteps }}</span>
-                            <span class="font-semibold text-[#087F8C]">
-                                {{ isRider ? 'Delivery Rider application' : 'Logistics Partner application' }}
-                            </span>
-                        </div>
-                        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
-                            <div
-                                class="h-full bg-[#087F8C] transition-all duration-300"
-                                :style="{ width: `${(currentStep / totalSteps) * 100}%` }"
-                            ></div>
-                        </div>
-                    </div>
+                <!-- RIGHT MAIN CONTENT PANEL (Dark Teal background) -->
+                <div class="relative flex-1 overflow-y-auto max-h-[92vh] bg-[#05505A] p-6 sm:p-8 lg:p-10 flex flex-col justify-between text-white">
+                    <!-- CLOSE BUTTON (top right white circular button) -->
+                    <button
+                        type="button"
+                        @click="close"
+                        class="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label="Close"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
 
-                    <!-- STEP ERROR BANNER -->
-                    <div v-if="stepError" role="alert" class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]">
-                        {{ stepError }}
-                    </div>
+                    <div>
+                        <!-- ================================================= -->
+                        <!-- LOGIN TAB -->
+                        <!-- ================================================= -->
+                        <div v-if="activeTab === 'login'">
+                            <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                                Welcome back
+                            </h2>
+                            <p class="mt-1 text-sm text-teal-100/70">
+                                Sign in to access your logistics or rider portal.
+                            </p>
 
-                    <!-- TOGGLE TAB (ONLY WHEN ON ROLE SELECTION OR LOGIN) -->
-                    <div v-if="!registrationStarted" class="mt-6 flex rounded-xl bg-[#F1F5F9] p-1">
-                        <button
-                            type="button"
-                            :class="[
-                                'flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all duration-200',
-                                activeTab === 'signup'
-                                    ? 'bg-white text-[#087F8C] shadow-sm'
-                                    : 'text-[#64748B] hover:text-[#1F2937]'
-                            ]"
-                            @click="activeTab = 'signup'"
-                        >
-                            Sign Up / Apply
-                        </button>
-                        <button
-                            type="button"
-                            :class="[
-                                'flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all duration-200',
-                                activeTab === 'login'
-                                    ? 'bg-white text-[#087F8C] shadow-sm'
-                                    : 'text-[#64748B] hover:text-[#1F2937]'
-                            ]"
-                            @click="activeTab = 'login'"
-                        >
-                            Log In
-                        </button>
-                    </div>
-
-                    <!-- ================================================= -->
-                    <!-- ROLE SELECTION (BEFORE STARTING REGISTRATION) -->
-                    <!-- ================================================= -->
-                    <div v-if="activeTab === 'signup' && !registrationStarted" class="mt-6">
-                        <p class="mb-3 text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                            Select your partner role
-                        </p>
-
-                        <div class="space-y-3">
-                            <!-- LOGISTICS PARTNER CARD -->
-                            <button
-                                type="button"
-                                :aria-pressed="selectedRole === 'logistics'"
-                                :class="[
-                                    'group w-full rounded-2xl border p-4 text-left transition',
-                                    selectedRole === 'logistics'
-                                        ? 'border-[#087F8C] bg-[#E8F7F6] ring-2 ring-[#E8F7F6]'
-                                        : 'border-[#E5E7EB] bg-white hover:border-[#087F8C]/40 hover:bg-[#E8F7F6]/50'
-                                ]"
-                                @click="selectedRole = 'logistics'"
+                            <!-- GOOGLE LOGIN BUTTON -->
+                            <a
+                                :href="route('google.redirect', { role: isRider ? 'rider' : 'sorting_center' })"
+                                class="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
                             >
-                                <div class="flex items-center gap-4">
-                                    <div
-                                        :class="[
-                                            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition',
-                                            selectedRole === 'logistics'
-                                                ? 'bg-[#087F8C] text-white'
-                                                : 'bg-[#E8F7F6] text-[#087F8C] group-hover:bg-[#087F8C] group-hover:text-white'
-                                        ]"
-                                    >
-                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                    </div>
+                                <svg class="h-5 w-5" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                </svg>
+                                <span>Continue with Google</span>
+                            </a>
 
-                                    <div class="min-w-0 flex-1">
-                                        <h3 class="font-semibold text-[#1F2937]">
-                                            Logistics Partner
-                                        </h3>
-                                        <p class="mt-0.5 text-xs leading-relaxed text-[#64748B]">
-                                            Manage a sorting center, coverage areas, pickups, and fleet operations.
-                                        </p>
-                                    </div>
+                            <!-- DIVIDER -->
+                            <div class="my-5 flex items-center gap-3 text-xs text-teal-200/60">
+                                <span class="h-px flex-1 bg-white/15"></span>
+                                <span>or sign in with email</span>
+                                <span class="h-px flex-1 bg-white/15"></span>
+                            </div>
 
-                                    <div
-                                        :class="[
-                                            'h-5 w-5 rounded-full border-2 transition flex items-center justify-center',
-                                            selectedRole === 'logistics'
-                                                ? 'border-[#087F8C] bg-[#087F8C]'
-                                                : 'border-[#CBD5E1]'
-                                        ]"
-                                    >
-                                        <div
-                                            v-if="selectedRole === 'logistics'"
-                                            class="h-1.5 w-1.5 rounded-full bg-white"
-                                        ></div>
-                                    </div>
+                            <form @submit.prevent="submitLogin" class="space-y-4">
+                                <!-- EMAIL -->
+                                <div>
+                                    <label for="partner-login-email" class="block text-sm font-semibold text-white">
+                                        Partner Email address
+                                    </label>
+                                    <input
+                                        id="partner-login-email"
+                                        v-model="loginForm.email"
+                                        type="email"
+                                        autocomplete="email"
+                                        required
+                                        placeholder="partner@example.com"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                    />
+                                    <InputError class="mt-1.5" :message="loginForm.errors.email || page.props.errors?.email" />
                                 </div>
-                            </button>
 
-                            <!-- DELIVERY RIDER CARD -->
-                            <button
-                                type="button"
-                                :aria-pressed="selectedRole === 'rider'"
-                                :class="[
-                                    'group w-full rounded-2xl border p-4 text-left transition',
-                                    selectedRole === 'rider'
-                                        ? 'border-[#087F8C] bg-[#E8F7F6] ring-2 ring-[#E8F7F6]'
-                                        : 'border-[#E5E7EB] bg-white hover:border-[#087F8C]/40 hover:bg-[#E8F7F6]/50'
-                                ]"
-                                @click="selectedRole = 'rider'"
-                            >
-                                <div class="flex items-center gap-4">
-                                    <div
-                                        :class="[
-                                            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition',
-                                            selectedRole === 'rider'
-                                                ? 'bg-[#087F8C] text-white'
-                                                : 'bg-[#E8F7F6] text-[#087F8C] group-hover:bg-[#087F8C] group-hover:text-white'
-                                        ]"
-                                    >
-                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                            <circle cx="5.5" cy="17.5" r="3.5" />
-                                            <circle cx="18.5" cy="17.5" r="3.5" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 6h-3l-2.5 5.5h6L15 6zM5.5 17.5l4-6M18.5 17.5l-3-6h-3" />
-                                            <circle cx="16" cy="4.5" r="1.5" />
-                                        </svg>
+                                <!-- PASSWORD -->
+                                <div>
+                                    <div class="flex items-center justify-between">
+                                        <label for="partner-login-password" class="block text-sm font-semibold text-white">
+                                            Password
+                                        </label>
+                                        <a href="/forgot-password" class="text-xs font-semibold text-teal-300 hover:text-white hover:underline">
+                                            Forgot password?
+                                        </a>
                                     </div>
 
-                                    <div class="min-w-0 flex-1">
-                                        <h3 class="font-semibold text-[#1F2937]">
-                                            Delivery Rider
-                                        </h3>
-                                        <p class="mt-0.5 text-xs leading-relaxed text-[#64748B]">
-                                            Join our delivery fleet, accept assigned orders, and deliver to buyers.
-                                        </p>
+                                    <div class="relative mt-1.5">
+                                        <input
+                                            id="partner-login-password"
+                                            v-model="loginForm.password"
+                                            :type="showLoginPassword ? 'text' : 'password'"
+                                            autocomplete="current-password"
+                                            required
+                                            placeholder="Enter your password"
+                                            class="block w-full rounded-xl border-0 bg-white px-4 py-3 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                            :aria-label="showLoginPassword ? 'Hide password' : 'Show password'"
+                                            @click="showLoginPassword = !showLoginPassword"
+                                        >
+                                            <svg v-if="showLoginPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                            </svg>
+                                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                            </svg>
+                                        </button>
                                     </div>
-
-                                    <div
-                                        :class="[
-                                            'h-5 w-5 rounded-full border-2 transition flex items-center justify-center',
-                                            selectedRole === 'rider'
-                                                ? 'border-[#087F8C] bg-[#087F8C]'
-                                                : 'border-[#CBD5E1]'
-                                        ]"
-                                    >
-                                        <div
-                                            v-if="selectedRole === 'rider'"
-                                            class="h-1.5 w-1.5 rounded-full bg-white"
-                                        ></div>
-                                    </div>
+                                    <InputError class="mt-1.5" :message="loginForm.errors.password" />
                                 </div>
-                            </button>
-                        </div>
 
-                        <!-- START IN-MODAL REGISTRATION BUTTON -->
-                        <button
-                            type="button"
-                            class="mt-6 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#066B76]"
-                            @click="startRegistration"
-                        >
-                            Continue as {{ isRider ? 'Delivery Rider' : 'Logistics Partner' }}
-                        </button>
+                                <!-- REMEMBER -->
+                                <div class="flex items-center gap-2 pt-1">
+                                    <input
+                                        id="partner-login-remember"
+                                        v-model="loginForm.remember"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524] focus:ring-offset-0"
+                                    />
+                                    <label for="partner-login-remember" class="text-sm text-teal-100/90 select-none cursor-pointer">
+                                        Remember me
+                                    </label>
+                                </div>
 
-                        <!-- GOOGLE SEPARATOR -->
-                        <div class="my-5 flex items-center gap-3 text-xs text-[#94A3B8]">
-                            <span class="h-px flex-1 bg-[#E5E7EB]"></span>
-                            <span>or apply with</span>
-                            <span class="h-px flex-1 bg-[#E5E7EB]"></span>
-                        </div>
-
-                        <!-- GOOGLE BUTTON -->
-                        <a
-                            :href="route('google.redirect', { role: isRider ? 'rider' : 'sorting_center' })"
-                            class="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAF9]"
-                        >
-                            <span class="text-base font-bold">G</span>
-                            Apply with Google as {{ isRider ? 'Rider' : 'Partner' }}
-                        </a>
-
-                        <!-- SWITCH TO LOGIN -->
-                        <div class="mt-5 border-t border-[#E5E7EB] pt-4 text-center">
-                            <p class="text-sm text-[#64748B]">
-                                Already have a partner account?
+                                <!-- LOGIN SUBMIT -->
                                 <button
-                                    type="button"
-                                    class="ml-1 font-semibold text-[#087F8C] hover:text-[#066B76]"
-                                    @click="activeTab = 'login'"
+                                    type="submit"
+                                    :disabled="loginForm.processing"
+                                    class="mt-2 w-full rounded-xl bg-[#F5A524] py-3.5 px-4 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    Log In
+                                    {{ loginForm.processing ? 'Signing in...' : 'Log in' }}
                                 </button>
-                            </p>
-                        </div>
-                    </div>
+                            </form>
 
-                    <!-- ================================================= -->
-                    <!-- IN-MODAL MULTI-STEP REGISTRATION FORM -->
-                    <!-- ================================================= -->
-                    <form v-else-if="activeTab === 'signup' && registrationStarted" class="mt-6" @submit.prevent="submitApplication">
-                        <!-- STEP 1: ACCOUNT INFORMATION -->
-                        <div v-show="currentStep === 1" class="space-y-4">
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <PartnerField name="modal_first_name" label="First name" required v-model="form.first_name" :error="form.errors.first_name" />
-                                <PartnerField name="modal_middle_name" label="Middle name (optional)" v-model="form.middle_name" :error="form.errors.middle_name" />
-                            </div>
-
-                            <PartnerField name="modal_last_name" label="Last name" required v-model="form.last_name" :error="form.errors.last_name" />
-                            <PartnerField name="modal_email" label="Email address" type="email" required v-model="form.email" :error="form.errors.email" />
-                            <PartnerField name="modal_contact_no" label="Philippine mobile number" type="tel" required v-model="form.contact_no" :error="form.errors.contact_no" />
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <PartnerField name="modal_password" label="Password (min 8 chars)" type="password" required v-model="form.password" :error="form.errors.password" />
-                                <PartnerField name="modal_password_confirmation" label="Confirm password" type="password" required v-model="form.password_confirmation" />
-                            </div>
-                        </div>
-
-                        <!-- STEP 2: DETAILS (RIDER vs LOGISTICS) -->
-                        <div v-show="currentStep === 2" class="space-y-4">
-                            <!-- RIDER STEP 2 -->
-                            <template v-if="isRider">
-                                <PartnerField name="modal_birthday" label="Date of birth (18 or older)" type="date" required v-model="form.birthday" :error="form.errors.birthday" />
-                                <PartnerField name="modal_vehicle_type" label="Vehicle type" :options="vehicles" required v-model="form.vehicle_type" :error="form.errors.vehicle_type" />
-
-                                <template v-if="isMotor">
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <PartnerField name="modal_vehicle_model" label="Vehicle model" required v-model="form.vehicle_model" :error="form.errors.vehicle_model" />
-                                        <PartnerField name="modal_plate_number" label="Plate number" required v-model="form.plate_number" :error="form.errors.plate_number" />
-                                    </div>
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <PartnerField name="modal_license_number" label="License number" required v-model="form.license_number" :error="form.errors.license_number" />
-                                        <PartnerField name="modal_license_expiry" label="License expiration" type="date" required v-model="form.license_expiry" :error="form.errors.license_expiry" />
-                                    </div>
-                                    <PartnerField name="modal_license_class" label="License classification" :options="[{ value: 'professional', label: 'Professional' }]" required v-model="form.license_class" :error="form.errors.license_class" />
-
-                                    <div>
-                                        <label class="block text-sm font-semibold text-[#1F2937] mb-2">Approved license codes</label>
-                                        <div class="flex flex-wrap gap-4">
-                                            <label v-for="code in ['A','A1','B','B1','B2']" :key="code" class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer">
-                                                <input v-model="form.license_codes" type="checkbox" :value="code" class="rounded text-[#087F8C] focus:ring-[#087F8C]" />
-                                                <span>{{ code }}</span>
-                                            </label>
-                                        </div>
-                                        <p v-if="form.errors.license_codes" class="mt-1 text-sm text-red-600">{{ form.errors.license_codes }}</p>
-                                    </div>
-                                </template>
-                            </template>
-
-                            <!-- LOGISTICS STEP 2 -->
-                            <template v-else>
-                                <PartnerField name="modal_business_name" label="Company / trade name" required v-model="form.business_name" :error="form.errors.business_name" />
-                                <PartnerField name="modal_business_type" label="Business entity type" :options="businesses" required v-model="form.business_type" :error="form.errors.business_type" />
-                                <PartnerField name="modal_authorized_representative" label="Authorized representative" required v-model="form.authorized_representative" :error="form.errors.authorized_representative" />
-                                <PartnerField v-if="form.business_type !== 'individual'" name="modal_registration_number" label="Registration number (DTI / SEC)" required v-model="form.registration_number" :error="form.errors.registration_number" />
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <PartnerField name="modal_business_email" label="Business email" type="email" required v-model="form.business_email" :error="form.errors.business_email" />
-                                    <PartnerField name="modal_business_phone" label="Business phone number" type="tel" required v-model="form.business_phone" :error="form.errors.business_phone" />
-                                </div>
-                                <PartnerField name="modal_services" label="Services offered" required v-model="form.services" :error="form.errors.services" />
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <PartnerField name="modal_vehicle_types" label="Fleet vehicle types" required v-model="form.vehicle_types" :error="form.errors.vehicle_types" />
-                                    <PartnerField name="modal_fleet_count" label="Fleet vehicle count" type="number" required v-model="form.fleet_count" :error="form.errors.fleet_count" />
-                                </div>
-                            </template>
-                        </div>
-
-                        <!-- STEP 3: ADDRESS & COVERAGE -->
-                        <div v-show="currentStep === 3" class="space-y-4">
-                            <PhilippineAddressSelector :form="form" />
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <PartnerField name="modal_street" label="Street" required v-model="form.street" :error="form.errors.street" />
-                                <PartnerField name="modal_house_number" label="House / building / lot number" required v-model="form.house_number" :error="form.errors.house_number" />
-                            </div>
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <PartnerField name="modal_subdivision" label="Subdivision (optional)" v-model="form.subdivision" :error="form.errors.subdivision" />
-                                <PartnerField name="modal_postal_code" label="Postal code" required v-model="form.postal_code" :error="form.errors.postal_code" />
-                            </div>
-
-                            <div class="border-t border-[#E5E7EB] pt-4">
-                                <DeliveryCoverageSelector :form="form" :rider="isRider" />
-                            </div>
-
-                            <div v-if="!isRider">
-                                <PartnerField name="modal_operating_hours" label="Operating hours (e.g. 8:00 AM - 6:00 PM)" required v-model="form.operating_hours" :error="form.errors.operating_hours" />
-                            </div>
-                        </div>
-
-                        <!-- STEP 4: DOCUMENTS & CONSENT -->
-                        <div v-show="currentStep === 4" class="space-y-5">
-                            <p class="text-xs text-[#64748B]">
-                                Upload JPG, PNG, or PDF files (up to 5 MB each). All uploaded documents are encrypted and kept strictly confidential.
-                            </p>
-
-                            <div class="space-y-4">
-                                <PartnerField
-                                    v-for="field in fileFields"
-                                    :key="field.name"
-                                    :name="'modal_' + field.name"
-                                    :label="field.label"
-                                    type="file"
-                                    :required="field.required"
-                                    v-model="form[field.name]"
-                                    :error="form.errors[field.name]"
-                                />
-                            </div>
-
-                            <div class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 space-y-3">
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input v-model="form.terms" type="checkbox" required class="mt-0.5 rounded text-[#087F8C] focus:ring-[#087F8C]" />
-                                    <span class="text-xs text-[#1F2937]">
-                                        I accept the <Link href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline">Terms and Conditions</Link>.
-                                    </span>
-                                </label>
-                                <p v-if="form.errors.terms" class="text-xs text-red-600">{{ form.errors.terms }}</p>
-
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input v-model="form.privacy" type="checkbox" required class="mt-0.5 rounded text-[#087F8C] focus:ring-[#087F8C]" />
-                                    <span class="text-xs text-[#1F2937]">
-                                        I accept the <Link href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline">Privacy Policy</Link>.
-                                    </span>
-                                </label>
-                                <p v-if="form.errors.privacy" class="text-xs text-red-600">{{ form.errors.privacy }}</p>
-                            </div>
-                        </div>
-
-                        <!-- STEP ACTION BUTTONS -->
-                        <div class="mt-6 flex items-center justify-between gap-3">
-                            <button
-                                type="button"
-                                class="rounded-xl border border-[#E5E7EB] px-4 py-2.5 text-sm font-semibold text-[#64748B] hover:bg-[#F8FAF9] transition"
-                                @click="previousStep"
-                            >
-                                {{ currentStep === 1 ? 'Cancel' : 'Back' }}
-                            </button>
-
-                            <button
-                                v-if="currentStep < totalSteps"
-                                type="button"
-                                class="rounded-xl bg-[#087F8C] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#066B76] transition"
-                                @click="nextStep"
-                            >
-                                Continue
-                            </button>
-
-                            <button
-                                v-else
-                                type="submit"
-                                :disabled="form.processing"
-                                class="rounded-xl bg-[#087F8C] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#066B76] transition disabled:opacity-50"
-                            >
-                                {{ form.processing ? 'Submitting Application...' : 'Submit Application' }}
-                            </button>
-                        </div>
-
-                        <!-- RESET ROLE BUTTON -->
-                        <div class="mt-4 text-center">
-                            <button
-                                type="button"
-                                class="text-xs font-medium text-[#64748B] hover:text-[#087F8C] transition"
-                                @click="resetAll"
-                            >
-                                Switch partner role
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- ================================================= -->
-                    <!-- LOG IN TAB -->
-                    <!-- ================================================= -->
-                    <form v-else-if="activeTab === 'login'" class="mt-6" @submit.prevent="submitLogin">
-                        <div>
-                            <label for="partner-login-email" class="text-sm font-medium text-[#1F2937]">
-                                Partner Email address
-                            </label>
-
-                            <input
-                                id="partner-login-email"
-                                v-model="loginForm.email"
-                                type="email"
-                                autocomplete="email"
-                                required
-                                placeholder="partner@example.com"
-                                class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                            />
-
-                            <InputError class="mt-2" :message="loginForm.errors.email || page.props.errors?.email" />
-                        </div>
-
-                        <div class="mt-4">
-                            <div class="flex items-center justify-between">
-                                <label for="partner-login-password" class="text-sm font-medium text-[#1F2937]">
-                                    Password
-                                </label>
-                            </div>
-
-                            <input
-                                id="partner-login-password"
-                                v-model="loginForm.password"
-                                type="password"
-                                autocomplete="current-password"
-                                required
-                                placeholder="Enter your password"
-                                class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                            />
-
-                            <InputError class="mt-2" :message="loginForm.errors.password" />
-                        </div>
-
-                        <div class="mt-4 flex items-center justify-between">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    v-model="loginForm.remember"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-[#CBD5E1] text-[#087F8C] focus:ring-[#087F8C]"
-                                />
-                                <span class="text-sm text-[#64748B]">Remember me</span>
-                            </label>
-                        </div>
-
-                        <button
-                            type="submit"
-                            :disabled="loginForm.processing"
-                            class="mt-6 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#066B76] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {{ loginForm.processing ? 'Signing in...' : 'Sign In to Portal' }}
-                        </button>
-
-                        <div class="mt-5 border-t border-[#E5E7EB] pt-4 text-center">
-                            <p class="text-sm text-[#64748B]">
+                            <!-- LOGIN FOOTER -->
+                            <div class="mt-6 text-center text-xs text-teal-100/70">
                                 Don't have a partner account yet?
                                 <button
                                     type="button"
-                                    class="ml-1 font-semibold text-[#087F8C] hover:text-[#066B76]"
                                     @click="activeTab = 'signup'; resetAll()"
+                                    class="font-semibold text-teal-300 hover:text-white hover:underline ml-1"
                                 >
                                     Apply Now
                                 </button>
-                            </p>
+                            </div>
                         </div>
-                    </form>
+
+                        <!-- ================================================= -->
+                        <!-- SIGNUP / APPLY TAB -->
+                        <!-- ================================================= -->
+                        <div v-else class="mt-1">
+                            <!-- ROLE PILL SWITCHER TABS -->
+                            <div class="mb-5 flex rounded-xl bg-white/10 p-1">
+                                <button
+                                    type="button"
+                                    :class="[
+                                        'flex-1 rounded-lg py-2 text-xs sm:text-sm font-bold transition-all',
+                                        !isRider
+                                            ? 'bg-[#F5A524] text-slate-900 shadow-sm'
+                                            : 'text-teal-100 hover:text-white'
+                                    ]"
+                                    @click="selectedRole = 'logistics'; currentStep = 1; stepError = ''"
+                                >
+                                    Logistics Partner
+                                </button>
+                                <button
+                                    type="button"
+                                    :class="[
+                                        'flex-1 rounded-lg py-2 text-xs sm:text-sm font-bold transition-all',
+                                        isRider
+                                            ? 'bg-[#F5A524] text-slate-900 shadow-sm'
+                                            : 'text-teal-100 hover:text-white'
+                                    ]"
+                                    @click="selectedRole = 'rider'; currentStep = 1; stepError = ''"
+                                >
+                                    Delivery Rider
+                                </button>
+                            </div>
+
+                            <!-- PROGRESS HEADER -->
+                            <div class="mb-5">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm font-semibold text-teal-300">
+                                        Step {{ currentStep }} of {{ totalSteps }}
+                                    </span>
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/15">
+                                        {{ isRider ? 'Delivery Rider application' : 'Logistics Partner application' }}
+                                    </span>
+                                </div>
+
+                                <div class="flex gap-2">
+                                    <div
+                                        v-for="stepNum in totalSteps"
+                                        :key="stepNum"
+                                        class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                                        :class="stepNum <= currentStep ? 'bg-[#F5A524]' : 'bg-white/20'"
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <!-- STEP TITLE & SUBTITLE -->
+                            <div class="mb-5">
+                                <h2 class="text-2xl font-bold tracking-tight text-white">
+                                    {{ stepTitle }}
+                                </h2>
+                                <p class="mt-1 text-sm text-teal-100/70">
+                                    {{ stepDescription }}
+                                </p>
+                            </div>
+
+                            <!-- STEP ERROR BANNER -->
+                            <div
+                                v-if="stepError"
+                                class="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm leading-relaxed text-rose-800 shadow-sm"
+                                role="alert"
+                            >
+                                {{ stepError }}
+                            </div>
+
+                            <!-- MULTI-STEP FORM -->
+                            <form @submit.prevent="submitApplication" class="space-y-4">
+                                <!-- STEP 1: ACCOUNT INFORMATION -->
+                                <div v-show="currentStep === 1" class="space-y-4">
+                                    <!-- GOOGLE BUTTON -->
+                                    <a
+                                        :href="route('google.redirect', { role: isRider ? 'rider' : 'sorting_center' })"
+                                        class="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
+                                    >
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24">
+                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                        </svg>
+                                        <span>Apply with Google as {{ isRider ? 'Rider' : 'Partner' }}</span>
+                                    </a>
+
+                                    <div class="my-4 flex items-center gap-3 text-xs text-teal-200/60">
+                                        <span class="h-px flex-1 bg-white/15"></span>
+                                        <span>or use your email</span>
+                                        <span class="h-px flex-1 bg-white/15"></span>
+                                    </div>
+
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <PartnerField name="modal_first_name" label="First name" required dark v-model="form.first_name" :error="form.errors.first_name" />
+                                        <PartnerField name="modal_middle_name" label="Middle name (optional)" dark v-model="form.middle_name" :error="form.errors.middle_name" />
+                                    </div>
+
+                                    <PartnerField name="modal_last_name" label="Last name" required dark v-model="form.last_name" :error="form.errors.last_name" />
+                                    <PartnerField name="modal_email" label="Email address" type="email" required dark v-model="form.email" :error="form.errors.email" />
+                                    <PartnerField name="modal_contact_no" label="Philippine mobile number" type="tel" required dark v-model="form.contact_no" :error="form.errors.contact_no" />
+
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <PartnerField name="modal_password" label="Password (min 8 chars)" type="password" required dark v-model="form.password" :error="form.errors.password" />
+                                        <PartnerField name="modal_password_confirmation" label="Confirm password" type="password" required dark v-model="form.password_confirmation" />
+                                    </div>
+                                </div>
+
+                                <!-- STEP 2: DETAILS (RIDER vs LOGISTICS) -->
+                                <div v-show="currentStep === 2" class="space-y-4">
+                                    <template v-if="isRider">
+                                        <PartnerField name="modal_birthday" label="Date of birth (18 or older)" type="date" required dark v-model="form.birthday" :error="form.errors.birthday" />
+                                        <PartnerField name="modal_vehicle_type" label="Vehicle type" :options="vehicles" required dark v-model="form.vehicle_type" :error="form.errors.vehicle_type" />
+
+                                        <template v-if="isMotor">
+                                            <div class="grid gap-3 sm:grid-cols-2">
+                                                <PartnerField name="modal_vehicle_model" label="Vehicle model" required dark v-model="form.vehicle_model" :error="form.errors.vehicle_model" />
+                                                <PartnerField name="modal_plate_number" label="Plate number" required dark v-model="form.plate_number" :error="form.errors.plate_number" />
+                                            </div>
+                                            <div class="grid gap-3 sm:grid-cols-2">
+                                                <PartnerField name="modal_license_number" label="License number" required dark v-model="form.license_number" :error="form.errors.license_number" />
+                                                <PartnerField name="modal_license_expiry" label="License expiration" type="date" required dark v-model="form.license_expiry" :error="form.errors.license_expiry" />
+                                            </div>
+                                            <PartnerField name="modal_license_class" label="License classification" :options="[{ value: 'professional', label: 'Professional' }]" required dark v-model="form.license_class" :error="form.errors.license_class" />
+
+                                            <div>
+                                                <label class="block text-sm font-semibold text-white mb-2">Approved license codes</label>
+                                                <div class="flex flex-wrap gap-4">
+                                                    <label v-for="code in ['A','A1','B','B1','B2']" :key="code" class="flex items-center gap-2 text-sm text-white cursor-pointer">
+                                                        <input v-model="form.license_codes" type="checkbox" :value="code" class="rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]" />
+                                                        <span>{{ code }}</span>
+                                                    </label>
+                                                </div>
+                                                <p v-if="form.errors.license_codes" class="mt-1 text-xs text-rose-300">{{ form.errors.license_codes }}</p>
+                                            </div>
+                                        </template>
+                                    </template>
+
+                                    <template v-else>
+                                        <PartnerField name="modal_business_name" label="Company / trade name" required dark v-model="form.business_name" :error="form.errors.business_name" />
+                                        <PartnerField name="modal_business_type" label="Business entity type" :options="businesses" required dark v-model="form.business_type" :error="form.errors.business_type" />
+                                        <PartnerField name="modal_authorized_representative" label="Authorized representative" required dark v-model="form.authorized_representative" :error="form.errors.authorized_representative" />
+                                        <PartnerField v-if="form.business_type !== 'individual'" name="modal_registration_number" label="Registration number (DTI / SEC)" required dark v-model="form.registration_number" :error="form.errors.registration_number" />
+                                        <div class="grid gap-3 sm:grid-cols-2">
+                                            <PartnerField name="modal_business_email" label="Business email" type="email" required dark v-model="form.business_email" :error="form.errors.business_email" />
+                                            <PartnerField name="modal_business_phone" label="Business phone number" type="tel" required dark v-model="form.business_phone" :error="form.errors.business_phone" />
+                                        </div>
+                                        <PartnerField name="modal_services" label="Services offered" required dark v-model="form.services" :error="form.errors.services" />
+                                        <div class="grid gap-3 sm:grid-cols-2">
+                                            <PartnerField name="modal_vehicle_types" label="Fleet vehicle types" required dark v-model="form.vehicle_types" :error="form.errors.vehicle_types" />
+                                            <PartnerField name="modal_fleet_count" label="Fleet vehicle count" type="number" required dark v-model="form.fleet_count" :error="form.errors.fleet_count" />
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- STEP 3: ADDRESS & COVERAGE -->
+                                <div v-show="currentStep === 3" class="space-y-4">
+                                    <div class="rounded-2xl border border-white/15 bg-white/5 p-4 text-slate-800">
+                                        <PhilippineAddressSelector :form="form" />
+                                    </div>
+
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <PartnerField name="modal_street" label="Street" required dark v-model="form.street" :error="form.errors.street" />
+                                        <PartnerField name="modal_house_number" label="House / building / lot number" required dark v-model="form.house_number" :error="form.errors.house_number" />
+                                    </div>
+
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <PartnerField name="modal_subdivision" label="Subdivision (optional)" dark v-model="form.subdivision" :error="form.errors.subdivision" />
+                                        <PartnerField name="modal_postal_code" label="Postal code" required dark v-model="form.postal_code" :error="form.errors.postal_code" />
+                                    </div>
+
+                                    <div class="rounded-2xl border border-white/15 bg-white/5 p-4 text-white">
+                                        <DeliveryCoverageSelector :form="form" :rider="isRider" />
+                                    </div>
+
+                                    <div v-if="!isRider">
+                                        <PartnerField name="modal_operating_hours" label="Operating hours (e.g. 8:00 AM - 6:00 PM)" required dark v-model="form.operating_hours" :error="form.errors.operating_hours" />
+                                    </div>
+                                </div>
+
+                                <!-- STEP 4: DOCUMENTS & CONSENT -->
+                                <div v-show="currentStep === 4" class="space-y-4">
+                                    <p class="text-xs text-teal-100/80">
+                                        Upload JPG, PNG, or PDF files (up to 5 MB each). All uploaded documents are encrypted and kept strictly confidential.
+                                    </p>
+
+                                    <div class="space-y-3">
+                                        <PartnerField
+                                            v-for="field in fileFields"
+                                            :key="field.name"
+                                            :name="'modal_' + field.name"
+                                            :label="field.label"
+                                            type="file"
+                                            dark
+                                            :required="field.required"
+                                            v-model="form[field.name]"
+                                            :error="form.errors[field.name]"
+                                        />
+                                    </div>
+
+                                    <div class="rounded-xl border border-white/15 bg-white/10 p-4 space-y-3">
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input v-model="form.terms" type="checkbox" required class="mt-0.5 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]" />
+                                            <span class="text-xs text-white">
+                                                I accept the <Link href="/policies" target="_blank" class="font-semibold text-teal-300 underline hover:text-white">Terms and Conditions</Link>.
+                                            </span>
+                                        </label>
+                                        <p v-if="form.errors.terms" class="text-xs text-rose-300">{{ form.errors.terms }}</p>
+
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input v-model="form.privacy" type="checkbox" required class="mt-0.5 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524]" />
+                                            <span class="text-xs text-white">
+                                                I accept the <Link href="/policies" target="_blank" class="font-semibold text-teal-300 underline hover:text-white">Privacy Policy</Link>.
+                                            </span>
+                                        </label>
+                                        <p v-if="form.errors.privacy" class="text-xs text-rose-300">{{ form.errors.privacy }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- NAVIGATION BUTTONS -->
+                                <div class="mt-6 flex gap-3">
+                                    <button
+                                        type="button"
+                                        @click="previousStep"
+                                        :disabled="form.processing"
+                                        class="flex-1 rounded-xl bg-white px-4 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {{ currentStep === 1 ? 'Cancel' : 'Back' }}
+                                    </button>
+
+                                    <button
+                                        v-if="currentStep < totalSteps"
+                                        type="button"
+                                        @click="nextStep"
+                                        class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99]"
+                                    >
+                                        Next
+                                    </button>
+
+                                    <button
+                                        v-else
+                                        type="submit"
+                                        :disabled="form.processing"
+                                        class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {{ form.processing ? 'Submitting...' : 'Submit Application' }}
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- REGISTRATION FOOTER -->
+                            <div class="mt-6 text-center text-xs text-teal-100/70">
+                                Already have a partner account?
+                                <button
+                                    type="button"
+                                    @click="activeTab = 'login'"
+                                    class="font-semibold text-teal-300 hover:text-white hover:underline ml-1"
+                                >
+                                    Log in
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

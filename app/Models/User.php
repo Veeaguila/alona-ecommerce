@@ -359,7 +359,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $this->forceFill([
-            'otp_code' => \Illuminate\Support\Facades\Hash::make($otp),
+            'otp_code' => $otp,
             'otp_expires_at' => now()->addMinutes(5),
         ])->save();
 
@@ -387,10 +387,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
 
-        $matches = hash_equals($storedOtp, $otp);
-        $this->forceFill(['otp_code' => \Illuminate\Support\Facades\Hash::make($storedOtp)])->save();
-
-        return $matches;
+        return hash_equals($storedOtp, $otp);
     }
 
     /*

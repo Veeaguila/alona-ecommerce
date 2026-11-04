@@ -63,8 +63,8 @@ const loginForm = useForm({
 |--------------------------------------------------------------------------
 */
 
-const registrationType = ref(null)
-const registrationStarted = ref(false)
+const registrationType = ref('buyer')
+const registrationStarted = ref(true)
 const registrationStep = ref(1)
 const stepError = ref('')
 const registrationSuccess = ref('')
@@ -74,6 +74,8 @@ const accountVerifiedSuccess = ref('')
 
 const showRegisterPassword = ref(false)
 const showRegisterPasswordConfirmation = ref(false)
+const showRegisterPasswords = ref(false)
+const showAdditionalNameFields = ref(false)
 const showLoginPassword = ref(false)
 
 const isVerifyingOtp = ref(false)
@@ -227,7 +229,7 @@ const isSeller = computed(() => {
 })
 
 const totalSteps = computed(() => {
-    return isSeller.value ? 4 : 2
+    return isSeller.value ? 4 : 3
 })
 
 const stepTitle = computed(() => {
@@ -296,6 +298,9 @@ const switchToLogin = () => {
 
 const switchToRegister = () => {
     emit('update:mode', 'register')
+    registrationType.value = 'buyer'
+    registrationStarted.value = true
+    registrationStep.value = 1
 }
 
 /*
@@ -305,8 +310,8 @@ const switchToRegister = () => {
 */
 
 const resetRegistration = () => {
-    registrationType.value = null
-    registrationStarted.value = false
+    registrationType.value = 'buyer'
+    registrationStarted.value = true
     registrationStep.value = 1
 
     stepError.value = ''
@@ -322,6 +327,8 @@ const resetRegistration = () => {
     accountVerifiedSuccess.value = ''
     showRegisterPassword.value = false
     showRegisterPasswordConfirmation.value = false
+    showRegisterPasswords.value = false
+    showAdditionalNameFields.value = false
     showLoginPassword.value = false
     if (resendTimer) {
         clearInterval(resendTimer)
@@ -656,11 +663,6 @@ const validateCurrentStep = () => {
             return false
         }
 
-        if (!isSeller.value && !registerForm.terms) {
-            registerForm.setError('terms', 'You must agree to the Terms and Privacy Policy.')
-            stepError.value = 'You must agree to the Terms and Privacy Policy.'
-            return false
-        }
     }
 
     /*
@@ -681,6 +683,18 @@ const validateCurrentStep = () => {
             stepError.value =
                 'Please enter your house number and street address.'
 
+            return false
+        }
+
+        if (!registerForm.postal_code || !/^\d{4}$/.test(registerForm.postal_code.trim())) {
+            registerForm.setError('postal_code', 'Please enter a valid 4-digit postal code.')
+            stepError.value = 'Please enter a valid 4-digit postal code.'
+            return false
+        }
+
+        if (!isSeller.value && !registerForm.terms) {
+            registerForm.setError('terms', 'You must agree to the Terms and Privacy Policy.')
+            stepError.value = 'You must agree to the Terms and Privacy Policy.'
             return false
         }
     }
@@ -1108,84 +1122,66 @@ watch(
     <Teleport to="body">
         <div
             v-if="show"
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1F2937]/55 px-4 py-6 backdrop-blur-sm"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1F2937]/60 p-4 sm:p-6 backdrop-blur-sm"
             @click="closeOnBackground"
         >
             <div
-                class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl"
+                class="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[28px] border border-teal-900/40 bg-[#05505A] shadow-2xl flex flex-col md:flex-row"
                 ref="dialog" role="dialog" aria-modal="true" aria-label="Alona account" tabindex="-1" @keydown.esc="close" @keydown="trapFocus"
             >
+                <!-- LEFT BRANDED PANEL (White background with logo and decorative circles) -->
+                <div class="relative hidden md:flex md:w-[320px] lg:w-[355px] shrink-0 flex-col justify-between overflow-hidden bg-white p-8 lg:p-10 text-slate-900 select-none">
+                    <!-- Decorative background ambient circles matching target design -->
+                    <div class="pointer-events-none absolute top-[55%] -left-14 h-44 w-44 rounded-full bg-[#F5A524]"></div>
+                    <div class="pointer-events-none absolute -bottom-14 -right-14 h-64 w-64 rounded-full bg-[#067A87]"></div>
 
-                <!-- CLOSE -->
+                    <!-- Top: Full Official Alona Logo with Tagline -->
+                    <div class="relative z-10 flex items-center">
+                        <img src="/images/alona.png" alt="Alona" class="h-14 w-auto object-contain" />
+                    </div>
 
-                <button
-                    type="button"
-                    @click="close"
-                    class="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full text-[#64748B] transition hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-                    aria-label="Close"
-                >
-                    <svg
-                        class="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 6l12 12M18 6L6 18"
-                        />
-                    </svg>
-                </button>
-
-                <div class="p-6 sm:p-8">
-
-                    <!-- HEADER -->
-
-                    <div class="text-center">
-
-                        <!-- ALONA LOGO -->
-
-                        <div
-                            class="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#E8F7F6] p-2"
-                        >
-                            <img
-                                src="/images/Alogo.png"
-                                alt="Alona"
-                                class="h-full w-full object-contain"
-                            />
-                        </div>
-
-                        <h2
-                            class="mt-4 text-2xl font-bold tracking-tight text-[#1F2937]"
-                        >
+                    <!-- Bottom: Contextual Hero Heading & Subtitle -->
+                    <div class="relative z-10 mt-auto pt-8">
+                        <h3 class="text-3xl lg:text-[34px] font-bold leading-[1.15] tracking-tight text-[#0F172A]">
                             {{
                                 isVerifyingOtp
-                                    ? 'Verify your email'
+                                    ? 'Check your inbox.'
                                     : mode === 'login'
-                                        ? 'Welcome back'
-                                        : registrationStarted
-                                            ? stepTitle
-                                            : 'Create your account'
+                                        ? 'Good to see you again.'
+                                        : isSeller
+                                            ? 'Grow your business.'
+                                            : "Let's get you set up."
                             }}
-                        </h2>
-
-                        <p
-                            class="mt-2 text-sm leading-5 text-[#64748B]"
-                        >
+                        </h3>
+                        <p class="mt-3 text-sm leading-relaxed text-[#64748B]">
                             {{
                                 isVerifyingOtp
-                                    ? `Enter the 6-digit code sent to ${otpEmail || 'your email'}. It expires in 5 minutes.`
+                                    ? 'Enter the 6-digit verification code sent to your email to secure and activate your account.'
                                     : mode === 'login'
-                                        ? 'Sign in to continue shopping with Alona.'
-                                        : registrationStarted
-                                            ? stepDescription
-                                            : 'Choose how you want to join Alona.'
+                                        ? 'Your cart, saved items and orders are right where you left them.'
+                                        : isSeller
+                                            ? 'Reach thousands of active customers across the Philippines and scale your sales.'
+                                            : 'Create your buyer account in three short steps and start shopping.'
                             }}
                         </p>
-
                     </div>
+                </div>
+
+                <!-- RIGHT MAIN CONTENT PANEL (Dark Teal background) -->
+                <div class="relative flex-1 overflow-y-auto max-h-[92vh] bg-[#05505A] p-6 sm:p-8 lg:p-10 flex flex-col justify-between text-white">
+                    <!-- CLOSE BUTTON (top right white circular button) -->
+                    <button
+                        type="button"
+                        @click="close"
+                        class="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label="Close"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <div>
 
                     <!-- ================================================= -->
                     <!-- OTP VERIFICATION SCREEN -->
@@ -1198,21 +1194,21 @@ watch(
                         <!-- ACCOUNT CREATED SUCCESS ALERT -->
                         <div
                             v-if="accountCreatedSuccess && !accountVerifiedSuccess"
-                            class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                            class="rounded-2xl border border-emerald-400/40 bg-emerald-500/20 p-4 text-emerald-100 shadow-sm"
                             role="status"
                         >
                             <div class="flex items-start gap-3">
-                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/30 text-emerald-200">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="text-sm font-semibold text-emerald-950">
+                                    <h4 class="text-sm font-semibold text-white">
                                         Account Created Successfully!
                                     </h4>
-                                    <p class="mt-1 text-xs leading-5 text-emerald-800">
-                                        A 6-digit verification code has been sent to <span class="font-bold underline">{{ otpEmail }}</span>. Please enter it below to activate your account.
+                                    <p class="mt-1 text-xs leading-5 text-emerald-200">
+                                        A 6-digit verification code has been sent to <span class="font-bold underline text-white">{{ otpEmail }}</span>. Please enter it below to activate your account.
                                     </p>
                                 </div>
                             </div>
@@ -1221,20 +1217,20 @@ watch(
                         <!-- ACCOUNT VERIFIED SUCCESS ALERT -->
                         <div
                             v-if="accountVerifiedSuccess"
-                            class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                            class="rounded-2xl border border-emerald-400/40 bg-emerald-500/20 p-4 text-emerald-100 shadow-sm"
                             role="status"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/30 text-emerald-200">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="text-sm font-semibold text-emerald-950">
+                                    <h4 class="text-sm font-semibold text-white">
                                         Email Verified Successfully!
                                     </h4>
-                                    <p class="text-xs text-emerald-800 mt-0.5">
+                                    <p class="text-xs text-emerald-200 mt-0.5">
                                         {{ accountVerifiedSuccess }}
                                     </p>
                                 </div>
@@ -1244,14 +1240,14 @@ watch(
                         <!-- RESEND OTP SUCCESS NOTICE -->
                         <div
                             v-if="otpSuccess && !accountCreatedSuccess && !accountVerifiedSuccess"
-                            class="rounded-xl border border-emerald-200 bg-[#E8F7F6] px-4 py-3 text-sm font-medium text-[#087F8C]"
+                            class="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-3 text-sm font-medium text-emerald-200"
                         >
                             {{ otpSuccess }}
                         </div>
 
                         <div
                             v-if="otpError"
-                            class="rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
+                            class="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm leading-relaxed text-rose-800 shadow-sm"
                             role="alert"
                         >
                             {{ cleanMessage(otpError) }}
@@ -1264,7 +1260,7 @@ watch(
                             <div>
                                 <label
                                     for="modal-otp-code"
-                                    class="block text-sm font-medium text-[#1F2937]"
+                                    class="block text-sm font-semibold text-white"
                                 >
                                     6-Digit Verification Code
                                 </label>
@@ -1279,10 +1275,10 @@ watch(
                                     autocomplete="one-time-code"
                                     placeholder="000000"
                                     autofocus
-                                    class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-[#1F2937] outline-none transition placeholder:tracking-normal placeholder:font-normal focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                    class="mt-2 block w-full rounded-xl border-0 bg-white px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-slate-900 shadow-inner outline-none transition placeholder:tracking-normal placeholder:font-normal focus:ring-2 focus:ring-[#F5A524]"
                                 />
 
-                                <p class="mt-2 text-xs text-[#94A3B8]">
+                                <p class="mt-2 text-xs text-teal-200/70">
                                     Please check your inbox (or spam folder) for the 6-digit code.
                                 </p>
                             </div>
@@ -1290,18 +1286,18 @@ watch(
                             <button
                                 type="submit"
                                 :disabled="isOtpSubmitting || otpCode.trim().length !== 6"
-                                class="w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
+                                class="w-full rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {{ isOtpSubmitting ? 'Verifying...' : 'Verify Account' }}
                             </button>
                         </form>
 
-                        <div class="flex items-center justify-between border-t border-[#E5E7EB] pt-5 text-sm">
+                        <div class="flex items-center justify-between border-t border-white/15 pt-5 text-sm">
                             <button
                                 type="button"
                                 @click="submitModalResendOtp"
                                 :disabled="isOtpResending || resendCooldown > 0"
-                                class="font-semibold text-[#087F8C] hover:text-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
+                                class="font-semibold text-teal-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {{
                                     isOtpResending
@@ -1315,7 +1311,7 @@ watch(
                             <button
                                 type="button"
                                 @click="backFromOtp"
-                                class="font-medium text-[#64748B] hover:text-[#1F2937]"
+                                class="font-medium text-teal-200/80 hover:text-white"
                             >
                                 Change details
                             </button>
@@ -1326,133 +1322,169 @@ watch(
                     <!-- LOGIN -->
                     <!-- ================================================= -->
 
-                    <form
+                    <div
                         v-else-if="mode === 'login'"
-                        class="mt-7"
-                        @submit.prevent="submitLogin"
                     >
+                        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                            Welcome back
+                        </h2>
+                        <p class="mt-1 text-sm text-teal-100/70">
+                            Sign in to continue shopping with Alona.
+                        </p>
 
-                        <!-- EMAIL -->
+                        <!-- GOOGLE LOGIN BUTTON -->
+                        <a
+                            :href="route('google.redirect', { role: undefined })"
+                            class="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
+                        >
+                            <svg class="h-5 w-5" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                            </svg>
+                            <span>Continue with Google</span>
+                        </a>
 
-                        <div>
-
-                            <label
-                                for="login-email"
-                                class="text-sm font-medium text-[#1F2937]"
-                            >
-                                Email address
-                            </label>
-
-                            <input
-                                id="login-email"
-                                v-model="loginForm.email"
-                                type="email"
-                                autocomplete="email"
-                                required
-                                placeholder="you@example.com"
-                                class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                            />
-
-                            <InputError
-                                class="mt-2"
-                                :message="loginForm.errors.email || page.props.errors?.email"
-                            />
-
+                        <!-- DIVIDER -->
+                        <div class="my-5 flex items-center gap-3 text-xs text-teal-200/60">
+                            <span class="h-px flex-1 bg-white/15"></span>
+                            <span>or sign in with email</span>
+                            <span class="h-px flex-1 bg-white/15"></span>
                         </div>
 
-                        <!-- PASSWORD -->
+                        <!-- GOOGLE COLLISION / GENERAL LOGIN ERROR BANNER -->
+                        <div
+                            v-if="page.props.errors?.google || (loginForm.errors.email && loginForm.errors.email.toLowerCase().includes('google'))"
+                            class="mb-4 rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-sm text-rose-800 leading-relaxed shadow-sm"
+                            role="alert"
+                        >
+                            {{ page.props.errors?.google || loginForm.errors.email }}
+                        </div>
 
-                        <div class="mt-5">
-
-                            <div
-                                class="flex items-center justify-between"
-                            >
-
+                        <form
+                            @submit.prevent="submitLogin"
+                            class="space-y-4"
+                        >
+                            <!-- EMAIL -->
+                            <div>
                                 <label
-                                    for="login-password"
-                                    class="text-sm font-medium text-[#1F2937]"
+                                    for="login-email"
+                                    class="block text-sm font-semibold text-white"
                                 >
-                                    Password
+                                    Email address
                                 </label>
 
-                                <a
-                                    v-if="props.canResetPassword"
-                                    :href="route('password.request')"
-                                    class="text-xs font-semibold text-[#087F8C] hover:text-[#16A6A0]"
-                                >
-                                    Forgot password?
-                                </a>
-
-                            </div>
-
-                            <div class="relative mt-2">
                                 <input
-                                    id="login-password"
-                                    v-model="loginForm.password"
-                                    :type="showLoginPassword ? 'text' : 'password'"
-                                    autocomplete="current-password"
+                                    id="login-email"
+                                    v-model="loginForm.email"
+                                    type="email"
+                                    autocomplete="email"
                                     required
-                                    placeholder="Enter your password"
-                                    class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                    placeholder="you@example.com"
+                                    class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                 />
-                                <button
-                                    type="button"
-                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                                    :aria-label="showLoginPassword ? 'Hide password' : 'Show password'"
-                                    @click="showLoginPassword = !showLoginPassword"
-                                >
-                                    <svg v-if="showLoginPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                    </svg>
-                                    <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                    </svg>
-                                </button>
+
+                                <InputError
+                                    v-if="!loginForm.errors.email?.toLowerCase().includes('google')"
+                                    class="mt-1.5"
+                                    :message="loginForm.errors.email || page.props.errors?.email"
+                                />
                             </div>
 
-                            <InputError
-                                class="mt-2"
-                                :message="loginForm.errors.password"
-                            />
+                            <!-- PASSWORD -->
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <label
+                                        for="login-password"
+                                        class="block text-sm font-semibold text-white"
+                                    >
+                                        Password
+                                    </label>
 
-                        </div>
+                                    <a
+                                        v-if="props.canResetPassword"
+                                        :href="route('password.request')"
+                                        class="text-xs font-semibold text-teal-300 hover:text-white hover:underline"
+                                    >
+                                        Forgot password?
+                                    </a>
+                                </div>
 
-                        <!-- REMEMBER -->
+                                <div class="relative mt-1.5">
+                                    <input
+                                        id="login-password"
+                                        v-model="loginForm.password"
+                                        :type="showLoginPassword ? 'text' : 'password'"
+                                        autocomplete="current-password"
+                                        required
+                                        placeholder="Enter your password"
+                                        class="block w-full rounded-xl border-0 bg-white px-4 py-3 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                        :aria-label="showLoginPassword ? 'Hide password' : 'Show password'"
+                                        @click="showLoginPassword = !showLoginPassword"
+                                    >
+                                        <svg v-if="showLoginPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                        </svg>
+                                        <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                        </svg>
+                                    </button>
+                                </div>
 
-                        <label
-                            class="mt-5 flex items-center gap-2"
-                        >
+                                <InputError
+                                    class="mt-1.5"
+                                    :message="loginForm.errors.password"
+                                />
+                            </div>
 
-                            <input
-                                v-model="loginForm.remember"
-                                type="checkbox"
-                                class="h-4 w-4 rounded border-gray-300 text-[#087F8C] focus:ring-[#087F8C]"
-                            />
+                            <!-- REMEMBER -->
+                            <div class="flex items-center gap-2 pt-1">
+                                <input
+                                    id="login-remember"
+                                    v-model="loginForm.remember"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524] focus:ring-offset-0"
+                                />
+                                <label
+                                    for="login-remember"
+                                    class="text-sm text-teal-100/90 select-none cursor-pointer"
+                                >
+                                    Remember me
+                                </label>
+                            </div>
 
-                            <span
-                                class="text-sm text-[#64748B]"
+                            <!-- LOGIN SUBMIT -->
+                            <button
+                                type="submit"
+                                :disabled="loginForm.processing"
+                                class="mt-2 w-full rounded-xl bg-[#F5A524] py-3.5 px-4 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                Remember me
-                            </span>
+                                {{
+                                    loginForm.processing
+                                        ? 'Signing in...'
+                                        : 'Log in'
+                                }}
+                            </button>
+                        </form>
 
-                        </label>
-
-                        <!-- LOGIN -->
-
-                        <button
-                            type="submit"
-                            :disabled="loginForm.processing"
-                            class="mt-6 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {{
-                                loginForm.processing
-                                    ? 'Signing in...'
-                                    : 'Log in'
-                            }}
-                        </button>
-
-                    </form>
+                        <!-- LOGIN FOOTER -->
+                        <div class="mt-6 text-center text-xs text-teal-100/70">
+                            New to Alona?
+                            <button
+                                type="button"
+                                @click="switchToRegister"
+                                class="font-semibold text-teal-300 hover:text-white hover:underline ml-1"
+                            >
+                                Create an account
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- ================================================= -->
                     <!-- REGISTER -->
@@ -1460,274 +1492,37 @@ watch(
 
                     <div
                         v-else
-                        class="mt-7"
+                        class="mt-2"
                     >
-
-                        <!-- ACCOUNT TYPE -->
-
-                        <div
-                            v-if="!registrationStarted"
-                        >
-
-                            <div class="space-y-4">
-
-                                <!-- BUYER -->
-
-                                <button
-                                    type="button"
-                                    @click="selectRegistrationType('buyer')"
-                                    :aria-pressed="registrationType === 'buyer'"
-                                    :class="[
-                                        'group w-full rounded-2xl border p-5 text-left transition',
-                                        registrationType === 'buyer'
-                                            ? 'border-[#087F8C] bg-[#E8F7F6] ring-2 ring-[#E8F7F6]'
-                                            : 'border-[#E5E7EB] bg-white hover:border-[#087F8C]/40 hover:bg-[#E8F7F6]/50'
-                                    ]"
-                                >
-
-                                    <div
-                                        class="flex items-center gap-4"
-                                    >
-
-                                        <div
-                                            :class="[
-                                                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition',
-                                                registrationType === 'buyer'
-                                                    ? 'bg-[#087F8C] text-white'
-                                                    : 'bg-[#E8F7F6] text-[#087F8C] group-hover:bg-[#087F8C] group-hover:text-white'
-                                            ]"
-                                        >
-
-                                            <svg
-                                                class="h-5 w-5"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M20 21a8 8 0 0 0-16 0"
-                                                />
-
-                                                <circle
-                                                    cx="12"
-                                                    cy="7"
-                                                    r="4"
-                                                />
-                                            </svg>
-
-                                        </div>
-
-                                        <div
-                                            class="min-w-0 flex-1"
-                                        >
-
-                                            <h3
-                                                class="font-semibold text-[#1F2937]"
-                                            >
-                                                Register as Buyer
-                                            </h3>
-
-                                            <p
-                                                class="mt-1 text-sm text-[#64748B]"
-                                            >
-                                                Create an account to browse and purchase products.
-                                            </p>
-
-                                        </div>
-
-                                        <div
-                                            :class="[
-                                                'h-5 w-5 rounded-full border-2',
-                                                registrationType === 'buyer'
-                                                    ? 'border-[#087F8C] bg-[#087F8C]'
-                                                    : 'border-[#CBD5E1]'
-                                            ]"
-                                        >
-
-                                            <div
-                                                v-if="registrationType === 'buyer'"
-                                                class="m-1 h-1.5 w-1.5 rounded-full bg-white"
-                                            ></div>
-
-                                        </div>
-
-                                    </div>
-
-                                </button>
-
-                                <!-- SELLER -->
-
-                                <button
-                                    type="button"
-                                    @click="selectRegistrationType('seller')"
-                                    :aria-pressed="registrationType === 'seller'"
-                                    :class="[
-                                        'group w-full rounded-2xl border p-5 text-left transition',
-                                        registrationType === 'seller'
-                                            ? 'border-[#16A6A0] bg-[#E8F7F6] ring-2 ring-[#E8F7F6]'
-                                            : 'border-[#E5E7EB] bg-white hover:border-[#16A6A0]/40 hover:bg-[#E8F7F6]/50'
-                                    ]"
-                                >
-
-                                    <div
-                                        class="flex items-center gap-4"
-                                    >
-
-                                        <div
-                                            :class="[
-                                                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition',
-                                                registrationType === 'seller'
-                                                    ? 'bg-[#16A6A0] text-white'
-                                                    : 'bg-[#E8F7F6] text-[#16A6A0] group-hover:bg-[#16A6A0] group-hover:text-white'
-                                            ]"
-                                        >
-
-                                            <svg
-                                                class="h-5 w-5"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M3 10h18"
-                                                />
-
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M5 10v9h14v-9"
-                                                />
-
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M4 10 6 4h12l2 6"
-                                                />
-
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    d="M9 19v-5h6v5"
-                                                />
-                                            </svg>
-
-                                        </div>
-
-                                        <div
-                                            class="min-w-0 flex-1"
-                                        >
-
-                                            <h3
-                                                class="font-semibold text-[#1F2937]"
-                                            >
-                                                Register as Seller
-                                            </h3>
-
-                                            <p
-                                                class="mt-1 text-sm text-[#64748B]"
-                                            >
-                                                Apply to open your own store and sell products.
-                                            </p>
-
-                                        </div>
-
-                                        <div
-                                            :class="[
-                                                'h-5 w-5 rounded-full border-2',
-                                                registrationType === 'seller'
-                                                    ? 'border-[#16A6A0] bg-[#16A6A0]'
-                                                    : 'border-[#CBD5E1]'
-                                            ]"
-                                        >
-
-                                            <div
-                                                v-if="registrationType === 'seller'"
-                                                class="m-1 h-1.5 w-1.5 rounded-full bg-white"
-                                            ></div>
-
-                                        </div>
-
-                                    </div>
-
-                                </button>
-
-                            </div>
-
-                            <!-- ERROR -->
-
-                            <div
-                                v-if="stepError"
-                                class="mt-4 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
-                                role="alert"
-                            >
-                                {{ cleanMessage(stepError) }}
-                            </div>
-
-                            <!-- ADDRESS ERROR -->
-
-                            <!-- NEXT -->
-
-                            <button
-                                type="button"
-                                @click="startRegistration"
-                                :disabled="!registrationType"
-                                class="mt-5 w-full rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Next
-                            </button>
-
-                        </div>
-
-                        <!-- ================================================= -->
-                        <!-- REGISTRATION STEPS -->
-                        <!-- ================================================= -->
-
-                        <div v-else>
-
-                            <!-- PROGRESS -->
-
-                            <div class="mb-7">
-
-                                <div
-                                    class="flex items-center justify-between text-xs font-medium text-[#64748B]"
-                                >
-
-                                    <span>
-                                        Step
-                                        {{ registrationStep }}
-                                        of
-                                        {{ totalSteps }}
+                        <!-- PROGRESS HEADER -->
+                        <div class="mb-5">
+                            <div class="flex items-center">
+                                    <span class="text-sm font-semibold text-teal-300">
+                                        Step {{ registrationStep }} of {{ totalSteps }}
                                     </span>
-
-                                    <span>
-                                        {{
-                                            isSeller
-                                                ? 'Seller application'
-                                                : 'Buyer registration'
-                                        }}
+                                    <span class="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/15">
+                                        {{ isSeller ? 'Seller application' : 'Buyer registration' }}
                                     </span>
-
                                 </div>
 
-                                <div
-                                    class="mt-3 h-2 overflow-hidden rounded-full bg-[#E5E7EB]"
-                                >
-
+                                <div class="mt-3 flex gap-2">
                                     <div
-                                        class="h-full rounded-full bg-[#087F8C] transition-all duration-300"
-                                        :style="{
-                                            width: `${(registrationStep / totalSteps) * 100}%`
-                                        }"
+                                        v-for="stepNum in totalSteps"
+                                        :key="stepNum"
+                                        class="h-1.5 flex-1 rounded-full transition-all duration-300"
+                                        :class="stepNum <= registrationStep ? 'bg-[#F5A524]' : 'bg-white/20'"
                                     ></div>
-
                                 </div>
+                            </div>
 
+                            <!-- STEP TITLE & SUBTITLE -->
+                            <div class="mb-5">
+                                <h2 class="text-2xl font-bold tracking-tight text-white">
+                                    {{ stepTitle }}
+                                </h2>
+                                <p class="mt-1 text-sm text-teal-100/70">
+                                    {{ stepDescription }}
+                                </p>
                             </div>
 
                             <!-- ================================================= -->
@@ -1736,75 +1531,99 @@ watch(
 
                             <div
                                 v-if="registrationStep === 1"
-                                class="space-y-5"
+                                class="space-y-4"
                             >
+                                <!-- GOOGLE BUTTON (Step 1) -->
+                                <a
+                                    :href="route('google.redirect', { role: registrationType || 'buyer' })"
+                                    class="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100"
+                                >
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                    </svg>
+                                    <span>Continue with Google</span>
+                                </a>
 
-                                <!-- FIRST NAME -->
-
-                                <div>
-
-                                    <label
-                                        for="register-first-name"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        First name
-                                    </label>
-
-                                    <input
-                                        id="register-first-name"
-                                        v-model="registerForm.first_name"
-                                        @input="registerForm.clearErrors('first_name'); stepError = ''"
-                                        type="text"
-                                        autocomplete="given-name"
-                                        placeholder="Enter your first name"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    />
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.first_name"
-                                    />
-
+                                <div class="my-4 flex items-center gap-3 text-xs text-teal-200/60">
+                                    <span class="h-px flex-1 bg-white/15"></span>
+                                    <span>or use your email</span>
+                                    <span class="h-px flex-1 bg-white/15"></span>
                                 </div>
 
-                                <!-- LAST NAME -->
+                                <!-- FIRST & LAST NAME (Side-by-side) -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label
+                                            for="register-first-name"
+                                            class="block text-sm font-semibold text-white"
+                                        >
+                                            First name
+                                        </label>
 
-                                <div>
+                                        <input
+                                            id="register-first-name"
+                                            v-model="registerForm.first_name"
+                                            @input="registerForm.clearErrors('first_name'); stepError = ''"
+                                            type="text"
+                                            autocomplete="given-name"
+                                            placeholder="First name"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                        />
 
-                                    <label
-                                        for="register-last-name"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Last name
-                                    </label>
+                                        <InputError
+                                            class="mt-1.5"
+                                            :message="registerForm.errors.first_name"
+                                        />
+                                    </div>
 
-                                    <input
-                                        id="register-last-name"
-                                        v-model="registerForm.last_name"
-                                        @input="registerForm.clearErrors('last_name'); stepError = ''"
-                                        type="text"
-                                        autocomplete="family-name"
-                                        placeholder="Enter your last name"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                    />
+                                    <div>
+                                        <label
+                                            for="register-last-name"
+                                            class="block text-sm font-semibold text-white"
+                                        >
+                                            Last name
+                                        </label>
 
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.last_name"
-                                    />
+                                        <input
+                                            id="register-last-name"
+                                            v-model="registerForm.last_name"
+                                            @input="registerForm.clearErrors('last_name'); stepError = ''"
+                                            type="text"
+                                            autocomplete="family-name"
+                                            placeholder="Last name"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                        />
 
+                                        <InputError
+                                            class="mt-1.5"
+                                            :message="registerForm.errors.last_name"
+                                        />
+                                    </div>
                                 </div>
 
-                                <!-- MIDDLE NAME & SUFFIX -->
+                                <!-- TOGGLE MIDDLE NAME / SUFFIX -->
+                                <div class="pt-0.5">
+                                    <button
+                                        type="button"
+                                        @click="showAdditionalNameFields = !showAdditionalNameFields"
+                                        class="text-xs font-semibold text-teal-300 hover:text-white hover:underline inline-flex items-center gap-1"
+                                    >
+                                        <span>{{ showAdditionalNameFields ? '− Remove middle name or suffix' : '+ Add middle name or suffix' }}</span>
+                                    </button>
+                                </div>
 
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <!-- EXPANDABLE MIDDLE NAME & SUFFIX -->
+                                <div v-if="showAdditionalNameFields" class="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-1">
                                     <div class="sm:col-span-2">
                                         <label
                                             for="register-middle-name"
-                                            class="text-sm font-medium text-[#1F2937]"
+                                            class="block text-sm font-semibold text-white"
                                         >
                                             Middle name
-                                            <span class="text-[#94A3B8]">
+                                            <span class="text-teal-200/60 font-normal">
                                                 (optional)
                                             </span>
                                         </label>
@@ -1816,11 +1635,11 @@ watch(
                                             type="text"
                                             maxlength="50"
                                             placeholder="Enter middle name"
-                                            class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                         />
 
                                         <InputError
-                                            class="mt-2"
+                                            class="mt-1.5"
                                             :message="registerForm.errors.middle_name || registerForm.errors.middle_initial"
                                         />
                                     </div>
@@ -1828,10 +1647,10 @@ watch(
                                     <div>
                                         <label
                                             for="register-suffix"
-                                            class="text-sm font-medium text-[#1F2937]"
+                                            class="block text-sm font-semibold text-white"
                                         >
                                             Suffix
-                                            <span class="text-[#94A3B8]">
+                                            <span class="text-teal-200/60 font-normal">
                                                 (optional)
                                             </span>
                                         </label>
@@ -1843,23 +1662,21 @@ watch(
                                             type="text"
                                             maxlength="20"
                                             placeholder="Jr., Sr., III"
-                                            class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                         />
 
                                         <InputError
-                                            class="mt-2"
+                                            class="mt-1.5"
                                             :message="registerForm.errors.suffix"
                                         />
                                     </div>
                                 </div>
 
                                 <!-- EMAIL -->
-
                                 <div>
-
                                     <label
                                         for="register-email"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Email address
                                     </label>
@@ -1873,102 +1690,79 @@ watch(
                                         type="email"
                                         autocomplete="email"
                                         placeholder="you@example.com"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
-                                        class="mt-2"
+                                        class="mt-1.5"
                                         :message="registerForm.errors.email"
                                     />
-
                                 </div>
 
-                                <!-- PASSWORD -->
+                                <!-- PASSWORD & CONFIRM PASSWORD (Side-by-side) -->
+                                <div v-if="!isGoogleOnboarding" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label
+                                            for="register-password"
+                                            class="block text-sm font-semibold text-white"
+                                        >
+                                            Password
+                                        </label>
 
-                                <div v-if="!isGoogleOnboarding">
-
-                                    <label
-                                        for="register-password"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Password
-                                    </label>
-
-                                    <div class="relative mt-2">
                                         <input
                                             id="register-password"
                                             v-model="registerForm.password"
-                                            :type="showRegisterPassword ? 'text' : 'password'"
+                                            :type="showRegisterPasswords ? 'text' : 'password'"
                                             autocomplete="new-password"
                                             placeholder="At least 8 characters"
-                                            class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                         />
-                                        <button
-                                            type="button"
-                                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                                            :aria-label="showRegisterPassword ? 'Hide password' : 'Show password'"
-                                            @click="showRegisterPassword = !showRegisterPassword"
-                                        >
-                                            <svg v-if="showRegisterPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                            </svg>
-                                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                            </svg>
-                                        </button>
+
+                                        <InputError
+                                            class="mt-1.5"
+                                            :message="registerForm.errors.password"
+                                        />
                                     </div>
 
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.password"
-                                    />
+                                    <div>
+                                        <label
+                                            for="register-password-confirmation"
+                                            class="block text-sm font-semibold text-white"
+                                        >
+                                            Confirm password
+                                        </label>
 
-                                </div>
-
-                                <!-- CONFIRM PASSWORD -->
-
-                                <div v-if="!isGoogleOnboarding">
-
-                                    <label
-                                        for="register-password-confirmation"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        Confirm password
-                                    </label>
-
-                                    <div class="relative mt-2">
                                         <input
                                             id="register-password-confirmation"
                                             v-model="registerForm.password_confirmation"
-                                            :type="showRegisterPasswordConfirmation ? 'text' : 'password'"
+                                            :type="showRegisterPasswords ? 'text' : 'password'"
                                             autocomplete="new-password"
-                                            placeholder="Repeat your password"
-                                            class="block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-11 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                            placeholder="Repeat password"
+                                            class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                         />
-                                        <button
-                                            type="button"
-                                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                                            :aria-label="showRegisterPasswordConfirmation ? 'Hide password' : 'Show password'"
-                                            @click="showRegisterPasswordConfirmation = !showRegisterPasswordConfirmation"
-                                        >
-                                            <svg v-if="showRegisterPasswordConfirmation" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                            </svg>
-                                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                            </svg>
-                                        </button>
+
+                                        <InputError
+                                            class="mt-1.5"
+                                            :message="registerForm.errors.password_confirmation"
+                                        />
                                     </div>
-
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.password_confirmation"
-                                    />
-
                                 </div>
 
+                                <!-- SHOW PASSWORDS CHECKBOX -->
+                                <div v-if="!isGoogleOnboarding" class="flex items-center gap-2 pt-0.5">
+                                    <input
+                                        id="register-show-passwords"
+                                        v-model="showRegisterPasswords"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524] focus:ring-offset-0"
+                                    />
+                                    <label
+                                        for="register-show-passwords"
+                                        class="text-xs text-teal-100/90 select-none cursor-pointer"
+                                    >
+                                        Show passwords
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- ================================================= -->
@@ -1986,7 +1780,7 @@ watch(
 
                                     <label
                                         for="register-sex"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Sex
                                     </label>
@@ -1994,7 +1788,7 @@ watch(
                                     <select
                                         id="register-sex"
                                         v-model="registerForm.sex"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 focus:ring-[#F5A524]"
                                     >
 
                                         <option
@@ -2031,7 +1825,7 @@ watch(
 
                                     <label
                                         for="register-birthday"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Birthday
                                     </label>
@@ -2042,7 +1836,7 @@ watch(
                                         @input="registerForm.clearErrors('birthday', 'age'); stepError = ''"
                                         type="date"
                                         :max="new Date().toISOString().split('T')[0]"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2058,7 +1852,7 @@ watch(
 
                                     <label
                                         for="register-age"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Age
                                     </label>
@@ -2069,11 +1863,11 @@ watch(
                                         type="number"
                                         readonly
                                         placeholder="Automatically calculated"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F1F5F9] px-4 py-3 text-sm text-[#64748B] outline-none"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white/80 px-4 py-3 text-sm text-slate-600 outline-none"
                                     />
 
                                     <p
-                                        class="mt-1 text-xs text-[#94A3B8]"
+                                        class="mt-1 text-xs text-teal-200/70"
                                     >
                                         Age is automatically calculated from your birthday.
                                     </p>
@@ -2091,7 +1885,7 @@ watch(
 
                                     <label
                                         for="register-contact"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Contact number
                                     </label>
@@ -2104,7 +1898,7 @@ watch(
                                         type="tel"
                                         autocomplete="tel"
                                         placeholder="09XXXXXXXXX"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2112,30 +1906,6 @@ watch(
                                         :message="registerForm.errors.contact_no"
                                     />
 
-                                </div>
-
-                                <!-- TERMS & PRIVACY POLICY -->
-                                <div class="pt-2">
-                                    <label for="register-terms" class="flex cursor-pointer items-start gap-3">
-                                        <input
-                                            id="register-terms"
-                                            v-model="registerForm.terms"
-                                            @change="registerForm.clearErrors('terms'); stepError = ''"
-                                            type="checkbox"
-                                            class="mt-1 h-4 w-4 rounded border-[#CBD5E1] text-[#087F8C] focus:ring-[#087F8C]"
-                                        />
-                                        <span class="text-sm leading-5 text-[#475569]">
-                                            I agree to the
-                                            <a href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline hover:text-[#16A6A0]">Terms and Conditions</a>
-                                            and
-                                            <a href="/policies" target="_blank" class="font-semibold text-[#087F8C] underline hover:text-[#16A6A0]">Privacy Policy</a>.
-                                            <span class="text-red-500">*</span>
-                                        </span>
-                                    </label>
-                                    <InputError
-                                        class="mt-2"
-                                        :message="registerForm.errors.terms"
-                                    />
                                 </div>
 
                             </div>
@@ -2157,7 +1927,7 @@ watch(
 
                                     <label
                                         for="register-street"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         House No. / Street Address
                                     </label>
@@ -2167,7 +1937,7 @@ watch(
                                         v-model="registerForm.street_address"
                                         rows="3"
                                         placeholder="House number, street, subdivision, etc."
-                                        class="mt-2 block w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full resize-none rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     ></textarea>
 
                                     <InputError
@@ -2181,10 +1951,10 @@ watch(
                                 <div>
                                     <label
                                         for="register-postal-code"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Postal Code
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-400">*</span>
                                     </label>
 
                                     <input
@@ -2194,7 +1964,7 @@ watch(
                                         type="text"
                                         maxlength="4"
                                         placeholder="e.g. 1121"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2211,23 +1981,47 @@ watch(
                                         registerForm.municipality &&
                                         registerForm.barangay
                                     "
-                                    class="rounded-xl bg-[#E8F7F6] p-4"
+                                    class="rounded-xl bg-white/10 border border-white/15 p-4"
                                 >
 
                                     <p
-                                        class="text-xs font-semibold uppercase tracking-wide text-[#087F8C]"
+                                        class="text-xs font-semibold uppercase tracking-wide text-teal-300"
                                     >
                                         Selected address
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm leading-5 text-[#1F2937]"
+                                        class="mt-1 text-sm leading-5 text-white"
                                     >
                                         {{ registerForm.barangay }},
                                         {{ registerForm.municipality }},
                                         {{ registerForm.province }}
                                     </p>
 
+                                </div>
+
+                                <!-- TERMS & PRIVACY POLICY (Buyer Step 3) -->
+                                <div v-if="!isSeller" class="pt-2">
+                                    <label for="register-terms" class="flex cursor-pointer items-start gap-3">
+                                        <input
+                                            id="register-terms"
+                                            v-model="registerForm.terms"
+                                            @change="registerForm.clearErrors('terms'); stepError = ''"
+                                            type="checkbox"
+                                            class="mt-1 h-4 w-4 rounded border-0 bg-white text-[#F5A524] focus:ring-[#F5A524] focus:ring-offset-0"
+                                        />
+                                        <span class="text-sm leading-5 text-teal-100/90">
+                                            I agree to the
+                                            <a href="/policies" target="_blank" class="font-semibold text-teal-300 underline hover:text-white">Terms and Conditions</a>
+                                            and
+                                            <a href="/policies" target="_blank" class="font-semibold text-teal-300 underline hover:text-white">Privacy Policy</a>.
+                                            <span class="text-rose-400">*</span>
+                                        </span>
+                                    </label>
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.terms"
+                                    />
                                 </div>
 
                             </div>
@@ -2245,17 +2039,17 @@ watch(
                             >
 
                                 <div
-                                    class="rounded-xl bg-[#E8F7F6] p-4"
+                                    class="rounded-xl bg-white/10 border border-white/15 p-4"
                                 >
 
                                     <h3
-                                        class="font-semibold text-[#087F8C]"
+                                        class="font-semibold text-white"
                                     >
                                         Seller application
                                     </h3>
 
                                     <p
-                                        class="mt-1 text-sm leading-5 text-[#64748B]"
+                                        class="mt-1 text-sm leading-5 text-teal-100/80"
                                     >
                                         Provide your store details and required verification documents to apply as an Alona seller.
                                     </p>
@@ -2268,7 +2062,7 @@ watch(
 
                                     <label
                                         for="register-store-name"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Store name
                                     </label>
@@ -2278,7 +2072,7 @@ watch(
                                         v-model="registerForm.store_name"
                                         type="text"
                                         placeholder="Enter your store name"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2292,17 +2086,17 @@ watch(
                                 <div>
                                     <label
                                         for="register-seller-type"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Seller Type
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-400">*</span>
                                     </label>
 
                                     <select
                                         id="register-seller-type"
                                         v-model="registerForm.seller_type"
                                         @change="registerForm.clearErrors('seller_type'); stepError = ''"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 focus:ring-[#F5A524]"
                                     >
                                         <option value="Sole Proprietorship">Sole Proprietorship</option>
                                         <option value="Individual">Individual</option>
@@ -2319,10 +2113,10 @@ watch(
                                 <div>
                                     <label
                                         for="register-tin"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Taxpayer Identification Number (TIN)
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-400">*</span>
                                     </label>
 
                                     <input
@@ -2332,7 +2126,7 @@ watch(
                                         type="text"
                                         maxlength="15"
                                         placeholder="000-000-000-000"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2347,7 +2141,7 @@ watch(
 
                                     <label
                                         for="register-line-of-business"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Line of business
                                     </label>
@@ -2357,7 +2151,7 @@ watch(
                                         v-model="registerForm.line_of_business"
                                         type="text"
                                         placeholder="e.g. Clothing, Electronics, Food"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2373,10 +2167,10 @@ watch(
 
                                     <label
                                         for="register-store-description"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Store description
-                                        <span class="text-[#94A3B8]">
+                                        <span class="text-teal-200/60 font-normal">
                                             (optional)
                                         </span>
                                     </label>
@@ -2386,7 +2180,7 @@ watch(
                                         v-model="registerForm.store_description"
                                         rows="3"
                                         placeholder="Tell customers about your store"
-                                        class="mt-2 block w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full resize-none rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     ></textarea>
 
                                     <InputError
@@ -2402,10 +2196,10 @@ watch(
 
                                     <label
                                         for="register-bank-name"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Bank name
-                                        <span class="text-[#94A3B8]">
+                                        <span class="text-teal-200/60 font-normal">
                                             (optional)
                                         </span>
                                     </label>
@@ -2415,7 +2209,7 @@ watch(
                                         v-model="registerForm.bank_name"
                                         type="text"
                                         placeholder="Bank name"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2431,10 +2225,10 @@ watch(
 
                                     <label
                                         for="register-bank-account-name"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Bank account name
-                                        <span class="text-[#94A3B8]">
+                                        <span class="text-teal-200/60 font-normal">
                                             (optional)
                                         </span>
                                     </label>
@@ -2444,7 +2238,7 @@ watch(
                                         v-model="registerForm.bank_account_name"
                                         type="text"
                                         placeholder="Account holder name"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2460,10 +2254,10 @@ watch(
 
                                     <label
                                         for="register-bank-account-number"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Bank account number
-                                        <span class="text-[#94A3B8]">
+                                        <span class="text-teal-200/60 font-normal">
                                             (optional)
                                         </span>
                                     </label>
@@ -2473,7 +2267,7 @@ watch(
                                         v-model="registerForm.bank_account_number"
                                         type="text"
                                         placeholder="Account number"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 text-sm outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
                                     />
 
                                     <InputError
@@ -2483,109 +2277,172 @@ watch(
 
                                 </div>
 
-                                <!-- VALID ID -->
+                                <!-- GOVERNMENT ID TYPE -->
 
                                 <div>
 
                                     <label
-                                        for="seller-register-id"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        for="seller-id-type"
+                                        class="block text-sm font-semibold text-white"
                                     >
-                                        Valid ID
-                                        <span class="text-red-500">
-                                            *
-                                        </span>
+                                        Valid Government ID
+                                    </label>
+
+                                    <select
+                                        id="seller-id-type"
+                                        v-model="registerForm.id_type"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:ring-2 focus:ring-[#F5A524]"
+                                    >
+
+                                        <option
+                                            value=""
+                                            disabled
+                                        >
+                                            Select government ID type
+                                        </option>
+
+                                        <option value="Passport">
+                                            Passport
+                                        </option>
+
+                                        <option value="Driver's License">
+                                            Driver's License
+                                        </option>
+
+                                        <option value="UMID">
+                                            UMID
+                                        </option>
+
+                                        <option value="PhilHealth">
+                                            PhilHealth ID
+                                        </option>
+
+                                        <option value="SSS">
+                                            SSS ID
+                                        </option>
+
+                                        <option value="Voter's ID">
+                                            Voter's ID
+                                        </option>
+
+                                        <option value="Postal ID">
+                                            Postal ID
+                                        </option>
+
+                                        <option value="National ID">
+                                            National ID (PhilSys)
+                                        </option>
+
+                                    </select>
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.id_type"
+                                    />
+
+                                </div>
+
+                                <!-- GOVERNMENT ID NUMBER -->
+
+                                <div>
+
+                                    <label
+                                        for="seller-id-number"
+                                        class="block text-sm font-semibold text-white"
+                                    >
+                                        ID Number
                                     </label>
 
                                     <input
-                                        id="seller-register-id"
+                                        id="seller-id-number"
+                                        v-model="registerForm.id_number"
+                                        type="text"
+                                        placeholder="Enter your ID number"
+                                        class="mt-1.5 block w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none shadow-inner transition focus:ring-2 focus:ring-[#F5A524]"
+                                    />
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.id_number"
+                                    />
+
+                                </div>
+
+                                <!-- ID FRONT UPLOAD -->
+
+                                <div>
+
+                                    <label
+                                        for="seller-id-front"
+                                        class="block text-sm font-semibold text-white"
+                                    >
+                                        ID Front Photo
+                                    </label>
+
+                                    <input
+                                        id="seller-id-front"
                                         type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        @change="handleIdUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                        accept="image/jpeg,image/png,image/jpg"
+                                        @change="handleIdFrontUpload"
+                                        class="mt-1.5 block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-teal-100 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:font-semibold file:text-slate-900 hover:file:bg-slate-100"
                                     />
 
                                     <p
-                                        class="mt-1 text-xs text-[#94A3B8]"
+                                        class="mt-1 text-xs text-teal-200/70"
                                     >
-                                        JPG, JPEG, PNG, or PDF. Maximum 5 MB.
+                                        JPG, JPEG, or PNG. Maximum 5 MB.
                                     </p>
 
                                     <InputError
                                         class="mt-2"
-                                        :message="registerForm.errors.id"
+                                        :message="registerForm.errors.id_front"
                                     />
 
                                 </div>
 
-                                <!-- DTI CERTIFICATE (Sole Proprietorship) -->
-                                <div v-if="registerForm.seller_type === 'Sole Proprietorship'">
-                                    <label
-                                        for="seller-dti-cert"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        DTI Certificate of Business Name Registration
-                                        <span class="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        id="seller-dti-cert"
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        @change="handleDtiUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
-                                    />
-                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
-                                    <InputError class="mt-2" :message="registerForm.errors.dti_certificate" />
-                                </div>
+                                <!-- ID BACK UPLOAD -->
 
-                                <!-- SEC CERTIFICATE (Corporation) -->
-                                <div v-if="registerForm.seller_type === 'Corporation'">
-                                    <label
-                                        for="seller-sec-cert"
-                                        class="text-sm font-medium text-[#1F2937]"
-                                    >
-                                        SEC Certificate of Registration
-                                        <span class="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        id="seller-sec-cert"
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        @change="handleSecUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
-                                    />
-                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
-                                    <InputError class="mt-2" :message="registerForm.errors.sec_certificate" />
-                                </div>
+                                <div>
 
-                                <!-- BIR FORM 2303 -->
-                                <div v-if="['Sole Proprietorship', 'Corporation'].includes(registerForm.seller_type)">
                                     <label
-                                        for="seller-bir-cert"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        for="seller-id-back"
+                                        class="block text-sm font-semibold text-white"
                                     >
-                                        BIR Certificate of Registration (Form 2303)
-                                        <span class="text-red-500">*</span>
+                                        ID Back Photo
+                                        <span class="text-teal-200/60 font-normal">
+                                            (optional)
+                                        </span>
                                     </label>
+
                                     <input
-                                        id="seller-bir-cert"
+                                        id="seller-id-back"
                                         type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        @change="handleBirUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                        accept="image/jpeg,image/png,image/jpg"
+                                        @change="handleIdBackUpload"
+                                        class="mt-1.5 block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-teal-100 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:font-semibold file:text-slate-900 hover:file:bg-slate-100"
                                     />
-                                    <p class="mt-1 text-xs text-[#94A3B8]">JPG, JPEG, PNG, or PDF. Maximum 5 MB.</p>
-                                    <InputError class="mt-2" :message="registerForm.errors.bir_2303" />
+
+                                    <p
+                                        class="mt-1 text-xs text-teal-200/70"
+                                    >
+                                        JPG, JPEG, or PNG. Maximum 5 MB.
+                                    </p>
+
+                                    <InputError
+                                        class="mt-2"
+                                        :message="registerForm.errors.id_back"
+                                    />
+
                                 </div>
 
                                 <!-- MAYOR'S / BUSINESS PERMIT -->
                                 <div>
                                     <label
                                         for="seller-business-permit"
-                                        class="text-sm font-medium text-[#1F2937]"
+                                        class="block text-sm font-semibold text-white"
                                     >
                                         Mayor's / Business Permit
-                                        <span class="text-slate-400 font-normal">(optional)</span>
+                                        <span class="text-teal-200/60 font-normal">(optional)</span>
                                     </label>
 
                                     <input
@@ -2593,11 +2450,11 @@ watch(
                                         type="file"
                                         accept=".jpg,.jpeg,.png,.pdf"
                                         @change="handleBusinessPermitUpload"
-                                        class="mt-2 block w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-3 text-sm text-[#64748B] file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8F7F6] file:px-3 file:py-2 file:font-medium file:text-[#087F8C] hover:file:bg-[#D7F1EF]"
+                                        class="mt-1.5 block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-teal-100 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:font-semibold file:text-slate-900 hover:file:bg-slate-100"
                                     />
 
                                     <p
-                                        class="mt-1 text-xs text-[#94A3B8]"
+                                        class="mt-1 text-xs text-teal-200/70"
                                     >
                                         JPG, JPEG, PNG, or PDF. Maximum 5 MB.
                                     </p>
@@ -2612,20 +2469,20 @@ watch(
                                 <!-- APPLICATION REVIEW -->
 
                                 <div
-                                    class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] p-4 text-sm text-[#64748B]"
+                                    class="rounded-xl border border-white/15 bg-white/10 p-4 text-sm text-teal-100"
                                 >
 
                                     <p
-                                        class="font-medium text-[#1F2937]"
+                                        class="font-semibold text-white"
                                     >
                                         Application review
                                     </p>
 
                                     <p
-                                        class="mt-1 leading-5"
+                                        class="mt-1 leading-5 text-teal-100/80"
                                     >
                                         Your seller account will be created with
-                                        <strong class="text-[#087F8C]">
+                                        <strong class="text-teal-300">
                                             pending
                                         </strong>
                                         status and will require administrator approval.
@@ -2639,20 +2496,20 @@ watch(
 
                             <div
                                 v-if="registrationSuccess"
-                                class="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm"
+                                class="mt-5 rounded-2xl border border-emerald-400/40 bg-emerald-500/20 p-4 text-emerald-100 shadow-sm"
                                 role="status"
                             >
                                 <div class="flex items-start gap-3">
-                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/30 text-emerald-200">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
                                     <div class="flex-1">
-                                        <h4 class="text-sm font-semibold text-emerald-950">
+                                        <h4 class="text-sm font-semibold text-white">
                                             Success!
                                         </h4>
-                                        <p class="mt-1 text-xs leading-5 text-emerald-800">
+                                        <p class="mt-1 text-xs leading-5 text-emerald-200">
                                             {{ registrationSuccess }}
                                         </p>
                                     </div>
@@ -2663,49 +2520,41 @@ watch(
 
                             <div
                                 v-if="visibleStepError"
-                                class="mt-5 rounded-2xl bg-[#FEF2F2] px-5 py-4 text-sm leading-relaxed text-[#DC2626]"
+                                class="mt-5 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm leading-relaxed text-rose-800 shadow-sm"
                                 role="alert"
                             >
                                 {{ visibleStepError }}
                             </div>
 
                             <!-- NAVIGATION -->
-
                             <div class="mt-7 flex gap-3">
-
                                 <!-- BACK -->
-
                                 <button
                                     type="button"
                                     @click="previousStep"
                                     :disabled="registerForm.processing"
-                                    class="flex-1 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAF9] disabled:cursor-not-allowed disabled:opacity-60"
+                                    class="flex-1 rounded-xl bg-white px-4 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     Back
                                 </button>
 
                                 <!-- NEXT -->
-
                                 <button
-                                    v-if="
-                                        registrationStep <
-                                        totalSteps
-                                    "
+                                    v-if="registrationStep < totalSteps"
                                     type="button"
                                     @click="nextStep"
-                                    class="flex-1 rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#16A6A0]"
+                                    class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99]"
                                 >
                                     Next
                                 </button>
 
                                 <!-- SUBMIT -->
-
                                 <button
                                     v-else
                                     type="button"
                                     @click="submitRegister"
                                     :disabled="registerForm.processing"
-                                    class="flex-1 rounded-xl bg-[#087F8C] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#16A6A0] disabled:cursor-not-allowed disabled:opacity-60"
+                                    class="flex-1 rounded-xl bg-[#F5A524] px-4 py-3.5 text-sm font-bold text-slate-900 shadow-md transition hover:bg-[#e0941d] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {{
                                         registerForm.processing
@@ -2715,97 +2564,23 @@ watch(
                                                 : 'Create Account'
                                     }}
                                 </button>
-
                             </div>
 
-                            <!-- CHANGE ACCOUNT TYPE -->
-
-                            <button
-                                type="button"
-                                @click="resetRegistration"
-                                :disabled="registerForm.processing"
-                                class="mt-4 w-full text-center text-xs font-medium text-[#64748B] hover:text-[#087F8C] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Change account type
-                            </button>
-
-                        </div>
-
+                            <!-- REGISTRATION FOOTER -->
+                            <div class="mt-6 text-center text-xs text-teal-100/70">
+                                Already have an account?
+                                <button
+                                    type="button"
+                                    @click="switchToLogin"
+                                    class="font-semibold text-teal-300 hover:text-white hover:underline ml-1"
+                                >
+                                    Log in
+                                </button>
+                            </div>
                     </div>
-
-                    <!-- ================================================= -->
-                    <!-- GOOGLE -->
-                    <!-- ================================================= -->
-
-                    <div
-                        v-if="!registrationStarted && !isVerifyingOtp"
-                        class="my-6 flex items-center gap-3 text-xs text-[#94A3B8]"
-                    >
-
-                        <span
-                            class="h-px flex-1 bg-[#E5E7EB]"
-                        ></span>
-
-                        <span>
-                            or continue with
-                        </span>
-
-                        <span
-                            class="h-px flex-1 bg-[#E5E7EB]"
-                        ></span>
-
-                    </div>
-
-                    <a
-                        v-if="!registrationStarted && !isVerifyingOtp"
-                        :href="route('google.redirect', { role: mode === 'login' ? undefined : registrationType || 'buyer' })"
-                        class="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAF9]"
-                    >
-
-                        <span
-                            class="text-base font-bold"
-                        >
-                            G
-                        </span>
-
-                        Continue with Google
-
-                    </a>
-
-                    <!-- ================================================= -->
-                    <!-- LOGIN / REGISTER SWITCH -->
-                    <!-- ================================================= -->
-
-                    <div
-                        v-if="!registrationStarted && !isVerifyingOtp"
-                        class="mt-6 border-t border-[#E5E7EB] pt-6 text-center"
-                    >
-
-                        <p
-                            class="text-sm text-[#64748B]"
-                        >
-                            {{
-                                mode === 'login'
-                                    ? "Don't have an Alona account?"
-                                    : 'Already have an Alona account?'
-                            }}
-                            <button v-if="mode !== 'login'" type="button" @click="switchToLogin" class="ml-1 font-semibold text-[#087F8C] hover:text-[#16A6A0]">Log in</button>
-                        </p>
-
-                        <button
-                            v-if="mode === 'login'"
-                            type="button"
-                            @click="switchToRegister"
-                            class="mt-2 text-sm font-semibold text-[#087F8C] hover:text-[#16A6A0]"
-                        >
-                            Create an account
-                        </button>
-
-
-                    </div>
-
                 </div>
             </div>
         </div>
-    </Teleport>
+    </div>
+</Teleport>
 </template>

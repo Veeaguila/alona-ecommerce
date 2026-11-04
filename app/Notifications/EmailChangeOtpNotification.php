@@ -34,13 +34,14 @@ class EmailChangeOtpNotification extends Notification
         $name = $this->user?->first_name ?? $this->user?->name ?? 'Valued Customer';
 
         return (new MailMessage)
-            ->subject('Verify Your New Email Address - Alona')
-            ->greeting("Hello {$name}!")
-            ->line('You have requested to change the email address linked to your Alona account.')
-            ->line('Please use the 6-digit verification code below to confirm this change:')
-            ->line("**{$this->otpCode}**")
-            ->line('This code will expire in 5 minutes.')
-            ->line('If you did not request this email change, please ignore this email or review your account security.');
+            ->subject('Verify Your New Email Address - Alona: ' . $this->otpCode)
+            ->view('emails.otp-verification', [
+                'otpCode' => $this->otpCode,
+                'userName' => $name,
+                'title' => 'Confirm Email Address Change',
+                'introText' => 'You recently requested to update the email address linked to your Alona account. Please use the 6-digit verification code below to authorize this change:',
+                'subject' => 'Verify Your New Email Address - Alona',
+            ]);
     }
 
     /**

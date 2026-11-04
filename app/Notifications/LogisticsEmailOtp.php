@@ -16,9 +16,19 @@ class LogisticsEmailOtp extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject('Verify your ALONA logistics email')
-            ->line('Your verification code is: '.$this->code)
-            ->line('This code expires in five minutes. Requesting another code cancels this one.')
-            ->line('If you did not create this account, ignore this email.');
+        $name = trim(($notifiable->first_name ?? '') . ' ' . ($notifiable->last_name ?? ''));
+        if (! $name) {
+            $name = $notifiable->name ?? 'Partner Representative';
+        }
+
+        return (new MailMessage)
+            ->subject('Verify your ALONA Logistics Email: ' . $this->code)
+            ->view('emails.otp-verification', [
+                'otpCode' => $this->code,
+                'userName' => $name,
+                'title' => 'Logistics Partner Email Verification',
+                'introText' => 'Thank you for onboarding with the Alona Logistics Network. Please enter the 6-digit verification code below to verify your partner email:',
+                'subject' => 'Verify your ALONA Logistics Email',
+            ]);
     }
 }

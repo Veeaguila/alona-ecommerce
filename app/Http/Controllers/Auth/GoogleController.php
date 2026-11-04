@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AccountDestination;
 use GuzzleHttp\Client;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
@@ -46,7 +49,7 @@ class GoogleController extends Controller
         $byIdentity = User::where('google_id', $google->getId())->first();
         $byEmail = User::where('email', $email)->first();
         if (($byIdentity && $byEmail && $byIdentity->id !== $byEmail->id)
-            || ($byEmail?->google_id && $byEmail->google_id !== $google->getId())) {
+            || ($byEmail?->google_id && ! str_starts_with((string) $byEmail->google_id, 'google_') && $byEmail->google_id !== $google->getId())) {
             return redirect('/?auth=login')->withErrors(['email' => 'This Google identity is already associated with another account. Please use your original sign-in method.']);
         }
         $user = $byIdentity ?? $byEmail;
@@ -60,11 +63,17 @@ class GoogleController extends Controller
                 if ($locked->usertype !== 'rider' || !is_string($locked->avatar) || !str_starts_with($locked->avatar, 'rider-avatars/'.$locked->id.'/')) {
                     $changes['avatar'] = $google->getAvatar();
                 }
+                if ($locked->usertype === 'buyer' && $locked->status === 'unverified') {
+                    $changes['status'] = 'approved';
+                }
                 $locked->update($changes);
                 return $locked;
             });
             if (($user->partnerApplication?->details['registration_version'] ?? null) !== 2) {
                 $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
+            }
+            if ($user->usertype === 'buyer' && $user->status === 'unverified') {
+                $user->forceFill(['status' => 'approved'])->save();
             }
             Auth::login($user, true);
             $request->session()->regenerate();
@@ -72,6 +81,46 @@ class GoogleController extends Controller
 
             return redirect()->route($destinations->route($user));
         }
+
+        // Direct login / auto-creation for Buyer accounts
+        if ($role === 'buyer') {
+            $rawUser = is_array($google->user) ? $google->user : [];
+            $firstName = $rawUser['given_name'] ?? null;
+            $lastName = $rawUser['family_name'] ?? null;
+            $fullName = trim((string) $google->getName());
+
+            if (! $firstName && ! $lastName) {
+                $parts = explode(' ', $fullName, 2);
+                $firstName = $parts[0] ?: 'Buyer';
+                $lastName = $parts[1] ?? '';
+            }
+            if (! $fullName) {
+                $fullName = trim("$firstName $lastName") ?: 'Buyer';
+            }
+
+            $user = User::create([
+                'first_name' => $firstName ?: 'Buyer',
+                'last_name' => $lastName ?: '',
+                'name' => $fullName,
+                'email' => $email,
+                'google_id' => $google->getId(),
+                'avatar' => $google->getAvatar(),
+                'usertype' => 'buyer',
+                'status' => 'approved',
+                'password' => Hash::make(Str::random(32)),
+                'email_verified_at' => now(),
+            ]);
+
+            event(new Registered($user));
+            $request->session()->forget('onboarding.google');
+
+            Auth::login($user, true);
+            $request->session()->regenerate();
+            $request->session()->forget('url.intended');
+
+            return redirect()->route($destinations->route($user));
+        }
+
         $request->session()->put('onboarding.google', ['id' => $google->getId(), 'email' => $email,
             'name' => $google->getName(), 'role' => $role, 'expires_at' => now()->addHour()->timestamp]);
 
