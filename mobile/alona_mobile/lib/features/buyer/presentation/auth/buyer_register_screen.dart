@@ -7,6 +7,7 @@ import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_otp_screen.dart';
+import 'package:alona_mobile/shared/widgets/alona_auth_scaffold.dart';
 
 class BuyerRegisterScreen extends StatefulWidget {
   final AuthState authState;
@@ -19,7 +20,7 @@ class BuyerRegisterScreen extends StatefulWidget {
 
 class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
   int _currentStep = 1;
-  final int _totalSteps = 2;
+  final int _totalSteps = 3;
 
   // Step 1 Controllers (Account Information)
   final _firstNameCtrl = TextEditingController();
@@ -31,12 +32,15 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
   final _passwordConfirmCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _showMiddleAndSuffix = false;
 
   // Step 2 Controllers (Personal Information)
   DateTime? _selectedBirthday;
   final _birthdayCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+
+  // Step 3 (Review & Agreements)
   bool _agreeToTerms = false;
 
   bool _isLoading = false;
@@ -45,7 +49,6 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
   @override
   void initState() {
     super.initState();
-    // Default birthday 20 years ago
     final defaultDate = DateTime.now().subtract(const Duration(days: 365 * 20));
     _setBirthday(defaultDate);
   }
@@ -72,7 +75,6 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     final day = date.day.toString().padLeft(2, '0');
     _birthdayCtrl.text = '$year-$month-$day';
 
-    // Calculate age
     final now = DateTime.now();
     int age = now.year - date.year;
     if (now.month < date.month || (now.month == date.month && now.day < date.day)) {
@@ -95,9 +97,9 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF087F8C),
+              primary: AlonaAuthColors.backgroundTeal,
               onPrimary: Colors.white,
-              onSurface: Color(0xFF1F2937),
+              onSurface: AlonaAuthColors.darkText,
             ),
           ),
           child: child!,
@@ -144,12 +146,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     });
   }
 
-  Future<void> _submitRegister() async {
-    if (!_agreeToTerms) {
-      setState(() => _errorMessage = 'You must agree to the Terms and Conditions and Privacy Policy.');
-      return;
-    }
-
+  void _validateAndProceedToStep3() {
     var phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) {
       setState(() => _errorMessage = 'Please enter your contact number.');
@@ -177,6 +174,27 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
       setState(() => _errorMessage = 'You must be at least 18 years old to register.');
       return;
     }
+
+    setState(() {
+      _errorMessage = null;
+      _currentStep = 3;
+    });
+  }
+
+  Future<void> _submitRegister() async {
+    if (!_agreeToTerms) {
+      setState(() => _errorMessage = 'You must agree to the Terms and Conditions and Privacy Policy.');
+      return;
+    }
+
+    var phone = _phoneCtrl.text.trim();
+    if (phone.startsWith('+63')) {
+      phone = '0${phone.substring(3)}';
+    } else if (phone.startsWith('63')) {
+      phone = '0${phone.substring(2)}';
+    }
+
+    final age = int.tryParse(_ageCtrl.text) ?? 0;
 
     setState(() {
       _isLoading = true;
@@ -225,10 +243,15 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           title,
-          style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 18),
+          style: GoogleFonts.figtree(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: AlonaAuthColors.darkText,
+          ),
         ),
         content: SizedBox(
           width: double.maxFinite,
@@ -244,7 +267,10 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Understood',
-              style: GoogleFonts.figtree(fontWeight: FontWeight.w600, color: const Color(0xFF087F8C)),
+              style: GoogleFonts.figtree(
+                fontWeight: FontWeight.w700,
+                color: AlonaAuthColors.backgroundTeal,
+              ),
             ),
           ),
         ],
@@ -320,7 +346,6 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     });
 
     try {
-      // 1. Native Android AccountManager Google Account Selection (avoids SHA-1 ApiException: 10)
       try {
         final dynamic picked =
             await _googlePickerChannel.invokeMethod('pickGoogleAccount');
@@ -339,10 +364,9 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
           }
         }
       } on MissingPluginException {
-        // Native channel not registered in current hot-reload session; fall through
+        // Native channel not registered
       }
 
-      // 2. Fallback to GoogleSignIn plugin
       final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
       await googleSignIn.signOut().catchError((_) => null);
 
@@ -528,7 +552,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
-                        color: Color(0xFF087F8C),
+                        color: AlonaAuthColors.backgroundTeal,
                         width: 1.5,
                       ),
                     ),
@@ -537,7 +561,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: 46,
+                  height: 48,
                   child: ElevatedButton(
                     onPressed: isSubmitting
                         ? null
@@ -580,17 +604,17 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF087F8C),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AlonaAuthColors.amber,
+                      foregroundColor: AlonaAuthColors.darkText,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: Text(
                       'Continue',
                       style: GoogleFonts.figtree(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -604,717 +628,504 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     );
   }
 
-  InputDecoration _fieldDecoration({required String hintText, Widget? suffixIcon}) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF94A3B8)),
-      filled: true,
-      fillColor: const Color(0xFFF8FAF9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF087F8C), width: 1.5),
-      ),
-      suffixIcon: suffixIcon,
-    );
+  void _handleBackNavigation() {
+    if (_currentStep > 1) {
+      setState(() {
+        _errorMessage = null;
+        _currentStep--;
+      });
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1F2937)),
-          onPressed: () {
-            if (_currentStep == 2) {
-              setState(() => _currentStep = 1);
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
+    return AlonaAuthScaffold(
+      onBack: _handleBackNavigation,
+      trailing: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white, size: 22),
+        onPressed: () => Navigator.pop(context),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header logo container: h-14 w-14 rounded-2xl bg-[#E8F7F6] p-2
-              Center(
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F7F6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Image.asset(
-                    'assets/images/Alogo.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Segmented Step Indicator (Step X of 3 [Buyer registration])
+            AlonaStepProgressIndicator(
+              currentStep: _currentStep,
+              totalSteps: _totalSteps,
+              roleBadge: 'Buyer registration',
+            ),
+            const SizedBox(height: 20),
 
-              // Title matching AuthModal.vue: "Account information" (Step 1) or "Personal information" (Step 2)
-              Center(
-                child: Text(
-                  _currentStep == 1 ? 'Account information' : 'Personal information',
-                  style: GoogleFonts.figtree(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                    letterSpacing: -0.5,
-                  ),
-                ),
+            // Heading & Subtitle matching Screenshot 3
+            Text(
+              _currentStep == 1
+                  ? 'Account information'
+                  : _currentStep == 2
+                      ? 'Personal information'
+                      : 'Review & agreement',
+              style: GoogleFonts.figtree(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.5,
               ),
-              const SizedBox(height: 6),
-
-              // Subtitle matching AuthModal.vue
-              Center(
-                child: Text(
-                  _currentStep == 1
-                      ? 'Create your Alona account credentials.'
-                      : 'Tell us a little about yourself.',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _currentStep == 1
+                  ? 'Create your Alona account credentials.'
+                  : _currentStep == 2
+                      ? 'Tell us a little about yourself.'
+                      : 'Review your details and agree to our policies.',
+              style: GoogleFonts.figtree(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.85),
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 22),
 
-              // Step Progress Bar matching AuthModal.vue
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Step $_currentStep of $_totalSteps',
+            // Error Alert Banner
+            if (_errorMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
                         style: GoogleFonts.figtree(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF64748B),
+                          color: const Color(0xFFDC2626),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+            ],
+
+            // ==========================================
+            // STEP 1: ACCOUNT INFORMATION
+            // ==========================================
+            if (_currentStep == 1) ...[
+              // Continue with Google Button
+              AlonaGoogleButton(
+                onPressed: _isLoading ? null : _handleGoogleSignUp,
+              ),
+
+              // Divider "or use your email"
+              const AlonaAuthDivider(text: 'or use your email'),
+
+              // First Name & Last Name (Side by side)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: AlonaAuthTextField(
+                      label: 'First name',
+                      controller: _firstNameCtrl,
+                      hintText: 'First name',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AlonaAuthTextField(
+                      label: 'Last name',
+                      controller: _lastNameCtrl,
+                      hintText: 'Last name',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // + Add middle name or suffix toggle
+              GestureDetector(
+                onTap: () {
+                  setState(() => _showMiddleAndSuffix = !_showMiddleAndSuffix);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _showMiddleAndSuffix ? Icons.remove : Icons.add,
+                        size: 16,
+                        color: AlonaAuthColors.tealAccent,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        'Buyer registration',
+                        _showMiddleAndSuffix
+                            ? 'Hide middle name or suffix'
+                            : '+ Add middle name or suffix',
                         style: GoogleFonts.figtree(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF64748B),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AlonaAuthColors.tealAccent,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: _currentStep / _totalSteps,
-                      minHeight: 8,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF087F8C)),
+                ),
+              ),
+
+              if (_showMiddleAndSuffix) ...[
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: AlonaAuthTextField(
+                        label: 'Middle name (optional)',
+                        controller: _middleNameCtrl,
+                        hintText: 'Middle name',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: AlonaAuthTextField(
+                        label: 'Suffix (opt)',
+                        controller: _suffixCtrl,
+                        hintText: 'Jr., Sr.',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // Email Address
+              AlonaAuthTextField(
+                label: 'Email address',
+                controller: _emailCtrl,
+                hintText: 'you@example.com',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+
+              // Password
+              AlonaAuthTextField(
+                label: 'Password',
+                controller: _passwordCtrl,
+                hintText: 'At least 8 characters',
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AlonaAuthColors.hintText,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Confirm Password
+              AlonaAuthTextField(
+                label: 'Confirm password',
+                controller: _passwordConfirmCtrl,
+                hintText: 'Repeat password',
+                obscureText: _obscureConfirmPassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AlonaAuthColors.hintText,
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Next Button (Amber)
+              AlonaPrimaryButton(
+                label: 'Next',
+                onPressed: _validateAndProceedToStep2,
+              ),
+            ],
+
+            // ==========================================
+            // STEP 2: PERSONAL INFORMATION
+            // ==========================================
+            if (_currentStep == 2) ...[
+              // Birthday Field
+              AlonaAuthTextField(
+                label: 'Birthday',
+                controller: _birthdayCtrl,
+                hintText: 'YYYY-MM-DD',
+                readOnly: true,
+                onTap: _pickBirthday,
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_today_outlined, size: 20, color: AlonaAuthColors.darkText),
+                  onPressed: _pickBirthday,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Age (Auto-calculated)
+              AlonaAuthTextField(
+                label: 'Age',
+                controller: _ageCtrl,
+                hintText: 'Automatically calculated',
+                readOnly: true,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Age is automatically calculated from your birthday.',
+                style: GoogleFonts.figtree(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Contact Number
+              AlonaAuthTextField(
+                label: 'Contact number',
+                controller: _phoneCtrl,
+                hintText: '09XXXXXXXXX',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 24),
+
+              // Step 2 Buttons: Back and Next
+              Row(
+                children: [
+                  Expanded(
+                    child: AlonaSecondaryButton(
+                      label: 'Back',
+                      onPressed: () => setState(() => _currentStep = 1),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AlonaPrimaryButton(
+                      label: 'Next',
+                      onPressed: _validateAndProceedToStep3,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // ==========================================
+            // STEP 3: REVIEW & AGREEMENT
+            // ==========================================
+            if (_currentStep == 3) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Account Summary',
+                      style: GoogleFonts.figtree(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AlonaAuthColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSummaryRow('Name', '${_firstNameCtrl.text} ${_lastNameCtrl.text}'),
+                    _buildSummaryRow('Email', _emailCtrl.text),
+                    _buildSummaryRow('Phone', _phoneCtrl.text),
+                    _buildSummaryRow('Birthday', '${_birthdayCtrl.text} (${_ageCtrl.text} y/o)'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Terms & Privacy Checkbox
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Checkbox(
+                      value: _agreeToTerms,
+                      onChanged: (val) => setState(() => _agreeToTerms = val ?? false),
+                      activeColor: AlonaAuthColors.amber,
+                      checkColor: AlonaAuthColors.darkText,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                      side: const BorderSide(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        text: 'I agree to the ',
+                        style: GoogleFonts.figtree(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          height: 1.4,
+                        ),
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: GestureDetector(
+                              onTap: () => _showPoliciesDialog('Terms and Conditions'),
+                              child: Text(
+                                'Terms and Conditions',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AlonaAuthColors.tealAccent,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: GestureDetector(
+                              onTap: () => _showPoliciesDialog('Privacy Policy'),
+                              child: Text(
+                                'Privacy Policy',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AlonaAuthColors.tealAccent,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const TextSpan(
+                            text: ' *',
+                            style: TextStyle(
+                              color: Color(0xFFF87171),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Error banner if any
-              if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
+              // Step 3 Buttons: Back and Submit
+              Row(
+                children: [
+                  Expanded(
+                    child: AlonaSecondaryButton(
+                      label: 'Back',
+                      onPressed: _isLoading ? null : () => setState(() => _currentStep = 2),
+                    ),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.figtree(color: const Color(0xFFDC2626), fontSize: 13),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AlonaPrimaryButton(
+                      label: 'Create Account',
+                      isLoading: _isLoading,
+                      onPressed: _submitRegister,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 28),
+
+            // Already have an account? Sign In Footer matching Screenshot 3
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Already have an account?',
+                    style: GoogleFonts.figtree(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BuyerLoginScreen(authState: widget.authState),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-              ],
-
-              // ==========================================
-              // STEP 1: ACCOUNT INFORMATION
-              // ==========================================
-              if (_currentStep == 1) ...[
-                // First Name and Last Name Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'First name',
-                            style: GoogleFonts.figtree(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF1F2937),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _firstNameCtrl,
-                            style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                            decoration: _fieldDecoration(hintText: 'Enter your first name'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Last name',
-                            style: GoogleFonts.figtree(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF1F2937),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _lastNameCtrl,
-                            style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                            decoration: _fieldDecoration(hintText: 'Enter your last name'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Middle Name & Suffix Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              text: 'Middle name ',
-                              style: GoogleFonts.figtree(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF1F2937),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: '(optional)',
-                                  style: GoogleFonts.figtree(color: const Color(0xFF94A3B8), fontWeight: FontWeight.normal),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _middleNameCtrl,
-                            style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                            decoration: _fieldDecoration(hintText: 'Enter middle name'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              text: 'Suffix ',
-                              style: GoogleFonts.figtree(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF1F2937),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: '(opt)',
-                                  style: GoogleFonts.figtree(color: const Color(0xFF94A3B8), fontWeight: FontWeight.normal),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _suffixCtrl,
-                            style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                            decoration: _fieldDecoration(hintText: 'Jr., Sr.'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Email Address
-                Text(
-                  'Email address',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                  decoration: _fieldDecoration(hintText: 'you@example.com'),
-                ),
-                const SizedBox(height: 16),
-
-                // Password with eye toggle
-                Text(
-                  'Password',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordCtrl,
-                  obscureText: _obscurePassword,
-                  style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                  decoration: _fieldDecoration(
-                    hintText: 'At least 8 characters',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        size: 20,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Confirm Password with eye toggle
-                Text(
-                  'Confirm password',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordConfirmCtrl,
-                  obscureText: _obscureConfirmPassword,
-                  style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                  decoration: _fieldDecoration(
-                    hintText: 'Repeat your password',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        size: 20,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Step 1 Next Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _validateAndProceedToStep2,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF087F8C),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
+                      );
+                    },
                     child: Text(
-                      'Next',
-                      style: GoogleFonts.figtree(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // "or continue with" Divider
-                Row(
-                  children: [
-                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text(
-                        'or continue with',
-                        style: GoogleFonts.figtree(
-                          fontSize: 12,
-                          color: const Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // Continue with Google Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _handleGoogleSignUp,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'G',
-                              style: GoogleFonts.roboto(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF4285F4),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Continue with Google',
-                          style: GoogleFonts.figtree(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1F2937),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-
-              // ==========================================
-              // STEP 2: PERSONAL INFORMATION
-              // ==========================================
-              if (_currentStep == 2) ...[
-                // Birthday
-                Text(
-                  'Birthday',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: _pickBirthday,
-                  child: AbsorbPointer(
-                    child: TextField(
-                      controller: _birthdayCtrl,
-                      style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                      decoration: _fieldDecoration(
-                        hintText: 'YYYY-MM-DD',
-                        suffixIcon: const Icon(Icons.calendar_today_outlined, size: 20, color: Color(0xFF087F8C)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Age (Readonly, auto-calculated)
-                Text(
-                  'Age',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _ageCtrl,
-                  readOnly: true,
-                  style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF64748B)),
-                  decoration: InputDecoration(
-                    hintText: 'Automatically calculated',
-                    hintStyle: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF94A3B8)),
-                    filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Age is automatically calculated from your birthday.',
-                  style: GoogleFonts.figtree(fontSize: 12, color: const Color(0xFF94A3B8)),
-                ),
-                const SizedBox(height: 16),
-
-                // Contact Number
-                Text(
-                  'Contact number',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  style: GoogleFonts.figtree(fontSize: 14, color: const Color(0xFF1F2937)),
-                  decoration: _fieldDecoration(hintText: '09XXXXXXXXX'),
-                ),
-                const SizedBox(height: 20),
-
-                // Terms & Privacy Policy Checkbox matching AuthModal.vue
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: Checkbox(
-                        value: _agreeToTerms,
-                        onChanged: (val) => setState(() => _agreeToTerms = val ?? false),
-                        activeColor: const Color(0xFF087F8C),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'I agree to the ',
-                          style: GoogleFonts.figtree(fontSize: 13, color: const Color(0xFF475569), height: 1.4),
-                          children: [
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.baseline,
-                              baseline: TextBaseline.alphabetic,
-                              child: GestureDetector(
-                                onTap: () => _showPoliciesDialog('Terms and Conditions'),
-                                child: Text(
-                                  'Terms and Conditions',
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF087F8C),
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' and ',
-                              style: GoogleFonts.figtree(fontSize: 13, color: const Color(0xFF475569)),
-                            ),
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.baseline,
-                              baseline: TextBaseline.alphabetic,
-                              child: GestureDetector(
-                                onTap: () => _showPoliciesDialog('Privacy Policy'),
-                                child: Text(
-                                  'Privacy Policy',
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF087F8C),
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const TextSpan(
-                              text: ' *',
-                              style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Step 2 Action Buttons (Back & Submit)
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton(
-                          onPressed: _isLoading ? null : () => setState(() => _currentStep = 1),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            side: const BorderSide(color: Color(0xFFE5E7EB)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: Text(
-                            'Back',
-                            style: GoogleFonts.figtree(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1F2937),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _submitRegister,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF087F8C),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: _isLoading
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Submitting...',
-                                      style: GoogleFonts.figtree(fontSize: 13, fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
-                                )
-                              : Text(
-                                  'Create Account',
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-
-              const SizedBox(height: 28),
-
-              // Switch to Login Footer
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 20),
-                decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Already have an Alona account?',
+                      'Log in',
                       style: GoogleFonts.figtree(
                         fontSize: 14,
-                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w800,
+                        color: AlonaAuthColors.amber,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BuyerLoginScreen(authState: widget.authState),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Log in',
-                        style: GoogleFonts.figtree(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF087F8C),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: GoogleFonts.figtree(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AlonaAuthColors.mutedText,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '—' : value,
+              style: GoogleFonts.figtree(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: AlonaAuthColors.darkText,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

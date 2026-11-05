@@ -8,6 +8,7 @@ import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_otp_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_register_screen.dart';
+import 'package:alona_mobile/shared/widgets/alona_auth_scaffold.dart';
 
 class BuyerLoginScreen extends StatefulWidget {
   final AuthState authState;
@@ -453,460 +454,230 @@ class _BuyerLoginScreenState extends State<BuyerLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1F2937)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header logo container matching AuthModal.vue: h-14 w-14 rounded-2xl bg-[#E8F7F6] p-2
-              Center(
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F7F6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Image.asset(
-                    'assets/images/Alogo.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+    return AlonaAuthScaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
 
-              // Title matching AuthModal.vue: "Welcome back"
-              Center(
-                child: Text(
-                  'Welcome back',
-                  style: GoogleFonts.figtree(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                    letterSpacing: -0.5,
-                  ),
-                ),
+            // Title: "Welcome back"
+            Text(
+              'Welcome back',
+              style: GoogleFonts.figtree(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.4,
               ),
-              const SizedBox(height: 6),
+            ),
+            const SizedBox(height: 6),
 
-              // Subtitle matching AuthModal.vue: "Sign in to continue shopping with Alona."
-              Center(
-                child: Text(
-                  'Sign in to continue shopping with Alona.',
-                  style: GoogleFonts.figtree(
-                    fontSize: 14,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
+            // Subtitle: "Sign in to continue shopping with Alona."
+            Text(
+              'Sign in to continue shopping with Alona.',
+              style: GoogleFonts.figtree(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.82),
               ),
-              const SizedBox(height: 28),
+            ),
+            const SizedBox(height: 24),
 
-              // Error alert banner
-              if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Color(0xFFDC2626),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.figtree(
-                            color: const Color(0xFFDC2626),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-              ],
+            // Continue with Google Button
+            AlonaGoogleButton(
+              onPressed: _isLoading ? null : _handleGoogleSignIn,
+            ),
 
-              // Email Address Field
-              Text(
-                'Email address',
-                style: GoogleFonts.figtree(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.figtree(
-                  fontSize: 14,
-                  color: const Color(0xFF1F2937),
-                ),
-                decoration: InputDecoration(
-                  hintText: 'you@example.com',
-                  hintStyle: GoogleFonts.figtree(
-                    fontSize: 14,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAF9),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF087F8C),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
+            // Divider: "or sign in with email"
+            const AlonaAuthDivider(text: 'or sign in with email'),
 
-              // Password Label + Forgot Password link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Password',
-                    style: GoogleFonts.figtree(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF1F2937),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _showForgotPasswordDialog,
-                    child: Text(
-                      'Forgot password?',
-                      style: GoogleFonts.figtree(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF087F8C),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Password Input with eye toggle
-              TextField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                style: GoogleFonts.figtree(
-                  fontSize: 14,
-                  color: const Color(0xFF1F2937),
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Enter your password',
-                  hintStyle: GoogleFonts.figtree(
-                    fontSize: 14,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAF9),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF087F8C),
-                      width: 1.5,
-                    ),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 20,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Remember me Checkbox
-              Row(
-                children: [
-                  SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: Checkbox(
-                      value: _rememberMe,
-                      onChanged: (val) =>
-                          setState(() => _rememberMe = val ?? false),
-                      activeColor: const Color(0xFF087F8C),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      side: const BorderSide(color: Color(0xFFD1D5DB)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => setState(() => _rememberMe = !_rememberMe),
-                    child: Text(
-                      'Remember me',
-                      style: GoogleFonts.figtree(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Log in Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF087F8C),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Signing in...',
-                              style: GoogleFonts.figtree(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          'Log in',
-                          style: GoogleFonts.figtree(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // "or continue with" Divider
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(
-                      'or continue with',
-                      style: GoogleFonts.figtree(
-                        fontSize: 12,
-                        color: const Color(0xFF94A3B8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // Continue with Google Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: _isLoading ? null : _handleGoogleSignIn,
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE5E7EB)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'G',
-                            style: GoogleFonts.roboto(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF4285F4),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Continue with Google',
-                        style: GoogleFonts.figtree(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Switch to Register Footer matching AuthModal.vue
+            // Error alert banner
+            if (_errorMessage != null) ...[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 20),
-                decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
                 ),
-                child: Column(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Don't have an Alona account?",
-                      style: GoogleFonts.figtree(
-                        fontSize: 14,
-                        color: const Color(0xFF64748B),
-                      ),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Color(0xFFDC2626),
+                      size: 20,
                     ),
-                    const SizedBox(height: 4),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BuyerRegisterScreen(
-                              authState: widget.authState,
-                            ),
-                          ),
-                        );
-                      },
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Text(
-                        'Create an account',
+                        _errorMessage!,
                         style: GoogleFonts.figtree(
-                          fontSize: 14,
+                          color: const Color(0xFFDC2626),
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF087F8C),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
+            ],
 
-              // Logistics Portal Login Switch
-              Center(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    widget.authState.switchModule('logistics');
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            LogisticsLoginScreen(authState: widget.authState),
-                      ),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.local_shipping_outlined,
-                    size: 18,
-                    color: Color(0xFF087F8C),
+            // Email Address Field
+            AlonaAuthTextField(
+              label: 'Email address',
+              controller: _emailController,
+              hintText: 'you@example.com',
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 18),
+
+            // Password Field
+            AlonaAuthTextField(
+              label: 'Password',
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              obscureText: _obscurePassword,
+              rightLabelWidget: GestureDetector(
+                onTap: _showForgotPasswordDialog,
+                child: Text(
+                  'Forgot password?',
+                  style: GoogleFonts.figtree(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AlonaAuthColors.tealAccent,
                   ),
-                  label: Text(
-                    'Logistics Staff Portal Login',
-                    style: GoogleFonts.figtree(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF087F8C),
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
+                  color: const Color(0xFF64748B),
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Remember me Checkbox
+            Row(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                    activeColor: AlonaAuthColors.amber,
+                    checkColor: AlonaAuthColors.darkText,
+                    side: const BorderSide(color: Colors.white, width: 1.5),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () => setState(() => _rememberMe = !_rememberMe),
+                  child: Text(
+                    'Remember me',
+                    style: GoogleFonts.figtree(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Sign In Button
+            AlonaPrimaryButton(
+              label: 'Sign In',
+              onPressed: _isLoading ? null : _login,
+              isLoading: _isLoading,
+            ),
+            const SizedBox(height: 24),
+
+            // Footer: "New to Alona? Create an account"
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BuyerRegisterScreen(
+                        authState: widget.authState,
+                      ),
+                    ),
+                  );
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.figtree(fontSize: 14),
+                      children: [
+                        TextSpan(
+                          text: 'New to Alona? ',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const TextSpan(
+                          text: 'Create an account',
+                          style: TextStyle(
+                            color: AlonaAuthColors.amber,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+
+            // Logistics switch option
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  widget.authState.switchModule('logistics');
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LogisticsLoginScreen(authState: widget.authState),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.local_shipping_outlined,
+                  size: 18,
+                  color: AlonaAuthColors.tealAccent,
+                ),
+                label: Text(
+                  'Logistics Staff Portal Login',
+                  style: GoogleFonts.figtree(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AlonaAuthColors.tealAccent,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );

@@ -1,9 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../services/registration_api.dart';
 import '../services/api_error.dart';
 import '../theme/rider_theme.dart';
+import '../../../shared/widgets/alona_auth_scaffold.dart';
 
 class RegistrationPage extends StatefulWidget {
   final RegistrationApi? api;
@@ -505,56 +507,46 @@ class _RegistrationPageState extends State<RegistrationPage> {
           (row) => province == null || (row['province_code'] ?? '') == province,
         )
         .toList();
-    return Scaffold(
-      backgroundColor: RiderColors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Image.asset(
-                            'assets/images/alona/alonalogo2.png',
-                            height: 44,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        Flexible(
-                          child: TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text(
-                              'Back to sign in',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ],
+    return AlonaAuthScaffold(
+      onBack: () => Navigator.of(context).pop(),
+      trailing: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white, size: 22),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AlonaStepProgressIndicator(
+                    currentStep: 1,
+                    totalSteps: 1,
+                    roleBadge: 'Rider registration',
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Create your rider profile',
+                    style: GoogleFonts.figtree(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
                     ),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'Create your rider profile',
-                      style: TextStyle(
-                        fontSize: 30,
-                        height: 1.2,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Submit your details for sorting center approval.',
+                    style: GoogleFonts.figtree(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Submit your details for sorting center approval.',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                    const SizedBox(height: 28),
+                  ),
+                  const SizedBox(height: 24),
                     section(
                       'Sorting center',
                       icon: Icons.store_mall_directory_outlined,
@@ -920,33 +912,56 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         ),
                       ),
                     ]),
-                    CheckboxListTile(
-                      value: acceptedTerms,
-                      onChanged: submitting
-                          ? null
-                          : (value) =>
-                                setState(() => acceptedTerms = value ?? false),
-                      activeColor: RiderColors.teal,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text(
-                        'I agree to the rider registration terms and verification process.',
-                        style: TextStyle(fontSize: 14),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ),
-                    CheckboxListTile(
-                      value: acceptedPrivacy,
-                      onChanged: submitting
-                          ? null
-                          : (value) => setState(
-                              () => acceptedPrivacy = value ?? false,
+                      child: Column(
+                        children: [
+                          CheckboxListTile(
+                            value: acceptedTerms,
+                            onChanged: submitting
+                                ? null
+                                : (value) =>
+                                      setState(() => acceptedTerms = value ?? false),
+                            activeColor: AlonaAuthColors.amber,
+                            checkColor: AlonaAuthColors.darkText,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text(
+                              'I agree to the rider registration terms and verification process.',
+                              style: GoogleFonts.figtree(
+                                fontSize: 13.5,
+                                color: AlonaAuthColors.darkText,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                      activeColor: RiderColors.teal,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text(
-                        'I consent to the privacy policy and identity verification.',
-                        style: TextStyle(fontSize: 14),
+                          ),
+                          const Divider(height: 1),
+                          CheckboxListTile(
+                            value: acceptedPrivacy,
+                            onChanged: submitting
+                                ? null
+                                : (value) => setState(
+                                    () => acceptedPrivacy = value ?? false,
+                                  ),
+                            activeColor: AlonaAuthColors.amber,
+                            checkColor: AlonaAuthColors.darkText,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text(
+                              'I consent to the privacy policy and identity verification.',
+                              style: GoogleFonts.figtree(
+                                fontSize: 13.5,
+                                color: AlonaAuthColors.darkText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (error != null) ...[
@@ -957,36 +972,48 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       const SizedBox(height: 16),
                       message(success!, true),
                     ],
-                    const SizedBox(height: 22),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: submitting ? null : submit,
-                        icon: submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.arrow_forward),
-                        label: Text(
-                          submitting ? 'Submitting...' : 'Submit registration',
-                        ),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 17),
-                        ),
+                    const SizedBox(height: 24),
+                    AlonaPrimaryButton(
+                      label: submitting ? 'Submitting registration...' : 'Submit rider registration',
+                      isLoading: submitting,
+                      onPressed: submit,
+                    ),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Already registered as a courier?',
+                            style: GoogleFonts.figtree(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Text(
+                              'Sign In',
+                              style: GoogleFonts.figtree(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AlonaAuthColors.amber,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
           ),
         ),
-      ),
     );
   }
 

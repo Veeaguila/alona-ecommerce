@@ -18,6 +18,10 @@ defineProps({
         type: String,
         default: null,
     },
+    bundleDeals: {
+        type: Array,
+        default: () => [],
+    },
     featuredProducts: {
         type: Array,
         default: () => [],
@@ -68,6 +72,7 @@ defineProps({
         :products="products"
         :flash-sales="flashSales"
         :flash-sale-end-time="flashSaleEndTime"
+        :bundle-deals="bundleDeals"
         :featured-products="featuredProducts"
         :recommended-products="recommendedProducts"
         :top-selling-products="topSellingProducts"

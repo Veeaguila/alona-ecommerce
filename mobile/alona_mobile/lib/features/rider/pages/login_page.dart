@@ -1,14 +1,14 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_error.dart';
 import '../services/api_config.dart';
 import '../services/rider_session.dart';
-import '../theme/rider_theme.dart';
 import 'rider_shell_page.dart';
 import 'registration_page.dart';
 import 'rider_portal_page.dart';
+import '../../../shared/widgets/alona_auth_scaffold.dart';
 
 class LoginPage extends StatefulWidget {
   final String? initialMessage;
@@ -99,397 +99,261 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RiderColors.background,
+    return AlonaAuthScaffold(
+      showBackButton: Navigator.canPop(context),
+      onBack: () => Navigator.pop(context),
+      trailing: Navigator.canPop(context)
+          ? IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 22),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Teal Top Header (Design Mockup 1)
-            Container(
-              width: double.infinity,
-              color: RiderColors.teal,
-              padding: const EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 60,
-                bottom: 48,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Role badge pill
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: RiderColors.amber,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(
-                            Icons.local_shipping_rounded,
-                            color: Color(0xFF111827),
-                            size: 30,
+                        const Icon(Icons.two_wheeler_rounded, color: AlonaAuthColors.tealAccent, size: 15),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Courier & Rider Portal',
+                          style: GoogleFonts.figtree(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
-                        if (Navigator.canPop(context))
-                          TextButton.icon(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-                            label: const Text(
-                              'Back to Buyer',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Title & Subtitle matching Screenshot 2
+              Text(
+                'Welcome back',
+                style: GoogleFonts.figtree(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "See today's pickups and deliveries, and track your earnings.",
+                style: GoogleFonts.figtree(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Status / Error message
+              if (message != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: success ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: success ? const Color(0xFFA7F3D0) : const Color(0xFFFCA5A5),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            success ? Icons.check_circle_outline : Icons.error_outline,
+                            color: success ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              message!,
+                              style: GoogleFonts.figtree(
+                                color: success ? const Color(0xFF059669) : const Color(0xFFDC2626),
                                 fontSize: 13,
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
+                        ],
+                      ),
+                      if (!success && message!.contains('awaiting approval')) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RiderAccountPage(session: riderSession),
+                            ),
+                          ),
+                          child: Text(
+                            'View account status →',
+                            style: GoogleFonts.figtree(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AlonaAuthColors.tealAccent,
+                            ),
+                          ),
+                        ),
                       ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+
+              // Email Address Field
+              AlonaAuthTextField(
+                label: 'Email address',
+                controller: email,
+                hintText: 'you@example.com',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+
+              // Password Field
+              AlonaAuthTextField(
+                label: 'Password',
+                controller: password,
+                hintText: 'Enter your password',
+                obscureText: !showPassword,
+                rightLabelWidget: GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Contact your Sorting Center supervisor to reset password.'),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Forgot password?',
+                    style: GoogleFonts.figtree(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AlonaAuthColors.tealAccent,
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Courier sign in',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
+                  ),
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    showPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AlonaAuthColors.hintText,
+                  ),
+                  onPressed: () => setState(() => showPassword = !showPassword),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Remember me checkbox
+              Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Checkbox(
+                      value: rememberMe,
+                      onChanged: (val) => setState(() => rememberMe = val ?? true),
+                      activeColor: AlonaAuthColors.amber,
+                      checkColor: AlonaAuthColors.darkText,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      side: const BorderSide(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Keep me signed in',
+                    style: GoogleFonts.figtree(
+                      fontSize: 13.5,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Golden Primary Button: Sign In
+              AlonaPrimaryButton(
+                label: 'Sign In',
+                isLoading: submitting,
+                onPressed: submit,
+              ),
+              const SizedBox(height: 28),
+
+              // Secondary: Register as a courier
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'New courier?',
+                      style: GoogleFonts.figtree(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "See today's pickups and deliveries, and track your earnings.",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        height: 1.35,
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RegistrationPage(),
+                        ),
+                      ),
+                      child: Text(
+                        'Register as a courier',
+                        style: GoogleFonts.figtree(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AlonaAuthColors.amber,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
 
-            // Card & Form
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: RiderColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: formKey,
-                          child: AutofillGroup(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Subtle test-compatible heading
-                                const SizedBox(
-                                  height: 0,
-                                  width: 0,
-                                  child: Opacity(
-                                    opacity: 0,
-                                    child: Text('Welcome back'),
-                                  ),
-                                ),
-                                const Text(
-                                  'E-mail',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: RiderColors.text,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: email,
-                                  keyboardType: TextInputType.emailAddress,
-                                  autofillHints: const [AutofillHints.username],
-                                  textInputAction: TextInputAction.next,
-                                  autocorrect: false,
-                                  enabled: !submitting,
-                                  validator: (value) =>
-                                      value == null || !value.contains('@')
-                                      ? 'Enter a valid email'
-                                      : null,
-                                  decoration: const InputDecoration(
-                                    hintText: 'name@email.com',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                const Text(
-                                  'Password',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: RiderColors.text,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: password,
-                                  obscureText: !showPassword,
-                                  autofillHints: const [AutofillHints.password],
-                                  textInputAction: TextInputAction.done,
-                                  autocorrect: false,
-                                  enableSuggestions: false,
-                                  enabled: !submitting,
-                                  onFieldSubmitted: (_) => submit(),
-                                  validator: (value) =>
-                                      value == null || value.isEmpty
-                                      ? 'Enter your password'
-                                      : null,
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter your password',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                    ),
-                                    suffixIcon: Tooltip(
-                                      message: showPassword
-                                          ? 'Hide password'
-                                          : 'Show password',
-                                      preferBelow: false,
-                                      verticalOffset: -30,
-                                      child: IconButton(
-                                        onPressed: () => setState(
-                                          () => showPassword = !showPassword,
-                                        ),
-                                        icon: Icon(
-                                          showPassword
-                                              ? Icons.visibility_off_outlined
-                                              : Icons.visibility_outlined,
-                                          color: RiderColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final checkboxWidget = Row(
-                                      children: [
-                                        SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: Checkbox(
-                                            value: rememberMe,
-                                            activeColor: RiderColors.teal,
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize
-                                                    .shrinkWrap,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            onChanged: (val) {
-                                              setState(
-                                                () => rememberMe = val ?? true,
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Flexible(
-                                          child: Text(
-                                            'Keep me signed in',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: RiderColors.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-
-                                    final forgotBtn = TextButton(
-                                      style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: Size.zero,
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Contact your Sorting Center to reset password.',
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text(
-                                        'Forgot password?',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: RiderColors.teal,
-                                        ),
-                                      ),
-                                    );
-
-                                    if (constraints.maxWidth < 280) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          checkboxWidget,
-                                          const SizedBox(height: 4),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: forgotBtn,
-                                          ),
-                                        ],
-                                      );
-                                    }
-
-                                    return Row(
-                                      children: [
-                                        Expanded(child: checkboxWidget),
-                                        forgotBtn,
-                                      ],
-                                    );
-                                  },
-                                ),
-                                if (message != null) ...[
-                                  const SizedBox(height: 16),
-                                  _statusMessage(message!, success),
-                                  TextButton(
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => RiderAccountPage(
-                                          session: riderSession,
-                                        ),
-                                      ),
-                                    ),
-                                    child: const Text('View account status'),
-                                  ),
-                                ],
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 52,
-                                  child: FilledButton(
-                                    onPressed: submitting ? null : submit,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        if (submitting) ...[
-                                          const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                        ],
-                                        Text(
-                                          submitting ? 'Signing in...' : 'Log in',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      const Text(
-                        'New courier?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: RiderColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const RegistrationPage(),
-                            ),
-                          ),
-                          child: const Text('Register as a courier'),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'New accounts are approved by the Logistics / Sorting Center before you can log in.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF9CA3AF),
-                            height: 1.35,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
+              // Sub-note
+              Center(
+                child: Text(
+                  'New courier accounts are verified and approved by the Logistics Hub before first dispatch.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.figtree(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.65),
+                    height: 1.4,
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statusMessage(String text, bool isSuccess) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isSuccess ? const Color(0xffdff4e9) : const Color(0xffffe6e2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: isSuccess ? const Color(0xff176b43) : const Color(0xff9b3125),
-          fontWeight: FontWeight.w500,
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

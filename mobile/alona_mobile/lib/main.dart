@@ -4,6 +4,8 @@ import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/presentation/splash/buyer_splash_welcome_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +41,14 @@ class AlonaApp extends StatelessWidget {
   }
 
   Widget _buildHome() {
-    // Always launch with the Alona Splash & Welcome flow in alona_mobile
+    if (authState.isLogisticsModule) {
+      if (!authState.isLogisticsAuthenticated) {
+        return LogisticsLoginScreen(authState: authState);
+      }
+      return LogisticsMainScreen(authState: authState);
+    }
+
+    // Default: Buyer Module Splash & Welcome flow
     return BuyerSplashWelcomeScreen(authState: authState);
   }
 }

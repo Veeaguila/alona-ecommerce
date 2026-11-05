@@ -7,6 +7,7 @@ use App\Models\FlashSale;
 use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\RecentlyViewedProduct;
+use App\Models\SellerPromotion;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -536,6 +537,51 @@ if ($topSellingIds->isNotEmpty()) {
             }
         }
 
+        $bundleDeals = collect();
+        if (Schema::hasTable('seller_promotions')) {
+            $now = now();
+            $bundleDeals = SellerPromotion::query()
+                ->where('type', 'bundle')
+                ->where('is_active', true)
+                ->whereNull('ended_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+                })
+                ->with(['seller:id,name,store_name'])
+                ->get()
+                ->map(function ($bundle) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 4))
+                        ->where('status', 'approved')
+                        ->get(['id', 'name', 'price', 'image_path']);
+
+                    return [
+                        'id' => $bundle->id,
+                        'name' => $bundle->name,
+                        'seller_id' => $bundle->seller_id,
+                        'store_name' => $bundle->seller?->store_name ?: ($bundle->seller?->name ?: 'Featured Store'),
+                        'min_quantity' => $bundle->min_quantity ?? 2,
+                        'discount_value' => (float) $bundle->discount_value,
+                        'discount_type' => $bundle->discount_type,
+                        'products' => $sampleProducts->map(fn ($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => (float) $p->price,
+                            'image' => $p->image_path
+                                ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                                : null,
+                        ]),
+                    ];
+                })
+                ->values();
+        }
+
         return Inertia::render($guest ? 'Guest/Home' : 'Buyer/Dashboard', [
             'categories' => $categories,
 
@@ -544,6 +590,8 @@ if ($topSellingIds->isNotEmpty()) {
             'flashSales' => $flashSales,
 
             'flashSaleEndTime' => $flashSaleEndTime,
+
+            'bundleDeals' => $bundleDeals,
 
             'featuredProducts' => $featuredProducts,
 

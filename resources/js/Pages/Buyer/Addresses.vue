@@ -563,9 +563,9 @@ const remove = address => {
                             </div>
                         </div>
 
-                        <!-- STREET ADDRESS (BUY-ADDR-001) -->
-                        <div class="mt-3">
-                            <label class="block">
+                        <!-- STREET ADDRESS & POSTAL CODE (BUY-ADDR-001) -->
+                        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                            <label class="block sm:col-span-2">
                                 <span class="label">Street, Unit / House No. *</span>
                                 <input
                                     v-model="form.street_address"
@@ -576,6 +576,19 @@ const remove = address => {
                                 />
                                 <p v-if="form.errors.street_address" class="mt-1 text-[11px] font-semibold text-rose-600">
                                     {{ form.errors.street_address }}
+                                </p>
+                            </label>
+
+                            <label class="block">
+                                <span class="label">Postal Code</span>
+                                <input
+                                    v-model="form.postal_code"
+                                    maxlength="10"
+                                    class="field"
+                                    placeholder="e.g. 4030"
+                                />
+                                <p v-if="form.errors.postal_code" class="mt-1 text-[11px] font-semibold text-rose-600">
+                                    {{ form.errors.postal_code }}
                                 </p>
                             </label>
                         </div>

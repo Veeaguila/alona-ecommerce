@@ -200,6 +200,28 @@ watch(
     },
 )
 
+watch(
+    user,
+    newUser => {
+        if (!newUser) return
+        if (!form.isDirty) {
+            form.last_name = newUser.last_name || ''
+            form.first_name = newUser.first_name || ''
+            form.middle_initial = newUser.middle_initial || ''
+            form.sex = newUser.sex || ''
+            form.email = newUser.email || ''
+            form.contact_no = newUser.contact_no || ''
+            form.birthday = newUser.birthday ? String(newUser.birthday).substring(0, 10) : ''
+            form.age = newUser.age || ''
+            form.province = newUser.province || ''
+            form.municipality = newUser.municipality || ''
+            form.barangay = newUser.barangay || ''
+            form.street_address = newUser.street_address || ''
+        }
+    },
+    { deep: true },
+)
+
 /*
 |--------------------------------------------------------------------------
 | PSGC location data
@@ -490,6 +512,10 @@ const submit = () => {
                         'Account update validation errors:',
                         errors,
                     )
+                    const firstErrorEl = document.querySelector('.input-error, .text-rose-500, [role="alert"]')
+                    if (firstErrorEl) {
+                        firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
                 },
             },
         )
@@ -883,12 +909,11 @@ onBeforeUnmount(() => {
                     <!-- Sex -->
                     <label>
                         <span class="label">
-                            Sex *
+                            Sex
                         </span>
 
                         <select
                             v-model="form.sex"
-                            required
                             class="field"
                         >
                             <option value="">
@@ -916,13 +941,12 @@ onBeforeUnmount(() => {
                     <!-- Birthday -->
                     <label>
                         <span class="label">
-                            Birthday *
+                            Birthday
                         </span>
 
                         <input
                             v-model="form.birthday"
                             type="date"
-                            required
                             class="field"
                         />
 
@@ -1028,13 +1052,12 @@ onBeforeUnmount(() => {
                     <div>
                         <label>
                             <span class="label">
-                                Contact No. *
+                                Contact No.
                             </span>
 
                             <input
                                 v-model="form.contact_no"
                                 type="tel"
-                                required
                                 placeholder="09171234567"
                                 class="field"
                             />
@@ -1187,6 +1210,19 @@ onBeforeUnmount(() => {
 
                         Account and address saved successfully.
                     </span>
+                </div>
+
+                <div
+                    v-if="form.hasErrors"
+                    class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700"
+                    role="alert"
+                >
+                    <p class="font-bold">Please check the following before saving:</p>
+                    <ul class="mt-1 list-disc list-inside space-y-0.5 text-[11px]">
+                        <li v-for="(msg, field) in form.errors" :key="field">
+                            {{ msg }}
+                        </li>
+                    </ul>
                 </div>
             </div>
 

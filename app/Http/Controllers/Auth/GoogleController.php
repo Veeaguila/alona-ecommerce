@@ -57,11 +57,16 @@ class GoogleController extends Controller
         if ($user) {
             $request->session()->forget('onboarding.google');
             $user = DB::transaction(function () use ($user, $google): User {
-                // Serialize against Rider photo uploads and preserve their explicitly chosen picture.
+                // Preserve explicitly uploaded avatar pictures for all users (buyer and rider).
                 $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
                 $changes = ['google_id' => $google->getId()];
-                if ($locked->usertype !== 'rider' || !is_string($locked->avatar) || !str_starts_with($locked->avatar, 'rider-avatars/'.$locked->id.'/')) {
-                    $changes['avatar'] = $google->getAvatar();
+                $hasCustomUpload = is_string($locked->avatar) && (
+                    str_starts_with($locked->avatar, 'avatars/') ||
+                    str_starts_with($locked->avatar, 'rider-avatars/') ||
+                    str_starts_with($locked->avatar, 'public/avatars/')
+                );
+                if (! $hasCustomUpload && (! $locked->avatar || $google->getAvatar())) {
+                    $changes['avatar'] = $google->getAvatar() ?: $locked->avatar;
                 }
                 if ($locked->usertype === 'buyer' && $locked->status === 'unverified') {
                     $changes['status'] = 'approved';

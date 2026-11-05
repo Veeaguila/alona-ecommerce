@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\Voucher;
 use App\Models\UserVoucher;
+use App\Models\FlashSale;
+use App\Models\SellerPromotion;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +32,7 @@ class BuyerStoreController extends Controller
         $productsQuery = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
-            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->when(
                 $search !== '',
@@ -96,7 +99,7 @@ class BuyerStoreController extends Controller
         $recommendedProducts = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
-            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->where('is_featured', true)
             ->limit(6)
@@ -106,7 +109,7 @@ class BuyerStoreController extends Controller
             $recommendedProducts = Product::query()
                 ->where('seller_id', $seller->id)
                 ->where('status', 'approved')
-                ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images'])
+                ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
                 ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
                 ->orderByDesc('rating')
                 ->orderByDesc('reviews_count')
@@ -316,6 +319,104 @@ class BuyerStoreController extends Controller
                 'seller_reply' => $r->seller_reply,
             ]);
 
+        // Flash sales for this store
+        $flashSales = collect();
+        $flashSaleEndTime = null;
+        if (Schema::hasTable('flash_sales')) {
+            $now = now();
+            $activeFlashSales = FlashSale::query()
+                ->whereHas('product', fn ($q) => $q->where('seller_id', $seller->id)->where('status', 'approved'))
+                ->whereNull('ended_at')
+                ->where('starts_at', '<=', $now)
+                ->where('ends_at', '>', $now)
+                ->whereRaw('flash_quantity > COALESCE(sold_quantity, 0)')
+                ->with(['product:id,name,slug,price,image_path,seller_id'])
+                ->orderBy('ends_at')
+                ->get();
+
+            if ($activeFlashSales->isNotEmpty()) {
+                $minEnd = $activeFlashSales->min('ends_at');
+                $flashSaleEndTime = $minEnd ? $minEnd->toIso8601String() : null;
+
+                $flashSales = $activeFlashSales->map(function ($fs) {
+                    $p = $fs->product;
+                    $origPrice = (float) $p->price;
+                    $flashPrice = (float) $fs->flash_price;
+                    $discountPct = $origPrice > $flashPrice && $origPrice > 0
+                        ? round((($origPrice - $flashPrice) / $origPrice) * 100)
+                        : 0;
+                    $totalQty = (int) $fs->flash_quantity;
+                    $soldQty = (int) ($fs->sold_quantity ?? 0);
+                    $percentSold = $totalQty > 0 ? min(100, round(($soldQty / $totalQty) * 100)) : 0;
+
+                    return [
+                        'id' => $fs->id,
+                        'product_id' => $p->id,
+                        'name' => $p->name,
+                        'slug' => $p->slug,
+                        'image' => $p->image_path
+                            ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                            : null,
+                        'original_price' => $origPrice,
+                        'flash_price' => $flashPrice,
+                        'discount_percentage' => $discountPct,
+                        'flash_quantity' => $totalQty,
+                        'sold_quantity' => $soldQty,
+                        'percent_sold' => $percentSold,
+                        'remaining' => max(0, $totalQty - $soldQty),
+                        'ends_at' => $fs->ends_at?->toIso8601String(),
+                    ];
+                })->values();
+            }
+        }
+
+        // Bundle deals for this store
+        $bundleDeals = collect();
+        if (Schema::hasTable('seller_promotions')) {
+            $now = now();
+            $bundleDeals = SellerPromotion::query()
+                ->where('seller_id', $seller->id)
+                ->where('type', 'bundle')
+                ->where('is_active', true)
+                ->whereNull('ended_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+                })
+                ->get()
+                ->map(function ($bundle) use ($seller) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 6))
+                        ->where('status', 'approved')
+                        ->get(['id', 'name', 'price', 'image_path']);
+
+                    return [
+                        'id' => $bundle->id,
+                        'name' => $bundle->name,
+                        'seller_id' => $bundle->seller_id,
+                        'store_name' => $seller->store_name ?: $seller->name,
+                        'min_quantity' => $bundle->min_quantity ?? 2,
+                        'discount_value' => (float) $bundle->discount_value,
+                        'discount_type' => $bundle->discount_type,
+                        'product_ids' => $productIds,
+                        'products' => $sampleProducts->map(fn ($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => (float) $p->price,
+                            'image' => $p->image_path
+                                ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                                : null,
+                        ]),
+                    ];
+                })
+                ->values();
+        }
+
         $responseData = [
             'seller' => [
                 'id' => $seller->id,
@@ -351,6 +452,9 @@ class BuyerStoreController extends Controller
             'categories' => $categories,
             'vouchers' => $vouchers,
             'claimed_voucher_ids' => $claimedVoucherIds,
+            'flash_sales' => $flashSales,
+            'flash_sale_end_time' => $flashSaleEndTime,
+            'bundle_deals' => $bundleDeals,
             'is_following' => $isFollowing,
             'reviews' => $sellerReviews,
             'stats' => [

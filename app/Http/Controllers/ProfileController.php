@@ -100,6 +100,13 @@ class ProfileController extends Controller
             $data['age'] = Carbon::parse(
                 $data['birthday']
             )->age;
+        } else {
+            $data['birthday'] = null;
+            $data['age'] = null;
+        }
+
+        if (array_key_exists('sex', $data) && empty($data['sex'])) {
+            $data['sex'] = null;
         }
 
         /*

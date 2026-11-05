@@ -22,7 +22,7 @@ class ProfileUpdateRequest extends FormRequest
             'last_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
             'first_name' => ['required', 'string', 'min:2', 'max:50', "regex:/^[\pL\s\-'.]+$/u"],
             'middle_initial' => ['nullable', 'string', 'max:2', "regex:/^[\pL]?\.?$/u"],
-            'sex' => ['required', 'in:Male,Female,Other'],
+            'sex' => ['nullable', 'in:Male,Female,Other'],
             'email' => [
                 'required',
                 'string',
@@ -32,11 +32,11 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'contact_no' => [
-                'required',
+                'nullable',
                 'string',
                 'regex:/^(09|\+639)\d{9}$/',
             ],
-            'birthday' => ['required', 'date', 'before:today'],
+            'birthday' => ['nullable', 'date', 'before:today'],
             'province' => ['nullable', 'string', 'max:255'],
             'municipality' => ['nullable', 'string', 'max:255'],
             'barangay' => ['nullable', 'string', 'max:255'],

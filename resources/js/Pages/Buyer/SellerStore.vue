@@ -50,6 +50,18 @@ const props = defineProps({
             category: null,
         }),
     },
+    flash_sales: {
+        type: Array,
+        default: () => [],
+    },
+    flash_sale_end_time: {
+        type: String,
+        default: null,
+    },
+    bundle_deals: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const page = usePage()
@@ -59,6 +71,71 @@ const layoutComponent = computed(() => isGuest.value ? GuestLayout : BuyerLayout
 
 // Active category filter: 'all' or category slug
 const activeCategory = ref(props.filters.category || 'all')
+
+// Bundle & Flash Sales helpers
+const bundleProductIds = computed(() => {
+    const ids = new Set()
+    if (Array.isArray(props.bundle_deals)) {
+        props.bundle_deals.forEach(b => {
+            if (Array.isArray(b.product_ids)) {
+                b.product_ids.forEach(id => ids.add(Number(id)))
+            }
+            if (Array.isArray(b.products)) {
+                b.products.forEach(p => ids.add(Number(p.id)))
+            }
+        })
+    }
+    return ids
+})
+
+const isProductInBundle = productId => {
+    return bundleProductIds.value.has(Number(productId))
+}
+
+const flashSaleCountdown = ref({
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+})
+let flashTimerInterval = null
+
+const tickFlashCountdown = () => {
+    const now = new Date().getTime()
+    let targetTime
+
+    if (props.flash_sale_end_time) {
+        targetTime = new Date(props.flash_sale_end_time).getTime()
+    } else {
+        const endOfDay = new Date()
+        endOfDay.setHours(23, 59, 59, 999)
+        targetTime = endOfDay.getTime()
+    }
+
+    const diff = Math.max(0, Math.floor((targetTime - now) / 1000))
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    const s = diff % 60
+
+    flashSaleCountdown.value = {
+        hours: String(h).padStart(2, '0'),
+        minutes: String(m).padStart(2, '0'),
+        seconds: String(s).padStart(2, '0'),
+    }
+}
+
+const storeFlashSlider = ref(null)
+const scrollStoreFlash = direction => {
+    const container = storeFlashSlider.value
+    if (!container) return
+    const card = container.querySelector('.product-card')
+    const width = card ? card.getBoundingClientRect().width : 180
+    container.scrollBy({ left: (width + 10) * (direction === 'left' ? -2 : 2), behavior: 'smooth' })
+}
+
+onMounted(() => {
+    tickFlashCountdown()
+    flashTimerInterval = setInterval(tickFlashCountdown, 1000)
+})
 
 // Follow State (persisted in database via buyer.store.follow API)
 const isFollowing = ref(Boolean(props.is_following))
@@ -807,6 +884,255 @@ const formatTime = (timeStr) => {
                 </div>
 
                 <!-- ============================================================== -->
+                <!-- STORE SPECIAL OFFERS: FLASH DEALS & BUNDLE PROMOTIONS -->
+                <!-- ============================================================== -->
+                <div
+                    v-if="(flash_sales && flash_sales.length) || (bundle_deals && bundle_deals.length)"
+                    class="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-br from-[#FFFDF9] via-white to-[#F0FAF9] p-4 sm:p-5 shadow-xs"
+                >
+                    <div
+                        class="grid items-start gap-5"
+                        :class="flash_sales?.length && bundle_deals?.length ? 'grid-cols-1 lg:grid-cols-2 lg:gap-7' : 'grid-cols-1'"
+                    >
+                        <!-- ==============================================
+                             STORE FLASH SALES
+                        =============================================== -->
+                        <div v-if="flash_sales && flash_sales.length" class="flex flex-col">
+                            <!-- Flash Header -->
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#087F8C]">
+                                            Store Limited Offer
+                                        </p>
+                                    </div>
+
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-base sm:text-lg">⚡</span>
+                                            <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
+                                                Flash Deals
+                                            </h2>
+                                        </div>
+
+                                        <!-- Live Countdown Timer -->
+                                        <div class="flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-0.5 text-white shadow-2xs">
+                                            <span class="text-[8px] font-bold uppercase tracking-wider text-amber-400">Ends in</span>
+                                            <div class="flex items-center gap-0.5 font-mono text-[11px] font-black">
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.hours }}</span>
+                                                <span class="text-amber-400 font-bold">:</span>
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.minutes }}</span>
+                                                <span class="text-amber-400 font-bold">:</span>
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.seconds }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Slider Controls -->
+                                <div v-if="flash_sales.length > 2" class="flex items-center gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        title="Previous products"
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
+                                        @click="scrollStoreFlash('left')"
+                                    >
+                                        ‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        title="Next products"
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
+                                        @click="scrollStoreFlash('right')"
+                                    >
+                                        ›
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p class="mt-0.5 text-[11px] text-[#64748B] truncate">
+                                Limited quantities available at special flash prices!
+                            </p>
+
+                            <!-- Compact Horizontal Slider -->
+                            <div
+                                ref="storeFlashSlider"
+                                class="mt-2.5 flex gap-2.5 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-1"
+                            >
+                                <Link
+                                    v-for="item in flash_sales"
+                                    :key="item.id"
+                                    :href="route('buyer.product', item.product_id)"
+                                    class="product-card group relative flex w-[calc(50%-5px)] sm:w-[calc(33.333%-7px)] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-xl border border-amber-200/70 bg-white p-2 shadow-2xs transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                                >
+                                    <!-- Image & Badges -->
+                                    <div class="relative h-28 sm:h-32 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
+                                        <img
+                                            v-if="item.image"
+                                            :src="item.image"
+                                            :alt="item.name"
+                                            class="h-full w-full object-contain transition duration-500 group-hover:scale-105"
+                                            loading="lazy"
+                                        />
+                                        <div v-else class="flex h-full items-center justify-center text-slate-300">
+                                            <Icon name="bag" class="h-6 w-6 text-[#087F8C]/40" />
+                                        </div>
+
+                                        <!-- Discount Badge -->
+                                        <span
+                                            v-if="item.discount_percentage > 0"
+                                            class="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                        >
+                                            <span>⚡</span>
+                                            <span>-{{ item.discount_percentage }}%</span>
+                                        </span>
+
+                                        <!-- Stock status badge -->
+                                        <span
+                                            v-if="item.remaining <= 5 && item.remaining > 0"
+                                            class="absolute right-1 top-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-amber-300 backdrop-blur-2xs"
+                                        >
+                                            {{ item.remaining }} left
+                                        </span>
+                                    </div>
+
+                                    <!-- Product Details -->
+                                    <div class="mt-1.5 flex flex-1 flex-col justify-between">
+                                        <p class="line-clamp-1 text-xs font-bold text-gray-900 transition group-hover:text-[#087F8C]">
+                                            {{ item.name }}
+                                        </p>
+
+                                        <div class="mt-1 space-y-1">
+                                            <div class="flex items-baseline gap-1 flex-wrap">
+                                                <span class="text-xs sm:text-sm font-black text-[#087F8C]">
+                                                    ₱{{ Number(item.flash_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                                </span>
+                                                <span
+                                                    v-if="item.original_price > item.flash_price"
+                                                    class="text-[10px] text-gray-400 line-through"
+                                                >
+                                                    ₱{{ Number(item.original_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                                </span>
+                                            </div>
+
+                                            <!-- Progress Bar -->
+                                            <div>
+                                                <div class="h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                                                    <div
+                                                        class="h-full rounded-full bg-gradient-to-r from-amber-400 to-[#087F8C] transition-all duration-500"
+                                                        :style="{ width: `${Math.max(12, item.percent_sold)}%` }"
+                                                    ></div>
+                                                </div>
+                                                <div class="mt-0.5 flex items-center justify-between text-[9px] text-gray-500">
+                                                    <span class="font-bold text-amber-600">🔥 {{ item.sold_quantity }} sold</span>
+                                                    <span>{{ item.remaining }} left</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+                        </div>
+
+                        <!-- ==============================================
+                             STORE BUNDLE DEALS (UNIFIED SINGLE CARD)
+                        =============================================== -->
+                        <div
+                            v-if="bundle_deals && bundle_deals.length"
+                            class="flex flex-col"
+                            :class="flash_sales?.length ? 'border-t border-slate-200/80 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0' : ''"
+                        >
+                            <!-- Bundle Header -->
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#087F8C]">
+                                            Store Bundle Promotions
+                                        </p>
+                                    </div>
+
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <span class="text-base sm:text-lg">🎁</span>
+                                        <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
+                                            Bundle Deals
+                                        </h2>
+                                        <span class="rounded bg-teal-100 px-1.5 py-0.5 text-[9px] font-bold text-teal-800">
+                                            Instant Discount
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="mt-0.5 text-[11px] text-[#64748B] truncate">
+                                Add bundle items to your cart to automatically unlock discount at checkout!
+                            </p>
+
+                            <!-- Single Unified Card (Hindi Magkakahiwalay) -->
+                            <div class="mt-2.5 overflow-hidden rounded-xl border border-teal-200/80 bg-white shadow-2xs divide-y divide-teal-100/70">
+                                <div
+                                    v-for="bundle in bundle_deals"
+                                    :key="bundle.id"
+                                    class="group flex items-center justify-between gap-3 p-2.5 sm:px-3 sm:py-2.5 transition duration-200 hover:bg-[#F2FAF9]"
+                                >
+                                    <div class="min-w-0 flex-1">
+                                        <!-- Line 1: Badge -->
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs">
+                                                BUY {{ bundle.min_quantity }} GET {{ Math.round(bundle.discount_value) }}% OFF
+                                            </span>
+                                            <span class="text-[10px] font-bold text-teal-700">
+                                                Store Special
+                                            </span>
+                                        </div>
+
+                                        <!-- Line 2: Title -->
+                                        <h3 class="mt-1 truncate text-xs font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
+                                            {{ bundle.name }}
+                                        </h3>
+
+                                        <!-- Line 3: Product Thumbnails -->
+                                        <div class="mt-1.5 flex items-center gap-1.5">
+                                            <Link
+                                                v-for="p in bundle.products.slice(0, 4)"
+                                                :key="p.id"
+                                                :href="route('buyer.product', p.id)"
+                                                class="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs hover:border-[#087F8C] transition"
+                                                :title="p.name"
+                                            >
+                                                <img
+                                                    v-if="p.image"
+                                                    :src="p.image"
+                                                    :alt="p.name"
+                                                    class="h-full w-full rounded object-cover"
+                                                />
+                                                <div v-else class="flex h-full items-center justify-center text-[8px] text-slate-400">
+                                                    📦
+                                                </div>
+                                            </Link>
+                                            <span
+                                                v-if="bundle.products.length > 4"
+                                                class="rounded bg-teal-50 px-1.5 py-0.5 text-[9px] font-extrabold text-teal-700"
+                                            >
+                                                +{{ bundle.products.length - 4 }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <span class="text-[10px] font-extrabold text-[#087F8C] bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-lg">
+                                            Eligible in Cart
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ============================================================== -->
                 <!-- 4. FEATURED PRODUCTS (Only if real featured products exist) -->
                 <!-- ============================================================== -->
                 <div
@@ -840,6 +1166,22 @@ const formatTime = (timeStr) => {
                                 <span v-else class="text-3xl text-slate-300">
                                     <Icon name="bag" class="h-6 w-6" />
                                 </span>
+
+                                <!-- Flash Sale or Bundle Badge -->
+                                <span
+                                    v-if="product.has_active_flash_sale"
+                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                >
+                                    <span>⚡</span>
+                                    <span>Flash Sale</span>
+                                </span>
+                                <span
+                                    v-else-if="isProductInBundle(product.id)"
+                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
+                                >
+                                    <span>🎁</span>
+                                    <span>Bundle Promo</span>
+                                </span>
                             </div>
 
                             <div class="min-w-0 p-3 sm:p-3.5">
@@ -848,9 +1190,17 @@ const formatTime = (timeStr) => {
                                 </h3>
 
                                 <div class="mt-2 flex items-baseline justify-between gap-1">
-                                    <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
-                                        ₱{{ formatPrice(product.price) }}
-                                    </p>
+                                    <div class="flex items-baseline gap-1.5 flex-wrap">
+                                        <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
+                                            ₱{{ formatPrice(product.price) }}
+                                        </p>
+                                        <span
+                                            v-if="product.old_price && Number(product.old_price) > Number(product.price)"
+                                            class="text-[10px] text-gray-400 line-through"
+                                        >
+                                            ₱{{ formatPrice(product.old_price) }}
+                                        </span>
+                                    </div>
                                     <span v-if="product.reviews_count" class="text-[10px] text-slate-400">
                                         {{ product.reviews_count }} sold
                                     </span>
@@ -1033,6 +1383,22 @@ const formatTime = (timeStr) => {
                                 <span v-else class="text-3xl text-slate-300">
                                     <Icon name="bag" class="h-6 w-6" />
                                 </span>
+
+                                <!-- Flash Sale or Bundle Badge -->
+                                <span
+                                    v-if="product.has_active_flash_sale"
+                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                >
+                                    <span>⚡</span>
+                                    <span>Flash Sale</span>
+                                </span>
+                                <span
+                                    v-else-if="isProductInBundle(product.id)"
+                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
+                                >
+                                    <span>🎁</span>
+                                    <span>Bundle Promo</span>
+                                </span>
                             </div>
 
                             <div class="min-w-0 p-3 sm:p-3.5">
@@ -1041,9 +1407,17 @@ const formatTime = (timeStr) => {
                                 </h3>
 
                                 <div class="mt-2 flex items-baseline justify-between gap-1">
-                                    <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
-                                        ₱{{ formatPrice(product.price) }}
-                                    </p>
+                                    <div class="flex items-baseline gap-1.5 flex-wrap">
+                                        <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
+                                            ₱{{ formatPrice(product.price) }}
+                                        </p>
+                                        <span
+                                            v-if="product.old_price && Number(product.old_price) > Number(product.price)"
+                                            class="text-[10px] text-gray-400 line-through"
+                                        >
+                                            ₱{{ formatPrice(product.old_price) }}
+                                        </span>
+                                    </div>
                                     <span v-if="product.reviews_count" class="text-[10px] text-slate-400">
                                         {{ product.reviews_count }} sold
                                     </span>

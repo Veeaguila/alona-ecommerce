@@ -5,6 +5,9 @@ import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_register_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
+import 'package:alona_mobile/features/rider/rider_entry_gate.dart';
 
 class BuyerSplashWelcomeScreen extends StatefulWidget {
   final AuthState authState;
@@ -21,10 +24,10 @@ class BuyerSplashWelcomeScreen extends StatefulWidget {
 
 class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
     with TickerProviderStateMixin {
-  static const Color _tealCardColor = Color(0xFF117E8B);
-  static const Color _goldButtonColor = Color(0xFFF3B84B);
-  static const Color _goldTextColor = Color(0xFFF3B340);
-  static const Color _darkTextColor = Color(0xFF132228);
+  static const Color _tealCardColor = Color(0xFF05505A);
+  static const Color _goldButtonColor = Color(0xFFF5A524);
+  static const Color _goldTextColor = Color(0xFFF5A524);
+  static const Color _darkTextColor = Color(0xFF0F172A);
 
   // Smooth Apple/iOS-style deceleration curves for silky 120fps swipe-up
   static const Cubic _smoothOutCubic = Cubic(0.22, 1.0, 0.36, 1.0);
@@ -212,6 +215,28 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
     });
   }
 
+  Future<void> _openLogistics() async {
+    await widget.authState.switchModule('logistics');
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => widget.authState.isLogisticsAuthenticated
+            ? LogisticsMainScreen(authState: widget.authState)
+            : LogisticsLoginScreen(authState: widget.authState),
+      ),
+    );
+  }
+
+  Future<void> _openRider() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const RiderEntryGate(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_enterMainApp) {
@@ -349,49 +374,47 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
 
   Widget _buildWelcomeCardContent() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _tealCardColor,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // Top-right decorative soft circle matching video
+          // Top-right decorative soft ambient teal circle matching AuthModal
           Positioned(
-            top: -12,
-            right: -38,
+            top: -24,
+            right: -36,
             child: Container(
-              width: 190,
-              height: 190,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+              width: 210,
+              height: 210,
+              decoration: const BoxDecoration(
+                color: Color(0xFF067A87),
                 shape: BoxShape.circle,
               ),
             ),
           ),
 
-          // Bottom-left decorative soft circle matching video
+          // Bottom-left amber decorative circle matching screenshot
           Positioned(
-            bottom: 48,
-            left: -72,
+            bottom: -35,
+            left: -35,
             child: Container(
-              width: 205,
-              height: 205,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+              width: 140,
+              height: 140,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5A524),
                 shape: BoxShape.circle,
               ),
             ),
           ),
 
-          // Main card content with subtle upward settle
+          // Main card content
           LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
@@ -417,32 +440,16 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // White circle badge with 'a' shopping bag icon
-                          Container(
-                            width: 124,
-                            height: 124,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(23),
-                            child: Image.asset(
-                              'assets/images/Alogo.png',
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                            ),
-                          ),
-
-                          const SizedBox(height: 26),
+                          const SizedBox(height: 10),
 
                           // "Welcome to Alona."
                           RichText(
                             textAlign: TextAlign.center,
                             text: TextSpan(
                               style: GoogleFonts.figtree(
-                                fontSize: 27,
+                                fontSize: 28,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
+                                letterSpacing: -0.4,
                               ),
                               children: const [
                                 TextSpan(
@@ -457,7 +464,7 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
 
                           // Subtitle
                           Text(
@@ -466,17 +473,17 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                             style: GoogleFonts.figtree(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.92),
-                              height: 1.42,
+                              color: Colors.white.withValues(alpha: 0.88),
+                              height: 1.45,
                             ),
                           ),
 
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 36),
 
-                          // "Create account" gold button
+                          // "Sign Up" gold button matching screenshot
                           SizedBox(
                             width: double.infinity,
-                            height: 50,
+                            height: 52,
                             child: ElevatedButton(
                               onPressed: _openCreateAccount,
                               style: ElevatedButton.styleFrom(
@@ -484,14 +491,14 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                                 foregroundColor: _darkTextColor,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                               child: Text(
-                                'Create account',
+                                'Sign Up',
                                 style: GoogleFonts.figtree(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
                                   color: _darkTextColor,
                                 ),
                               ),
@@ -500,34 +507,34 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
 
                           const SizedBox(height: 14),
 
-                          // "Log in" outlined white button
+                          // "Sign In" outlined white button matching screenshot
                           SizedBox(
                             width: double.infinity,
-                            height: 50,
+                            height: 52,
                             child: OutlinedButton(
                               onPressed: _openLogin,
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 side: const BorderSide(
                                   color: Colors.white,
-                                  width: 1.3,
+                                  width: 1.5,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                               child: Text(
-                                'Log in',
+                                'Sign In',
                                 style: GoogleFonts.figtree(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 24),
 
                           // "Continue as guest" underlined button
                           GestureDetector(
@@ -541,16 +548,87 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                               child: Text(
                                 'Continue as guest',
                                 style: GoogleFonts.figtree(
-                                  fontSize: 13.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                                  color: Colors.white.withValues(alpha: 0.95),
                                   decoration: TextDecoration.underline,
                                   decorationColor: Colors.white,
-                                  decorationThickness: 1.3,
+                                  decorationThickness: 1.4,
                                 ),
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+
+                          // Module portals switcher row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: _openLogistics,
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.local_shipping_outlined,
+                                        color: Color(0xFF5EEAD4),
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Logistics Hub',
+                                        style: GoogleFonts.figtree(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF5EEAD4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  '•',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.4),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _openRider,
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.two_wheeler_rounded,
+                                        color: Color(0xFF5EEAD4),
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Rider Portal',
+                                        style: GoogleFonts.figtree(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF5EEAD4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
                         ],
                       ),
                     ),
