@@ -50,6 +50,18 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    raw_subtotal: {
+        type: [String, Number],
+        default: '0.00',
+    },
+    bundle_discount: {
+        type: [String, Number],
+        default: '0.00',
+    },
+    promotion_discount: {
+        type: [String, Number],
+        default: '0.00',
+    },
 
     saved_payment_methods: {
         type: Array,
@@ -150,6 +162,14 @@ const itemPrice = item => {
     return Number(item.product?.price ?? 0)
 }
 
+const itemOriginalPrice = item => {
+    const reg = Number(item.regular_price ?? 0)
+    if (reg > 0) return reg
+    const varPrice = Number(item.variant?.price ?? 0)
+    if (varPrice > 0) return varPrice
+    return Number(item.product?.price ?? item.unit_price ?? itemPrice(item))
+}
+
 const itemQuantity = item =>
     Number(item.quantity || 0)
 
@@ -157,12 +177,20 @@ const activeItems = computed(() =>
     props.items.filter(item => selectedItems.value.includes(Number(item.id)))
 )
 
-const subtotal = computed(() =>
-    activeItems.value.reduce(
-        (total, item) =>
-            total + itemPrice(item) * itemQuantity(item),
+const rawSubtotal = computed(() => {
+    if (props.raw_subtotal && Number(props.raw_subtotal) > 0) {
+        return Number(props.raw_subtotal)
+    }
+    return activeItems.value.reduce(
+        (total, item) => total + (itemOriginalPrice(item) * itemQuantity(item)),
         0
     )
+})
+
+const bundleDiscount = computed(() => Number(props.bundle_discount || 0))
+
+const subtotal = computed(() =>
+    Math.max(0, rawSubtotal.value - bundleDiscount.value)
 )
 
 const itemDiscount = computed(() => {
@@ -919,6 +947,10 @@ const submit = () => {
                                         <span class="text-[10px] text-[#94A3B8]">
                                             × {{ itemQuantity(item) }}
                                         </span>
+
+                                        <span v-if="item.bundle_applied" class="mt-0.5 block text-[10px] font-bold text-[#087F8C]">
+                                            🎁 {{ item.bundle_name || 'Bundle Discount Applied' }}
+                                        </span>
                                     </span>
 
                                     <span class="shrink-0 text-right font-bold text-[#1F2937]">
@@ -931,7 +963,19 @@ const submit = () => {
                                 <div class="flex items-center justify-between gap-3">
                                     <span class="text-[#64748B]">Subtotal</span>
                                     <span class="font-bold text-[#1F2937]">
-                                        {{ money(subtotal) }}
+                                        {{ money(rawSubtotal) }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    v-if="Number(bundle_discount || 0) > 0"
+                                    class="flex items-center justify-between gap-3 text-xs"
+                                >
+                                    <span class="min-w-0 truncate font-bold text-[#22A06B]">
+                                        🎁 Bundle Savings
+                                    </span>
+                                    <span class="shrink-0 font-bold text-[#22A06B]">
+                                        -{{ money(Number(bundle_discount)) }}
                                     </span>
                                 </div>
 

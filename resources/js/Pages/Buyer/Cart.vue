@@ -15,6 +15,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    raw_subtotal: {
+        type: [String, Number],
+        default: '0.00',
+    },
     bundle_discount: {
         type: [String, Number],
         default: '0.00',
@@ -170,6 +174,20 @@ const itemPrice = item => {
     )
 }
 
+const itemOriginalPrice = item => {
+    const unitPrice = Number(item?.unit_price ?? 0)
+    if (unitPrice > 0) return unitPrice
+    const varPrice = Number(item?.variant?.price ?? 0)
+    if (varPrice > 0) return varPrice
+    return Number(item?.product?.price ?? item?.price ?? 0)
+}
+
+const itemOriginalTotal = item => {
+    const rawLine = Number(item?.line_subtotal ?? 0)
+    if (rawLine > 0) return rawLine
+    return itemOriginalPrice(item) * Number(item?.quantity ?? 0)
+}
+
 const itemTotal = item => {
     return (
         itemPrice(item) *
@@ -227,12 +245,33 @@ const selectedQuantity = computed(() =>
     )
 )
 
-const subtotal = computed(() =>
+const rawSubtotal = computed(() =>
     selectedCartItems.value.reduce(
         (total, item) =>
-            total + itemTotal(item),
+            total + itemOriginalTotal(item),
         0
     )
+)
+
+const selectedBundleDiscount = computed(() => {
+    return selectedCartItems.value.reduce((total, item) => {
+        if (!item.bundle_applied || Number(item.bundle_discount || 0) <= 0) {
+            return total
+        }
+        const sId = item.product?.seller_id
+        const sellerSelectedQty = selectedCartItems.value
+            .filter(i => (i.product?.seller_id ?? 0) === sId)
+            .reduce((sum, i) => sum + Number(i.quantity || 1), 0)
+        const minQty = Number(item.bundle_min_quantity || 2)
+        if (sellerSelectedQty >= minQty) {
+            return total + Number(item.bundle_discount || 0)
+        }
+        return total
+    }, 0)
+})
+
+const subtotal = computed(() =>
+    Math.max(0, rawSubtotal.value - selectedBundleDiscount.value)
 )
 
 const allSelected = computed(() => {
@@ -1015,17 +1054,33 @@ const checkoutButtonLabel = computed(() => {
                                                     </button>
                                                 </div>
 
-                                                <p
-                                                    class="mt-2 text-sm font-extrabold text-[#087F8C]"
-                                                >
-                                                    {{
-                                                        money(
-                                                            itemPrice(
-                                                                item
+                                                <div v-if="item.bundle_applied" class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                    <span class="inline-flex items-center gap-1 rounded bg-teal-50 border border-teal-200 px-2 py-0.5 text-[10px] font-black text-[#087F8C]">
+                                                        <span>🎁</span>
+                                                        <span>{{ item.bundle_name || 'Bundle Promo' }}</span>
+                                                        <span v-if="Number(item.bundle_discount) > 0">(-{{ money(Number(item.bundle_discount)) }})</span>
+                                                    </span>
+                                                </div>
+
+                                                <div class="mt-2 flex items-baseline gap-2 flex-wrap">
+                                                    <p
+                                                        class="text-sm font-extrabold text-[#087F8C]"
+                                                    >
+                                                        {{
+                                                            money(
+                                                                itemPrice(
+                                                                    item
+                                                                )
                                                             )
-                                                        )
-                                                    }}
-                                                </p>
+                                                        }}
+                                                    </p>
+                                                    <span
+                                                        v-if="item.bundle_applied && Number(item.unit_price) > itemPrice(item)"
+                                                        class="text-[11px] text-gray-400 line-through"
+                                                    >
+                                                        {{ money(Number(item.unit_price)) }}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <!-- ITEM TOTAL -->
@@ -1315,9 +1370,24 @@ const checkoutButtonLabel = computed(() => {
                                 >
                                     {{
                                         money(
-                                            subtotal
+                                            rawSubtotal
                                         )
                                     }}
+                                </span>
+                            </div>
+
+                            <!-- BUNDLE SAVINGS -->
+                            <div
+                                v-if="selectedBundleDiscount > 0"
+                                class="flex items-center justify-between gap-3 text-emerald-600 font-bold"
+                            >
+                                <span class="flex items-center gap-1">
+                                    <span>🎁</span>
+                                    <span>Bundle Discount</span>
+                                </span>
+
+                                <span>
+                                    -{{ money(selectedBundleDiscount) }}
                                 </span>
                             </div>
 

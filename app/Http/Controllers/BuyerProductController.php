@@ -102,8 +102,17 @@ class BuyerProductController extends Controller
                     ->orderByDesc('reviews_count');
                 break;
 
-            default:
+            case 'latest':
                 $products->latest();
+                break;
+
+            case 'featured':
+            default:
+                // Seeded random order to ensure cross-store product diversity with stable pagination
+                $seed = (int) $request->session()->remember('catalog_seed', function () use ($request) {
+                    return abs(crc32($request->session()->getId() . date('YmdH')));
+                });
+                $products->orderByRaw("RAND({$seed})");
                 break;
         }
 

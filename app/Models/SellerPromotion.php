@@ -116,6 +116,9 @@ class SellerPromotion extends Model
         }
 
         $ids = array_map('intval', (array) ($this->product_ids ?? []));
+        if (empty($ids) && $this->product_id === null) {
+            return true;
+        }
 
         return in_array($productId, $ids, true);
     }

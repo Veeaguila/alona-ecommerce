@@ -98,6 +98,8 @@ class CartPromotionCalculator
                 'is_free_gift' => false,
                 'free_quantity' => 0,
                 'bundle_applied' => false,
+                'bundle_name' => null,
+                'bundle_min_quantity' => 2,
                 'bundle_discount' => 0.0,
                 'buy_x_get_y_discount' => 0.0,
                 'lines' => $itemLines,
@@ -152,10 +154,49 @@ class CartPromotionCalculator
                                     ? round($discountForBundle * ($itemPricingMap[$mItem->id]['line_subtotal'] / $eligibleMerchandiseTotal), 2)
                                     : 0.0;
                                 $itemPricingMap[$mItem->id]['bundle_applied'] = true;
+                                $itemPricingMap[$mItem->id]['bundle_name'] = $promo->name;
+                                $itemPricingMap[$mItem->id]['bundle_min_quantity'] = $minQty;
                                 $itemPricingMap[$mItem->id]['bundle_discount'] = round(
                                     ($itemPricingMap[$mItem->id]['bundle_discount'] ?? 0.0) + $share,
                                     2
                                 );
+
+                                // Update effective unit price and line total for this bundle-discounted item
+                                $baseLineTotal = $itemPricingMap[$mItem->id]['line_subtotal'] ?? 0.0;
+                                $newLineTotal = max(0.0, round($baseLineTotal - $share, 2));
+                                $mQty = max(1, (int) $mItem->quantity);
+                                $newUnitPrice = round($newLineTotal / $mQty, 2);
+
+                                $itemPricingMap[$mItem->id]['effective_unit_price'] = $newUnitPrice;
+                                $itemPricingMap[$mItem->id]['effective_line_total'] = $newLineTotal;
+
+                                if (!empty($itemPricingMap[$mItem->id]['lines'])) {
+                                    foreach ($itemPricingMap[$mItem->id]['lines'] as &$lRow) {
+                                        $lRow['unit_price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $lRow['price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $lRow['effective_price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $lRow['line_total'] = number_format($newLineTotal, 2, '.', '');
+                                        $lRow['line_total_float'] = $newLineTotal;
+                                        $lRow['bundle_applied'] = true;
+                                        $lRow['bundle_discount'] = number_format($share, 2, '.', '');
+                                        $lRow['bundle_name'] = $promo->name;
+                                    }
+                                    unset($lRow);
+                                }
+
+                                $checkoutLines = $checkoutLines->map(function (array $line) use ($mItem, $newUnitPrice, $newLineTotal, $share, $promo) {
+                                    if ((int) ($line['cart_item_id'] ?? 0) === (int) $mItem->id) {
+                                        $line['price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $line['unit_price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $line['effective_price'] = number_format($newUnitPrice, 2, '.', '');
+                                        $line['line_total'] = number_format($newLineTotal, 2, '.', '');
+                                        $line['line_total_float'] = $newLineTotal;
+                                        $line['bundle_applied'] = true;
+                                        $line['bundle_discount'] = number_format($share, 2, '.', '');
+                                        $line['bundle_name'] = $promo->name;
+                                    }
+                                    return $line;
+                                });
                             }
                         }
                     }
@@ -235,6 +276,8 @@ class CartPromotionCalculator
             $item->setAttribute('is_free_gift', $meta['is_free_gift']);
             $item->setAttribute('free_quantity', $meta['free_quantity']);
             $item->setAttribute('bundle_applied', $meta['bundle_applied']);
+            $item->setAttribute('bundle_name', $meta['bundle_name'] ?? null);
+            $item->setAttribute('bundle_min_quantity', $meta['bundle_min_quantity'] ?? 2);
             $item->setAttribute('bundle_discount', number_format($meta['bundle_discount'], 2, '.', ''));
             $item->setAttribute('buy_x_get_y_discount', number_format($meta['buy_x_get_y_discount'], 2, '.', ''));
         }

@@ -51,7 +51,6 @@ class GuestProductController extends Controller
             );
 
         switch ($sort) {
-
             case 'price-low':
                 $products->orderBy('price', 'asc');
                 break;
@@ -66,8 +65,17 @@ class GuestProductController extends Controller
                     ->orderByDesc('reviews_count');
                 break;
 
-            default:
+            case 'latest':
                 $products->latest();
+                break;
+
+            case 'featured':
+            default:
+                // Seeded random order to ensure cross-store product diversity with stable pagination
+                $seed = (int) $request->session()->remember('guest_catalog_seed', function () use ($request) {
+                    return abs(crc32($request->session()->getId() . date('YmdH')));
+                });
+                $products->orderByRaw("RAND({$seed})");
                 break;
         }
 

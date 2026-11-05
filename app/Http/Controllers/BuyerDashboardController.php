@@ -102,8 +102,8 @@ class BuyerDashboardController extends Controller
         $featuredProducts = (clone $approvedProductQuery)
             ->where('is_featured', true)
             ->where('stock', '>', 0)
-            ->latest('updated_at')
-            ->take(8)
+            ->inRandomOrder()
+            ->take(12)
             ->get()
             ->map(fn ($product) => $this->formatProduct($product))
             ->values();
@@ -217,8 +217,7 @@ if ($topSellingIds->isNotEmpty()) {
                         $query->where('status', '!=', 'cancelled');
                     },
                 ], 'quantity')
-                ->orderByDesc('sold_count')
-                ->latest('updated_at')
+                ->inRandomOrder()
                 ->take(8 - $recommendedProducts->count())
                 ->get()
                 ->map(fn ($product) => $this->formatProduct($product))
@@ -341,8 +340,8 @@ if ($topSellingIds->isNotEmpty()) {
         */
         $products = (clone $approvedProductQuery)
             ->where('stock', '>', 0)
-            ->latest()
-            ->take(12)
+            ->inRandomOrder()
+            ->take(18)
             ->get()
             ->map(fn ($product) => $this->formatProduct($product))
             ->values();
@@ -483,7 +482,7 @@ if ($topSellingIds->isNotEmpty()) {
                 ->where('starts_at', '<=', $now)
                 ->where('ends_at', '>', $now)
                 ->whereRaw('flash_quantity > COALESCE(sold_quantity, 0)')
-                ->orderBy('ends_at')
+                ->inRandomOrder()
                 ->take(12)
                 ->get();
 

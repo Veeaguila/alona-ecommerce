@@ -1189,8 +1189,8 @@ class BuyerOrderController extends Controller
 
                             foreach ($linesToCreate as $lineRow) {
                                 $lineQty = (int) ($lineRow['quantity'] ?? $cartItem->quantity);
-                                $lineUnitPrice = isset($itemMeta['is_free_gift']) && $itemMeta['is_free_gift']
-                                    ? (float) ($itemMeta['effective_unit_price'] ?? 0.0)
+                                $lineUnitPrice = ((isset($itemMeta['bundle_applied']) && $itemMeta['bundle_applied']) || (isset($itemMeta['is_free_gift']) && $itemMeta['is_free_gift']))
+                                    ? (float) ($itemMeta['effective_unit_price'] ?? $lineRow['unit_price'] ?? $this->itemPrice($cartItem))
                                     : (float) ($lineRow['unit_price'] ?? $this->itemPrice($cartItem));
 
                                 $orderItemData = [
@@ -2744,6 +2744,10 @@ class BuyerOrderController extends Controller
     private function itemPrice(
         CartItem $item
     ): float {
+        if ($item->effective_price !== null && (float) $item->effective_price > 0) {
+            return (float) $item->effective_price;
+        }
+
         $varPrice = (float) ($item->variant?->price ?? 0);
         if ($varPrice > 0) {
             return $varPrice;
