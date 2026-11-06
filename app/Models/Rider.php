@@ -79,6 +79,11 @@ class Rider extends Model
         return $this->belongsTo(SortingCenter::class);
     }
 
+    public function hub(): BelongsTo
+    {
+        return $this->belongsTo(LogisticsHub::class, 'logistics_hub_id');
+    }
+
     public function areas(): BelongsToMany
     {
         return $this->belongsToMany(Area::class, 'rider_areas');

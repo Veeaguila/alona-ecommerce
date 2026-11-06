@@ -50,7 +50,7 @@ class FooterService
                     'icon' => 'user',
                     'links' => [
                         ['label' => 'Become a Seller', 'url' => '/register/seller'],
-                        ['label' => 'Become a Rider', 'url' => '/register'],
+                        ['label' => 'Become a Rider', 'url' => '/register/rider'],
                         ['label' => 'Logistics Partner', 'url' => '/register/logistics'],
                         ['label' => 'My Account', 'url' => '/buyer/dashboard'],
                     ],
@@ -83,6 +83,21 @@ class FooterService
             if ($setting && $setting->value) {
                 $decoded = json_decode($setting->value, true);
                 if (is_array($decoded) && !empty($decoded['sections'])) {
+                    $dirty = false;
+                    foreach ($decoded['sections'] as &$section) {
+                        if (!empty($section['links']) && is_array($section['links'])) {
+                            foreach ($section['links'] as &$link) {
+                                if (isset($link['label']) && $link['label'] === 'Become a Rider' && ($link['url'] ?? '') === '/register') {
+                                    $link['url'] = '/register/rider';
+                                    $dirty = true;
+                                }
+                            }
+                        }
+                    }
+                    if ($dirty) {
+                        $setting->value = json_encode($decoded);
+                        $setting->save();
+                    }
                     return $decoded;
                 }
             }

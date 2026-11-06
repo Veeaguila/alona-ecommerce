@@ -41,28 +41,135 @@
                 <li v-for="hub in network.hubs" :key="hub.id" class="flex items-start justify-between gap-3 py-4">
                   <div><strong>{{ hub.name }}</strong> <span class="text-sm text-slate-500">({{ hub.code }})</span>
                     <p class="mt-1 text-sm text-slate-600">{{ hub.address }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ hub.is_active ? 'Active' : 'Paused for new bookings' }} · Pickup: {{ hub.pickup_city_codes.length }} cities · Delivery: {{ hub.delivery_city_codes.length }} cities</p>
+                    <p class="mt-1 text-xs font-medium text-teal-800">Location: {{ cityDisplayNameByCode(hub.city_code) }}</p>
+                    <p class="mt-0.5 text-xs text-slate-500">{{ hub.is_active ? 'Active' : 'Paused for new bookings' }} · Pickup: {{ hub.pickup_city_codes.length }} cities · Delivery: {{ hub.delivery_city_codes.length }} cities</p>
                   </div>
                   <button type="button" class="app-button-secondary" :disabled="busy || !fresh" @click="editHub(hub)">Edit</button>
                 </li>
               </ul>
             </div>
-            <form class="space-y-3" @submit.prevent="saveHub">
-              <h3 class="font-semibold">{{ hubForm.id ? 'Edit hub' : 'Add a hub' }}</h3>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <label class="text-sm">Hub code<input v-model.trim="hubForm.code" required maxlength="24" pattern="[A-Z0-9][A-Z0-9-]*" class="app-input mt-1 w-full" placeholder="MNL-01" :disabled="busy" /></label>
-                <label class="text-sm">Hub name<input v-model.trim="hubForm.name" required maxlength="100" class="app-input mt-1 w-full" placeholder="Manila hub" :disabled="busy" /></label>
+            <form class="space-y-4" @submit.prevent="saveHub">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h3 class="font-semibold text-slate-900">{{ hubForm.id ? 'Edit hub: ' + hubForm.name : 'Add a hub' }}</h3>
+                <button v-if="hubForm.id" type="button" class="text-xs text-slate-500 underline hover:text-slate-700" :disabled="busy" @click="resetHub">Cancel edit</button>
               </div>
-              <label class="block text-sm">Physical address<textarea v-model.trim="hubForm.address" required maxlength="500" rows="2" class="app-input mt-1 w-full" :disabled="busy"></textarea></label>
-              <label class="block text-sm">Hub city / municipality<select v-model="hubForm.city_code" required class="app-input mt-1 w-full" :disabled="busy"><option value="">Choose a city</option><option v-for="city in cities" :key="city.code" :value="city.code">{{ cityLabel(city) }}</option></select></label>
-              <label class="block text-sm">Find coverage cities<input v-model="citySearch" type="search" class="app-input mt-1 w-full" placeholder="Search city or province" /></label>
               <div class="grid gap-3 sm:grid-cols-2">
-                <label class="text-sm">Pickup cities<select v-model="hubForm.pickup_city_codes" multiple size="5" class="app-input mt-1 w-full" :disabled="busy"><option v-for="city in coverageChoices" :key="city.code" :value="city.code">{{ cityLabel(city) }}</option></select></label>
-                <label class="text-sm">Delivery cities<select v-model="hubForm.delivery_city_codes" multiple size="5" class="app-input mt-1 w-full" :disabled="busy"><option v-for="city in coverageChoices" :key="city.code" :value="city.code">{{ cityLabel(city) }}</option></select></label>
+                <label class="text-sm font-medium">Hub code<input v-model.trim="hubForm.code" required maxlength="24" pattern="[A-Z0-9][A-Z0-9-]*" class="app-input mt-1 w-full" placeholder="LAG-01" :disabled="busy" /></label>
+                <label class="text-sm font-medium">Hub name<input v-model.trim="hubForm.name" required maxlength="100" class="app-input mt-1 w-full" placeholder="Laguna Operations Hub" :disabled="busy" /></label>
               </div>
-              <p class="text-xs text-slate-500">Selected: {{ hubForm.pickup_city_codes.length }} pickup / {{ hubForm.delivery_city_codes.length }} delivery cities. Use Ctrl or Command to select several cities.</p>
+              <label class="block text-sm font-medium">Physical address<textarea v-model.trim="hubForm.address" required maxlength="500" rows="2" class="app-input mt-1 w-full" placeholder="e.g. National Highway, Brgy. Turbina, Calamba City, Laguna" :disabled="busy"></textarea></label>
+              <label class="block text-sm font-medium">Physical Hub Location (City / Municipality)
+                <select v-model="hubForm.city_code" required class="app-input mt-1 w-full text-sm" :disabled="busy">
+                  <option value="">Choose hub city / municipality</option>
+                  <optgroup v-for="group in groupedLocations" :key="group.key" :label="group.name">
+                    <option v-for="city in group.cities" :key="city.code" :value="city.code">{{ city.name }}, {{ group.name }}</option>
+                  </optgroup>
+                </select>
+              </label>
+
+              <!-- Coverage Areas Configuration -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                  <div>
+                    <h4 class="text-sm font-bold text-slate-800">Coverage Areas (Cities & Municipalities)</h4>
+                    <p class="text-xs text-slate-500">Define the cities your hub picks up from and delivers to.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100" title="Copy pickup coverage to delivery" :disabled="busy || !hubForm.pickup_city_codes.length" @click="copyCoverage('pickup', 'delivery')">
+                      Copy Pickup to Delivery
+                    </button>
+                    <button type="button" class="rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100" title="Copy delivery coverage to pickup" :disabled="busy || !hubForm.delivery_city_codes.length" @click="copyCoverage('delivery', 'pickup')">
+                      Copy Delivery to Pickup
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Tabs: Pickup vs Delivery -->
+                <div class="mt-3 flex border-b border-slate-200 text-sm">
+                  <button type="button" class="px-4 py-2 font-medium border-b-2 transition" :class="coverageTab === 'pickup' ? 'border-teal-600 text-teal-700 font-semibold bg-teal-50/50' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="coverageTab = 'pickup'">
+                    Pickup Areas ({{ hubForm.pickup_city_codes.length }})
+                  </button>
+                  <button type="button" class="px-4 py-2 font-medium border-b-2 transition" :class="coverageTab === 'delivery' ? 'border-teal-600 text-teal-700 font-semibold bg-teal-50/50' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="coverageTab = 'delivery'">
+                    Delivery Areas ({{ hubForm.delivery_city_codes.length }})
+                  </button>
+                </div>
+
+                <p class="mt-2 text-xs text-slate-600">
+                  <span v-if="coverageTab === 'pickup'"><strong>Pickup coverage:</strong> Hub riders will pick up parcels from sellers located in these cities.</span>
+                  <span v-else><strong>Delivery coverage:</strong> Hub riders will deliver parcels to buyers located in these cities.</span>
+                </p>
+
+                <!-- Province Quick Selector -->
+                <div class="mt-3 space-y-2">
+                  <label class="block text-xs font-semibold text-slate-700">Quick Select by Province / Region (e.g. Laguna, Metro Manila)
+                    <select v-model="selectedProvinceKey" class="app-input mt-1 w-full text-xs" :disabled="busy">
+                      <option value="">-- Choose Province / Region to view & select towns --</option>
+                      <option v-for="group in groupedLocations" :key="group.key" :value="group.key">
+                        {{ group.name }} ({{ group.cities.length }} towns)
+                      </option>
+                    </select>
+                  </label>
+
+                  <!-- Province Town Picker Panel -->
+                  <div v-if="activeGroup" class="rounded-lg border border-teal-200 bg-teal-50/30 p-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-teal-100 pb-2">
+                      <span class="text-xs font-semibold text-teal-900">
+                        {{ activeGroup.name }} ({{ groupSelectedCount(activeGroup.key) }} of {{ activeGroup.cities.length }} selected)
+                      </span>
+                      <div class="flex items-center gap-2">
+                        <button type="button" class="rounded bg-teal-600 px-2 py-0.5 text-xs font-medium text-white shadow-sm hover:bg-teal-700" :disabled="busy" @click="selectAllInGroup(activeGroup.key)">
+                          + Select all {{ activeGroup.cities.length }} in {{ activeGroup.name }}
+                        </button>
+                        <button type="button" class="rounded bg-white px-2 py-0.5 text-xs font-medium text-slate-700 border border-slate-300 hover:bg-slate-50" :disabled="busy" @click="deselectAllInGroup(activeGroup.key)">
+                          Deselect all
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mt-2 grid max-h-52 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
+                      <label v-for="city in activeGroup.cities" :key="city.code" class="flex items-center gap-1.5 rounded p-1 text-xs cursor-pointer select-none transition" :class="isCityCovered(city.code) ? 'bg-teal-100/70 font-semibold text-teal-950' : 'hover:bg-teal-50 text-slate-700'">
+                        <input type="checkbox" :checked="isCityCovered(city.code)" :disabled="busy" class="rounded text-teal-600 focus:ring-teal-500" @change="toggleCityCovered(city.code)" />
+                        <span class="truncate" :title="city.name">{{ city.name }}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Global Town Search -->
+                  <div class="mt-2">
+                    <input v-model="coverageSearch" type="search" class="app-input w-full text-xs" placeholder="Search any city or municipality across the Philippines..." :disabled="busy" />
+                    <div v-if="coverageSearch.trim()" class="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                      <p class="text-xs text-slate-500 mb-1 font-medium">Matching cities:</p>
+                      <div v-if="!searchedCities.length" class="text-xs text-slate-400 py-1">No matching cities found.</div>
+                      <div v-else class="grid max-h-40 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
+                        <label v-for="city in searchedCities" :key="city.code" class="flex items-center gap-1.5 rounded p-1 text-xs cursor-pointer select-none" :class="isCityCovered(city.code) ? 'bg-teal-100 font-semibold text-teal-900' : 'hover:bg-white text-slate-700'">
+                          <input type="checkbox" :checked="isCityCovered(city.code)" :disabled="busy" class="rounded text-teal-600 focus:ring-teal-500" @change="toggleCityCovered(city.code)" />
+                          <span class="truncate">{{ cityDisplayName(city) }}</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Coverage Summary Badges -->
+                  <div class="mt-3 border-t border-slate-100 pt-2">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="font-semibold text-slate-700">Total selected for {{ coverageTab }}: {{ activeCoverageCodes.length }} cities</span>
+                      <button v-if="activeCoverageCodes.length" type="button" class="text-xs text-red-600 hover:underline" :disabled="busy" @click="clearAllActiveCoverage">Clear all {{ coverageTab }}</button>
+                    </div>
+                    <div v-if="coverageSummary.length" class="mt-2 flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+                      <span v-for="group in coverageSummary" :key="group.groupKey" class="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-800">
+                        {{ group.groupName }}: {{ group.count }}/{{ group.totalInGroup }}
+                        <button type="button" class="ml-1 font-bold hover:text-red-700" title="Remove all in this province" :disabled="busy" @click="deselectAllInGroup(group.groupKey)">✕</button>
+                      </span>
+                    </div>
+                    <p v-else class="mt-1 text-xs text-slate-400 italic">No cities selected yet for this coverage.</p>
+                  </div>
+                </div>
+              </div>
+
               <label class="flex items-center gap-2 text-sm"><input v-model="hubForm.is_active" type="checkbox" :disabled="busy" /> Accept new bookings through this hub</label>
-              <button class="app-button-primary" :disabled="busy || !fresh || !cities.length">Save hub</button>
+              <div class="flex items-center gap-3 pt-2">
+                <button class="app-button-primary" :disabled="busy || !fresh || !cities.length">{{ hubForm.id ? 'Save hub changes' : 'Register hub' }}</button>
+                <button v-if="hubForm.id" type="button" class="app-button-secondary" :disabled="busy" @click="resetHub">Cancel</button>
+              </div>
             </form>
           </div>
         </section>
@@ -137,9 +244,14 @@ import { createRequestKey } from '@/requestKey.js';
 export default {
   components: { ScLayout },
   setup() {
-    const network = ref(null), cities = ref([]), journeys = ref({ data: [], current_page: 1, last_page: 1 });
-    const busy = ref(false), fresh = ref(false), error = ref(''), notice = ref(''), citySearch = ref(''), search = ref(''), appliedSearch = ref(''), operatingHub = ref('');
+    const network = ref(null), cities = ref([]), provinces = ref([]), regions = ref([]);
+    const journeys = ref({ data: [], current_page: 1, last_page: 1 });
+    const busy = ref(false), fresh = ref(false), error = ref(''), notice = ref('');
+    const coverageSearch = ref(''), search = ref(''), appliedSearch = ref(''), operatingHub = ref('');
     const activeTab = ref('setup'), stage = ref('all');
+    const coverageTab = ref('pickup');
+    const selectedProvinceKey = ref('');
+
     const riderHubs = reactive({}), references = reactive({}), confirmations = reactive({});
     const blankHub = () => ({ id: null, code: '', name: '', address: '', city_code: '', pickup_city_codes: [], delivery_city_codes: [], is_active: true });
     const blankRoute = () => ({ id: null, origin_hub_id: '', destination_hub_id: '', transport_mode: 'road', is_active: true });
@@ -147,9 +259,140 @@ export default {
     let disposed = false, version = 0;
     onUnmounted(() => { disposed = true; version++; });
     watch(operatingHub, () => { Object.keys(confirmations).forEach(key => { confirmations[key] = false; }); });
-    const cityLabel = city => [city.name, city.province_name || city.province_code, city.code].filter(Boolean).join(' · ');
-    const coverageChoices = computed(() => cities.value.filter(city => hubForm.pickup_city_codes.includes(city.code)
-      || hubForm.delivery_city_codes.includes(city.code) || cityLabel(city).toLowerCase().includes(citySearch.value.toLowerCase())));
+
+    const provinceMap = computed(() => Object.fromEntries(provinces.value.map(p => [p.code, p])));
+    const regionMap = computed(() => Object.fromEntries(regions.value.map(r => [r.code, r])));
+
+    const cityDisplayName = city => {
+      if (!city) return '';
+      if (city.province_code && provinceMap.value[city.province_code]) {
+        return `${city.name}, ${provinceMap.value[city.province_code].name}`;
+      }
+      if (city.region_code === '1300000000') {
+        return `${city.name}, Metro Manila`;
+      }
+      const reg = regionMap.value[city.region_code]?.name;
+      return reg ? `${city.name}, ${reg}` : city.name;
+    };
+
+    const cityDisplayNameByCode = code => {
+      if (!code) return '';
+      const match = cities.value.find(c => c.code === code);
+      return match ? cityDisplayName(match) : code;
+    };
+
+    const groupedLocations = computed(() => {
+      const groups = {};
+      groups['NCR'] = { key: 'NCR', name: 'Metro Manila (NCR)', cities: [] };
+      provinces.value.forEach(p => {
+        groups[p.code] = { key: p.code, name: p.name, region_code: p.region_code, cities: [] };
+      });
+      cities.value.forEach(city => {
+        if (city.region_code === '1300000000') {
+          groups['NCR'].cities.push(city);
+        } else if (city.province_code && groups[city.province_code]) {
+          groups[city.province_code].cities.push(city);
+        } else {
+          const regKey = 'REG_' + city.region_code;
+          if (!groups[regKey]) {
+            const regName = regionMap.value[city.region_code]?.name || 'Other Region';
+            groups[regKey] = { key: regKey, name: `${regName} (Independent Cities)`, cities: [] };
+          }
+          groups[regKey].cities.push(city);
+        }
+      });
+      Object.values(groups).forEach(g => {
+        g.cities.sort((a, b) => a.name.localeCompare(b.name));
+      });
+      return Object.values(groups)
+        .filter(g => g.cities.length > 0)
+        .sort((a, b) => {
+          if (a.key === 'NCR') return -1;
+          if (b.key === 'NCR') return 1;
+          return a.name.localeCompare(b.name);
+        });
+    });
+
+    const activeCoverageCodes = computed(() => coverageTab.value === 'pickup' ? hubForm.pickup_city_codes : hubForm.delivery_city_codes);
+
+    const activeGroup = computed(() => groupedLocations.value.find(g => g.key === selectedProvinceKey.value) || null);
+
+    const isCityCovered = code => activeCoverageCodes.value.includes(code);
+
+    const groupSelectedCount = groupKey => {
+      const group = groupedLocations.value.find(g => g.key === groupKey);
+      if (!group) return 0;
+      const set = new Set(activeCoverageCodes.value);
+      return group.cities.filter(c => set.has(c.code)).length;
+    };
+
+    const toggleCityCovered = code => {
+      const targetList = coverageTab.value === 'pickup' ? hubForm.pickup_city_codes : hubForm.delivery_city_codes;
+      const idx = targetList.indexOf(code);
+      if (idx >= 0) targetList.splice(idx, 1);
+      else targetList.push(code);
+    };
+
+    const selectAllInGroup = groupKey => {
+      const group = groupedLocations.value.find(g => g.key === groupKey);
+      if (!group) return;
+      const targetList = coverageTab.value === 'pickup' ? hubForm.pickup_city_codes : hubForm.delivery_city_codes;
+      const current = new Set(targetList);
+      group.cities.forEach(c => {
+        if (!current.has(c.code)) targetList.push(c.code);
+      });
+    };
+
+    const deselectAllInGroup = groupKey => {
+      const group = groupedLocations.value.find(g => g.key === groupKey);
+      if (!group) return;
+      const groupCodes = new Set(group.cities.map(c => c.code));
+      if (coverageTab.value === 'pickup') {
+        hubForm.pickup_city_codes = hubForm.pickup_city_codes.filter(c => !groupCodes.has(c));
+      } else {
+        hubForm.delivery_city_codes = hubForm.delivery_city_codes.filter(c => !groupCodes.has(c));
+      }
+    };
+
+    const clearAllActiveCoverage = () => {
+      if (coverageTab.value === 'pickup') hubForm.pickup_city_codes = [];
+      else hubForm.delivery_city_codes = [];
+    };
+
+    const copyCoverage = (fromTab, toTab) => {
+      const fromKey = fromTab === 'pickup' ? 'pickup_city_codes' : 'delivery_city_codes';
+      const toKey = toTab === 'pickup' ? 'pickup_city_codes' : 'delivery_city_codes';
+      hubForm[toKey] = Array.from(new Set(hubForm[fromKey]));
+      notice.value = `Copied ${hubForm[toKey].length} ${fromTab} areas to ${toTab} coverage.`;
+    };
+
+    const searchedCities = computed(() => {
+      const q = coverageSearch.value.trim().toLowerCase();
+      if (!q) return [];
+      return cities.value.filter(c => {
+        return c.name.toLowerCase().includes(q) || cityDisplayName(c).toLowerCase().includes(q);
+      }).slice(0, 50);
+    });
+
+    const coverageSummary = computed(() => {
+      const codes = new Set(activeCoverageCodes.value);
+      if (!codes.size) return [];
+      const result = [];
+      groupedLocations.value.forEach(group => {
+        const matched = group.cities.filter(c => codes.has(c.code));
+        if (matched.length > 0) {
+          result.push({
+            groupKey: group.key,
+            groupName: group.name,
+            count: matched.length,
+            totalInGroup: group.cities.length,
+            cities: matched
+          });
+        }
+      });
+      return result;
+    });
+
     async function request(path, method = 'GET', body) {
       const token = localStorage.getItem('logistics_auth_token');
       if (!token) throw new Error('Sign in to your Logistics account to manage hubs.');
@@ -168,13 +411,23 @@ export default {
       busy.value = true; fresh.value = false; error.value = ''; if (!keepNotice) notice.value = '';
       const current = ++version;
       try {
-        const [result, locations, parcels] = await Promise.all([request('/api/sorting-center/hub-network'), cities.value.length ? Promise.resolve({ data: cities.value }) : request('/api/addresses/cities'), request(journeyUrl(1))]);
+        const [result, locations, provList, regList, parcels] = await Promise.all([
+          request('/api/sorting-center/hub-network'),
+          cities.value.length ? Promise.resolve({ data: cities.value }) : request('/api/addresses/cities'),
+          provinces.value.length ? Promise.resolve({ data: provinces.value }) : request('/api/addresses/provinces'),
+          regions.value.length ? Promise.resolve({ data: regions.value }) : request('/api/addresses/regions'),
+          request(journeyUrl(1))
+        ]);
         if (disposed || current !== version) return;
         if (!Array.isArray(result.data?.hubs) || !Array.isArray(result.data?.routes) || !Array.isArray(result.data?.riders) || !Array.isArray(parcels.data?.data)) throw new Error('Hub records could not be read. Refresh before continuing.');
         const choices = locations.data || locations;
         if (!Array.isArray(choices)) throw new Error('City choices could not be read. Refresh before continuing.');
         if (!network.value) activeTab.value = result.data.hubs.length ? 'operations' : 'setup';
-        network.value = result.data; cities.value = choices; journeys.value = parcels.data;
+        network.value = result.data;
+        cities.value = choices;
+        provinces.value = Array.isArray(provList?.data) ? provList.data : (Array.isArray(provList) ? provList : []);
+        regions.value = Array.isArray(regList?.data) ? regList.data : (Array.isArray(regList) ? regList : []);
+        journeys.value = parcels.data;
         result.data.riders.forEach(rider => { riderHubs[rider.id] = rider.logistics_hub_id || ''; });
         fresh.value = true;
       } catch (failure) { if (!disposed && current === version) error.value = failure.message; }
@@ -189,11 +442,38 @@ export default {
       finally { if (!disposed) busy.value = false; }
       if (succeeded && !disposed) await refresh(true);
     }
-    const resetHub = () => { Object.assign(hubForm, blankHub()); citySearch.value = ''; };
-    const editHub = hub => { Object.assign(hubForm, { ...hub, pickup_city_codes: [...hub.pickup_city_codes], delivery_city_codes: [...hub.delivery_city_codes] }); citySearch.value = ''; };
+    const resetHub = () => {
+      Object.assign(hubForm, blankHub());
+      coverageSearch.value = '';
+      selectedProvinceKey.value = '';
+    };
+    const editHub = hub => {
+      Object.assign(hubForm, {
+        id: hub.id,
+        code: hub.code,
+        name: hub.name,
+        address: hub.address,
+        city_code: hub.city_code,
+        pickup_city_codes: [...(hub.pickup_city_codes || [])],
+        delivery_city_codes: [...(hub.delivery_city_codes || [])],
+        is_active: Boolean(hub.is_active)
+      });
+      coverageSearch.value = '';
+      const match = cities.value.find(c => c.code === hub.city_code);
+      if (match) {
+        selectedProvinceKey.value = match.region_code === '1300000000' ? 'NCR' : (match.province_code || '');
+      }
+    };
     const resetRoute = () => Object.assign(routeForm, blankRoute());
     const editRoute = route => Object.assign(routeForm, { id: route.id, origin_hub_id: route.origin_hub_id, destination_hub_id: route.destination_hub_id, transport_mode: route.transport_mode, is_active: route.is_active });
-    const saveHub = () => mutate('/api/sorting-center/hubs' + (hubForm.id ? '/' + hubForm.id : ''), hubForm.id ? 'PUT' : 'POST', { ...hubForm }, resetHub);
+    const saveHub = () => {
+      const payload = {
+        ...hubForm,
+        pickup_city_codes: Array.from(new Set(hubForm.pickup_city_codes)),
+        delivery_city_codes: Array.from(new Set(hubForm.delivery_city_codes))
+      };
+      return mutate('/api/sorting-center/hubs' + (hubForm.id ? '/' + hubForm.id : ''), hubForm.id ? 'PUT' : 'POST', payload, resetHub);
+    };
     const saveRoute = () => {
       if (String(routeForm.origin_hub_id) === String(routeForm.destination_hub_id)) { error.value = 'Choose two different hubs.'; return; }
       return mutate('/api/sorting-center/hub-routes' + (routeForm.id ? '/' + routeForm.id : ''), routeForm.id ? 'PUT' : 'POST', { ...routeForm }, resetRoute);
@@ -231,8 +511,13 @@ export default {
     const chooseHub = hubId => { if (busy.value || !fresh.value) return; operatingHub.value = hubId; activeTab.value = 'operations'; return changeHub(); };
     const time = value => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : 'Not recorded';
     onMounted(() => { refresh(); });
-    return { network, cities, journeys, busy, fresh, error, notice, citySearch, search, operatingHub, riderHubs, references, confirmations, hubForm, routeForm, coverageChoices, cityLabel,
-      activeTab, stage, changeHub, chooseHub, canReceiveOrigin, receiveOrigin, refresh, resetHub, editHub, saveHub, resetRoute, editRoute, saveRoute, assignRider, canDispatch, canReceive, transfer, loadJourneys, searchJourneys, time };
+    return {
+      network, cities, provinces, regions, journeys, busy, fresh, error, notice, search, operatingHub, riderHubs, references, confirmations,
+      hubForm, routeForm, activeTab, stage, coverageTab, selectedProvinceKey, coverageSearch,
+      groupedLocations, activeGroup, activeCoverageCodes, isCityCovered, groupSelectedCount, toggleCityCovered, selectAllInGroup, deselectAllInGroup,
+      clearAllActiveCoverage, copyCoverage, searchedCities, coverageSummary, cityDisplayName, cityDisplayNameByCode,
+      changeHub, chooseHub, canReceiveOrigin, receiveOrigin, refresh, resetHub, editHub, saveHub, resetRoute, editRoute, saveRoute, assignRider, canDispatch, canReceive, transfer, loadJourneys, searchJourneys, time
+    };
   },
 };
 </script>

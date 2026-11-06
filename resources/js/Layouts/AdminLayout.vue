@@ -679,11 +679,6 @@ const navigation = [
         key: 'vouchers',
     },
     {
-        label: 'Shipping Rates',
-        href: route('admin.shipping-rates'),
-        key: 'shipping_rates',
-    },
-    {
         label: 'Audit Logs',
         href: route('admin.audit-logs'),
         key: 'audit_logs',

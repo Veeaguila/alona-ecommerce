@@ -28,7 +28,7 @@ class RiderManagementController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Rider::query()
-            ->with(['user:id,name,email', 'user.partnerApplication:id,user_id,documents'])
+            ->with(['user:id,name,email', 'user.partnerApplication:id,user_id,documents', 'hub:id,name,code'])
             ->where('sorting_center_id', $request->user()->sortingCenter->id);
 
         if ($request->filled('status')) {
@@ -128,6 +128,10 @@ class RiderManagementController extends Controller
             'driver_license' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'or_cr' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ];
+
+        if (! empty($input['password'])) {
+            $rules['password'] = ['required', 'string', 'min:8'];
+        }
 
         $messages = [
             'first_name.required' => 'The first name is required.',
@@ -232,6 +236,7 @@ class RiderManagementController extends Controller
         $dobFormatted = Carbon::parse($validated['date_of_birth'])->format('Y-m-d');
         $expiryFormatted = Carbon::parse($validated['license_expiry'])->format('Y-m-d');
         $activationToken = Str::random(40);
+        $isImmediate = !empty($input['password']);
 
         $rider = DB::transaction(function () use (
             $validated,
@@ -241,7 +246,9 @@ class RiderManagementController extends Controller
             $licensePath,
             $orCrPath,
             $activationToken,
-            $sortingCenter
+            $sortingCenter,
+            $isImmediate,
+            $input
         ) {
             $user = User::create([
                 'name' => trim($validated['first_name'] . ' ' . $validated['last_name']),
@@ -251,8 +258,9 @@ class RiderManagementController extends Controller
                 'contact_no' => $mobile,
                 'birthday' => $dobFormatted,
                 'usertype' => 'rider',
-                'status' => 'pending_activation',
-                'password' => Hash::make(Str::random(32)),
+                'status' => $isImmediate ? 'approved' : 'pending_activation',
+                'email_verified_at' => $isImmediate ? now() : null,
+                'password' => Hash::make($isImmediate ? $input['password'] : Str::random(32)),
             ]);
 
             $rider = Rider::create([
@@ -267,20 +275,37 @@ class RiderManagementController extends Controller
                 'license_expiry' => $expiryFormatted,
                 'license_doc_url' => $licensePath,
                 'or_cr_doc_url' => $orCrPath,
-                'activation_token' => $activationToken,
-                'activation_token_expires_at' => now()->addHours(24),
-                'approval_status' => 'pending_activation',
-                'is_active' => false,
+                'activation_token' => $isImmediate ? null : $activationToken,
+                'activation_token_expires_at' => $isImmediate ? null : now()->addHours(24),
+                'approval_status' => $isImmediate ? 'approved' : 'pending_activation',
+                'is_active' => $isImmediate ? true : false,
             ]);
 
-            $user->notify(new RiderActivationNotification($activationToken, $sortingCenter->business_name ?? 'Logistics'));
+            if (!empty($input['hub_id'])) {
+                $hub = \App\Models\LogisticsHub::where('sorting_center_id', $sortingCenter->id)->where('is_active', true)->find($input['hub_id']);
+                if ($hub) {
+                    $rider->forceFill(['logistics_hub_id' => $hub->id])->save();
+                }
+            }
+
+            if (!empty($input['area_ids']) && is_array($input['area_ids'])) {
+                $areaIds = array_map('intval', $input['area_ids']);
+                $validAreaIds = \App\Models\Area::where('sorting_center_id', $sortingCenter->id)->whereIn('id', $areaIds)->pluck('id')->all();
+                if ($validAreaIds) {
+                    $rider->areas()->sync($validAreaIds);
+                }
+            }
+
+            if (!$isImmediate) {
+                $user->notify(new RiderActivationNotification($activationToken, $sortingCenter->business_name ?? 'Logistics'));
+            }
 
             return $rider->load('user:id,name,email');
         });
 
         if ($request->expectsJson() || $request->is('api/*')) {
             return response()->json([
-                'message' => 'Rider created successfully. An activation email has been sent.',
+                'message' => $isImmediate ? 'Rider created and activated successfully.' : 'Rider created successfully. An activation email has been sent.',
                 'data' => $rider,
             ], 201);
         }
@@ -337,7 +362,7 @@ class RiderManagementController extends Controller
         $rider = DB::transaction(function () use ($request, $id, $sortingCenterId): ?Rider {
             $rider = $this->lockedRider($sortingCenterId, $id);
 
-            if (! $rider || $rider->approval_status !== 'pending') {
+            if (! $rider || ! in_array($rider->approval_status, ['pending', 'pending_activation'], true)) {
                 return null;
             }
 
@@ -346,9 +371,11 @@ class RiderManagementController extends Controller
             $rider->update([
                 'approval_status' => 'approved',
                 'is_active' => true,
+                'activation_token' => null,
+                'activation_token_expires_at' => null,
             ]);
 
-            $rider->user->update(['status' => $rider->approval_status]);
+            $rider->user->update(['status' => 'approved', 'email_verified_at' => $rider->user->email_verified_at ?? now()]);
             $this->recordDecision($request, $rider, $before, 'approve');
             return $rider->load('user:id,name,email');
         });

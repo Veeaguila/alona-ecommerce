@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('logistics_hub_id')->constrained('logistics_hubs')->restrictOnDelete();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            $table->index(['sorting_center_id', 'logistics_hub_id', 'is_active']);
+            $table->index(['sorting_center_id', 'logistics_hub_id', 'is_active'], 'hub_staff_center_hub_active_idx');
         });
     }
 

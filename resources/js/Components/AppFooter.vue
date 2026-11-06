@@ -38,7 +38,7 @@ const defaultFooter = {
             title: 'Partner & Account',
             links: [
                 { label: 'Become a Seller', url: '/register/seller' },
-                { label: 'Become a Rider', url: '/register' },
+                { label: 'Become a Rider', url: '/register/rider' },
                 { label: 'Logistics Partner', url: '/register/logistics' },
                 { label: 'My Account', url: '/buyer/dashboard' },
             ],

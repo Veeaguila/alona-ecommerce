@@ -34,6 +34,41 @@ class AdminFooterSettingsTest extends TestCase
         $policiesSection = $defaultConfig['sections'][3];
         $this->assertSame('Policies & Information', $policiesSection['title']);
         $this->assertSame('shield', $policiesSection['icon']);
+
+        $partnerSection = $defaultConfig['sections'][2];
+        $this->assertSame('Partner & Account', $partnerSection['title']);
+        $riderLink = collect($partnerSection['links'])->firstWhere('label', 'Become a Rider');
+        $this->assertNotNull($riderLink);
+        $this->assertSame('/register/rider', $riderLink['url']);
+    }
+
+    public function test_footer_service_auto_heals_legacy_rider_registration_url(): void
+    {
+        $legacyConfig = [
+            'theme' => 'light',
+            'sections' => [
+                [
+                    'id' => 'partner-account',
+                    'title' => 'Partner & Account',
+                    'links' => [
+                        ['label' => 'Become a Rider', 'url' => '/register'],
+                    ],
+                ],
+            ],
+        ];
+
+        $setting = PlatformSetting::create([
+            'key' => 'marketplace.footer',
+            'value' => json_encode($legacyConfig),
+            'is_active' => true,
+        ]);
+
+        $resolved = FooterService::get();
+        $this->assertSame('/register/rider', $resolved['sections'][0]['links'][0]['url']);
+
+        $setting->refresh();
+        $persisted = json_decode($setting->value, true);
+        $this->assertSame('/register/rider', $persisted['sections'][0]['links'][0]['url']);
     }
 
     public function test_admin_can_view_footer_configuration_in_settings_page(): void

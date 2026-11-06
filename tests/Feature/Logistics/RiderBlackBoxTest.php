@@ -815,13 +815,13 @@ class RiderBlackBoxTest extends TestCase
     }
 
     /**
-     * TC-RID-029: No public rider registration
+     * TC-RID-029: Public rider registration page
      */
     public function test_tc_rid_029_no_public_rider_registration(): void
     {
-        // Public registration GET /register/rider redirects to login
+        // Public registration GET /register/rider renders rider onboarding page
         $regRes = $this->get('/register/rider');
-        $regRes->assertRedirect('/?auth=login');
+        $regRes->assertOk();
 
         // Accessing Add Rider form unauthenticated redirects to login
         $addRiderRes = $this->get('/sorting-center/riders');
