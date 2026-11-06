@@ -135,6 +135,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $appends = [
         'avatar_url',
+        'contact_number',
     ];
 
     /*
@@ -349,6 +350,11 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return asset('storage/' . ltrim($this->avatar, '/'));
+    }
+
+    public function getContactNumberAttribute(): ?string
+    {
+        return $this->contact_no;
     }
 
     /**

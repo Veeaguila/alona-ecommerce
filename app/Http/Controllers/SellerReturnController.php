@@ -44,7 +44,7 @@ class SellerReturnController extends Controller
                 'orderItem',
                 'orderItem.product:id,name,image_path',
                 'orderItem.variant:id,product_id,color,size,image_path',
-                'buyer:id,name,email,avatar,contact_number',
+                'buyer:id,name,email,avatar,contact_no',
                 'refundLedger',
             ]);
 
@@ -110,7 +110,7 @@ class SellerReturnController extends Controller
             ? \App\Models\LogisticsAuditEvent::where('action', 'logistics_refund_requested')
                 ->whereIn('data->return_request_id', $returnRequests->getCollection()->pluck('id'))
                 ->get()->pluck('data.return_request_id')->map(fn ($id) => (int) $id)->all() : [];
-        $returnRequests->getCollection()->each(fn ($entry) => $entry->setAttribute('logistics_execution_blocked', in_array($entry->id, $managedIds, true)));
+        $returnRequests->getCollection()->each(fn ($entry) => $entry->setAttribute('logistics_execution_blocked', $entry->status === 'pending' && in_array($entry->id, $managedIds, true)));
 
         // SELLER-41: Refund History Ledger
         $ledgerQuery = RefundLedger::query()
@@ -206,7 +206,7 @@ class SellerReturnController extends Controller
             'orderItem',
             'orderItem.product:id,name,image_path',
             'orderItem.variant:id,product_id,color,size,image_path',
-            'buyer:id,name,email,avatar,contact_number',
+            'buyer:id,name,email,avatar,contact_no',
             'refundLedger',
         ]);
 

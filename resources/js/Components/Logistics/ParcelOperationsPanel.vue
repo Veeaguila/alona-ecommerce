@@ -22,6 +22,28 @@
       <button class="app-button-primary" type="submit" :disabled="busy || !confirmed">{{ busy ? 'Saving...' : 'Confirm parcel operation' }}</button>
     </form>
     <LogisticsReviewNotice :review="review" />
+    <div v-if="review?.refund && review.refund.status === 'pending'" class="mt-3 rounded-xl border border-blue-200 bg-blue-50/80 p-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h4 class="font-semibold text-slate-800 text-sm">Authorize & Issue Buyer Refund</h4>
+          <p class="text-xs text-slate-600 mt-1">
+            Returned parcel was physically confirmed and restocked by the seller. You can now authorize the platform refund of ₱{{ Number(review.refund.requested_amount).toFixed(2) }} back to the buyer to complete this RTS cycle.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 text-xs shadow-sm transition disabled:opacity-50 cursor-pointer"
+          :disabled="refunding"
+          @click="executeRefund"
+        >
+          <svg v-if="refunding" class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>{{ refunding ? 'Processing Refund...' : `Authorize & Issue Refund (₱${Number(review.refund.requested_amount).toFixed(2)})` }}</span>
+        </button>
+      </div>
+    </div>
     <h3 class="mt-5 font-semibold">Immutable audit history</h3>
     <p v-if="!events.length" class="mt-2 text-sm">{{ loading ? 'Loading audit...' : 'No recorded Logistics operations.' }}</p>
     <ol class="mt-2 space-y-3">
@@ -47,7 +69,7 @@ const props = defineProps({ parcel: { type: Object, required: true }, token: { t
 const emit = defineEmits(['updated', 'close']);
 const operation = ref(props.parcel.status === 'OUT_FOR_DELIVERY' ? 'delivered' : 'lost');
 const handoverOpen = ref(false);
-const reason = ref(''), file = ref(null), confirmed = ref(false), busy = ref(false), loading = ref(false), message = ref('');
+const reason = ref(''), file = ref(null), confirmed = ref(false), busy = ref(false), loading = ref(false), refunding = ref(false), message = ref('');
 const events = ref([]), incidents = ref([]), review = ref(null);
 const urls = new Set();
 const requestKey = ref(createRequestKey());
@@ -89,6 +111,29 @@ async function viewEvidence(incidentId) {
     const url = URL.createObjectURL(await response.blob()); urls.add(url);
     const link = document.createElement('a'); link.href = url; link.download = `incident-${incidentId}`; link.click();
   } catch (error) { message.value = error.message; }
+}
+async function executeRefund() {
+  if (refunding.value || !review.value?.refund) return;
+  if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+    if (!window.confirm(`Are you sure you want to authorize and issue the refund of ₱${Number(review.value.refund.requested_amount).toFixed(2)} to the buyer?`)) return;
+  }
+  refunding.value = true;
+  message.value = '';
+  try {
+    const response = await fetch(`/api/sorting-center/parcels/${props.parcel.id}/execute-refund`, {
+      method: 'POST',
+      headers: headers(),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Refund authorization failed.');
+    message.value = data.message;
+    emit('updated', props.parcel.status);
+    await load();
+  } catch (error) {
+    message.value = error.message;
+  } finally {
+    refunding.value = false;
+  }
 }
 onMounted(load);
 onUnmounted(() => { for (const url of urls) URL.revokeObjectURL(url); });

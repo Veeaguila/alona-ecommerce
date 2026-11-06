@@ -723,8 +723,8 @@ const hasActiveFilters = computed(() => {
                                         <span class="font-bold text-slate-800">Buyer: {{ req.buyer?.name || 'Customer' }}</span>
                                         <span class="text-[11px] text-slate-500">{{ req.buyer?.email }}</span>
                                     </div>
-                                    <p v-if="req.buyer?.contact_number" class="mt-0.5 text-[11px] text-slate-500">
-                                        Contact: {{ req.buyer.contact_number }}
+                                    <p v-if="req.buyer?.contact_number || req.buyer?.contact_no" class="mt-0.5 text-[11px] text-slate-500">
+                                        Contact: {{ req.buyer?.contact_number || req.buyer?.contact_no }}
                                     </p>
                                 </div>
                             </div>
@@ -804,7 +804,7 @@ const hasActiveFilters = computed(() => {
                                 <div class="pt-2 space-y-2">
 
                                     <!-- STAGE 1: PENDING SELLER DECISION (SELLER-38) -->
-                                    <p v-if="req.logistics_execution_blocked" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Logistics refund review pending. No refund has been issued. Execution is blocked until the authorized payment workflow is verified and approved.</p>
+                                    <p v-if="req.logistics_execution_blocked && req.status === 'pending'" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Logistics refund review pending. No refund has been issued. Execution is blocked until the authorized payment workflow is verified and approved.</p>
                                     <template v-else-if="req.status === 'pending'">
                                         <button
                                             type="button"

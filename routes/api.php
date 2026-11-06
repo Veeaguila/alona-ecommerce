@@ -180,6 +180,7 @@ Route::middleware(['auth:sanctum', 'sorting_center.approved'])->group(function (
     Route::post('/sorting-center/handovers/{id}/confirm', [\App\Http\Controllers\Logistics\ParcelHandoverController::class, 'confirm'])->whereNumber('id');
     Route::post('/sorting-center/handovers/{id}/cancel', [\App\Http\Controllers\Logistics\ParcelHandoverController::class, 'cancel'])->whereNumber('id');
     Route::post('/sorting-center/parcels/{id}/override-delivered', [\App\Http\Controllers\Logistics\ParcelOperationsController::class, 'overrideDelivered'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::post('/sorting-center/parcels/{id}/execute-refund', [\App\Http\Controllers\Logistics\ParcelOperationsController::class, 'executeRefund'])->whereNumber('id')->middleware('throttle:20,1');
     Route::post('/sorting-center/parcels/{id}/incidents', [\App\Http\Controllers\Logistics\ParcelOperationsController::class, 'incident'])->whereNumber('id')->middleware('throttle:20,1');
     Route::get('/sorting-center/parcels/{id}/incidents/{incidentId}/evidence', [\App\Http\Controllers\Logistics\ParcelOperationsController::class, 'evidence'])->whereNumber(['id', 'incidentId']);
     Route::get('/sorting-center/dashboard', [DashboardController::class, 'index']);

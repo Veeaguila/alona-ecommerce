@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Logistics;
 
 use App\Http\Controllers\Controller;
-use App\Models\{BuyerNotification, LogisticsAuditEvent, Parcel, ParcelIncident, SellerNotification};
+use App\Models\{BuyerNotification, Commission, LogisticsAuditEvent, Order, OrderReturnRequest, Parcel, ParcelIncident, RefundLedger, SellerNotification};
 use App\Services\{LogisticsAudit, SellerParcelDelivery, SellerShipmentFinance};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Schema, Storage};
+use Illuminate\Support\Str;
 
 class ParcelOperationsController extends Controller
 {
@@ -102,6 +103,112 @@ class ParcelOperationsController extends Controller
         }
         if ($path && $incident->evidence_path !== $path) Storage::disk('local')->delete($path);
         return response()->json(['message' => 'Incident recorded. Refund review requires the existing authorized workflow.', 'data' => $incident], 201);
+    }
+
+    public function executeRefund(Request $request, int $id)
+    {
+        $this->owned($request, $id);
+        app(LogisticsAudit::class)->requireStorage();
+
+        $result = DB::transaction(function () use ($request, $id) {
+            $this->lockOwnedOrder($request, $id);
+            app(SellerShipmentFinance::class)->lockParcel($id);
+            $parcel = $this->owned($request, $id, true);
+
+            $event = LogisticsAuditEvent::where('parcel_id', $parcel->id)
+                ->where('action', 'logistics_refund_requested')
+                ->oldest('id')
+                ->first();
+
+            abort_unless($event && !empty($event->data['return_request_id']), 422, 'No pending logistics refund review found for this parcel.');
+
+            $returnRequest = OrderReturnRequest::whereKey($event->data['return_request_id'])->lockForUpdate()->firstOrFail();
+            abort_unless($returnRequest->status === 'pending', 422, 'This refund review is already resolved or cancelled.');
+
+            $order = Order::withoutEvents(fn () => Order::whereKey($returnRequest->order_id)->lockForUpdate()->firstOrFail());
+            abort_unless($order->payment_status === 'paid', 422, 'Only paid orders can have an executed refund.');
+
+            $amount = (float) $returnRequest->requested_amount;
+            abort_unless($amount > 0, 422, 'The refund amount must be greater than zero.');
+
+            $refundMethod = $order->payment_method ?? 'gcash';
+
+            $refundLedger = RefundLedger::create([
+                'refund_reference' => 'REF-' . now()->format('Ymd') . '-' . strtoupper(Str::random(6)),
+                'order_return_request_id' => $returnRequest->id,
+                'order_id' => $returnRequest->order_id,
+                'order_item_id' => $returnRequest->order_item_id,
+                'seller_id' => $returnRequest->seller_id,
+                'buyer_id' => $returnRequest->buyer_id,
+                'original_amount' => $returnRequest->requested_amount,
+                'refunded_amount' => $amount,
+                'refund_type' => 'refund_only',
+                'refund_method' => $refundMethod,
+                'status' => 'completed',
+                'reason' => 'Logistics RTS refund approved',
+                'notes' => 'Authorized refund executed by Logistics sorting center for returned parcel.',
+                'processed_by' => $request->user()->id,
+                'processed_at' => now(),
+            ]);
+
+            $returnRequest->update([
+                'status' => 'refunded',
+                'refunded_amount' => $amount,
+                'refund_method' => $refundMethod,
+                'resolved_at' => now(),
+            ]);
+
+            $order->update([
+                'refund_status' => 'refunded',
+                'refund_amount' => $amount,
+                'payment_status' => 'refunded',
+            ]);
+
+            if ($parcel->orderItem) {
+                $parcel->orderItem->update(['status' => 'refunded']);
+            }
+
+            if (Schema::hasTable('commissions')) {
+                Commission::where('order_id', $order->id)->update(['status' => 'cancelled']);
+            }
+
+            app(LogisticsAudit::class)->record($request->user(), 'logistics_refund_executed', $parcel, [
+                'return_request_id' => $returnRequest->id,
+                'refund_ledger_id' => $refundLedger->id,
+                'refund_reference' => $refundLedger->refund_reference,
+                'amount' => $amount,
+                'method' => $refundMethod,
+            ]);
+
+            if ($order->user_id && Schema::hasTable('buyer_notifications')) {
+                BuyerNotification::create([
+                    'user_id' => $order->user_id,
+                    'type' => 'logistics_refund_executed',
+                    'title' => 'Refund Processed',
+                    'message' => "A refund of ₱" . number_format($amount, 2) . " for Order #{$order->order_number} has been issued to your {$refundMethod} account.",
+                ]);
+            }
+
+            $sellerId = app(SellerParcelDelivery::class)->verifiedSellerId($parcel);
+            if ($sellerId && Schema::hasTable('seller_notifications')) {
+                SellerNotification::create([
+                    'user_id' => $sellerId,
+                    'type' => 'logistics_refund_executed',
+                    'title' => 'RTS Refund Completed',
+                    'message' => "Logistics completed the refund for Order #{$order->order_number} following confirmed item restock.",
+                    'url' => route('seller.returns', [], false),
+                ]);
+            }
+
+            return ['refund' => $returnRequest->fresh(), 'ledger' => $refundLedger];
+        }, 5);
+
+        return response()->json([
+            'message' => 'Refund of ₱' . number_format($result['refund']->refunded_amount, 2) . ' authorized and successfully issued.',
+            'data' => [
+                'review' => app(\App\Services\LogisticsRefundReview::class)->details($this->owned($request, $id)),
+            ],
+        ]);
     }
 
     public function evidence(Request $request, int $id, int $incidentId)

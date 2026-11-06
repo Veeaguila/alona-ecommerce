@@ -69,9 +69,12 @@ class LogisticsRefundReview
         if (!Schema::hasTable('logistics_audit_events')) return ['claim' => null, 'refund' => null];
         $claim = LogisticsAuditEvent::where('parcel_id', $parcel->id)->where('action', 'logistics_claim_opened')->oldest('id')->first();
         $event = LogisticsAuditEvent::where('parcel_id', $parcel->id)->where('action', 'logistics_refund_requested')->oldest('id')->first();
-        $request = $event ? OrderReturnRequest::find($event->data['return_request_id']) : null;
+        $request = $event ? OrderReturnRequest::with('refundLedger')->find($event->data['return_request_id']) : null;
         return ['claim' => $claim ? ['reference' => $claim->data['reference'], 'state' => 'pending_review', 'opened_at' => $claim->created_at] : null,
             'refund' => $request ? ['id' => $request->id, 'status' => $request->status, 'requested_amount' => $request->requested_amount,
-                'execution_blocked' => true, 'created_at' => $request->created_at] : null];
+                'refunded_amount' => $request->refunded_amount, 'refund_method' => $request->refund_method,
+                'refund_reference' => $request->refundLedger?->refund_reference,
+                'execution_blocked' => $request->status === 'pending', 'created_at' => $request->created_at,
+                'resolved_at' => $request->resolved_at] : null];
     }
 }

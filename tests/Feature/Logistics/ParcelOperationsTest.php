@@ -125,4 +125,47 @@ class ParcelOperationsTest extends CompleteWorkflowTest
         $this->assertDatabaseCount('order_return_requests', 0); $this->assertDatabaseCount('refund_ledgers', 0);
         $this->assertSame(1, LogisticsAuditEvent::where('action', 'logistics_refund_review_blocked')->count());
     }
+
+    public function test_authorized_sorting_center_can_execute_logistics_refund_review_and_completes_cycle(): void
+    {
+        $this->item->order->update(['payment_method' => 'gcash', 'payment_status' => 'paid', 'total' => '100.00']);
+        $parcel = $this->dispatchedParcel();
+        $parcel->updateQuietly(['status' => 'FAILED_RETURNED']);
+
+        $review = app(\App\Services\LogisticsRefundReview::class)->request($this->center->user, $parcel, 'rts');
+        $this->assertNotNull($review);
+        $this->assertSame('pending', $review->status);
+
+        $foreign = User::factory()->create(['usertype' => 'sorting_center', 'status' => 'approved']);
+        SortingCenter::create(['user_id' => $foreign->id, 'business_name' => 'Foreign Center', 'approval_status' => 'approved']);
+        Sanctum::actingAs($foreign);
+        $this->postJson("/api/sorting-center/parcels/{$parcel->id}/execute-refund")->assertNotFound();
+
+        Sanctum::actingAs($this->center->user);
+        $url = "/api/sorting-center/parcels/{$parcel->id}/execute-refund";
+        $response = $this->postJson($url)->assertOk();
+        $this->assertStringContainsString('Refund of ₱100.00 authorized', $response->json('message'));
+
+        $this->assertSame('refunded', $review->fresh()->status);
+        $this->assertSame('100.00', (string) $review->fresh()->refunded_amount);
+        $this->assertSame('refunded', $this->item->order->fresh()->payment_status);
+        $this->assertSame('refunded', $this->item->order->fresh()->refund_status);
+        $this->assertSame('refunded', $this->item->fresh()->status);
+
+        $ledger = \App\Models\RefundLedger::where('order_return_request_id', $review->id)->sole();
+        $this->assertSame('completed', $ledger->status);
+        $this->assertSame('100.00', (string) $ledger->refunded_amount);
+        $this->assertSame('gcash', $ledger->refund_method);
+        $this->assertSame($this->center->user_id, $ledger->processed_by);
+
+        $this->assertSame(1, LogisticsAuditEvent::where('action', 'logistics_refund_executed')->count());
+        $this->assertTrue(BuyerNotification::where('user_id', $this->item->order->user_id)->where('type', 'logistics_refund_executed')->exists());
+        $this->assertTrue(SellerNotification::where('user_id', $this->item->product->seller_id)->where('type', 'logistics_refund_executed')->exists());
+
+        $this->postJson($url)->assertUnprocessable();
+
+        $this->getJson("/api/sorting-center/parcels/{$parcel->id}/operations")->assertOk()
+            ->assertJsonPath('data.review.refund.status', 'refunded')
+            ->assertJsonPath('data.review.refund.execution_blocked', false);
+    }
 }
