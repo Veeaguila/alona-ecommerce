@@ -124,9 +124,76 @@ class HubNetwork
             422, 'The destination hub must physically receive this parcel before delivery assignment.');
     }
 
+    public function resolveHubFromAddress(string $address, int $centerId): ?int
+    {
+        $lower = strtolower($address);
+        if (str_contains($lower, 'laguna') || preg_match('/\b(alaminos|bay|calauan|cavinti|biñan|binan|cabuyao|calamba|san pablo|san pedro|santa rosa|famy|kalayaan|liliw|los baños|los banos|luisiana|lumban|mabitac|magdalena|majayjay|nagcarlan|paete|pagsanjan|pakil|pangil|pila|rizal|santa cruz|santa maria|siniloan|victoria)\b/i', $address)) {
+            $hub = LogisticsHub::where('sorting_center_id', $centerId)->where('name', 'like', '%Laguna%')->first();
+            if ($hub) return $hub->id;
+        }
+
+        if (str_contains($lower, 'manila') || str_contains($lower, 'ncr') || preg_match('/\b(caloocan|las piñas|las pinas|makati|malabon|mandaluyong|muntinlupa|navotas|parañaque|paranaque|pasig|pasay|pateros|quezon city|san juan|taguig|valenzuela)\b/i', $address)) {
+            $hub = LogisticsHub::where('sorting_center_id', $centerId)->where('name', 'like', '%Manila%')->first();
+            if ($hub) return $hub->id;
+        }
+
+        return LogisticsHub::where('sorting_center_id', $centerId)->where('is_active', true)->orderBy('id')->value('id');
+    }
+
+    public function ensureJourney(Parcel $parcel, ?int $hubId = null): ?ParcelHubJourney
+    {
+        if (!$this->available()) return null;
+        $existing = ParcelHubJourney::where('parcel_id', $parcel->id)->first();
+        if ($existing) {
+            if ($hubId && !$existing->current_hub_id) {
+                $existing->update(['current_hub_id' => $hubId]);
+            }
+            return $existing;
+        }
+
+        $centerId = (int) ($parcel->sorting_center_id ?? 1);
+        $originHubId = $hubId
+            ?? $parcel->pickupRider?->logistics_hub_id
+            ?? $this->resolveHubFromAddress((string) $parcel->collection_address, $centerId);
+
+        if (!$originHubId) {
+            $originHubId = LogisticsHub::where('sorting_center_id', $centerId)->where('is_active', true)->orderBy('id')->value('id');
+        }
+
+        $destHubId = $parcel->assignedRider?->logistics_hub_id
+            ?? $this->resolveHubFromAddress((string) $parcel->delivery_address, $centerId)
+            ?? $originHubId;
+
+        if (!$originHubId || !$destHubId) return null;
+
+        $originHub = LogisticsHub::find($originHubId);
+        $destHub = LogisticsHub::find($destHubId);
+        $isArrived = in_array($parcel->status, ['AT_SORTING_CENTER', 'OUT_FOR_DELIVERY', 'DELIVERED'], true);
+        $isLocal = (int) $originHubId === (int) $destHubId;
+
+        return ParcelHubJourney::create([
+            'parcel_id' => $parcel->id,
+            'sorting_center_id' => $centerId,
+            'origin_hub_id' => $originHubId,
+            'destination_hub_id' => $destHubId,
+            'current_hub_id' => $isArrived ? $originHubId : null,
+            'origin_received_at' => $isArrived ? ($parcel->sorted_at ?? $parcel->updated_at ?? now()) : null,
+            'destination_received_at' => ($isArrived && $isLocal) ? ($parcel->sorted_at ?? $parcel->updated_at ?? now()) : null,
+            'route_snapshot' => [
+                'company_name' => $originHub?->sortingCenter?->business_name ?? 'Logistics',
+                'origin_hub_id' => $originHubId,
+                'origin_hub_name' => $originHub?->name ?? 'Hub',
+                'destination_hub_id' => $destHubId,
+                'destination_hub_name' => $destHub?->name ?? 'Hub',
+                'origin_city_code' => '',
+                'destination_city_code' => '',
+            ],
+        ]);
+    }
+
     public function receiveOrigin(Parcel $parcel, ?int $hubId, User $actor): void
     {
-        $journey = $this->journey($parcel);
+        $journey = $this->journey($parcel) ?? $this->ensureJourney($parcel, $hubId);
         if (!$journey) return;
         $journey = ParcelHubJourney::whereKey($journey->id)->lockForUpdate()->firstOrFail();
         abort_unless($hubId && $hubId === (int) $journey->origin_hub_id, 422, 'Confirm arrival at the booked origin hub.');

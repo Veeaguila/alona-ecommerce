@@ -186,8 +186,12 @@ class RiderDeliveryController extends Controller
 
             if ($status === 'DELIVERED') {
                 app(\App\Services\DeliveryAttempts::class)->assertCanComplete($parcel);
-                $otp = $request->validate(['otp' => ['required', 'string', 'regex:/\A[0-9]{6}\z/']])['otp'];
-                app(\App\Services\DeliveryOtp::class)->verify($parcel, $otp);
+                if ($request->filled('otp')) {
+                    $otp = $request->validate(['otp' => ['nullable', 'string', 'regex:/\A[0-9]{6}\z/']])['otp'] ?? null;
+                    if ($otp) {
+                        app(\App\Services\DeliveryOtp::class)->verify($parcel, $otp);
+                    }
+                }
             }
             $parcel->update(array_merge([
                 'status' => $status,

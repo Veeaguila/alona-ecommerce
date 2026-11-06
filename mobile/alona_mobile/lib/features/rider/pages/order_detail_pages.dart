@@ -631,6 +631,73 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                Builder(
+                  builder: (_) {
+                    final isCod = delivery['is_cod'] == true;
+                    final codAmount = delivery['cod_amount'] != null
+                        ? double.tryParse(delivery['cod_amount'].toString()) ?? 0.0
+                        : 0.0;
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: isCod ? const Color(0xFFFEF3C7) : const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isCod ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        isCod
+                            ? 'COD: Collect PHP ${codAmount.toStringAsFixed(2)}'
+                            : 'PAID ONLINE - Do not collect payment',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: isCod ? const Color(0xFF92400E) : const Color(0xFF065F46),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (delivery['item_name'] != null || delivery['buyer_note'] != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: RiderColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (delivery['item_name'] != null)
+                          Text(
+                            'Package: ${delivery['item_quantity'] ?? 1}x ${delivery['item_name']}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: RiderColors.text,
+                            ),
+                          ),
+                        if (delivery['buyer_note'] != null &&
+                            delivery['buyer_note'].toString().trim().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Note: ${delivery['buyer_note']}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: RiderColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 _ContactCard(
                   name: _contactName(delivery, pickup: false),
                   address: deliveryAddress(delivery),

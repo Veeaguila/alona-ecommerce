@@ -18,7 +18,7 @@
       <div v-if="error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ error }}</div>
       <div v-if="notice" role="status" class="rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">{{ notice }}</div>
       <section v-if="result" class="app-panel app-panel--padded" aria-label="Parcel details">
-        <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="app-section-title">{{ result.parcel.order_id }}</h2><span class="text-sm">{{ result.parcel.status.replaceAll('_', ' ') }}</span></div>
+        <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="app-section-title">{{ result.parcel.order_id }}</h2><span class="text-xs font-bold uppercase tracking-wider rounded-lg px-2.5 py-1 border border-teal-200 bg-teal-50 text-teal-800">{{ result.status_label || (result.current_hub ? 'At ' + result.current_hub.name : result.parcel.status.replaceAll('_', ' ')) }}</span></div>
         <dl class="mt-5 grid gap-5 sm:grid-cols-2">
           <div><dt class="text-xs text-slate-500">Collection address</dt><dd class="mt-1 break-words text-sm">{{ result.parcel.collection_address || 'Not recorded' }}</dd></div>
           <div><dt class="text-xs text-slate-500">Delivery address</dt><dd class="mt-1 break-words text-sm">{{ result.parcel.delivery_address || 'Not recorded' }}</dd></div>
@@ -31,14 +31,15 @@
           <label class="mt-4 flex items-start gap-2 text-sm"><input v-model="confirmed" type="checkbox" :disabled="busy || !fresh" /><span>{{ result.action === 'dispatch' ? 'I confirm the shipment is physically leaving this hub.' : 'I confirm this parcel is physically here at my operating hub.' }}</span></label>
           <button type="button" class="app-button-primary mt-4" :disabled="busy || !fresh || !confirmed || (result.action === 'dispatch' && transportReference.length < 3)" @click="performAction">{{ result.action_label }}</button>
         </template>
-        <a v-if="result.can_open_delivery_assignment" href="/sorting-center/rider-assignment" class="mt-4 inline-block text-sm underline">Open delivery assignment</a>
+        <a v-if="result.can_open_delivery_management" href="/sorting-center/delivery-management" class="mt-4 inline-block text-sm font-semibold text-[#008B8B] underline">Open Delivery Management (Sort parcel to City Area)</a>
+        <a v-if="result.can_open_delivery_assignment" href="/sorting-center/rider-assignment" class="mt-4 inline-block text-sm font-semibold text-[#008B8B] underline">Open delivery assignment</a>
       </section>
       <section v-if="hubId" class="app-panel app-panel--padded">
         <h2 class="app-section-title">Work at this hub</h2>
         <label class="mt-4 block max-w-xs text-sm">Show<select v-model="stage" class="app-input mt-1 w-full" :disabled="busy" @change="changeStage"><option v-for="choice in stages" :key="choice.value" :value="choice.value">{{ choice.label }}</option></select></label>
         <p v-if="fresh && !queue.data.length" class="py-5 text-sm text-slate-600">No matching parcels at this hub.</p>
         <article v-for="journey in queue.data" :key="journey.id" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-          <div class="min-w-0"><p class="font-semibold">{{ journey.parcel.order_id }}</p><p class="mt-1 break-words text-sm text-slate-600">{{ journey.origin_hub.name }} → {{ journey.destination_hub.name }}</p><p class="mt-1 text-xs text-slate-500">{{ journey.parcel.status.replaceAll('_', ' ') }}</p></div>
+          <div class="min-w-0"><p class="font-semibold">{{ journey.parcel.order_id }}</p><p class="mt-1 break-words text-sm text-slate-600">{{ journey.origin_hub.name }} → {{ journey.destination_hub.name }}</p><p class="mt-1 text-xs font-semibold text-teal-700">{{ journey.parcel.status === 'AT_SORTING_CENTER' ? 'At ' + (journey.origin_hub?.name || 'Hub') : journey.parcel.status.replaceAll('_', ' ') }}</p></div>
           <button type="button" class="app-button-secondary" :disabled="busy || !fresh" @click="openParcel(journey.parcel.order_id)">Review parcel</button>
         </article>
         <div v-if="queue.last_page > 1" class="mt-5 flex items-center justify-between gap-3"><button type="button" class="app-button-secondary" :disabled="busy || queue.current_page <= 1" @click="loadPage(queue.current_page - 1)">Previous</button><span class="text-sm">Page {{ queue.current_page }} of {{ queue.last_page }}</span><button type="button" class="app-button-secondary" :disabled="busy || queue.current_page >= queue.last_page" @click="loadPage(queue.current_page + 1)">Next</button></div>

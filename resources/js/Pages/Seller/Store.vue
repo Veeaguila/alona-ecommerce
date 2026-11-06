@@ -39,7 +39,7 @@ const form = useForm({
     operating_hours: props.store.operating_hours
         ? { ...defaultHours, ...props.store.operating_hours }
         : { ...defaultHours },
-    response_time: props.store.response_time || 'within_day',
+    response_time: (props.store.response_time === 'within_day' ? 'same_day' : props.store.response_time) || 'same_day',
     shipping_policy: props.store.shipping_policy || '',
     warranty_policy: props.store.warranty_policy || '',
     return_policy: props.store.return_policy || '',

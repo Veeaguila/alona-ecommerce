@@ -1873,6 +1873,12 @@ class BuyerOrderController extends Controller
                     // Restock inventory
                     $this->restockOrderItem($item);
 
+                    // Cancel associated parcel & pickup requests if any
+                    if ($item->parcel) {
+                        $item->parcel->update(['status' => 'CANCELLED']);
+                        $item->parcel->pickupRequests()->update(['status' => 'cancelled']);
+                    }
+
                     // Notify seller
                     $this->notifySellerCancelledOrder($order, $item, $data['reason']);
                 }

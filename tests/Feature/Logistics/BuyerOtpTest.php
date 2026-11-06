@@ -48,7 +48,7 @@ class BuyerOtpTest extends CompleteWorkflowTest
         $this->getJson('/api/rider/deliveries')->assertOk()->assertJsonMissingPath('data.0.otp');
         $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => $code])->assertUnprocessable()->assertJsonPath('code', 'valid_photo_required');
         $this->postJson('/api/rider/deliveries/'.$parcel->id.'/upload-proof', ['file' => UploadedFile::fake()->image('otp-proof.jpg'), 'type' => 'PHOTO'])->assertCreated();
-        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver')->assertUnprocessable()->assertJsonValidationErrors('otp');
+        $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => '999999'])->assertUnprocessable()->assertJsonValidationErrors('otp');
         $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => $code])->assertOk()->assertJsonPath('data.status', 'DELIVERED');
         $this->postJson('/api/rider/deliveries/'.$parcel->id.'/deliver', ['otp' => $code])->assertUnprocessable();
         $this->assertTrue(Cache::get(DeliveryOtp::CACHE_PREFIX.$parcel->id)['consumed']);

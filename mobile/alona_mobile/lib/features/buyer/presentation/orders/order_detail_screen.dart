@@ -228,23 +228,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             const SizedBox(height: 16),
 
             // Order Tracking History Timeline
-            for (final parcel in _otpParcels)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: AlonaButton(
-                  text: _otpParcels.length == 1
-                      ? 'Show delivery OTP'
-                      : 'Delivery OTP · ${parcel['product_name']}',
-                  icon: Icons.lock_outline,
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) => DeliveryOtpDialog(
-                      orderId: order.id,
-                      parcelId: parcel['delivery_parcel_id'],
-                    ),
-                  ),
-                ),
-              ),
             if (_histories.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(16),

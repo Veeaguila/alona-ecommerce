@@ -62,6 +62,16 @@ class HubWorkspaceController extends Controller
     public function queue(Request $request): JsonResponse
     {
         $context = $this->context($request, true);
+
+        // Auto-ensure journeys for active parcels in this center that don't have one yet
+        $unlinkedParcels = Parcel::where('sorting_center_id', $context['center']->id)
+            ->whereNotIn('status', ['DELIVERED', 'FAILED_RETURNED'])
+            ->whereDoesntHave('hubJourney')
+            ->get();
+        foreach ($unlinkedParcels as $p) {
+            app(HubNetwork::class)->ensureJourney($p);
+        }
+
         $input = $request->validate(['stage' => ['sometimes', Rule::in(HubOperations::STAGES)], 'page' => ['sometimes', 'integer', 'min:1']]);
         $query = app(HubOperations::class)->queue($context['center']->id, $context['hub']->id, $input['stage'] ?? 'all')
             ->whereHas('parcel', fn ($q) => $q->whereNotIn('status', ['DELIVERED', 'FAILED_RETURNED']))

@@ -13,11 +13,27 @@ class RiderParcelDetails
             ? 'id,name,contact_no,address,street_address,barangay,municipality,province,address_geography'
             : 'id,name,contact_no';
         $parcels->load($relation.':'.$columns);
+        $parcels->load(['orderItem.order', 'orderItem.product']);
         foreach ($parcels as $parcel) {
             $person = $parcel->getRelation($relation);
+            $order = $parcel->orderItem?->order;
+            $product = $parcel->orderItem?->product;
+            $isCod = strtolower((string) ($order?->payment_method ?? '')) === 'cod';
+            $isPaid = strtolower((string) ($order?->payment_status ?? '')) === 'paid';
+            $codAmount = ($isCod && ! $isPaid) ? (float) ($order?->total ?? 0) : 0.0;
+
+            $parcel->setAttribute('payment_method', $order?->payment_method ?? 'cod');
+            $parcel->setAttribute('payment_status', $order?->payment_status ?? ($isPaid ? 'paid' : 'unpaid'));
+            $parcel->setAttribute('is_cod', $isCod && ! $isPaid);
+            $parcel->setAttribute('cod_amount', $codAmount);
+            $parcel->setAttribute('order_number', $order?->order_number ?? (string) $parcel->order_id);
+            $parcel->setAttribute('buyer_note', $order?->buyer_note);
+            $parcel->setAttribute('item_name', $product?->name ?? 'Package Item');
+            $parcel->setAttribute('item_quantity', (int) ($parcel->orderItem?->quantity ?? 1));
+
             $details = ['name' => $person?->name, 'contact_no' => $person?->contact_no,
                 'house_number' => null, 'street' => null, 'barangay' => null,
-                'city' => null, 'province' => null, 'postal_code' => null, 'instructions' => null];
+                'city' => null, 'province' => null, 'postal_code' => null, 'instructions' => $order?->buyer_note];
             if ($pickup) {
                 $profileAddress = $person?->address ?: implode(', ', array_filter([
                     $person?->street_address, $person?->barangay, $person?->municipality, $person?->province,

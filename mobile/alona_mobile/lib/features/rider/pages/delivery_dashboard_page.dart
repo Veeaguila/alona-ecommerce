@@ -177,13 +177,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
         current = updated;
       }
       if (!mounted) return;
-      final otp = await showDeliveryOtpDialog(
-        context,
-        current['order_id'].toString(),
-      );
-      if (otp == null || !mounted) return;
-      if (await updateDelivery(current, 'deliver', body: {'otp': otp}) &&
-          mounted) {
+      if (await updateDelivery(current, 'deliver') && mounted) {
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -453,6 +447,47 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   ),
                 ],
               ),
+              Builder(
+                builder: (_) {
+                  final isCod = delivery['is_cod'] == true;
+                  final codAmount = delivery['cod_amount'] != null
+                      ? double.tryParse(delivery['cod_amount'].toString()) ?? 0.0
+                      : 0.0;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: isCod ? const Color(0xFFFEF3C7) : const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isCod ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                      ),
+                    ),
+                    child: Text(
+                      isCod
+                          ? 'COD: Collect PHP ${codAmount.toStringAsFixed(2)}'
+                          : 'PAID ONLINE - Do not collect',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        color: isCod ? const Color(0xFF92400E) : const Color(0xFF065F46),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (delivery['item_name'] != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Item: ${delivery['item_quantity'] ?? 1}x ${delivery['item_name']}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: RiderColors.textSecondary,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 custName,

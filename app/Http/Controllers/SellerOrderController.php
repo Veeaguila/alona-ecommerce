@@ -817,6 +817,11 @@ class SellerOrderController extends Controller
          * This is separate from the buyer notification
          * created by OrderItem::moveTo().
          */
+        if ($orderItem->parcel) {
+            $orderItem->parcel->update(['status' => 'CANCELLED']);
+            $orderItem->parcel->pickupRequests()->update(['status' => 'cancelled']);
+        }
+
         SellerNotification::create([
             'user_id' => $request->user()->id,
             'type' => 'order',

@@ -35,6 +35,7 @@ class Rider extends Model
         'license_doc_url',
         'approval_status',
         'is_active',
+        'logistics_hub_id',
     ];
 
     // Activation credentials must stay out of API and nested model serialization.

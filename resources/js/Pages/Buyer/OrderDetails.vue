@@ -840,7 +840,6 @@ const getItemShopName = item => {
                                             <ol v-if="item.pickup_assignment_label" class="mt-2 text-sm" aria-label="Pickup assignment timeline"><li v-for="event in (item.status_histories || []).filter(event => event.note?.startsWith('Pickup Rider assigned to ') || event.note?.startsWith('Pickup Rider reassigned from '))" :key="event.id">{{ event.note }} · {{ new Date(event.created_at).toLocaleString() }}</li></ol>
                                             <p v-if="['LOST', 'DAMAGED'].includes(item.delivery_parcel_status)" class="mt-2 font-semibold">Courier status: {{ item.delivery_parcel_status }}</p>
                                             <LogisticsReviewNotice :review="item.logistics_review" />
-                                            <BuyerDeliveryOtp v-if="item.delivery_parcel_id && item.delivery_parcel_status === 'OUT_FOR_DELIVERY' && !item.return_to_seller" :order-id="order.id" :parcel-id="item.delivery_parcel_id" />
                                             <!-- RETURN/REFUND STATUS DISPLAY (BUYER-23) -->
                                             <div
                                                 v-if="item.active_return_request || item.latest_return_request"

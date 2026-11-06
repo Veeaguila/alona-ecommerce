@@ -48,6 +48,9 @@ class PickupRequestController extends Controller
                     ->orWhere(function ($query): void {
                         $query->whereNull('sorting_center_id')->where('pickup_requests.status', 'pending');
                     });
+            })
+            ->whereDoesntHave('parcel.orderItem', function ($query): void {
+                $query->where('status', 'cancelled');
             });
 
         $stage = $validated['stage'] ?? 'all';

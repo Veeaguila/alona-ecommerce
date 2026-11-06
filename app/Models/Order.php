@@ -365,6 +365,11 @@ class Order extends Model
                             }
                         }
                     }
+
+                    if ($item->parcel) {
+                        $item->parcel->update(['status' => 'CANCELLED']);
+                        $item->parcel->pickupRequests()->update(['status' => 'cancelled']);
+                    }
                 }
 
                 $order->restoreVouchers();

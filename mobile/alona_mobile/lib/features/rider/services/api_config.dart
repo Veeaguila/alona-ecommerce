@@ -6,19 +6,22 @@ const _configuredBaseUrl = String.fromEnvironment(
 );
 
 String normalizeApiBaseUrl(String value, {bool requireHttps = false}) {
-  final base = value.trim().replaceFirst(RegExp(r'/+$'), '');
-  final uri = Uri.tryParse(base);
+  var base = value.trim().replaceFirst(RegExp(r'/+$'), '');
+  var uri = Uri.tryParse(base);
   if (uri == null ||
       !uri.hasAuthority ||
       uri.host.isEmpty ||
       !['http', 'https'].contains(uri.scheme) ||
       uri.userInfo.isNotEmpty ||
       uri.hasQuery ||
-      uri.hasFragment ||
-      !uri.path.endsWith('/api')) {
+      uri.hasFragment) {
     throw const FormatException(
-      'Set API_BASE_URL to the ALONA server URL ending in /api.',
+      'Set API_BASE_URL to a valid ALONA server URL.',
     );
+  }
+  if (!uri.path.endsWith('/api')) {
+    base = '$base/api';
+    uri = Uri.parse(base);
   }
   if (requireHttps && uri.scheme != 'https') {
     throw const FormatException(

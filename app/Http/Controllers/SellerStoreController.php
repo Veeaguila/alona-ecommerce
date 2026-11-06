@@ -189,7 +189,7 @@ class SellerStoreController extends Controller
             'response_time' => [
                 'nullable',
                 'string',
-                'in:within_hour,few_hours,same_day,next_day',
+                'in:within_hour,few_hours,same_day,within_day,next_day',
             ],
             'shipping_policy' => [
                 'nullable',
@@ -262,6 +262,10 @@ class SellerStoreController extends Controller
         }
 
         unset($data['store_logo'], $data['store_banner'], $data['remove_banner'], $data['remove_logo']);
+
+        if (isset($data['response_time']) && $data['response_time'] === 'within_day') {
+            $data['response_time'] = 'same_day';
+        }
 
         // Composite address update
         if (isset($data['province']) || isset($data['municipality']) || isset($data['barangay']) || isset($data['street_address'])) {
