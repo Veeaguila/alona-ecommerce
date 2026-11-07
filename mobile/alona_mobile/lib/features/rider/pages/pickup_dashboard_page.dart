@@ -18,6 +18,7 @@ import 'rider_portal_page.dart';
 import '../theme/rider_theme.dart';
 import '../widgets/rider_design_widgets.dart';
 import 'order_detail_pages.dart';
+import 'parcel_scanner_page.dart';
 
 class PickupDashboardPage extends StatefulWidget {
   final RiderSession? session;
@@ -499,6 +500,23 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: RiderColors.background,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFFBBF24),
+        foregroundColor: const Color(0xFF1E293B),
+        icon: const Icon(Icons.qr_code_scanner, size: 24),
+        label: const Text(
+          'Scan to Pickup',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+        ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ParcelScannerPage(session: riderSession),
+          ),
+        ).then((_) {
+          if (mounted) refresh();
+        }),
+      ),
       body: Column(
         children: [
           _header(context),
@@ -512,6 +530,9 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                 padding: riderPagePadding(context),
                 children: [
                   RiderPresenceControl(session: riderSession),
+                  const SizedBox(height: 14),
+                  _scanHeroCard(context),
+                  const SizedBox(height: 14),
                   RiderNotificationBanner(
                     title: 'Seller & hub notifications',
                     subtitle: 'Tap to see pickup updates from sellers',
@@ -597,6 +618,90 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                   ],
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanHeroCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBBF24),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.qr_code_scanner,
+              size: 28,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Smart Barcode Scanner',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Scan the waybill at the store to confirm pickup instantly.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFBBF24),
+              foregroundColor: const Color(0xFF1E293B),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ParcelScannerPage(session: riderSession),
+              ),
+            ).then((_) {
+              if (mounted) refresh();
+            }),
+            child: const Text(
+              'Scan',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
             ),
           ),
         ],
