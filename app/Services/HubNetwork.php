@@ -187,6 +187,7 @@ class HubNetwork
                 'destination_hub_name' => $destHub?->name ?? 'Hub',
                 'origin_city_code' => '',
                 'destination_city_code' => '',
+                'transport_mode' => 'road',
             ],
         ]);
     }

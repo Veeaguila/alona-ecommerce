@@ -26,8 +26,34 @@
           <div><dt class="text-xs text-slate-500">Next destination</dt><dd class="mt-1 font-semibold">{{ result.next_destination?.name || 'No further movement recorded' }}</dd></div>
         </dl>
         <p class="mt-5 text-sm text-slate-600">{{ result.instruction }}</p>
+
+        <!-- Direct Hub Switch Helpers for Admin -->
+        <div v-if="!isStaff && result.current_hub && Number(result.current_hub.id) !== Number(hubId)" class="mt-4 rounded-xl border border-teal-200 bg-teal-50/80 p-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-teal-950">This parcel is currently at {{ result.current_hub.name }}</p>
+              <p class="text-xs text-teal-800 mt-0.5">Switch your workspace to {{ result.current_hub.name }} to dispatch or move this parcel.</p>
+            </div>
+            <button type="button" class="shrink-0 app-button-primary !text-xs !py-2 !px-3.5 cursor-pointer" :disabled="busy" @click="switchToHub(result.current_hub.id, result.parcel.order_id)">
+              Switch to {{ result.current_hub.name }} & Dispatch
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!isStaff && result.parcel.status === 'IN_HUB_TRANSIT' && result.route?.destination_hub_id && Number(result.route.destination_hub_id) !== Number(hubId)" class="mt-4 rounded-xl border border-teal-200 bg-teal-50/80 p-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-teal-950">Shipment is in transit to {{ result.route.destination_hub_name || 'destination hub' }}</p>
+              <p class="text-xs text-teal-800 mt-0.5">Switch your workspace to {{ result.route.destination_hub_name || 'destination hub' }} to confirm receiving this parcel.</p>
+            </div>
+            <button type="button" class="shrink-0 app-button-primary !text-xs !py-2 !px-3.5 cursor-pointer" :disabled="busy" @click="switchToHub(result.route.destination_hub_id, result.parcel.order_id)">
+              Switch to {{ result.route.destination_hub_name || 'Destination Hub' }} & Receive
+            </button>
+          </div>
+        </div>
+
         <template v-if="result.action">
-          <label v-if="result.action === 'dispatch'" class="mt-4 block max-w-md text-sm">Transport / manifest reference<input v-model.trim="transportReference" minlength="3" maxlength="100" class="app-input mt-1 w-full" :disabled="busy" /></label>
+          <label v-if="result.action === 'dispatch'" class="mt-4 block max-w-md text-sm">Transport / manifest reference<input v-model.trim="transportReference" minlength="3" maxlength="100" placeholder="e.g. TRUCK-01 or Van Plate" class="app-input mt-1 w-full" :disabled="busy" /></label>
           <label class="mt-4 flex items-start gap-2 text-sm"><input v-model="confirmed" type="checkbox" :disabled="busy || !fresh" /><span>{{ result.action === 'dispatch' ? 'I confirm the shipment is physically leaving this hub.' : 'I confirm this parcel is physically here at my operating hub.' }}</span></label>
           <button type="button" class="app-button-primary mt-4" :disabled="busy || !fresh || !confirmed || (result.action === 'dispatch' && transportReference.length < 3)" @click="performAction">{{ result.action_label }}</button>
         </template>
@@ -132,11 +158,20 @@ export default {
       finally { if (!disposed) busy.value = false; }
     }
     const switchHub = () => { reference.value = ''; stage.value = 'all'; return refresh(); };
+    async function switchToHub(targetHubId, parcelRef) {
+      if (busy.value || disposed) return;
+      hubId.value = targetHubId;
+      await refresh();
+      if (parcelRef) {
+        reference.value = parcelRef;
+        await lookup();
+      }
+    }
     const changeStage = () => { invalidate(); return loadPage(); };
     const openParcel = code => { reference.value = code; return lookup(); };
     onMounted(refresh);
     return { context, hubId, reference, result, queue, busy, fresh, error, notice, confirmed, transportReference, stage, stages, isStaff,
-      refresh, lookup, performAction, invalidate, switchHub, changeStage, openParcel, loadPage };
+      refresh, lookup, performAction, invalidate, switchHub, switchToHub, changeStage, openParcel, loadPage };
   },
 };
 </script>

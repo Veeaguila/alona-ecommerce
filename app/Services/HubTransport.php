@@ -37,7 +37,7 @@ class HubTransport
                 app(ParcelTrackingTimeline::class)->record($parcel, $note);
                 app(LogisticsAudit::class)->record($actor, 'hub_transfer_dispatched', $parcel,
                     ['origin_hub_id' => $journey->origin_hub_id, 'destination_hub_id' => $journey->destination_hub_id,
-                        'transport_reference' => $input['transport_reference'], 'transport_mode' => $journey->route_snapshot['transport_mode']]);
+                        'transport_reference' => $input['transport_reference'], 'transport_mode' => $journey->route_snapshot['transport_mode'] ?? 'road']);
             }
             return $result;
         });
