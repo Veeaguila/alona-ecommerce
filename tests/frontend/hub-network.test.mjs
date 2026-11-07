@@ -231,6 +231,7 @@ test('changing hub clears old queue rows before its response and never presents 
 
 test('hub management navigation remains available while required checkout routing is disabled', () => {
   const source = readFileSync(new URL('../../resources/js/Layouts/ScLayout.vue', import.meta.url), 'utf8');
-  assert.match(source, /navItems\[9\], navItems\[10\]/);
+  assert.match(source, /\/sorting-center\/hubs/);
+  assert.match(source, /\/sorting-center\/delivery-rates/);
   assert.doesNotMatch(source, /hub_routes_required \? \[navItems\[10\]\]/);
 });

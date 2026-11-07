@@ -52,7 +52,7 @@
         </div>
 
         <div v-else-if="hasLoaded" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <a v-for="card in cards" :key="card.key" :href="card.href" class="app-card group" >
+          <a v-for="card in cards" :key="card.href" :href="card.href" class="app-card group" >
             <div >
               <span class="app-card__label">{{ card.label }}</span>
               <span class="app-card__value">{{ counts[card.key] }}</span>

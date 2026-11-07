@@ -294,8 +294,9 @@ class LogisticsSmartScan
             abort_unless($journey, 422, 'No hub route found for this transit parcel.');
 
             $destHubId = (int) $journey->destination_hub_id;
-            return DB::transaction(function () use ($actor, $parcel, $centerId, $destHubId) {
-                $journey = app(HubTransport::class)->receive($actor, $centerId, $parcel->id, $destHubId);
+            $receiveHubId = $operatingHubId ?: $destHubId;
+            return DB::transaction(function () use ($actor, $parcel, $centerId, $receiveHubId) {
+                $journey = app(HubTransport::class)->receive($actor, $centerId, $parcel->id, $receiveHubId);
 
                 return [
                     'success' => true,

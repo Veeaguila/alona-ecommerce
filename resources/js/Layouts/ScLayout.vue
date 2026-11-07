@@ -558,7 +558,6 @@ export default {
 
     return {
       isHubStaff,
-      navItems,
       navGroups,
       sidebarOpen,
       accountOpen,
