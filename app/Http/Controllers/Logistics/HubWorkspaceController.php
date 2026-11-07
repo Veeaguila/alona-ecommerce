@@ -7,6 +7,7 @@ use App\Models\{LogisticsHub, LogisticsHubStaff, Parcel, User};
 use App\Services\{HubAccess, HubNetwork, HubOperations, HubTransport, HubWorkspace, SellerShipmentFinance};
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class HubWorkspaceController extends Controller
@@ -111,5 +112,122 @@ class HubWorkspaceController extends Controller
             return app(HubWorkspace::class)->lookup($actor, $reference, (int) $input['hub_id']);
         });
         return response()->json(['message' => 'Parcel movement recorded.', 'data' => $result]);
+    }
+
+    public function batchDispatch(Request $request): JsonResponse
+    {
+        $input = $request->validate([
+            'hub_id' => ['required', 'integer', 'min:1'],
+            'destination_hub_id' => ['required', 'integer', 'min:1'],
+            'transport_reference' => ['required', 'string', 'min:3', 'max:100'],
+            'parcel_ids' => ['nullable', 'array'],
+            'parcel_ids.*' => ['integer', 'min:1'],
+        ]);
+
+        $actor = $request->user();
+        $context = app(HubAccess::class)->context($actor, (int) $input['hub_id'], true);
+        $companyId = (int) $context['center']->id;
+        $originHubId = (int) $context['hub']->id;
+        $destHubId = (int) $input['destination_hub_id'];
+        $transportRef = trim($input['transport_reference']);
+
+        abort_if($originHubId === $destHubId, 422, 'Destination hub must be different from the origin hub.');
+
+        $query = Parcel::query()
+            ->where('sorting_center_id', $companyId)
+            ->where('status', 'AT_SORTING_CENTER')
+            ->whereNull('assigned_rider_id')
+            ->whereHas('hubJourney', function ($q) use ($originHubId, $destHubId) {
+                $q->where('origin_hub_id', $originHubId)
+                  ->where('destination_hub_id', $destHubId)
+                  ->whereNotNull('origin_received_at')
+                  ->whereNull('destination_received_at');
+            });
+
+        if (!empty($input['parcel_ids'])) {
+            $query->whereIn('id', $input['parcel_ids']);
+        }
+
+        $parcels = $query->with('hubJourney')->get();
+        abort_if($parcels->isEmpty(), 422, 'No parcels are ready for dispatch to the selected destination hub.');
+
+        $dispatched = DB::transaction(function () use ($actor, $companyId, $originHubId, $destHubId, $transportRef, $parcels) {
+            $results = [];
+            foreach ($parcels as $parcel) {
+                if ($parcel->fresh()->status === 'IN_HUB_TRANSIT') {
+                    continue;
+                }
+                app(HubTransport::class)->dispatch($actor, $companyId, $parcel->id, [
+                    'hub_id' => $originHubId,
+                    'transport_reference' => $transportRef,
+                    'request_key' => (string) Str::uuid(),
+                ]);
+                $results[] = $parcel->order_id;
+            }
+            return $results;
+        });
+
+        return response()->json([
+            'message' => count($dispatched) . " parcel(s) dispatched to destination hub via {$transportRef}.",
+            'data' => [
+                'dispatched_count' => count($dispatched),
+                'parcels' => $dispatched,
+                'transport_reference' => $transportRef,
+            ],
+        ]);
+    }
+
+    public function batchReceive(Request $request): JsonResponse
+    {
+        $input = $request->validate([
+            'hub_id' => ['required', 'integer', 'min:1'],
+            'transport_reference' => ['nullable', 'string', 'max:100'],
+            'parcel_ids' => ['nullable', 'array'],
+            'parcel_ids.*' => ['integer', 'min:1'],
+        ]);
+
+        $actor = $request->user();
+        $context = app(HubAccess::class)->context($actor, (int) $input['hub_id'], true);
+        $companyId = (int) $context['center']->id;
+        $destHubId = (int) $context['hub']->id;
+        $transportRef = trim((string) ($input['transport_reference'] ?? ''));
+
+        $query = Parcel::query()
+            ->where('sorting_center_id', $companyId)
+            ->where('status', 'IN_HUB_TRANSIT')
+            ->whereHas('hubJourney', function ($q) use ($destHubId, $transportRef) {
+                $q->where('destination_hub_id', $destHubId)
+                  ->whereNull('destination_received_at')
+                  ->when($transportRef !== '', function ($tq) use ($transportRef) {
+                      $tq->whereHas('transfer', fn ($x) => $x->where('transport_reference', $transportRef));
+                  });
+            });
+
+        if (!empty($input['parcel_ids'])) {
+            $query->whereIn('id', $input['parcel_ids']);
+        }
+
+        $parcels = $query->with('hubJourney.transfer')->get();
+        abort_if($parcels->isEmpty(), 422, 'No transit parcels are awaiting receipt at this hub' . ($transportRef !== '' ? " for manifest '{$transportRef}'." : '.'));
+
+        $received = DB::transaction(function () use ($actor, $companyId, $destHubId, $parcels) {
+            $results = [];
+            foreach ($parcels as $parcel) {
+                if ($parcel->fresh()->status === 'AT_SORTING_CENTER') {
+                    continue;
+                }
+                app(HubTransport::class)->receive($actor, $companyId, $parcel->id, $destHubId);
+                $results[] = $parcel->order_id;
+            }
+            return $results;
+        });
+
+        return response()->json([
+            'message' => count($received) . " parcel(s) received at " . $context['hub']->name . ".",
+            'data' => [
+                'received_count' => count($received),
+                'parcels' => $received,
+            ],
+        ]);
     }
 }

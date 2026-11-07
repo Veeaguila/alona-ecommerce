@@ -61,7 +61,62 @@
         <a v-if="result.can_open_delivery_assignment" href="/sorting-center/rider-assignment" class="mt-4 inline-block text-sm font-semibold text-[#008B8B] underline">Open delivery assignment</a>
       </section>
       <section v-if="hubId" class="app-panel app-panel--padded">
-        <h2 class="app-section-title">Work at this hub</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="app-section-title">Work at this hub</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-teal-800 border-teal-300 bg-teal-50 hover:bg-teal-100 cursor-pointer" :disabled="busy" @click="openBatchDispatchModal">
+              🚚 Batch Transfer Dispatch
+            </button>
+            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-indigo-800 border-indigo-300 bg-indigo-50 hover:bg-indigo-100 cursor-pointer" :disabled="busy" @click="openBatchReceiveModal">
+              📥 Batch Transfer Receive
+            </button>
+          </div>
+        </div>
+
+        <!-- Batch Dispatch Modal -->
+        <div v-if="showBatchDispatch" class="mt-4 rounded-xl border border-teal-300 bg-teal-50/90 p-4">
+          <div class="flex items-center justify-between pb-2 border-b border-teal-200">
+            <h3 class="font-bold text-teal-950 text-sm">🚚 Dispatch Linehaul Transfer (Batch Manifest)</h3>
+            <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-bold" @click="showBatchDispatch = false">✕ Close</button>
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="text-xs font-semibold text-slate-700">Destination Hub
+              <select v-model="batchDestHubId" class="app-input mt-1 w-full text-xs" :disabled="busy">
+                <option value="">Choose Destination Hub</option>
+                <option v-for="h in destinationHubs" :key="h.id" :value="h.id">{{ h.name }}</option>
+              </select>
+            </label>
+            <label class="text-xs font-semibold text-slate-700">Truck / Manifest Reference
+              <input v-model.trim="batchTransportRef" placeholder="e.g. TRUCK-MNL-LAG-01" class="app-input mt-1 w-full text-xs" :disabled="busy" />
+            </label>
+          </div>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-xs text-teal-800">Parcels at this hub will be batched into the specified transport vehicle and moved to In Transit.</p>
+            <button type="button" class="app-button-primary !text-xs !py-2 !px-4 cursor-pointer" :disabled="busy || !batchDestHubId || batchTransportRef.length < 3" @click="executeBatchDispatch">
+              {{ busy ? 'Dispatching…' : 'Dispatch All to Destination' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Batch Receive Modal -->
+        <div v-if="showBatchReceive" class="mt-4 rounded-xl border border-indigo-300 bg-indigo-50/90 p-4">
+          <div class="flex items-center justify-between pb-2 border-b border-indigo-200">
+            <h3 class="font-bold text-indigo-950 text-sm">📥 Receive Arrived Linehaul Truck (Batch Receive)</h3>
+            <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-bold" @click="showBatchReceive = false">✕ Close</button>
+          </div>
+          <div class="mt-3">
+            <label class="text-xs font-semibold text-slate-700">Truck / Manifest Reference (Optional filter)
+              <input v-model.trim="batchReceiveRef" placeholder="e.g. TRUCK-MNL-LAG-01 (leave empty to receive all arriving parcels)" class="app-input mt-1 w-full text-xs" :disabled="busy" />
+            </label>
+          </div>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-xs text-indigo-800">All parcels en route to this hub matching the manifest will be marked as physically arrived.</p>
+            <button type="button" class="app-button-primary !text-xs !py-2 !px-4 !bg-indigo-700 hover:!bg-indigo-800 cursor-pointer" :disabled="busy" @click="executeBatchReceive">
+              {{ busy ? 'Receiving…' : 'Confirm Batch Receipt' }}
+            </button>
+          </div>
+        </div>
+
         <label class="mt-4 block max-w-xs text-sm">Show<select v-model="stage" class="app-input mt-1 w-full" :disabled="busy" @change="changeStage"><option v-for="choice in stages" :key="choice.value" :value="choice.value">{{ choice.label }}</option></select></label>
         <p v-if="fresh && !queue.data.length" class="py-5 text-sm text-slate-600">No matching parcels at this hub.</p>
         <article v-for="journey in queue.data" :key="journey.id" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
@@ -85,6 +140,9 @@ export default {
     const context = ref(null), hubId = ref(''), reference = ref(''), result = ref(null), queue = ref({ data: [], current_page: 1, last_page: 1 });
     const busy = ref(false), fresh = ref(false), error = ref(''), notice = ref(''), confirmed = ref(false), transportReference = ref(''), stage = ref('all');
     const isStaff = computed(() => context.value?.operator?.role === 'hub_staff');
+    const showBatchDispatch = ref(false), showBatchReceive = ref(false);
+    const batchDestHubId = ref(''), batchTransportRef = ref(''), batchReceiveRef = ref('');
+    const destinationHubs = computed(() => (context.value?.hubs || []).filter(h => Number(h.id) !== Number(hubId.value)));
     const stages = [{ value: 'all', label: 'All active bookings' }, { value: 'pickup_inbound', label: 'Incoming pickups' }, { value: 'dispatch_ready', label: 'Ready to transfer' }, { value: 'transfer_inbound', label: 'Incoming transfers' }, { value: 'at_hub', label: 'At this hub' }, { value: 'out_for_delivery', label: 'Out for delivery' }];
     let disposed = false, generation = 0, requestKey = '';
     onUnmounted(() => { disposed = true; generation++; });
@@ -169,8 +227,67 @@ export default {
     }
     const changeStage = () => { invalidate(); return loadPage(); };
     const openParcel = code => { reference.value = code; return lookup(); };
+
+    function openBatchDispatchModal() {
+      showBatchDispatch.value = true;
+      showBatchReceive.value = false;
+      batchTransportRef.value = '';
+      batchDestHubId.value = destinationHubs.value.length === 1 ? destinationHubs.value[0].id : '';
+      error.value = '';
+      notice.value = '';
+    }
+
+    function openBatchReceiveModal() {
+      showBatchReceive.value = true;
+      showBatchDispatch.value = false;
+      batchReceiveRef.value = '';
+      error.value = '';
+      notice.value = '';
+    }
+
+    async function executeBatchDispatch() {
+      if (busy.value || !hubId.value || !batchDestHubId.value || batchTransportRef.value.length < 3) return;
+      busy.value = true; error.value = ''; notice.value = '';
+      try {
+        const res = await request('/batch-dispatch', {
+          hub_id: Number(hubId.value),
+          destination_hub_id: Number(batchDestHubId.value),
+          transport_reference: batchTransportRef.value,
+        });
+        showBatchDispatch.value = false;
+        notice.value = res.message || 'Batch dispatch successful.';
+        const parcels = await readQueue();
+        queue.value = parcels;
+      } catch (failure) {
+        error.value = failure.message;
+      } finally {
+        busy.value = false;
+      }
+    }
+
+    async function executeBatchReceive() {
+      if (busy.value || !hubId.value) return;
+      busy.value = true; error.value = ''; notice.value = '';
+      try {
+        const res = await request('/batch-receive', {
+          hub_id: Number(hubId.value),
+          transport_reference: batchReceiveRef.value || null,
+        });
+        showBatchReceive.value = false;
+        notice.value = res.message || 'Batch receipt successful.';
+        const parcels = await readQueue();
+        queue.value = parcels;
+      } catch (failure) {
+        error.value = failure.message;
+      } finally {
+        busy.value = false;
+      }
+    }
+
     onMounted(refresh);
     return { context, hubId, reference, result, queue, busy, fresh, error, notice, confirmed, transportReference, stage, stages, isStaff,
+      showBatchDispatch, showBatchReceive, batchDestHubId, batchTransportRef, batchReceiveRef, destinationHubs,
+      openBatchDispatchModal, openBatchReceiveModal, executeBatchDispatch, executeBatchReceive,
       refresh, lookup, performAction, invalidate, switchHub, switchToHub, changeStage, openParcel, loadPage };
   },
 };

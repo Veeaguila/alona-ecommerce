@@ -214,4 +214,42 @@ class HubStaffWorkflowTest extends TestCase
         $this->getJson('/api/sorting-center/hub-staff')->assertStatus(503);
         $this->getJson('/api/sorting-center/hub-workspace?hub_id='.$this->origin->id)->assertOk();
     }
+
+    public function test_batch_dispatch_and_batch_receive_workflow(): void
+    {
+        $originStaff = $this->staff($this->origin);
+        $destStaff = $this->staff($this->destination);
+
+        // Receive origin first
+        $this->action($originStaff, 'receive_origin', $this->origin)->assertOk();
+        $this->assertSame('AT_SORTING_CENTER', $this->parcel->fresh()->status);
+
+        // Batch dispatch from Origin Hub
+        Sanctum::actingAs($originStaff);
+        $dispatchRes = $this->postJson('/api/sorting-center/hub-workspace/batch-dispatch', [
+            'hub_id' => $this->origin->id,
+            'destination_hub_id' => $this->destination->id,
+            'transport_reference' => 'LINEHAUL-BATCH-01',
+        ]);
+
+        $dispatchRes->assertOk()
+            ->assertJsonPath('data.dispatched_count', 1)
+            ->assertJsonPath('data.parcels.0', 'ITEM-9001');
+
+        $this->assertSame('IN_HUB_TRANSIT', $this->parcel->fresh()->status);
+
+        // Batch receive at Destination Hub
+        Sanctum::actingAs($destStaff);
+        $receiveRes = $this->postJson('/api/sorting-center/hub-workspace/batch-receive', [
+            'hub_id' => $this->destination->id,
+            'transport_reference' => 'LINEHAUL-BATCH-01',
+        ]);
+
+        $receiveRes->assertOk()
+            ->assertJsonPath('data.received_count', 1)
+            ->assertJsonPath('data.parcels.0', 'ITEM-9001');
+
+        $this->assertSame('AT_SORTING_CENTER', $this->parcel->fresh()->status);
+        $this->assertNotNull(ParcelHubJourney::firstOrFail()->destination_received_at);
+    }
 }

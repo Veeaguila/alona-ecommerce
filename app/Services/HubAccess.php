@@ -11,7 +11,7 @@ class HubAccess
 {
     public function membership(User $user): ?LogisticsHubStaff
     {
-        if (!$user->exists || $user->usertype !== 'sorting_center' || !Schema::hasTable('logistics_hub_staff')) return null;
+        if (!$user->exists || !in_array($user->usertype, ['sorting_center', 'hub_staff'], true) || !Schema::hasTable('logistics_hub_staff')) return null;
         return LogisticsHubStaff::where('user_id', $user->id)->first();
     }
 
@@ -26,7 +26,7 @@ class HubAccess
 
     public function context(User $user, ?int $hubId = null, bool $requireHub = false): array
     {
-        abort_unless($user->usertype === 'sorting_center' && $user->status === 'approved', 403, 'An active Logistics account is required.');
+        abort_unless(in_array($user->usertype, ['sorting_center', 'hub_staff'], true) && $user->status === 'approved', 403, 'An active Logistics account is required.');
         $staff = $this->membership($user);
         if ($staff) {
             abort_unless($staff->is_active, 403, 'Your hub staff access is paused. Contact your company administrator.');

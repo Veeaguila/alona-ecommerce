@@ -43,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/queue', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'queue']);
         Route::get('/lookup', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'lookup'])->middleware('throttle:60,1');
         Route::post('/actions', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'act'])->middleware('throttle:30,1');
+        Route::post('/batch-dispatch', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'batchDispatch'])->middleware('throttle:20,1');
+        Route::post('/batch-receive', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'batchReceive'])->middleware('throttle:20,1');
     });
     Route::middleware('sorting_center.approved')->prefix('sorting-center/hub-staff')->group(function () {
         Route::get('/', [\App\Http\Controllers\Logistics\HubStaffController::class, 'index']);
@@ -71,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rider/handovers/{id}/acknowledge', [\App\Http\Controllers\Logistics\ParcelHandoverController::class, 'acknowledge'])->whereNumber('id')->middleware('throttle:20,1');
     Route::post('/rider/notifications/{id}/read', [\App\Http\Controllers\Logistics\RiderNotificationController::class, 'read']);
     Route::get('/user', fn (Request $request) => $request->user()->only(['id', 'name', 'email', 'usertype', 'status']));
+    Route::post('/logistics/smart-scan', [\App\Http\Controllers\Logistics\SmartScanController::class, 'scan']);
 });
 Route::post('/rider/login', [LoginRiderController::class, 'login'])->middleware('throttle:6,1');
 Route::get('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'show']);
@@ -100,6 +103,7 @@ Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(fu
     Route::post('/deliveries/{parcelId}/upload-proof', [RiderDeliveryController::class, 'uploadProof']);
     Route::post('/deliveries/{parcelId}/fail', [RiderDeliveryController::class, 'fail']);
     Route::post('/deliveries/{parcelId}/retry', [RiderDeliveryController::class, 'retry']);
+    Route::post('/smart-scan', [\App\Http\Controllers\Logistics\SmartScanController::class, 'scan']);
     Route::get('/returns', [\App\Http\Controllers\Logistics\ReturnToSellerController::class, 'mine']);
     Route::post('/returns/{id}/pickup', [\App\Http\Controllers\Logistics\ReturnToSellerController::class, 'pickup'])->whereNumber('id');
     Route::post('/returns/{id}/handover', [\App\Http\Controllers\Logistics\ReturnToSellerController::class, 'handover'])->whereNumber('id');
