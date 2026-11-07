@@ -532,17 +532,6 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                   RiderPresenceControl(session: riderSession),
                   const SizedBox(height: 14),
                   _scanHeroCard(context),
-                  const SizedBox(height: 14),
-                  RiderNotificationBanner(
-                    title: 'Seller & hub notifications',
-                    subtitle: 'Tap to see pickup updates from sellers',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RiderNotificationsPage(session: riderSession),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -749,8 +738,33 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            RiderNotificationsPage(session: riderSession),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -759,15 +773,16 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                           _greeting(),
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 15,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         const Text(
                           'Pickups',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 28,
+                            fontSize: 26,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

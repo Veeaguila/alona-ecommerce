@@ -765,17 +765,6 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   if (widget.parcelId == null) ...[
                     const SizedBox(height: 16),
                     _scanHeroCard(context),
-                    const SizedBox(height: 16),
-                    RiderNotificationBanner(
-                      title: 'Delivery notifications',
-                      subtitle: 'Open your saved delivery updates',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              RiderNotificationsPage(session: riderSession),
-                        ),
-                      ),
-                    ),
                   ],
                   if (loading) ...[
                     const SizedBox(height: 40),
@@ -943,11 +932,37 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   if (widget.parcelId != null) ...[
                     const BackButton(color: Colors.white),
                     const SizedBox(width: 4),
+                  ] else ...[
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RiderNotificationsPage(session: riderSession),
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                   ],
                   Expanded(
                     child: Text(
                       widget.parcelId == null
-                          ? 'Items for delivery'
+                          ? 'Deliveries'
                           : 'Delivery details',
                       style: const TextStyle(
                         color: Colors.white,
@@ -968,55 +983,12 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                         : refresh,
                     icon: const Icon(Icons.refresh),
                   ),
-                  if (widget.parcelId == null)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () =>
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  ParcelScannerPage(session: riderSession),
-                            ),
-                          ).then((_) {
-                            if (mounted) refresh();
-                          }),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFBBF24),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(
-                              Icons.crop_free,
-                              size: 20,
-                              color: Color(0xFF1E293B),
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Scan',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   IconButton(
                     iconSize: 20,
                     onPressed: loggingOut ? null : logout,
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.logout,
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white,
                     ),
                     tooltip: 'Sign out',
                   ),
