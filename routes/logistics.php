@@ -34,8 +34,9 @@ Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])
 
             return view('sorting-center.'.$page, ['logisticsSession' => [
                 'token' => $token, 'user' => $request->user()->only(['id', 'name', 'email']),
-                'sorting_center' => $request->user()->sortingCenter->only(['id', 'business_name']),
+                'sorting_center' => $request->user()->sortingCenter?->only(['id', 'business_name']) ?? app(\App\Services\HubAccess::class)->context($request->user())['center']?->only(['id', 'business_name']),
                 'hub_routes_required' => app(\App\Services\HubNetwork::class)->enforced(),
+                'operator' => app(\App\Services\HubAccess::class)->identity($request->user()),
             ]]);
         })->name('sorting-center.'.$page);
     }

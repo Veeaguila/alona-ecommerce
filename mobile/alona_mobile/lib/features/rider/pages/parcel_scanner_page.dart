@@ -104,24 +104,55 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     });
     await stopCamera();
     try {
-      final parcel = await sessionAction(() => api.lookup(reference.text));
+      // 1. First try Universal Smart Scanner API
+      final result = await sessionAction(() => api.smartScan(reference.text));
       if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DeliveryDashboardPage(
-            session: riderSession,
-            parcelId: parcel['id'] as int,
-          ),
+
+      final parcel = result['parcel'] as Map<String, dynamic>?;
+      final parcelId = parcel?['id'] as int?;
+      final actionMessage = result['message'] as String? ?? result['title'] as String? ?? 'Scan processed';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(actionMessage),
+          backgroundColor: RiderColors.teal,
+          duration: const Duration(seconds: 4),
         ),
       );
-    } catch (failure) {
-      if (mounted) {
-        setState(
-          () => error = failure is SessionFailure
-              ? failure.message
-              : 'Parcel lookup could not be confirmed. Retry or enter the reference.',
+
+      if (parcelId != null && parcelId > 0) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashboardPage(
+              session: riderSession,
+              parcelId: parcelId,
+            ),
+          ),
         );
+      }
+    } catch (smartScanErr) {
+      // 2. Fallback to legacy lookup if needed
+      try {
+        final parcel = await sessionAction(() => api.lookup(reference.text));
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashboardPage(
+              session: riderSession,
+              parcelId: parcel['id'] as int,
+            ),
+          ),
+        );
+      } catch (failure) {
+        if (mounted) {
+          setState(
+            () => error = failure is SessionFailure
+                ? failure.message
+                : (smartScanErr is SessionFailure ? smartScanErr.message : 'Parcel lookup could not be confirmed. Retry or enter the reference.'),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => busy = false);

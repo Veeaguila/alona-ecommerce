@@ -425,30 +425,45 @@ export default {
     const sidebarOpen = ref(false);
     const accountOpen = ref(false);
 
-    const navItems = [
-      { path: '/sorting-center/dashboard', label: 'Dashboard', key: 'dashboard' },
-      { path: '/sorting-center/pickup-requests', label: 'Pickup Requests', key: 'pickups' },
-      { path: '/sorting-center/order-management', label: 'Order Management', key: 'orders' },
-      { path: '/sorting-center/delivery-management', label: 'Delivery Management', key: 'delivery' },
-      { path: '/sorting-center/rider-assignment', label: 'Rider Assignment', key: 'riders' },
-      { path: '/sorting-center/delivery-monitoring', label: 'Delivery Monitoring', key: 'monitoring' },
-      { path: '/sorting-center/delivery-reports', label: 'Delivery Reports', key: 'reports' },
-      { path: '/sorting-center/messages', label: 'Messages', key: 'messages' },
-      { path: '/sorting-center/rider-management', label: 'Rider Management', key: 'rider-management' },
-      { path: '/sorting-center/delivery-rates', label: 'Zones & Rates', key: 'delivery-rates' },
-      { path: '/sorting-center/hubs', label: 'Hubs & Routes', key: 'hubs' },
-    ];
-
     const isHubStaff = window.logisticsSession?.operator?.role === 'hub_staff';
-    const hubWorkspace = { path: '/sorting-center/hub-workspace', label: 'Hub workspace', key: 'orders' };
+    const hubWorkspace = { path: '/sorting-center/hub-workspace', label: 'Hub Workspace', key: 'orders' };
+
     const navGroups = isHubStaff ? [
-      { label: 'Operations', items: [hubWorkspace] },
+      {
+        label: 'Hub Station',
+        items: [hubWorkspace],
+      },
     ] : [
-      { label: 'Overview', items: [navItems[0]] },
-      { label: 'Operations', items: [hubWorkspace, navItems[1], navItems[2], navItems[3], navItems[8], navItems[10], navItems[4], navItems[5], navItems[6]] },
-      { label: 'Staff access', items: [{ path: '/sorting-center/hub-staff', label: 'Hub staff', key: 'rider-management' }] },
-      { label: 'Finance', items: [{ path: '/sorting-center/payouts', label: 'Rider payouts', key: 'payouts' }] },
-      { label: 'Communication', items: [navItems[7]] },
+      {
+        label: 'Overview',
+        items: [
+          { path: '/sorting-center/dashboard', label: 'Admin Dashboard', key: 'dashboard' },
+        ],
+      },
+      {
+        label: 'Operations',
+        items: [
+          hubWorkspace,
+          { path: '/sorting-center/delivery-monitoring', label: 'Delivery Monitoring', key: 'monitoring' },
+        ],
+      },
+      {
+        label: 'Hubs & Fleet',
+        items: [
+          { path: '/sorting-center/hubs', label: 'Hubs & Routes', key: 'hubs' },
+          { path: '/sorting-center/hub-staff', label: 'Hub Staff Accounts', key: 'rider-management' },
+          { path: '/sorting-center/riders', label: 'Rider Management', key: 'riders' },
+          { path: '/sorting-center/delivery-rates', label: 'Zones & Rates', key: 'delivery-rates' },
+        ],
+      },
+      {
+        label: 'Financials & Comms',
+        items: [
+          { path: '/sorting-center/payouts', label: 'Rider Payouts', key: 'payouts' },
+          { path: '/sorting-center/delivery-reports', label: 'Delivery Reports', key: 'reports' },
+          { path: '/sorting-center/messages', label: 'Messages', key: 'messages' },
+        ],
+      },
     ];
 
     const userName = ref('Sorting Center');

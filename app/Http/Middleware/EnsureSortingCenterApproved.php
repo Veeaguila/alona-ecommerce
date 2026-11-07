@@ -28,6 +28,9 @@ class EnsureSortingCenterApproved
 
         // A hub membership never grants company-wide operational/admin access.
         if (app(\App\Services\HubAccess::class)->membership($user)) {
+            if (! $request->expectsJson() && $request->is('sorting-center/*')) {
+                return redirect()->route('sorting-center.hub-workspace');
+            }
             abort(403, 'Use your assigned hub workspace. Company-wide operations require the company administrator.');
         }
 

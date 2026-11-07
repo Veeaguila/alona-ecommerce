@@ -720,6 +720,25 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: RiderColors.background,
+      floatingActionButton: widget.parcelId == null
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFFFBBF24),
+              foregroundColor: const Color(0xFF1E293B),
+              icon: const Icon(Icons.qr_code_scanner, size: 24),
+              label: const Text(
+                'Scan Barcode',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ParcelScannerPage(session: riderSession),
+                ),
+              ).then((_) {
+                if (mounted) refresh();
+              }),
+            )
+          : null,
       body: Column(
         children: [
           _header(context),
@@ -744,6 +763,8 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                     const RiderMapIllustration(),
                   ],
                   if (widget.parcelId == null) ...[
+                    const SizedBox(height: 16),
+                    _scanHeroCard(context),
                     const SizedBox(height: 16),
                     RiderNotificationBanner(
                       title: 'Delivery notifications',
@@ -786,6 +807,90 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   ],
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanHeroCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBBF24),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.qr_code_scanner,
+              size: 28,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Smart Barcode Scanner',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Scan to pickup from store, self-assign at hub, or deliver to buyer.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFBBF24),
+              foregroundColor: const Color(0xFF1E293B),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ParcelScannerPage(session: riderSession),
+              ),
+            ).then((_) {
+              if (mounted) refresh();
+            }),
+            child: const Text(
+              'Scan',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
             ),
           ),
         ],
