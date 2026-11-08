@@ -52,7 +52,13 @@ class HubWorkspace
         if ($journey) {
             if (!$journey->origin_received_at) {
                 $next = ['name' => $route['origin_hub_name'], 'kind' => 'hub'];
-                $instruction = 'Waiting for the pickup Rider to bring this parcel to its origin hub.';
+                if (in_array($parcel->status, ['PLACED', 'PREPARING'], true)) {
+                    $instruction = $parcel->pickup_rider_id
+                        ? 'Pickup Rider assigned. Waiting for the rider to collect the parcel from the seller.'
+                        : 'Waiting for a pickup Rider to be assigned or self-claimed to collect this parcel from the seller.';
+                } else {
+                    $instruction = 'Waiting for the pickup Rider to bring this parcel to its origin hub.';
+                }
                 if ($parcel->status === 'PICKED_UP' && $hubId === (int) $journey->origin_hub_id) {
                     $action = 'receive_origin';
                     $instruction = 'Check the parcel and confirm that it is physically here.';

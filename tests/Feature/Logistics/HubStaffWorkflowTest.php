@@ -252,4 +252,84 @@ class HubStaffWorkflowTest extends TestCase
         $this->assertSame('AT_SORTING_CENTER', $this->parcel->fresh()->status);
         $this->assertNotNull(ParcelHubJourney::firstOrFail()->destination_received_at);
     }
+
+    public function test_hub_staff_can_view_and_assign_pending_seller_pickups_for_their_hub(): void
+    {
+        $originStaff = $this->staff($this->origin);
+        $seller = User::factory()->create(['usertype' => 'seller']);
+        $buyer = User::factory()->create(['usertype' => 'buyer']);
+
+        // Seller requests pickup for an item, placing parcel in PLACED status
+        $pendingParcel = Parcel::create([
+            'order_id' => 'ITEM-PICK-999',
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+            'sorting_center_id' => $this->company->id,
+            'status' => 'PLACED',
+            'delivery_province' => 'Synthetic province',
+            'delivery_municipality' => 'Synthetic city',
+            'delivery_barangay' => 'Synthetic barangay',
+            'collection_address' => '123 Market St, Manila',
+            'delivery_address' => '456 Home St, Pasig',
+        ]);
+        \App\Models\PickupRequest::create([
+            'parcel_id' => $pendingParcel->id,
+            'seller_id' => $seller->id,
+            'sorting_center_id' => $this->company->id,
+            'status' => 'confirmed',
+        ]);
+        ParcelHubJourney::create([
+            'parcel_id' => $pendingParcel->id,
+            'sorting_center_id' => $this->company->id,
+            'origin_hub_id' => $this->origin->id,
+            'destination_hub_id' => $this->destination->id,
+            'route_snapshot' => [
+                'origin_hub_id' => $this->origin->id,
+                'destination_hub_id' => $this->destination->id,
+                'origin_hub_name' => $this->origin->name,
+                'destination_hub_name' => $this->destination->name,
+                'transport_mode' => 'road',
+            ],
+        ]);
+
+        // Hub Staff checks queue with 'pending_pickup' stage
+        Sanctum::actingAs($originStaff);
+        $queueRes = $this->getJson('/api/sorting-center/hub-workspace/queue?stage=pending_pickup&hub_id='.$this->origin->id);
+        $queueRes->assertOk();
+        $this->assertSame(1, $queueRes->json('data.total'));
+        $this->assertSame('ITEM-PICK-999', $queueRes->json('data.data.0.parcel.order_id'));
+
+        // Hub Staff checks pickup requests API
+        $pickupsRes = $this->getJson('/api/sorting-center/pickup-requests?status=all&stage=accepted');
+        $pickupsRes->assertOk();
+        $this->assertTrue(collect($pickupsRes->json('data.data'))->pluck('parcel.order_id')->contains('ITEM-PICK-999'));
+
+        // Online rider in Manila / Origin Hub
+        $riderUser = User::factory()->create(['usertype' => 'rider', 'status' => 'approved', 'email_verified_at' => now()]);
+        $eligibleRider = \App\Models\Rider::create([
+            'user_id' => $riderUser->id,
+            'sorting_center_id' => $this->company->id,
+            'logistics_hub_id' => $this->origin->id,
+            'name' => 'Manila Local Rider',
+            'contact' => '09123456789',
+            'vehicle_type' => 'motorcycle',
+            'plate_number' => 'ABC-1234',
+            'approval_status' => 'approved',
+            'is_active' => true,
+        ]);
+        app(\App\Services\RiderPresence::class)->command($eligibleRider, 'go_online', 'synthetic');
+        $manilaArea = \App\Models\Area::create([
+            'sorting_center_id' => $this->company->id,
+            'name' => 'Manila',
+            'city_code' => '1381300000',
+        ]);
+        $eligibleRider->areas()->attach($manilaArea->id);
+
+        // Hub Staff assigns local rider to the pickup
+        $assignRes = $this->postJson('/api/sorting-center/pickup-dispatch/'.$pendingParcel->id.'/assign', [
+            'rider_id' => $eligibleRider->id,
+        ]);
+        $assignRes->assertOk();
+        $this->assertSame($eligibleRider->id, $pendingParcel->fresh()->pickup_rider_id);
+    }
 }

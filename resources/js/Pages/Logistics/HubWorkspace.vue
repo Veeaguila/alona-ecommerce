@@ -57,8 +57,24 @@
           <label class="mt-4 flex items-start gap-2 text-sm"><input v-model="confirmed" type="checkbox" :disabled="busy || !fresh" /><span>{{ result.action === 'dispatch' ? 'I confirm the shipment is physically leaving this hub.' : 'I confirm this parcel is physically here at my operating hub.' }}</span></label>
           <button type="button" class="app-button-primary mt-4" :disabled="busy || !fresh || !confirmed || (result.action === 'dispatch' && transportReference.length < 3)" @click="performAction">{{ result.action_label }}</button>
         </template>
-        <a v-if="result.can_open_delivery_management" href="/sorting-center/delivery-management" class="mt-4 inline-block text-sm font-semibold text-[#008B8B] underline">Open Delivery Management (Sort parcel to City Area)</a>
-        <a v-if="result.can_open_delivery_assignment" href="/sorting-center/rider-assignment" class="mt-4 inline-block text-sm font-semibold text-[#008B8B] underline">Open delivery assignment</a>
+        <div v-if="result.can_open_delivery_management" class="mt-4 p-4 rounded-xl border border-teal-200 bg-teal-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p class="font-bold text-teal-950 text-sm">📦 Parcel is Arrived & Ready to Sort</p>
+            <p class="text-xs text-teal-800 mt-0.5">Assign this parcel to its City Delivery Area so a delivery rider can take it.</p>
+          </div>
+          <a href="/sorting-center/delivery-management" class="app-button-primary !text-xs !py-2 !px-4 text-center">
+            Go to Parcel Sorting (Delivery Management) →
+          </a>
+        </div>
+        <div v-if="result.can_open_delivery_assignment" class="mt-4 p-4 rounded-xl border border-indigo-200 bg-indigo-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p class="font-bold text-indigo-950 text-sm">🛵 Ready for Delivery Assignment</p>
+            <p class="text-xs text-indigo-800 mt-0.5">Assign this sorted parcel to an online delivery rider.</p>
+          </div>
+          <a href="/sorting-center/rider-assignment" class="app-button-primary !text-xs !py-2 !px-4 text-center !bg-indigo-700 hover:!bg-indigo-800">
+            Assign Delivery Rider →
+          </a>
+        </div>
       </section>
       <section v-if="hubId" class="app-panel app-panel--padded">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -120,8 +136,21 @@
         <label class="mt-4 block max-w-xs text-sm">Show<select v-model="stage" class="app-input mt-1 w-full" :disabled="busy" @change="changeStage"><option v-for="choice in stages" :key="choice.value" :value="choice.value">{{ choice.label }}</option></select></label>
         <p v-if="fresh && !queue.data.length" class="py-5 text-sm text-slate-600">No matching parcels at this hub.</p>
         <article v-for="journey in queue.data" :key="journey.id" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-          <div class="min-w-0"><p class="font-semibold">{{ journey.parcel.order_id }}</p><p class="mt-1 break-words text-sm text-slate-600">{{ journey.origin_hub.name }} → {{ journey.destination_hub.name }}</p><p class="mt-1 text-xs font-semibold text-teal-700">{{ journey.parcel.status === 'AT_SORTING_CENTER' ? 'At ' + (journey.origin_hub?.name || 'Hub') : journey.parcel.status.replaceAll('_', ' ') }}</p></div>
-          <button type="button" class="app-button-secondary" :disabled="busy || !fresh" @click="openParcel(journey.parcel.order_id)">Review parcel</button>
+          <div class="min-w-0">
+            <p class="font-semibold">{{ journey.parcel.order_id }}</p>
+            <p class="mt-1 break-words text-sm text-slate-600">{{ journey.origin_hub.name }} → {{ journey.destination_hub.name }}</p>
+            <p v-if="['PLACED', 'PREPARING'].includes(journey.parcel.status)" class="mt-1 text-xs text-amber-700 font-medium">
+              🏪 Seller: {{ journey.parcel.collection_address }}
+              <span class="ml-1 text-slate-500">· Rider: {{ journey.parcel.pickup_rider?.name ? journey.parcel.pickup_rider.name : 'Unassigned (Waiting for pickup)' }}</span>
+            </p>
+            <p class="mt-1 text-xs font-semibold text-teal-700">{{ journey.parcel.status === 'AT_SORTING_CENTER' ? 'At ' + (journey.origin_hub?.name || 'Hub') : journey.parcel.status.replaceAll('_', ' ') }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a v-if="['PLACED', 'PREPARING'].includes(journey.parcel.status)" href="/sorting-center/pickup-requests" class="app-button-primary !text-xs !py-1.5 !px-3 font-semibold">
+              Assign Rider
+            </a>
+            <button type="button" class="app-button-secondary" :disabled="busy || !fresh" @click="openParcel(journey.parcel.order_id)">Review parcel</button>
+          </div>
         </article>
         <div v-if="queue.last_page > 1" class="mt-5 flex items-center justify-between gap-3"><button type="button" class="app-button-secondary" :disabled="busy || queue.current_page <= 1" @click="loadPage(queue.current_page - 1)">Previous</button><span class="text-sm">Page {{ queue.current_page }} of {{ queue.last_page }}</span><button type="button" class="app-button-secondary" :disabled="busy || queue.current_page >= queue.last_page" @click="loadPage(queue.current_page + 1)">Next</button></div>
       </section>
@@ -143,7 +172,15 @@ export default {
     const showBatchDispatch = ref(false), showBatchReceive = ref(false);
     const batchDestHubId = ref(''), batchTransportRef = ref(''), batchReceiveRef = ref('');
     const destinationHubs = computed(() => (context.value?.hubs || []).filter(h => Number(h.id) !== Number(hubId.value)));
-    const stages = [{ value: 'all', label: 'All active bookings' }, { value: 'pickup_inbound', label: 'Incoming pickups' }, { value: 'dispatch_ready', label: 'Ready to transfer' }, { value: 'transfer_inbound', label: 'Incoming transfers' }, { value: 'at_hub', label: 'At this hub' }, { value: 'out_for_delivery', label: 'Out for delivery' }];
+    const stages = [
+      { value: 'all', label: 'All active bookings' },
+      { value: 'pending_pickup', label: '🏪 Pending Seller Pickups (Tindahan)' },
+      { value: 'pickup_inbound', label: 'Incoming pickups' },
+      { value: 'dispatch_ready', label: 'Ready to transfer' },
+      { value: 'transfer_inbound', label: 'Incoming transfers' },
+      { value: 'at_hub', label: 'At this hub' },
+      { value: 'out_for_delivery', label: 'Out for delivery' },
+    ];
     let disposed = false, generation = 0, requestKey = '';
     onUnmounted(() => { disposed = true; generation++; });
     function invalidate() { generation++; result.value = null; confirmed.value = false; transportReference.value = ''; requestKey = ''; notice.value = ''; }

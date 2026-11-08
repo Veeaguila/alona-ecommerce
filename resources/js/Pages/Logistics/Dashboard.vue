@@ -179,10 +179,10 @@ export default {
     });
 
     const cards = [
+      { key: 'pickup_requests_pending', label: 'Pending Pickup Requests', destination: 'Pickup Requests', href: '/sorting-center/pickup-requests' },
       { key: 'parcels_awaiting_sorting', label: 'Hub Station & Transfers', destination: 'Hub Workspace', href: '/sorting-center/hub-workspace' },
       { key: 'parcels_out_for_delivery', label: 'Parcels Out for Delivery', destination: 'Delivery Monitoring', href: '/sorting-center/delivery-monitoring' },
       { key: 'active_approved_riders', label: 'Active Delivery Fleet', destination: 'Rider Fleet', href: '/sorting-center/riders' },
-      { key: 'parcels_awaiting_sorting', label: 'Hub Staff Personnel', destination: 'Hub Staff Accounts', href: '/sorting-center/hub-staff' },
     ];
 
     const scanRef = ref('');

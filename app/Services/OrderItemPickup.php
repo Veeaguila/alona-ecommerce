@@ -70,7 +70,7 @@ class OrderItemPickup
                 ]))),
             ]);
 
-            PickupRequest::create([
+            $pickupRequest = PickupRequest::create([
                 'parcel_id' => $parcel->id,
                 ...($hubPlan ? ['sorting_center_id' => $hubPlan['sorting_center_id']] : []),
                 'seller_id' => $seller->id,
@@ -84,6 +84,24 @@ class OrderItemPickup
             if ($hubPlan) {
                 app(HubNetwork::class)->attach($parcel, $hubPlan);
                 $parcel->update(['sorting_center_id' => $hubPlan['sorting_center_id']]);
+                $pickupRequest->update([
+                    'status' => 'confirmed',
+                    'sorting_center_id' => $hubPlan['sorting_center_id'],
+                ]);
+                $parcel->update(['status' => 'PLACED']);
+                app(\App\Services\ParcelTrackingTimeline::class)->record($parcel, \App\Services\ParcelTrackingTimeline::ACCEPTED);
+            } else {
+                $center = \App\Models\SortingCenter::where('approval_status', 'approved')->first();
+                if ($center && app(HubNetwork::class)->available()) {
+                    $originHubId = app(HubNetwork::class)->resolveHubFromAddress((string) $parcel->collection_address, $center->id);
+                    if ($originHubId) {
+                        $parcel->update(['sorting_center_id' => $center->id]);
+                        $pickupRequest->update(['sorting_center_id' => $center->id, 'status' => 'confirmed']);
+                        $parcel->update(['status' => 'PLACED']);
+                        app(HubNetwork::class)->ensureJourney($parcel, $originHubId);
+                        app(\App\Services\ParcelTrackingTimeline::class)->record($parcel, \App\Services\ParcelTrackingTimeline::ACCEPTED);
+                    }
+                }
             }
 
             $item->update([

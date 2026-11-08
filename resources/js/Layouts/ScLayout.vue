@@ -427,11 +427,21 @@ export default {
 
     const isHubStaff = window.logisticsSession?.operator?.role === 'hub_staff';
     const hubWorkspace = { path: '/sorting-center/hub-workspace', label: 'Hub Workspace', key: 'orders' };
+    const pickupRequests = { path: '/sorting-center/pickup-requests', label: 'Pickup Requests', key: 'pickups' };
+
+    const parcelSorting = { path: '/sorting-center/delivery-management', label: 'Parcel Sorting', key: 'delivery' };
+    const deliveryAssignment = { path: '/sorting-center/rider-assignment', label: 'Delivery Assignment', key: 'riders' };
 
     const navGroups = isHubStaff ? [
       {
-        label: 'Hub Station',
-        items: [hubWorkspace],
+        label: 'Hub Operations',
+        items: [hubWorkspace, pickupRequests, parcelSorting, deliveryAssignment],
+      },
+      {
+        label: 'Comms',
+        items: [
+          { path: '/sorting-center/messages', label: 'Messages', key: 'messages' },
+        ],
       },
     ] : [
       {
@@ -441,19 +451,18 @@ export default {
         ],
       },
       {
-        label: 'Operations',
-        items: [
-          hubWorkspace,
-          { path: '/sorting-center/delivery-monitoring', label: 'Delivery Monitoring', key: 'monitoring' },
-        ],
-      },
-      {
         label: 'Hubs & Fleet',
         items: [
           { path: '/sorting-center/hubs', label: 'Hubs & Routes', key: 'hubs' },
           { path: '/sorting-center/hub-staff', label: 'Hub Staff Accounts', key: 'rider-management' },
           { path: '/sorting-center/riders', label: 'Rider Management', key: 'riders' },
           { path: '/sorting-center/delivery-rates', label: 'Zones & Rates', key: 'delivery-rates' },
+        ],
+      },
+      {
+        label: 'Network Oversight',
+        items: [
+          { path: '/sorting-center/delivery-monitoring', label: 'Delivery Monitoring', key: 'monitoring' },
         ],
       },
       {

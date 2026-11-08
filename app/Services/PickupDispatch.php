@@ -58,6 +58,14 @@ class PickupDispatch
                         'This pickup has already been accepted or its assignment changed. Refresh the queue.');
                     abort_unless($member->pickupRequests()->where('status', 'confirmed')->where(fn ($query) => $query->where('sorting_center_id', $centerId)->orWhereNull('sorting_center_id'))->exists(), 422,
                         'Every shipment pickup request must be accepted by Logistics first.');
+                    app(HubNetwork::class)->assertRider($member, $rider, 'pickup');
+                    if ($member->collection_address && $rider->areas()->exists()) {
+                        $addr = strtolower($member->collection_address);
+                        $matchesArea = $rider->areas->contains(function ($area) use ($addr) {
+                            return str_contains($addr, strtolower($area->name));
+                        });
+                        abort_unless($matchesArea, 422, 'Error: Ang piniling rider ay hindi sumasakop sa bayan ng Seller na ito.');
+                    }
                 }
                 abort_if($fromId !== null && $fromId === $riderId, 422, 'Choose a different Rider for reassignment.');
                 abort_if($fromId !== null && mb_strlen(trim((string) $reason)) < 10, 422, 'A reassignment reason of at least 10 characters is required.');

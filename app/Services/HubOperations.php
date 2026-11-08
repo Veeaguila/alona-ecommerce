@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class HubOperations
 {
-    public const STAGES = ['all', 'pickup_inbound', 'dispatch_ready', 'transfer_inbound', 'at_hub', 'out_for_delivery'];
+    public const STAGES = ['all', 'pending_pickup', 'pickup_inbound', 'dispatch_ready', 'transfer_inbound', 'at_hub', 'out_for_delivery'];
 
     public function queue(int $companyId, ?int $hubId, string $stage): Builder
     {
@@ -16,6 +16,8 @@ class HubOperations
             ->whereHas('parcel', fn ($q) => $q->where('sorting_center_id', $companyId));
         if ($hubId) $query->where(fn ($q) => $q->where('origin_hub_id', $hubId)->orWhere('destination_hub_id', $hubId));
         return match ($stage) {
+            'pending_pickup' => $query->where('origin_hub_id', $hubId)->whereNull('origin_received_at')
+                ->whereHas('parcel', fn ($q) => $q->whereIn('status', ['PLACED', 'PREPARING'])),
             'pickup_inbound' => $query->where('origin_hub_id', $hubId)->whereNull('origin_received_at')
                 ->whereHas('parcel', fn ($q) => $q->where('status', 'PICKED_UP')),
             'dispatch_ready' => $query->where('origin_hub_id', $hubId)->where('current_hub_id', $hubId)
@@ -37,6 +39,7 @@ class HubOperations
             ->where('j.sorting_center_id', $companyId)->where('p.sorting_center_id', $companyId);
         $group = fn ($query, $column) => $query->select($column)->selectRaw('COUNT(*) as total')->groupBy($column)->pluck('total', $column);
         $sets = [
+            'pending_pickup' => $group((clone $base)->whereIn('p.status', ['PLACED', 'PREPARING'])->whereNull('j.origin_received_at'), 'j.origin_hub_id'),
             'pickup_inbound' => $group((clone $base)->where('p.status', 'PICKED_UP')->whereNull('j.origin_received_at'), 'j.origin_hub_id'),
             'dispatch_ready' => $group((clone $base)->where('p.status', 'AT_SORTING_CENTER')->whereNull('p.assigned_rider_id')
                 ->whereColumn('j.current_hub_id', 'j.origin_hub_id')->whereColumn('j.origin_hub_id', '!=', 'j.destination_hub_id')

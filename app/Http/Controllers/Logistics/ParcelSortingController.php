@@ -20,12 +20,17 @@ class ParcelSortingController extends Controller
             return app(ParcelAssignmentController::class)->index($request);
         }
 
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
 
         $parcels = Parcel::query()
             ->with('orderItem.order:id,shipping_method')
             ->where('sorting_center_id', $sortingCenterId)
             ->where('status', 'AT_SORTING_CENTER')
+            ->when($context['staff'] && $context['hub'], function ($query) use ($context) {
+                $hubId = (int) $context['hub']->id;
+                $query->whereHas('hubJourney', fn ($q) => $q->where('current_hub_id', $hubId)->orWhere('destination_hub_id', $hubId));
+            })
             ->when($request->query('status') === 'sorted',
                 fn ($query) => $query->whereNotNull('sorted_area_id'),
                 fn ($query) => $query->whereNull('sorted_area_id'))
@@ -54,7 +59,8 @@ class ParcelSortingController extends Controller
 
     public function areas(Request $request): JsonResponse
     {
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
 
         $geography = app(PhilippineAddressService::class)->data();
         $cities = array_column($geography['cities'], null, 'code');
@@ -79,7 +85,8 @@ class ParcelSortingController extends Controller
 
     public function createArea(Request $request): JsonResponse
     {
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
         $request->merge(['name' => trim((string) $request->input('name', ''))]);
         $validated = $request->validate([
             'name' => [
@@ -106,7 +113,8 @@ class ParcelSortingController extends Controller
         $validated = $request->validate([
             'area_id' => ['required', 'integer'],
         ]);
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
 
         $parcel = DB::transaction(function () use ($id, $validated, $sortingCenterId): Parcel {
             $parcel = Parcel::query()

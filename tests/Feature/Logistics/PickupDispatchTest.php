@@ -97,4 +97,41 @@ class PickupDispatchTest extends CompleteWorkflowTest
         Sanctum::actingAs($this->pickupRider->user);
         $this->postJson('/api/sorting-center/pickup-dispatch/'.$parcels[3]->id.'/assign', ['rider_id' => $this->pickupRider->id])->assertForbidden();
     }
+
+    public function test_pickup_assignment_enforces_town_matching_and_rejects_wrong_area(): void
+    {
+        $parcel = $this->pickup('TOWN-MATCH-1');
+        $parcel->update(['collection_address' => '123 Katipunan Ave, Quezon City, Metro Manila']);
+
+        $qcArea = \App\Models\Area::create(['sorting_center_id' => $this->center->id, 'name' => 'Quezon City']);
+        $calambaArea = \App\Models\Area::create(['sorting_center_id' => $this->center->id, 'name' => 'Calamba']);
+
+        $this->pickupRider->areas()->attach($qcArea);
+        $this->deliveryRider->areas()->attach($calambaArea);
+
+        foreach ([$this->pickupRider, $this->deliveryRider] as $rider) {
+            app(RiderPresence::class)->command($rider, 'go_online', 'synthetic');
+        }
+
+        Sanctum::actingAs($this->center->user);
+
+        // 1. Filtered riders API only returns the QC rider
+        $res = $this->getJson('/api/sorting-center/pickup-dispatch/riders?parcel_id='.$parcel->id)->assertOk();
+        $this->assertCount(1, $res->json('data'));
+        $this->assertSame($this->pickupRider->id, $res->json('data.0.id'));
+
+        // 2. Rejecting the out-of-town Calamba rider with exact error
+        $wrongRes = $this->postJson('/api/sorting-center/pickup-dispatch/'.$parcel->id.'/assign', [
+            'rider_id' => $this->deliveryRider->id,
+        ]);
+        $wrongRes->assertUnprocessable();
+        $this->assertStringContainsString('Ang piniling rider ay hindi sumasakop sa bayan ng Seller na ito.', $wrongRes->json('message'));
+
+        // 3. Successfully assigning the matching QC rider
+        $okRes = $this->postJson('/api/sorting-center/pickup-dispatch/'.$parcel->id.'/assign', [
+            'rider_id' => $this->pickupRider->id,
+        ]);
+        $okRes->assertOk();
+        $this->assertSame($this->pickupRider->id, $parcel->fresh()->pickup_rider_id);
+    }
 }

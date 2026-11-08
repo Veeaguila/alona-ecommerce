@@ -28,6 +28,11 @@ class EnsureSortingCenterApproved
 
         // A hub membership never grants company-wide operational/admin access.
         if (app(\App\Services\HubAccess::class)->membership($user)) {
+            if ($request->is('sorting-center/pickup-requests*') || $request->is('api/sorting-center/pickup-requests*') || $request->is('api/sorting-center/pickup-dispatch*')
+                || $request->is('sorting-center/delivery-management*') || $request->is('api/sorting-center/parcels*') || $request->is('api/sorting-center/areas*')
+                || $request->is('sorting-center/rider-assignment*')) {
+                return $next($request);
+            }
             abort(403, 'Use your assigned hub workspace. Company-wide operations require the company administrator.');
         }
 

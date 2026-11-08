@@ -13,7 +13,8 @@ class ParcelAssignmentController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
 
         $parcels = Parcel::query()
             ->with(['sortedArea:id,name', 'orderItem.order:id,shipping_method'])
@@ -21,6 +22,10 @@ class ParcelAssignmentController extends Controller
             ->where('status', 'AT_SORTING_CENTER')
             ->whereNotNull('sorted_area_id')
             ->whereNull('assigned_rider_id')
+            ->when($context['staff'] && $context['hub'], function ($query) use ($context) {
+                $hubId = (int) $context['hub']->id;
+                $query->whereHas('hubJourney', fn ($q) => $q->where('destination_hub_id', $hubId));
+            })
             ->when(app(\App\Services\HubNetwork::class)->available(), fn ($query) => $query->where(fn ($query) => $query
                 ->whereDoesntHave('hubJourney')->orWhereHas('hubJourney', fn ($journey) => $journey->whereNotNull('destination_received_at'))))
             ->orderByDesc('sorted_at')
@@ -49,7 +54,8 @@ class ParcelAssignmentController extends Controller
 
     public function eligibleRiders(Request $request, int $id): JsonResponse
     {
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
         $parcel = Parcel::where('sorting_center_id', $sortingCenterId)->find($id);
 
         if (! $parcel) {
@@ -108,7 +114,8 @@ class ParcelAssignmentController extends Controller
         $validated = $request->validate([
             'rider_id' => ['required', 'integer'],
         ]);
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
 
         $parcel = app(\App\Services\RiderAllocation::class)->run([$validated['rider_id']], fn () => DB::transaction(function () use ($id, $validated, $sortingCenterId, $request): Parcel {
             $jobMembers = app(\App\Services\RiderJobPay::class)->groupedMembers($id, (int) $sortingCenterId, 'delivery');

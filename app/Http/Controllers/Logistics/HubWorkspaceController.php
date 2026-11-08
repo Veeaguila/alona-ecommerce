@@ -76,7 +76,7 @@ class HubWorkspaceController extends Controller
         $input = $request->validate(['stage' => ['sometimes', Rule::in(HubOperations::STAGES)], 'page' => ['sometimes', 'integer', 'min:1']]);
         $query = app(HubOperations::class)->queue($context['center']->id, $context['hub']->id, $input['stage'] ?? 'all')
             ->whereHas('parcel', fn ($q) => $q->whereNotIn('status', ['DELIVERED', 'FAILED_RETURNED']))
-            ->with(['parcel:id,order_id,status', 'originHub:id,name', 'destinationHub:id,name']);
+            ->with(['parcel:id,order_id,status,collection_address,pickup_rider_id', 'parcel.pickupRider:id,name', 'originHub:id,name', 'destinationHub:id,name']);
         return response()->json(['data' => $query->orderByDesc('id')->paginate(20)]);
     }
 

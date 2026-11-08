@@ -20,9 +20,14 @@ class PickupRequestController extends Controller
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
         $status = $validated['status'] ?? 'pending';
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
+        $operatingHubId = $context['hub']?->id;
 
         $query = PickupRequest::query()
+            ->when($context['staff'] && $operatingHubId, function ($query) use ($operatingHubId) {
+                $query->whereHas('parcel.hubJourney', fn ($j) => $j->where('origin_hub_id', $operatingHubId));
+            })
             ->when(\Illuminate\Support\Facades\Schema::hasTable('logistics_audit_events'), fn ($query) => $query->with(['parcel.logisticsEvents' => fn ($events) => $events->orderBy('created_at')->orderBy('id')]))
             ->with([
                 'parcel:id,order_id,order_item_id,seller_id,status,pickup_rider_id,assigned_rider_id,sorted_at,assigned_at,delivered_at,updated_at,delivery_address,collection_address,delivery_province,delivery_municipality,delivery_barangay,delivery_street,delivery_house_number',
@@ -89,7 +94,8 @@ class PickupRequestController extends Controller
 
     public function confirm(Request $request, int $id): JsonResponse
     {
-        $sortingCenterId = $request->user()->sortingCenter->id;
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
         $pickupRequest = DB::transaction(function () use ($id, $sortingCenterId): PickupRequest {
             $pickupRequest = PickupRequest::query()->whereKey($id)->lockForUpdate()->first();
 

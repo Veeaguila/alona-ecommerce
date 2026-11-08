@@ -8,8 +8,16 @@
       <p class="mt-2 text-sm">Requires a fresh Seller collection point and consent-based Online Rider locations. The offer lasts 60 seconds; the Rider must accept before assignment.</p>
     </div>
     <form class="mt-4 space-y-3" @submit.prevent="submit">
-      <label class="block">Pickup Rider<select v-model="riderId" aria-label="Pickup Rider" class="app-input" :disabled="busy || loading"><option value="">Choose an eligible Rider</option><option v-for="rider in riders" :key="rider.id" :value="rider.id">{{ rider.name }} · {{ rider.presence }} · {{ rider.active_jobs_count }}/3 jobs</option></select></label>
-      <p v-if="!loading && !riders.length" role="status">{{ emptyReason }}</p>
+      <label class="block">
+        Pickup Rider (Filtered by Seller's Hub & Town)
+        <select v-model="riderId" aria-label="Pickup Rider" class="app-input" :disabled="busy || loading">
+          <option value="">Choose an eligible Rider</option>
+          <option v-for="rider in riders" :key="rider.id" :value="rider.id">
+            {{ rider.name }} · {{ rider.presence }} · {{ rider.active_jobs_count }}/3 jobs {{ rider.areas?.length ? '· ' + rider.areas.join(', ') : '' }}
+          </option>
+        </select>
+      </label>
+      <p v-if="!loading && !riders.length" role="status" class="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">{{ emptyReason }}</p>
       <label v-if="currentRiderId" class="block">Reassignment reason<textarea v-model="reason" aria-label="Reassignment reason" class="app-input" maxlength="300" :disabled="busy"></textarea></label>
       <div class="flex flex-wrap gap-2"><button class="app-button-primary" type="submit" :disabled="busy || !riderId">{{ busy ? 'Assigning...' : currentRiderId ? 'Confirm pickup reassignment' : parcelIds.length > 1 ? 'Assign selected pickups' : 'Assign pickup' }}</button><button class="app-button-secondary" type="button" :disabled="busy || loading" @click="load">Refresh eligible pickup Riders</button></div>
     </form>
@@ -26,9 +34,10 @@ const headers = () => ({ Accept: 'application/json', Authorization: `Bearer ${pr
 async function load() {
   loading.value = true;
   try {
-    const response = await fetch('/api/sorting-center/pickup-dispatch/riders', { headers: headers() }); const data = await response.json();
+    const query = props.parcelIds?.length ? `?parcel_id=${props.parcelIds[0]}` : '';
+    const response = await fetch(`/api/sorting-center/pickup-dispatch/riders${query}`, { headers: headers() }); const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Eligible Riders could not be loaded.');
-    riders.value = data.data.filter(rider => rider.id !== props.currentRiderId); emptyReason.value = data.meta.empty_reason || 'No different Online Rider has available capacity.';
+    riders.value = data.data.filter(rider => rider.id !== props.currentRiderId); emptyReason.value = data.meta?.empty_reason || 'No different Online Rider has available capacity.';
     if (!riders.value.some(rider => rider.id === Number(riderId.value))) riderId.value = '';
   } catch (error) { message.value = error.message; }
   finally { loading.value = false; }
