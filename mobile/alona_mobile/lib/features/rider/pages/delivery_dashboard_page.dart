@@ -25,6 +25,7 @@ import 'delivery_success_page.dart';
 import 'cod_and_earnings_tracker_page.dart';
 import '../theme/rider_theme.dart';
 import '../widgets/rider_design_widgets.dart';
+import '../widgets/rider_interactive_map_card.dart';
 import 'order_detail_pages.dart';
 import 'pickup_dashboard_page.dart';
 import 'rider_notifications_page.dart';
@@ -772,36 +773,222 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   ],
                   if (widget.parcelId != null) ...[
                     const SizedBox(height: 12),
-                    const RiderMapIllustration(),
-                  ],
-                  if (widget.parcelId == null) ...[
-                    const SizedBox(height: 16),
-                    _scanHeroCard(context),
-                    const SizedBox(height: 10),
-                    _codCounterHeroCard(context),
+                    Builder(
+                      builder: (ctx) {
+                        final filtered = deliveries.firstWhere(
+                          (d) => d['id'] == widget.parcelId,
+                          orElse: () => deliveries.isNotEmpty ? deliveries.first : {},
+                        );
+                        final pAddr = address(filtered);
+                        return RiderInteractiveMapCard(
+                          destinationAddress: pAddr.isNotEmpty ? pAddr : 'Santa Rosa, Laguna',
+                          destinationName: orderContactName(filtered, pickup: false),
+                          height: 230,
+                          onOpenExternalMap: () => RiderQuickActions.openMapNavigation(context, pAddr),
+                        );
+                      },
+                    ),
                   ],
                   if (loading) ...[
                     const SizedBox(height: 40),
                     const Center(child: CircularProgressIndicator()),
                   ] else ...[
-                    const SizedBox(height: 24),
-                    if (deliveries.isEmpty)
-                      Text(
-                        widget.parcelId == null
-                            ? 'No deliveries assigned right now.'
-                            : 'This parcel is no longer in your active assignments. Refresh or check Delivery History.',
-                        style: TextStyle(color: Colors.grey.shade700),
-                      )
-                    else ...[
-                      const Text(
-                        'To deliver',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                    if (deliveries.isEmpty) ...[
+                      const SizedBox(height: 14),
+                      // Standby Hub & Coverage Map
+                      RiderInteractiveMapCard(
+                        destinationAddress: 'Santa Rosa, Laguna',
+                        destinationName: 'Sorting Center Hub (Standby)',
+                        height: 220,
+                        onOpenExternalMap: () => RiderQuickActions.openMapNavigation(
+                          context,
+                          'Laguna Sorting Center',
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      ...deliveries.map(deliveryCard),
+                      if (widget.parcelId == null) ...[
+                        const SizedBox(height: 14),
+                        _scanHeroCard(context),
+                        const SizedBox(height: 10),
+                        _codCounterHeroCard(context),
+                      ],
+                      const SizedBox(height: 24),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFD1FAE5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_circle_rounded,
+                                size: 36,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              widget.parcelId == null
+                                  ? 'All caught up! No active deliveries.'
+                                  : 'This parcel is no longer in your active assignments. Refresh or check Delivery History.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: RiderColors.text,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Pumunta sa Sorting Hub upang mag-scan ng susunod na batch ng parcels.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: RiderColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Builder(
+                        builder: (_) {
+                          final nextStop = deliveries.firstWhere(
+                            (d) => d['status'] == 'OUT_FOR_DELIVERY',
+                            orElse: () => deliveries.first,
+                          );
+                          final remaining = deliveries
+                              .where((d) => d['id'] != nextStop['id'])
+                              .toList();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _nextStopHeroCard(context, nextStop),
+                              if (widget.parcelId == null) ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _miniActionCard(
+                                        icon: Icons.qr_code_scanner,
+                                        title: 'Scan Parcels',
+                                        color: const Color(0xFF0F766E),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ParcelScannerPage(
+                                              session: riderSession,
+                                            ),
+                                          ),
+                                        ).then((_) {
+                                          if (mounted) refresh();
+                                        }),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: _miniActionCard(
+                                        icon: Icons.calculate_outlined,
+                                        title: 'Cash Counter',
+                                        color: const Color(0xFFD97706),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                CodAndEarningsTrackerPage(
+                                              session: riderSession,
+                                              initialTabIndex: 0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                              if (remaining.isNotEmpty) ...[
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Upcoming Stops in Queue',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: RiderColors.text,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE2E8F0),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '${remaining.length}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                          color: Color(0xFF334155),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                ...remaining.map(deliveryCard),
+                              ] else ...[
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: const Color(0xFFA7F3D0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: const [
+                                      Icon(
+                                        Icons.check_circle_outline_rounded,
+                                        color: Color(0xFF059669),
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Ito na ang huling delivery para sa batch na ito!',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF065F46),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
                     ],
                     if (widget.parcelId == null) ...[
                       const SizedBox(height: 24),
@@ -813,6 +1000,505 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _miniActionCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _nextStopHeroCard(BuildContext context, Map<String, dynamic> delivery) {
+    final status = delivery['status']?.toString().toUpperCase();
+    final isOutForDelivery = status == 'OUT_FOR_DELIVERY';
+    final isAssigned = status == 'ASSIGNED';
+    final isCod = delivery['is_cod'] == true || delivery['payment_method'] == 'cod';
+    final codAmount = delivery['cod_amount'] != null
+        ? double.tryParse(delivery['cod_amount'].toString()) ?? 0.0
+        : 0.0;
+
+    final recipient = delivery['customer_name']?.toString().trim().isNotEmpty == true
+        ? delivery['customer_name'].toString()
+        : delivery['recipient_name']?.toString().trim().isNotEmpty == true
+            ? delivery['recipient_name'].toString()
+            : orderContactName(delivery, pickup: false);
+    final custName = recipient.isEmpty ? 'Customer' : recipient;
+
+    final addr = address(delivery);
+    final phone = delivery['address_details'] is Map
+        ? (delivery['address_details']['contact_no']?.toString() ?? '')
+        : (delivery['contact_no']?.toString() ?? '');
+
+    final itemName = delivery['item_name']?.toString();
+    final itemQty = delivery['item_quantity'] ?? 1;
+
+    final canStart = isAssigned;
+    final canAttempt = isOutForDelivery &&
+        delivery['awaiting_retry'] != true &&
+        delivery['return_status'] == null &&
+        delivery['rts_eligible'] != true;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isOutForDelivery ? const Color(0xFF0F766E) : const Color(0xFFF59E0B),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isOutForDelivery ? const Color(0xFF0F766E) : const Color(0xFFF59E0B))
+                .withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Banner
+            InkWell(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              onTap: actionParcelId != null || proofFlow || loggingOut
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DeliveryOrderPage(
+                          delivery: delivery,
+                          session: riderSession,
+                          statusLabel: isAssigned ? 'ASSIGNED' : 'OUT FOR DELIVERY',
+                          onStart: canStart ? () => startDelivery(delivery) : null,
+                          onCapture: canAttempt ? () => openProof(delivery) : null,
+                          onDeliver: canAttempt ? () => markDelivered(delivery) : null,
+                          onFail: canAttempt
+                              ? (reason) async {
+                                  await updateDelivery(
+                                    delivery,
+                                    'fail',
+                                    body: {'reason': reason},
+                                  );
+                                }
+                              : null,
+                        ),
+                      ),
+                    ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isOutForDelivery
+                        ? [const Color(0xFF0F766E), const Color(0xFF0D9488)]
+                        : [const Color(0xFFD97706), const Color(0xFFF59E0B)],
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isOutForDelivery ? Icons.directions_bike_rounded : Icons.schedule_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                isOutForDelivery ? '📍 CURRENT NEXT STOP' : '⏳ NEXT DISPATCH STOP',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Order #${delivery['order_id'] ?? delivery['id']}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isOutForDelivery ? 'IN TRANSIT' : 'ASSIGNED',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Card Body
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Name
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          custName,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                      if (phone.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            phone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Destination Address with Pin
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          addr.isNotEmpty ? addr : 'No address provided',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Item details if present
+                  if (itemName != null && itemName.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.inventory_2_outlined, size: 16, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '$itemQty x $itemName',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // Live Interactive OpenStreetMap Route Card
+                  RiderInteractiveMapCard(
+                    destinationAddress: addr,
+                    destinationName: custName,
+                    height: 210,
+                    onOpenExternalMap: () => RiderQuickActions.openMapNavigation(context, addr),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Payment / COD Callout Pill
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isCod ? const Color(0xFFFFFBEB) : const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isCod ? const Color(0xFFFBBF24) : const Color(0xFF34D399),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isCod ? Icons.payments_rounded : Icons.check_circle_rounded,
+                          color: isCod ? const Color(0xFFD97706) : const Color(0xFF059669),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isCod
+                                    ? 'COLLECT CASH: PHP ${codAmount.toStringAsFixed(2)}'
+                                    : 'PAID ONLINE (No Cash Collection)',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: isCod ? const Color(0xFF92400E) : const Color(0xFF065F46),
+                                ),
+                              ),
+                              Text(
+                                isCod
+                                    ? 'Pakihanda ang panukli bago lumapit kay buyer.'
+                                    : 'Ipa-verify ang OTP o kumuha ng photo proof.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: isCod ? const Color(0xFFB45309) : const Color(0xFF047857),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 1-Tap Thumb Action Bar: [ 🚗 Waze/Maps ] [ 📞 Call ] [ 💬 SMS ]
+                  Row(
+                    children: [
+                      // Navigation Button
+                      Expanded(
+                        flex: 4,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.navigation_rounded, size: 18),
+                          label: const Text(
+                            'Maps / Waze',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () => RiderQuickActions.openMapNavigation(context, addr),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Call Button
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.phone_in_talk_rounded, size: 18),
+                          label: const Text(
+                            'Call',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: phone.isNotEmpty
+                              ? () => RiderQuickActions.callContact(context, phone)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // SMS Button
+                      IconButton.filled(
+                        icon: const Icon(Icons.sms_rounded, size: 19),
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          foregroundColor: const Color(0xFF334155),
+                          padding: const EdgeInsets.all(12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                        onPressed: phone.isNotEmpty
+                            ? () => RiderQuickActions.sendDeliverySms(
+                                  context,
+                                  rawPhone: phone,
+                                  recipientName: custName,
+                                  orderId: '${delivery['order_id'] ?? ''}',
+                                  isCod: isCod,
+                                  codAmount: codAmount,
+                                )
+                            : null,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Giant Touch Target Primary Action: [ Complete Delivery (Photo & OTP) ] or [ Start Delivery ]
+                  if (isOutForDelivery) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.camera_alt_rounded, size: 22),
+                        label: const Text(
+                          'COMPLETE DELIVERY (Photo & OTP)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F766E),
+                          foregroundColor: Colors.white,
+                          elevation: 3,
+                          shadowColor: const Color(0xFF0F766E).withValues(alpha: 0.35),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: canAttempt ? () => markDelivered(delivery) : null,
+                      ),
+                    ),
+                  ] else if (isAssigned) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                        label: const Text(
+                          'START THIS TRIP',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          elevation: 3,
+                          shadowColor: const Color(0xFFD97706).withValues(alpha: 0.35),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: actionParcelId != null ? null : () => startDelivery(delivery),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

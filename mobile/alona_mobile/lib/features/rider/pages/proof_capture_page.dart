@@ -221,9 +221,15 @@ class _ProofCapturePageState extends State<ProofCapturePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text("Capture Delivery Proof"),
-        backgroundColor: const Color(0xFF1f3a70),
+        title: const Text(
+          "Delivery Photo Proof",
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        backgroundColor: const Color(0xFF0F766E),
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -231,143 +237,427 @@ class _ProofCapturePageState extends State<ProofCapturePage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Delivery Address",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+              // Address Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.deliveryAddress,
-                        style: const TextStyle(color: Colors.grey),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Delivery Destination",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.deliveryAddress,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(0xFF1E293B),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Photography Guidelines Pill
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDFA),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFCCFBF1)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.tips_and_updates_outlined,
+                      color: Color(0xFF0F766E),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            "Gabay sa Magandang Proof of Delivery:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: Color(0xFF0F766E),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "• Isama sa kuha ang parcel at ang pinto/gate ng bahay.\n• Kung maaari, ipakita ang house number o landmark.",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF134E4A),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Camera Viewport & Capture Card
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _capturedImage != null
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFCBD5E1),
+                    width: _capturedImage != null ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(19),
+                  child: Column(
+                    children: [
+                      if (_capturedImage != null) ...[
+                        Stack(
+                          children: [
+                            Image.memory(
+                              _capturedBytes!,
+                              height: 280,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              cacheWidth: 1200,
+                            ),
+                            Positioned(
+                              top: 12,
+                              left: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      "Photo Attached",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        Container(
+                          height: 220,
+                          width: double.infinity,
+                          color: const Color(0xFFF1F5F9),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.add_a_photo_outlined,
+                                    size: 38,
+                                    color: Color(0xFF0F766E),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  "Wala pang delivery photo",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                const Text(
+                                  "Pindutin ang button sa ibaba para kumuha ng litrato",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _capturePhoto(fromGallery: false),
+                                icon: _isCapturing
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        _capturedImage == null
+                                            ? Icons.camera_alt_rounded
+                                            : Icons.refresh_rounded,
+                                        size: 18,
+                                      ),
+                                label: Text(
+                                  _isCapturing
+                                      ? 'Inihahanda...'
+                                      : _capturedImage == null
+                                      ? 'Buksan ang Camera'
+                                      : 'Kumuha Muli ng Photo',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F766E),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (!_nativeCamera) ...[
+                              const SizedBox(width: 10),
+                              IconButton.filledTonal(
+                                tooltip: 'Pumili sa Gallery',
+                                onPressed: _busy
+                                    ? null
+                                    : () => _capturePhoto(fromGallery: true),
+                                icon: const Icon(Icons.photo_library_outlined),
+                                style: IconButton.styleFrom(
+                                  padding: const EdgeInsets.all(14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                "Delivery photo",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const Text(
-                'Capture a clear photo of this delivery. A signature alone cannot confirm delivery.',
-              ),
-              const SizedBox(height: 20),
-              _capturedImage != null
-                  ? Image.memory(
-                      _capturedBytes!,
-                      height: 300,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      cacheWidth: 1200,
-                    )
-                  : Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "No image captured",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    ),
-              const SizedBox(height: 12),
-              if (!_nativeCamera) ...[
-                const Text(
-                  'Live camera capture is available in the Android and iOS Rider app. Here, select a real photo to submit as proof.',
-                ),
-                const SizedBox(height: 12),
-              ],
+
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: Color(0xff9b3125))),
-                const SizedBox(height: 12),
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => _capturePhoto(fromGallery: !_nativeCamera),
-                  icon: _isCapturing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          _nativeCamera
-                              ? Icons.camera_alt
-                              : Icons.photo_library_outlined,
-                        ),
-                  label: Text(
-                    _isCapturing
-                        ? 'Opening photo…'
-                        : _nativeCamera
-                        ? (_capturedImage == null
-                              ? 'Capture Photo'
-                              : 'Retake Photo')
-                        : (_capturedImage == null
-                              ? 'Choose proof photo'
-                              : 'Choose another photo'),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFECACA)),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1f3a70),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                            color: Color(0xFF991B1B),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+              ],
+
               const SizedBox(height: 20),
+
+              // Notes Input
               const Text(
-                "Notes",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                "Karagdagang Tala (Optional)",
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: Color(0xFF1E293B),
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               TextField(
                 controller: _notesController,
-                maxLines: 3,
+                maxLines: 2,
                 maxLength: 500,
                 decoration: InputDecoration(
-                  hintText: "Add notes about delivery...",
+                  hintText: "Hal. Iniwan kay Nanay / Natanggap ng security guard...",
+                  prefixIcon: const Icon(
+                    Icons.edit_note_rounded,
+                    color: Color(0xFF64748B),
+                  ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                   ),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 20),
+
+              // Giant Action Button: Submit Proof
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _busy || _capturedBytes == null
-                      ? null
-                      : _uploadProof,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: _isUploading
-                      ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _busy || _capturedBytes == null ? null : _uploadProof,
+                  icon: _isUploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
                         )
-                      : const Text("Upload Proof"),
+                      : const Icon(Icons.cloud_upload_rounded, size: 22),
+                  label: Text(
+                    _isUploading
+                        ? "Ipinapasa ang Litrato..."
+                        : "I-SUBMIT ANG DELIVERY PROOF",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF94A3B8),
+                    disabledForegroundColor: Colors.white70,
+                    elevation: _capturedBytes != null ? 3 : 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
               ),
+
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
+
+              Center(
+                child: TextButton(
                   onPressed: _busy ? null : () => Navigator.pop(context),
-                  child: const Text("Cancel"),
+                  child: const Text(
+                    "Kanselahin at Bumalik",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -375,3 +665,4 @@ class _ProofCapturePageState extends State<ProofCapturePage>
     );
   }
 }
+

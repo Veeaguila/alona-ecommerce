@@ -11,7 +11,7 @@ class RiderShellPage extends StatefulWidget {
   final RiderSession session;
   final int initialTab;
 
-  const RiderShellPage({super.key, required this.session, this.initialTab = 0});
+  const RiderShellPage({super.key, required this.session, this.initialTab = 1});
 
   @override
   State<RiderShellPage> createState() => _RiderShellPageState();

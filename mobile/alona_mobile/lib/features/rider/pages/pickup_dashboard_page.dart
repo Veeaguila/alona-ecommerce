@@ -17,6 +17,7 @@ import 'login_page.dart';
 import 'rider_portal_page.dart';
 
 import '../theme/rider_theme.dart';
+import '../widgets/rider_interactive_map_card.dart';
 import 'order_detail_pages.dart';
 import 'parcel_scanner_page.dart';
 
@@ -541,6 +542,31 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                 children: [
                   RiderPresenceControl(session: riderSession),
                   const SizedBox(height: 14),
+                  Builder(
+                    builder: (ctx) {
+                      final activeJob = mine.isNotEmpty
+                          ? mine.first
+                          : (available.isNotEmpty ? available.first : null);
+                      final pAddr = activeJob != null
+                          ? pickupAddress(activeJob)
+                          : 'Santa Rosa, Laguna';
+                      final name = activeJob != null
+                          ? orderContactName(activeJob, pickup: true)
+                          : 'Pickup Area / Hub (Standby)';
+                      return Column(
+                        children: [
+                          RiderInteractiveMapCard(
+                            destinationAddress: pAddr,
+                            destinationName: name,
+                            height: 200,
+                            onOpenExternalMap: () =>
+                                RiderQuickActions.openMapNavigation(context, pAddr),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+                      );
+                    },
+                  ),
                   _scanHeroCard(context),
                   const SizedBox(height: 16),
                   SingleChildScrollView(

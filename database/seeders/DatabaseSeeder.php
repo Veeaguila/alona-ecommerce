@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             FaqAndSupportSettingSeeder::class,
             SellerProductCatalogSeeder::class,
+            HomepagePromotionsSeeder::class,
+            LogisticsCompleteSeeder::class,
+            TownRidersSeeder::class,
         ]);
     }
 }

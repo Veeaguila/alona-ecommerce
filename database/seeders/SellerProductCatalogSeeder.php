@@ -16,27 +16,52 @@ class SellerProductCatalogSeeder extends Seeder
 {
     public function run(): void
     {
-        $sellers = [
-            'tech' => User::where('email', 'techzone.ph.seller@gmail.com')->first(),
-            'fashion' => User::where('email', 'bellamoda.ph.seller@gmail.com')->first(),
-            'grocery' => User::where('email', 'greenharvest.ph.seller@gmail.com')->first(),
-            'beauty' => User::where('email', 'glowhaven.ph.seller@gmail.com')->first(),
-            'home' => User::where('email', 'apexhome.ph.seller@gmail.com')->first(),
+        $sellerConfigs = [
+            'tech' => ['email' => 'techzone.ph.seller@gmail.com', 'name' => 'TechZone PH', 'store_name' => 'TechZone Official Store'],
+            'fashion' => ['email' => 'bellamoda.ph.seller@gmail.com', 'name' => 'BellaModa PH', 'store_name' => 'BellaModa Fashion'],
+            'grocery' => ['email' => 'greenharvest.ph.seller@gmail.com', 'name' => 'GreenHarvest PH', 'store_name' => 'GreenHarvest Organics'],
+            'beauty' => ['email' => 'glowhaven.ph.seller@gmail.com', 'name' => 'GlowHaven PH', 'store_name' => 'GlowHaven Beauty'],
+            'home' => ['email' => 'apexhome.ph.seller@gmail.com', 'name' => 'ApexHome PH', 'store_name' => 'ApexHome Living'],
         ];
 
-        foreach ($sellers as $key => $s) {
-            if (!$s) {
-                throw new \RuntimeException("Seller account for $key ($key.seller@gmail.com) is missing.");
-            }
+        $sellers = [];
+        foreach ($sellerConfigs as $key => $conf) {
+            $sellers[$key] = User::firstOrCreate(
+                ['email' => $conf['email']],
+                [
+                    'name' => $conf['name'],
+                    'store_name' => $conf['store_name'],
+                    'password' => bcrypt('password'),
+                    'usertype' => 'seller',
+                    'status' => 'approved',
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
+
+        $sampleBuyerEmails = [
+            'juan.buyer@gmail.com' => 'Juan Dela Cruz',
+            'maria.buyer@gmail.com' => 'Maria Santos',
+            'mark.buyer@gmail.com' => 'Mark Reyes',
+            'anna.buyer@gmail.com' => 'Anna Mendoza',
+        ];
+
+        foreach ($sampleBuyerEmails as $email => $name) {
+            User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'name' => $name,
+                    'password' => bcrypt('password'),
+                    'usertype' => 'buyer',
+                    'status' => 'approved',
+                    'email_verified_at' => now(),
+                ]
+            );
         }
 
         $buyers = User::where('usertype', 'buyer')
             ->where('email', 'like', '%@gmail.com')
             ->get();
-
-        if ($buyers->isEmpty()) {
-            throw new \RuntimeException("No @gmail.com buyer accounts found.");
-        }
 
         $categoriesBySlug = Category::all()->keyBy('slug');
 
@@ -86,7 +111,15 @@ class SellerProductCatalogSeeder extends Seeder
                 $items = $entry['products'];
                 $prefix = $entry['tag'];
 
-                // Remove previous products of this seller if any
+                // If this seller already has products seeded, preserve them to protect order FKs
+                $existingCount = Product::where('seller_id', $seller->id)->count();
+                if ($existingCount >= count($items)) {
+                    $totalSeeded += $existingCount;
+                    $this->command->info("Seller {$seller->name} already has {$existingCount} products, skipping re-creation.");
+                    continue;
+                }
+
+                // Remove previous products of this seller if any (only when none are referenced by order items)
                 $existingProductIds = Product::where('seller_id', $seller->id)->pluck('id');
                 if ($existingProductIds->isNotEmpty()) {
                     Review::whereIn('product_id', $existingProductIds)->delete();

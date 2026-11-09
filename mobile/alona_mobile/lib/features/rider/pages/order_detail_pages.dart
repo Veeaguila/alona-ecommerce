@@ -7,6 +7,7 @@ import '../theme/rider_theme.dart';
 import '../widgets/address_details.dart';
 import '../widgets/rider_bottom_nav.dart';
 import '../widgets/rider_design_widgets.dart';
+import '../widgets/rider_interactive_map_card.dart';
 import 'rider_portal_page.dart';
 
 /// Presentation-only order screens (mock-ups 7 and 8). They never call the API
@@ -475,56 +476,13 @@ class _PickupOrderPageState extends State<PickupOrderPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                InkWell(
-                  onTap: () => RiderQuickActions.openMapNavigation(
+                RiderInteractiveMapCard(
+                  destinationAddress: pickupAddress(pickup),
+                  destinationName: _contactName(pickup, pickup: true),
+                  height: 210,
+                  onOpenExternalMap: () => RiderQuickActions.openMapNavigation(
                     context,
                     pickupAddress(pickup),
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Stack(
-                    children: [
-                      const RiderMapIllustration(),
-                      Positioned(
-                        bottom: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F766E),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.directions,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Open Maps / Waze',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -813,56 +771,13 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
                       : 0.0,
                 ),
                 const SizedBox(height: 14),
-                InkWell(
-                  onTap: () => RiderQuickActions.openMapNavigation(
+                RiderInteractiveMapCard(
+                  destinationAddress: deliveryAddress(delivery),
+                  destinationName: _contactName(delivery, pickup: false),
+                  height: 210,
+                  onOpenExternalMap: () => RiderQuickActions.openMapNavigation(
                     context,
                     deliveryAddress(delivery),
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Stack(
-                    children: [
-                      const RiderMapIllustration(),
-                      Positioned(
-                        bottom: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F766E),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.directions,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Open Maps / Waze',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 const SizedBox(height: 14),

@@ -185,12 +185,14 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     final existingIndex = batchItems.indexWhere((i) => i.code == clean);
     if (existingIndex >= 0 &&
         batchItems[existingIndex].status == BatchItemStatus.success) {
-      HapticFeedback.vibrate();
+      SystemSound.play(SystemSoundType.alert);
+      HapticFeedback.heavyImpact();
       _showScanNotice('⚠️ Nai-scan na ito: $clean (Duplicate)', isError: true);
       return;
     }
 
     // Process new scan in batch
+    SystemSound.play(SystemSoundType.click);
     HapticFeedback.lightImpact();
     final item = ScannedBatchItem(code: clean);
     setState(() {
@@ -228,6 +230,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         item.codAmount = codAmt;
       });
 
+      SystemSound.play(SystemSoundType.click);
       HapticFeedback.mediumImpact();
       _showScanNotice('✅ Na-load: ${item.code} (${item.buyerName})');
     } catch (e) {
@@ -237,7 +240,8 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         item.status = BatchItemStatus.error;
         item.message = msg;
       });
-      HapticFeedback.vibrate();
+      SystemSound.play(SystemSoundType.alert);
+      HapticFeedback.heavyImpact();
       _showScanNotice('⚠️ May issue sa ${item.code}: $msg', isError: true);
     }
   }
@@ -470,29 +474,74 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                     errorBuilder: (_, failure) => _buildScannerIllustration(),
                   ),
 
-                // Targeting Reticle Frame
+                // High-Tech Courier Reticle HUD with Corner Brackets & Laser
                 IgnorePointer(
                   child: Center(
-                    child: Container(
-                      width: 260,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: lastScannedToast != null
-                              ? (lastScannedToast!.startsWith('⚠️')
-                                  ? RiderColors.danger
-                                  : const Color(0xFF10B981))
-                              : RiderColors.amber,
-                          width: 2.5,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                    child: SizedBox(
+                      width: 270,
+                      height: 150,
                       child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          Center(
+                          CustomPaint(
+                            size: const Size(270, 150),
+                            painter: ScannerReticlePainter(
+                              color: lastScannedToast != null
+                                  ? (lastScannedToast!.startsWith('⚠️')
+                                      ? RiderColors.danger
+                                      : const Color(0xFF10B981))
+                                  : const Color(0xFFFBBF24),
+                            ),
+                          ),
+                          // Luminous Center Scanning Beam
+                          Container(
+                            height: 2,
+                            width: 240,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  (lastScannedToast != null &&
+                                          lastScannedToast!.startsWith('⚠️'))
+                                      ? const Color(0xFFEF4444)
+                                      : const Color(0xFFFBBF24),
+                                  Colors.transparent,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (lastScannedToast != null &&
+                                          lastScannedToast!.startsWith('⚠️'))
+                                      ? const Color(0xFFEF4444)
+                                          .withValues(alpha: 0.8)
+                                      : const Color(0xFFFBBF24)
+                                          .withValues(alpha: 0.8),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Helper Alignment Tag
+                          Positioned(
+                            bottom: 8,
                             child: Container(
-                              height: 2,
-                              color: RiderColors.amber.withValues(alpha: 0.7),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                'Itapat ang barcode o QR code',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -500,6 +549,78 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                     ),
                   ),
                 ),
+
+                // Floating Viewfinder Flashlight (Torch) Button
+                if (nativeCamera)
+                  Positioned(
+                    top: 10,
+                    right: 12,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () async {
+                          try {
+                            await camera?.toggleTorch();
+                            setState(() => isTorchOn = !isTorchOn);
+                          } catch (_) {}
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isTorchOn
+                                ? const Color(0xFFF59E0B)
+                                : Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isTorchOn
+                                  ? const Color(0xFFFDE68A)
+                                  : Colors.white.withValues(alpha: 0.3),
+                            ),
+                            boxShadow: isTorchOn
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFFF59E0B)
+                                          .withValues(alpha: 0.5),
+                                      blurRadius: 10,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isTorchOn
+                                    ? Icons.flash_on_rounded
+                                    : Icons.flash_off_rounded,
+                                color: isTorchOn
+                                    ? const Color(0xFF78350F)
+                                    : Colors.white,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                isTorchOn ? 'Flash ON' : 'Flash',
+                                style: TextStyle(
+                                  color: isTorchOn
+                                      ? const Color(0xFF78350F)
+                                      : Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Live Toast Banner inside Camera
                 if (lastScannedToast != null)
@@ -866,4 +987,49 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       ),
     );
   }
+}
+
+class ScannerReticlePainter extends CustomPainter {
+  final Color color;
+  final double cornerLength;
+  final double strokeWidth;
+
+  ScannerReticlePainter({
+    required this.color,
+    this.cornerLength = 26.0,
+    this.strokeWidth = 3.5,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final w = size.width;
+    final h = size.height;
+    final l = cornerLength;
+
+    // Top-Left corner
+    canvas.drawLine(Offset(0, l), const Offset(0, 0), paint);
+    canvas.drawLine(const Offset(0, 0), Offset(l, 0), paint);
+
+    // Top-Right corner
+    canvas.drawLine(Offset(w - l, 0), Offset(w, 0), paint);
+    canvas.drawLine(Offset(w, 0), Offset(w, l), paint);
+
+    // Bottom-Left corner
+    canvas.drawLine(Offset(0, h - l), Offset(0, h), paint);
+    canvas.drawLine(Offset(0, h), Offset(l, h), paint);
+
+    // Bottom-Right corner
+    canvas.drawLine(Offset(w - l, h), Offset(w, h), paint);
+    canvas.drawLine(Offset(w, h), Offset(w, h - l), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant ScannerReticlePainter oldDelegate) =>
+      oldDelegate.color != color;
 }

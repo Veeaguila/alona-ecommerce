@@ -1209,15 +1209,15 @@ onUnmounted(() => {
 
                 <div class="mx-auto w-full w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
                     <div
-                        class="alona-reveal hero-card relative overflow-hidden rounded-[30px] transition-colors duration-700"
-                        :class="currentBanner ? getThemeClass(currentBanner.theme) : 'bg-[#087F8C]'"
+                        class="alona-reveal hero-card relative overflow-hidden rounded-[30px] transition-colors duration-700 min-h-[280px] sm:min-h-[350px] md:min-h-[390px] lg:min-h-[430px]"
+                        :class="currentBanner && currentBanner.layout_type !== 'full' ? getThemeClass(currentBanner.theme) : 'bg-slate-900'"
                         @mouseenter="pauseHero"
                         @mouseleave="resumeHero"
                     >
-                        <div class="absolute -right-24 -top-32 h-96 w-96 rounded-full border-[70px] border-white/[0.05]"></div>
-                        <div class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"></div>
+                        <div v-if="!currentBanner || currentBanner.layout_type !== 'full'" class="absolute -right-24 -top-32 h-96 w-96 rounded-full border-[70px] border-white/[0.05]"></div>
+                        <div v-if="!currentBanner || currentBanner.layout_type !== 'full'" class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"></div>
 
-                        <Transition name="hero-slide" mode="out-in">
+                        <Transition name="hero-fade">
                             <!-- 1. FULL IMAGE BANNER (NO OVERLAY TEXT - PURE GRAPHIC BANNER) -->
                             <div
                                 v-if="isBannerSlide && currentBanner && currentBanner.layout_type === 'full' && !currentBanner.overlay_text"
@@ -3352,9 +3352,31 @@ onUnmounted(() => {
 
 /*
 |--------------------------------------------------------------------------
-| Hero Carousel Transition
+| Hero Carousel Transition (Seamless Crossfade - No Blank Gap)
 |--------------------------------------------------------------------------
 */
+
+.hero-fade-enter-active {
+    transition: opacity 0.5s ease-in-out;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+}
+
+.hero-fade-leave-active {
+    transition: opacity 0.5s ease-in-out;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.hero-fade-enter-from,
+.hero-fade-leave-to {
+    opacity: 0;
+}
 
 .hero-slide-enter-active,
 .hero-slide-leave-active {
