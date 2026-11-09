@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../services/parcel_address.dart';
+import '../services/rider_quick_actions.dart';
 import '../services/rider_session.dart';
 import '../theme/rider_theme.dart';
 import '../widgets/address_details.dart';
@@ -195,35 +195,21 @@ class _ContactCard extends StatelessWidget {
   final String address;
   final String phone;
   final RiderSession? session;
+  final String orderId;
+  final bool isPickup;
+  final bool isCod;
+  final double codAmount;
 
   const _ContactCard({
     required this.name,
     required this.address,
     required this.phone,
     required this.session,
+    this.orderId = '',
+    this.isPickup = false,
+    this.isCod = false,
+    this.codAmount = 0.0,
   });
-
-  Widget _square(IconData icon, String tooltip, VoidCallback? onTap) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF64748B)),
-          ),
-          child: Icon(
-            icon,
-            color: onTap == null ? RiderColors.textSecondary : RiderColors.text,
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -234,49 +220,112 @@ class _ContactCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: RiderColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17,
-                    color: RiderColors.text,
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: RiderColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      address.isEmpty ? 'Address not provided' : address,
+                      style: const TextStyle(color: RiderColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: address.trim().isEmpty
+                      ? null
+                      : () => RiderQuickActions.openMapNavigation(context, address),
+                  icon: const Icon(Icons.navigation_outlined, size: 16),
+                  label: const Text('Maps', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F766E),
+                    side: const BorderSide(color: Color(0xFF0F766E)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  address.isEmpty ? 'Address not provided' : address,
-                  style: const TextStyle(color: RiderColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          _square(
-            Icons.chat_bubble_outline,
-            'Message',
-            () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => RiderChatPage(session: session),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _square(
-            Icons.phone_outlined,
-            'Call',
-            phone.isEmpty
-                ? null
-                : () async {
-                    try {
-                      await launchUrl(Uri(scheme: 'tel', path: phone));
-                    } catch (_) {}
-                  },
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: phone.trim().isEmpty
+                      ? null
+                      : () => RiderQuickActions.sendDeliverySms(
+                            context,
+                            rawPhone: phone,
+                            recipientName: name,
+                            orderId: orderId,
+                            isCod: isCod,
+                            codAmount: codAmount,
+                            isPickup: isPickup,
+                          ),
+                  icon: const Icon(Icons.sms_outlined, size: 16),
+                  label: const Text('SMS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2563EB),
+                    side: const BorderSide(color: Color(0xFF2563EB)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: phone.trim().isEmpty
+                      ? null
+                      : () => RiderQuickActions.callContact(context, phone),
+                  icon: const Icon(Icons.phone_outlined, size: 16),
+                  label: const Text('Call', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF059669),
+                    side: const BorderSide(color: Color(0xFF059669)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RiderChatPage(session: session),
+                    ),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                  label: const Text('Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: RiderColors.tealDark,
+                    side: const BorderSide(color: RiderColors.tealDark),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -426,13 +475,66 @@ class _PickupOrderPageState extends State<PickupOrderPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                const RiderMapIllustration(),
+                InkWell(
+                  onTap: () => RiderQuickActions.openMapNavigation(
+                    context,
+                    pickupAddress(pickup),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      const RiderMapIllustration(),
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F766E),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.directions,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Open Maps / Waze',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 14),
                 _ContactCard(
                   name: _contactName(pickup, pickup: true),
                   address: pickupAddress(pickup),
                   phone: _contactPhone(pickup),
                   session: widget.session,
+                  orderId: '${pickup['order_id'] ?? ''}',
+                  isPickup: true,
                 ),
                 const SizedBox(height: 14),
                 _card(
@@ -703,9 +805,66 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
                   address: deliveryAddress(delivery),
                   phone: _contactPhone(delivery),
                   session: widget.session,
+                  orderId: '${delivery['order_id'] ?? ''}',
+                  isPickup: false,
+                  isCod: delivery['is_cod'] == true,
+                  codAmount: delivery['cod_amount'] != null
+                      ? double.tryParse(delivery['cod_amount'].toString()) ?? 0.0
+                      : 0.0,
                 ),
                 const SizedBox(height: 14),
-                const RiderMapIllustration(),
+                InkWell(
+                  onTap: () => RiderQuickActions.openMapNavigation(
+                    context,
+                    deliveryAddress(delivery),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      const RiderMapIllustration(),
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F766E),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.directions,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Open Maps / Waze',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 14),
                 if (canResolve)
                   _card(

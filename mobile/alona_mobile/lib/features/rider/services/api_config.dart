@@ -53,6 +53,8 @@ String get pickupsAvailableUrl => '$pickupsUrl/available';
 String get pickupsMineUrl => '$pickupsUrl/mine';
 String get deliveriesUrl => '$apiBaseUrl/rider/deliveries';
 String get smartScanUrl => '$apiBaseUrl/rider/smart-scan';
+String get codUrl => '$apiBaseUrl/rider/cod';
+String get earningsUrl => '$apiBaseUrl/earnings';
 
 String get logoutApiUrl => '$apiBaseUrl/logistics/logout';
 String get partnerProfileUrl => '$apiBaseUrl/partner/profile';

@@ -61,10 +61,16 @@ class PickupDispatch
                     app(HubNetwork::class)->assertRider($member, $rider, 'pickup');
                     if ($member->collection_address && $rider->areas()->exists()) {
                         $addr = strtolower($member->collection_address);
-                        $matchesArea = $rider->areas->contains(function ($area) use ($addr) {
-                            return str_contains($addr, strtolower($area->name));
-                        });
-                        abort_unless($matchesArea, 422, 'Error: Ang piniling rider ay hindi sumasakop sa bayan ng Seller na ito.');
+                        $hasMatchingAreaInCenter = \App\Models\Area::where('sorting_center_id', $centerId)
+                            ->get()
+                            ->contains(fn ($area) => str_contains($addr, strtolower($area->name)));
+
+                        if ($hasMatchingAreaInCenter) {
+                            $matchesArea = $rider->areas->contains(function ($area) use ($addr) {
+                                return str_contains($addr, strtolower($area->name));
+                            });
+                            abort_unless($matchesArea, 422, 'Error: Ang piniling rider ay hindi sumasakop sa bayan ng Seller na ito.');
+                        }
                     }
                 }
                 abort_if($fromId !== null && $fromId === $riderId, 422, 'Choose a different Rider for reassignment.');

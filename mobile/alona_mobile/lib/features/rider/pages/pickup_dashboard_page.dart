@@ -10,13 +10,13 @@ import '../services/api_error.dart';
 
 import '../services/api_config.dart';
 import '../services/parcel_address.dart';
+import '../services/rider_quick_actions.dart';
 import '../services/rider_session.dart';
 import '../services/rider_session_guard.dart';
 import 'login_page.dart';
 import 'rider_portal_page.dart';
 
 import '../theme/rider_theme.dart';
-import '../widgets/rider_design_widgets.dart';
 import 'order_detail_pages.dart';
 import 'parcel_scanner_page.dart';
 
@@ -360,7 +360,17 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              RiderCardQuickActions(
+                address: address,
+                phone: pickup['address_details'] is Map &&
+                        pickup['address_details']['contact_no'] != null
+                    ? pickup['address_details']['contact_no'].toString()
+                    : (pickup['contact_no']?.toString() ?? ''),
+                recipientName: orderContactName(pickup, pickup: true),
+                orderId: '${pickup['order_id'] ?? ''}',
+                isPickup: true,
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,

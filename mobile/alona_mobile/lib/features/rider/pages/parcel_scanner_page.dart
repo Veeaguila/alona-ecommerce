@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -9,14 +10,47 @@ import '../services/rider_parcel_api.dart';
 import '../services/rider_session.dart';
 import '../services/rider_session_guard.dart';
 import '../theme/rider_theme.dart';
-import '../widgets/rider_content.dart';
 import 'delivery_dashboard_page.dart';
 import 'delivery_history_page.dart';
+
+enum ScannerMode {
+  continuousBatch,
+  singleLookup,
+}
+
+enum BatchItemStatus {
+  verifying,
+  success,
+  error,
+}
+
+class ScannedBatchItem {
+  final String code;
+  BatchItemStatus status;
+  String? message;
+  String? buyerName;
+  String? deliveryAddress;
+  bool isCod;
+  double codAmount;
+  final DateTime scannedAt;
+
+  ScannedBatchItem({
+    required this.code,
+    this.status = BatchItemStatus.verifying,
+    this.message,
+    this.buyerName,
+    this.deliveryAddress,
+    this.isCod = false,
+    this.codAmount = 0.0,
+    DateTime? scannedAt,
+  }) : scannedAt = scannedAt ?? DateTime.now();
+}
 
 class ParcelScannerPage extends StatefulWidget {
   final RiderSession? session;
   final Widget Function(ValueChanged<String> onDetected)? scannerBuilder;
   const ParcelScannerPage({super.key, this.session, this.scannerBuilder});
+
   @override
   State<ParcelScannerPage> createState() => _ParcelScannerPageState();
 }
@@ -26,22 +60,46 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
   @override
   late final riderSession = widget.session ?? RiderSession();
   late final api = RiderParcelApi(riderSession);
+
+  ScannerMode mode = ScannerMode.continuousBatch;
   final reference = TextEditingController();
   MobileScannerController? camera;
-  bool busy = false, scanLocked = false;
-  String? error, cameraError;
+  bool busy = false;
+  bool scanLocked = false;
+  bool isTorchOn = false;
+  String? error;
+  String? cameraError;
+  String? lastScannedToast;
+  Timer? toastTimer;
+
+  // Continuous Batch State
+  final List<ScannedBatchItem> batchItems = [];
+  String? _lastCode;
+  DateTime? _lastScanTime;
+
   bool get nativeCamera =>
       !kIsWeb &&
       [
         TargetPlatform.android,
         TargetPlatform.iOS,
       ].contains(defaultTargetPlatform);
+
+  int get successfulCount =>
+      batchItems.where((i) => i.status == BatchItemStatus.success).length;
+
+  int get errorCount =>
+      batchItems.where((i) => i.status == BatchItemStatus.error).length;
+
+  double get totalBatchCod => batchItems
+      .where((i) => i.status == BatchItemStatus.success && i.isCod)
+      .fold(0.0, (acc, item) => acc + item.codAmount);
+
   @override
   void initState() {
     super.initState();
     if (nativeCamera && widget.scannerBuilder == null) {
       camera = MobileScannerController(
-        detectionTimeoutMs: 600,
+        detectionTimeoutMs: 650,
         returnImage: false,
       );
     }
@@ -74,7 +132,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       if (mounted) {
         setState(
           () => cameraError =
-              'Camera could not start. Allow camera access in device Settings, then retry or enter the reference.',
+              'Camera could not start. Allow camera access in Settings, then retry.',
         );
       }
     }
@@ -84,17 +142,110 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     reference.dispose();
+    toastTimer?.cancel();
     unawaited(camera?.dispose());
     super.dispose();
   }
 
-  void detected(String value) {
-    if (busy || scanLocked) return;
-    reference.text = value.trim();
-    unawaited(lookup());
+  void _showScanNotice(String message, {bool isError = false}) {
+    toastTimer?.cancel();
+    setState(() => lastScannedToast = message);
+    toastTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) setState(() => lastScannedToast = null);
+    });
   }
 
-  Future<void> lookup() async {
+  // -------------------------------------------------------------
+  // SCAN DETECTION ROUTING
+  // -------------------------------------------------------------
+  void detected(String rawValue) {
+    final clean = rawValue.trim().toUpperCase();
+    if (clean.isEmpty) return;
+
+    if (mode == ScannerMode.singleLookup) {
+      if (busy || scanLocked) return;
+      reference.text = clean;
+      unawaited(singleLookup());
+      return;
+    }
+
+    // Continuous Batch Mode
+    final now = DateTime.now();
+    if (_lastCode == clean &&
+        _lastScanTime != null &&
+        now.difference(_lastScanTime!).inMilliseconds < 1400) {
+      // Debounce rapid repeat read of the same exact barcode
+      return;
+    }
+
+    _lastCode = clean;
+    _lastScanTime = now;
+
+    // Check if already in current batch
+    final existingIndex = batchItems.indexWhere((i) => i.code == clean);
+    if (existingIndex >= 0 &&
+        batchItems[existingIndex].status == BatchItemStatus.success) {
+      HapticFeedback.vibrate();
+      _showScanNotice('⚠️ Nai-scan na ito: $clean (Duplicate)', isError: true);
+      return;
+    }
+
+    // Process new scan in batch
+    HapticFeedback.lightImpact();
+    final item = ScannedBatchItem(code: clean);
+    setState(() {
+      if (existingIndex >= 0) {
+        batchItems.removeAt(existingIndex);
+      }
+      batchItems.insert(0, item);
+      _showScanNotice('⚡ Na-scan: $clean (Inaalam ang detalye...)');
+    });
+
+    _processBatchScan(item);
+  }
+
+  Future<void> _processBatchScan(ScannedBatchItem item) async {
+    try {
+      final res = await sessionAction(() => api.smartScan(item.code));
+      if (!mounted) return;
+
+      final parcel = res['parcel'] as Map<String, dynamic>?;
+      final isCod = parcel?['is_cod'] == true;
+      final codAmt = parcel?['cod_amount'] != null
+          ? double.tryParse('${parcel!['cod_amount']}'.replaceAll(',', '')) ?? 0.0
+          : 0.0;
+
+      setState(() {
+        item.status = BatchItemStatus.success;
+        item.message = res['message']?.toString() ??
+            res['title']?.toString() ??
+            'Out for Delivery (Loaded)';
+        item.buyerName = parcel?['buyer_name']?.toString() ??
+            parcel?['recipient_name']?.toString() ??
+            'Buyer';
+        item.deliveryAddress = parcel?['delivery_address']?.toString() ?? '';
+        item.isCod = isCod;
+        item.codAmount = codAmt;
+      });
+
+      HapticFeedback.mediumImpact();
+      _showScanNotice('✅ Na-load: ${item.code} (${item.buyerName})');
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is SessionFailure ? e.message : 'Hindi ma-load ang parcel.';
+      setState(() {
+        item.status = BatchItemStatus.error;
+        item.message = msg;
+      });
+      HapticFeedback.vibrate();
+      _showScanNotice('⚠️ May issue sa ${item.code}: $msg', isError: true);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // SINGLE LOOKUP MODE
+  // -------------------------------------------------------------
+  Future<void> singleLookup() async {
     if (busy) return;
     FocusScope.of(context).unfocus();
     setState(() {
@@ -104,13 +255,14 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     });
     await stopCamera();
     try {
-      // 1. First try Universal Smart Scanner API
       final result = await sessionAction(() => api.smartScan(reference.text));
       if (!mounted) return;
 
       final parcel = result['parcel'] as Map<String, dynamic>?;
       final parcelId = parcel?['id'] as int?;
-      final actionMessage = result['message'] as String? ?? result['title'] as String? ?? 'Scan processed';
+      final actionMessage = result['message'] as String? ??
+          result['title'] as String? ??
+          'Scan processed';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -132,7 +284,6 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         );
       }
     } catch (smartScanErr) {
-      // 2. Fallback to legacy lookup if needed
       try {
         final parcel = await sessionAction(() => api.lookup(reference.text));
         if (!mounted) return;
@@ -150,7 +301,9 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
           setState(
             () => error = failure is SessionFailure
                 ? failure.message
-                : (smartScanErr is SessionFailure ? smartScanErr.message : 'Parcel lookup could not be confirmed. Retry or enter the reference.'),
+                : (smartScanErr is SessionFailure
+                    ? smartScanErr.message
+                    : 'Parcel lookup could not be confirmed.'),
           );
         }
       }
@@ -168,139 +321,54 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     await startCamera();
   }
 
-  Widget _buildScannerIllustration() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(24),
+  void _clearBatch() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      batchItems.clear();
+      _lastCode = null;
+      _lastScanTime = null;
+    });
+    _showScanNotice('Nalinis na ang batch scanner.');
+  }
+
+  void _finishAndGoToDeliveries() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DeliveryDashboardPage(session: riderSession),
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Corner Guides
-          Padding(
-            padding: const EdgeInsets.all(32),
-            child: SizedBox(
-              width: 240,
-              height: 140,
-              child: Stack(
-                children: [
-                  // Top-left corner
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.white, width: 4),
-                          left: BorderSide(color: Colors.white, width: 4),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Top-right corner
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.white, width: 4),
-                          right: BorderSide(color: Colors.white, width: 4),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Bottom-left corner
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.white, width: 4),
-                          left: BorderSide(color: Colors.white, width: 4),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Bottom-right corner
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.white, width: 4),
-                          right: BorderSide(color: Colors.white, width: 4),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          bottomRight: Radius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Barcode vertical lines
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(24, (i) {
-                        final isThick = i % 3 == 0;
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          width: isThick ? 4 : 2,
-                          height: 60,
-                          color: const Color(0xFF64748B),
-                        );
-                      }),
-                    ),
-                  ),
-                  // Horizontal Yellow / Amber Laser Scan Line
-                  Center(
-                    child: Container(
-                      width: 210,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: RiderColors.amber,
-                        borderRadius: BorderRadius.circular(2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: RiderColors.amber.withValues(alpha: 0.6),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    );
+  }
+
+  void _showManualInputDialog() {
+    final inputCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('I-type ang Reference'),
+        content: TextField(
+          controller: inputCtrl,
+          textCapitalization: TextCapitalization.characters,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Halimbawa: ITEM-12',
+            border: OutlineInputBorder(),
           ),
-          // Caption at bottom
-          Positioned(
-            bottom: 16,
-            child: Text(
-              'Camera scanning is available in the Android and iOS app.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Kanselahin'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = inputCtrl.text.trim();
+              Navigator.pop(ctx);
+              if (val.isNotEmpty) {
+                detected(val);
+              }
+            },
+            child: const Text('I-scan / Tanggapin'),
           ),
         ],
       ),
@@ -308,241 +376,494 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: RiderColors.background,
-    appBar: AppBar(title: const Text('Scan parcel')),
-    body: ListView(
-      padding: riderPagePadding(context, maxWidth: 640),
-      children: [
-        const SizedBox(height: 8),
-        const Text(
-          'Find your assigned delivery',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: RiderColors.text,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: RiderColors.background,
+      appBar: AppBar(
+        title: const Text('Rider Bodega Scanner'),
+        actions: [
+          if (nativeCamera)
+            IconButton(
+              icon: Icon(isTorchOn ? Icons.flash_on : Icons.flash_off),
+              tooltip: 'Toggle Flashlight',
+              onPressed: () async {
+                try {
+                  await camera?.toggleTorch();
+                  setState(() => isTorchOn = !isTorchOn);
+                } catch (_) {}
+              },
+            ),
+          IconButton(
+            icon: const Icon(Icons.keyboard_alt_outlined),
+            tooltip: 'Type code manually',
+            onPressed: _showManualInputDialog,
           ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Place the parcel barcode inside the guide. Only deliveries assigned to you can be opened.',
-          style: TextStyle(
-            fontSize: 14,
-            color: RiderColors.textSecondary,
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 20),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: SizedBox(
-            height: 280,
-            child: widget.scannerBuilder != null
-                ? widget.scannerBuilder!(detected)
-                : !nativeCamera
-                ? _buildScannerIllustration()
-                : Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      MobileScanner(
-                        controller: camera,
-                        useAppLifecycleState: false,
-                        onDetect: (capture) {
-                          for (final barcode in capture.barcodes) {
-                            final value = barcode.rawValue;
-                            if (value != null && value.trim().isNotEmpty) {
-                              detected(value);
-                              break;
-                            }
-                          }
-                        },
-                        errorBuilder: (_, failure) =>
-                            _buildScannerIllustration(),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Mode Switcher Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<ScannerMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ScannerMode.continuousBatch,
+                        label: Text('⚡ Mabilisang Bodega (Batch)'),
+                        icon: Icon(Icons.all_inclusive, size: 18),
                       ),
-                      IgnorePointer(
-                        child: Center(
-                          child: FractionallySizedBox(
-                            widthFactor: 0.78,
-                            heightFactor: 0.55,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: RiderColors.amber,
-                                  width: 3,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
+                      ButtonSegment(
+                        value: ScannerMode.singleLookup,
+                        label: Text('🔍 Single Lookup'),
+                        icon: Icon(Icons.search, size: 18),
+                      ),
+                    ],
+                    selected: {mode},
+                    onSelectionChanged: (val) {
+                      setState(() {
+                        mode = val.first;
+                        if (mode == ScannerMode.continuousBatch) {
+                          scanLocked = false;
+                          startCamera();
+                        }
+                      });
+                    },
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor: const Color(0xFF0F766E),
+                      selectedForegroundColor: Colors.white,
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Camera Viewport Area
+          SizedBox(
+            height: mode == ScannerMode.continuousBatch ? 230 : 270,
+            width: double.infinity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (widget.scannerBuilder != null)
+                  widget.scannerBuilder!(detected)
+                else if (!nativeCamera)
+                  _buildScannerIllustration()
+                else
+                  MobileScanner(
+                    controller: camera,
+                    useAppLifecycleState: false,
+                    onDetect: (capture) {
+                      for (final barcode in capture.barcodes) {
+                        final value = barcode.rawValue;
+                        if (value != null && value.trim().isNotEmpty) {
+                          detected(value);
+                          break;
+                        }
+                      }
+                    },
+                    errorBuilder: (_, failure) => _buildScannerIllustration(),
+                  ),
+
+                // Targeting Reticle Frame
+                IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      width: 260,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: lastScannedToast != null
+                              ? (lastScannedToast!.startsWith('⚠️')
+                                  ? RiderColors.danger
+                                  : const Color(0xFF10B981))
+                              : RiderColors.amber,
+                          width: 2.5,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Container(
+                              height: 2,
+                              color: RiderColors.amber.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Live Toast Banner inside Camera
+                if (lastScannedToast != null)
+                  Positioned(
+                    top: 12,
+                    left: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: lastScannedToast!.startsWith('⚠️')
+                            ? const Color(0xFF991B1B).withValues(alpha: 0.9)
+                            : const Color(0xFF0F766E).withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Text(
+                        lastScannedToast!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Batch Stats Overlay on Camera
+                if (mode == ScannerMode.continuousBatch)
+                  Positioned(
+                    bottom: 10,
+                    left: 14,
+                    right: 14,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '📦 Na-load: $successfulCount${errorCount > 0 ? ' · ⚠️ $errorCount Issue' : ''}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (totalBatchCod > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706).withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'COD: ₱${totalBatchCod.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Content Area (Batch List or Single Lookup Controls)
+          Expanded(
+            child: mode == ScannerMode.continuousBatch
+                ? _buildContinuousBatchView()
+                : _buildSingleLookupView(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // CONTINUOUS BATCH VIEW (List of scanned parcels)
+  // -------------------------------------------------------------
+  Widget _buildContinuousBatchView() {
+    return Column(
+      children: [
+        // Action Bar for Batch
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: RiderColors.border)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Talaan ng Na-scan (${batchItems.length} kabuuan)',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+              ),
+              if (batchItems.isNotEmpty)
+                TextButton.icon(
+                  onPressed: _clearBatch,
+                  icon: const Icon(Icons.delete_sweep, size: 16),
+                  label: const Text('Linisin', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: RiderColors.danger),
+                ),
+            ],
+          ),
+        ),
+
+        // List of scanned items
+        Expanded(
+          child: batchItems.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.qr_code_scanner, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'Mabilisang Pag-scan sa Bodega',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Itapat ang camera sa mga barcode ng parcel nang sunod-sunod. Awtomatiko itong maia-assign sa iyong delivery run.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: batchItems.length,
+                  itemBuilder: (ctx, index) {
+                    final item = batchItems[index];
+                    final isSuccess = item.status == BatchItemStatus.success;
+                    final isVerifying = item.status == BatchItemStatus.verifying;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSuccess
+                              ? const Color(0xFF10B981)
+                              : (isVerifying ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)),
+                          width: 1.2,
                         ),
                       ),
-                      if (busy)
-                        const ColoredBox(
-                          color: Color(0x88000000),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
+                      child: Row(
+                        children: [
+                          // Status Icon
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isSuccess
+                                  ? const Color(0xFFD1FAE5)
+                                  : (isVerifying ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2)),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: isVerifying
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Icon(
+                                    isSuccess ? Icons.check_circle : Icons.error,
+                                    color: isSuccess ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                    size: 18,
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      item.code,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 15,
+                                        color: RiderColors.text,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (item.isCod)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'COD ₱${item.codAmount.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            color: Color(0xFF92400E),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  isSuccess
+                                      ? '${item.buyerName ?? "Buyer"} · ${item.deliveryAddress ?? ""}'
+                                      : (item.message ?? 'Inaalam ang status...'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSuccess ? RiderColors.textSecondary : RiderColors.danger,
+                                    fontWeight: isSuccess ? FontWeight.normal : FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-          ),
+                          // Remove button
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                            onPressed: () {
+                              setState(() => batchItems.removeAt(index));
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ),
-        if (busy)
-          const Padding(
-            padding: EdgeInsets.only(top: 12),
-            child: Center(
-              child: Text(
-                'Checking your assignment...',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: RiderColors.teal,
+
+        // Bottom Finish Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: RiderColors.border)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton.icon(
+                onPressed: successfulCount > 0 ? _finishAndGoToDeliveries : null,
+                icon: const Icon(Icons.local_shipping, size: 20),
+                label: Text(
+                  successfulCount > 0
+                      ? 'Tapusin at Simulan ang Delivery Run ($successfulCount Parcels)'
+                      : 'Mag-scan muna ng mga parcel',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F766E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
           ),
-        if (cameraError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              cameraError!,
-              style: const TextStyle(color: RiderColors.danger),
-            ),
-          ),
+        ),
+      ],
+    );
+  }
+
+  // -------------------------------------------------------------
+  // SINGLE LOOKUP VIEW (Old mode)
+  // -------------------------------------------------------------
+  Widget _buildSingleLookupView() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
         if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              error!,
-              style: const TextStyle(
-                color: RiderColors.danger,
-                fontWeight: FontWeight.w600,
-              ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Text(error!, style: const TextStyle(color: RiderColors.danger, fontWeight: FontWeight.bold)),
           ),
-        if (nativeCamera || widget.scannerBuilder != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: TextButton.icon(
-              onPressed: busy ? null : scanAgain,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: Text(scanLocked ? 'Scan another parcel' : 'Retry camera'),
-            ),
+        TextField(
+          controller: reference,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: 'ITEM-123',
+            prefixIcon: const Icon(Icons.inventory_2_outlined),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            filled: true,
+            fillColor: Colors.white,
           ),
-        const SizedBox(height: 20),
-        // Divider "or enter it here"
-        Row(
-          children: const [
-            Expanded(child: Divider(color: RiderColors.border, thickness: 1)),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'or enter it here',
-                style: TextStyle(
-                  color: RiderColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            Expanded(child: Divider(color: RiderColors.border, thickness: 1)),
-          ],
+          onSubmitted: (_) => singleLookup(),
         ),
-        const SizedBox(height: 20),
-        const Text(
-          'Parcel reference',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-            color: RiderColors.text,
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: busy ? null : singleLookup,
+          icon: const Icon(Icons.search),
+          label: const Text('Buksan ang Detalye ng Parcel'),
+          style: FilledButton.styleFrom(
+            backgroundColor: RiderColors.teal,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: reference,
-          enabled: !busy,
-          textCapitalization: TextCapitalization.characters,
-          maxLength: 50,
-          decoration: InputDecoration(
-            hintText: 'ITEM-123',
-            prefixIcon: const Icon(
-              Icons.inventory_2_outlined,
-              color: RiderColors.textSecondary,
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: RiderColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: RiderColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: RiderColors.teal,
-                width: 1.5,
-              ),
-            ),
+        if (scanLocked)
+          TextButton.icon(
+            onPressed: scanAgain,
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('Muling i-scan ang camera'),
           ),
-          onSubmitted: busy ? null : (_) => lookup(),
-        ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: busy ? null : lookup,
-            icon: const Icon(Icons.search, size: 20),
-            label: const Text(
-              'Open delivery details',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            style: FilledButton.styleFrom(
-              backgroundColor: RiderColors.teal,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         Center(
           child: TextButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    await stopCamera();
-                    if (mounted) setState(() => scanLocked = true);
-                    if (!context.mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            DeliveryHistoryPage(session: riderSession),
-                      ),
-                    );
-                    if (mounted) setState(() => scanLocked = true);
-                  },
-            child: const Text(
-              'Delivery history',
-              style: TextStyle(
-                color: RiderColors.teal,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DeliveryHistoryPage(session: riderSession)),
             ),
+            child: const Text('Tingnan ang Delivery History'),
           ),
         ),
-        const SizedBox(height: 24),
       ],
-    ),
-  );
+    );
+  }
+
+  Widget _buildScannerIllustration() {
+    return Container(
+      color: const Color(0xFF1E293B),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+            const SizedBox(height: 8),
+            Text(
+              cameraError ?? 'Camera is not active on this environment.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

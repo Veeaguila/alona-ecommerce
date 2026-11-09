@@ -46,19 +46,6 @@ class RiderPickupController extends Controller
                 'pickup_rider_id',
             ]);
 
-        $rider = $request->user()->rider;
-        $riderAreas = $rider ? $rider->areas()->pluck('name')->map('strtolower')->all() : [];
-        if (!empty($riderAreas)) {
-            $pickups = $pickups->filter(function ($parcel) use ($riderAreas) {
-                if (empty($parcel->collection_address)) return true;
-                $addr = strtolower($parcel->collection_address);
-                foreach ($riderAreas as $area) {
-                    if (str_contains($addr, $area)) return true;
-                }
-                return false;
-            })->values();
-        }
-
         app(\App\Services\RiderParcelDetails::class)->append($pickups, true);
         $this->appendAssignmentState($pickups);
         if (\Illuminate\Support\Facades\Schema::hasTable('pickup_offers')) {

@@ -225,6 +225,74 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               ),
             ),
 
+            if (_otpParcels.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFF59E0B)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.security, color: Color(0xFFB45309), size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Delivery Verification PIN',
+                          style: GoogleFonts.figtree(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF92400E),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Ipakita ang iyong delivery OTP PIN sa rider kapag dumating na ang iyong parcel.',
+                      style: GoogleFonts.figtree(
+                        fontSize: 13,
+                        color: const Color(0xFF78350F),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final p in _otpParcels)
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF59E0B),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.key, size: 16),
+                            label: Text('View PIN (#${p['tracking_number'] ?? p['id']})'),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => DeliveryOtpDialog(
+                                  orderId: widget.orderId,
+                                  parcelId: p['id'] as int,
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 16),
 
             // Order Tracking History Timeline

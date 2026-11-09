@@ -1,4 +1,3 @@
-import '../widgets/delivery_otp_dialog.dart';
 import '../widgets/rider_presence_control.dart';
 
 import 'dart:convert';
@@ -13,6 +12,7 @@ import '../services/api_error.dart';
 
 import '../services/api_config.dart';
 import '../services/parcel_address.dart';
+import '../services/rider_quick_actions.dart';
 import '../services/rider_session.dart';
 import '../services/rider_session_guard.dart';
 import '../widgets/failure_reason_dialog.dart';
@@ -22,6 +22,7 @@ import 'proof_capture_page.dart';
 import 'rider_returns_page.dart';
 import 'parcel_scanner_page.dart';
 import 'delivery_success_page.dart';
+import 'cod_and_earnings_tracker_page.dart';
 import '../theme/rider_theme.dart';
 import '../widgets/rider_design_widgets.dart';
 import 'order_detail_pages.dart';
@@ -518,7 +519,18 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              RiderCardQuickActions(
+                address: addr,
+                phone: delivery['address_details'] is Map
+                    ? (delivery['address_details']['contact_no']?.toString() ?? '')
+                    : (delivery['contact_no']?.toString() ?? ''),
+                recipientName: custName,
+                orderId: '${delivery['order_id'] ?? ''}',
+                isCod: isCod,
+                codAmount: double.tryParse('$amount') ?? 0.0,
+                isPickup: false,
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -765,6 +777,8 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   if (widget.parcelId == null) ...[
                     const SizedBox(height: 16),
                     _scanHeroCard(context),
+                    const SizedBox(height: 10),
+                    _codCounterHeroCard(context),
                   ],
                   if (loading) ...[
                     const SizedBox(height: 40),
@@ -881,6 +895,85 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
               'Scan',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _codCounterHeroCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.calculate_outlined,
+              size: 24,
+              color: Color(0xFFD97706),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'COD Cash Counter',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: RiderColors.text,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'I-count ang barya at perang papel bago mag-remit sa hub.',
+                  style: TextStyle(
+                    color: RiderColors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFD97706),
+              side: const BorderSide(color: Color(0xFFD97706)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CodAndEarningsTrackerPage(
+                  session: riderSession,
+                  initialTabIndex: 0,
+                ),
+              ),
+            ),
+            child: const Text('Bilangin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),
