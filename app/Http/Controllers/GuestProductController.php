@@ -75,7 +75,11 @@ class GuestProductController extends Controller
                 $seed = (int) $request->session()->remember('guest_catalog_seed', function () use ($request) {
                     return abs(crc32($request->session()->getId() . date('YmdH')));
                 });
-                $products->orderByRaw("RAND({$seed})");
+                if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite') {
+                    $products->inRandomOrder($seed);
+                } else {
+                    $products->orderByRaw("RAND({$seed})");
+                }
                 break;
         }
 

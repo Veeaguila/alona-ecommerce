@@ -13,6 +13,26 @@ class RiderJobPayTest extends OrderJourney
 {
     private const BASE = '/api/sorting-center/payroll';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // This suite retains coverage of the historical company-payroll delivery policy.
+        config(['distribution.enabled' => false]);
+    }
+
+    public function test_new_distribution_delivery_cannot_also_create_company_delivery_pay(): void
+    {
+        config(['distribution.enabled' => true]);
+        $this->rates();
+        $this->checkout();
+        $this->ready();
+        $this->dispatchToDelivery();
+        $this->assertDatabaseCount('payment_distributions', 1);
+        $this->assertDatabaseHas('rider_pay_earnings', ['leg' => 'pickup', 'amount_cents' => 2500]);
+        $this->assertDatabaseMissing('rider_pay_earnings', ['leg' => 'delivery']);
+        $this->assertDatabaseHas('payment_distribution_lines', ['role' => 'rider', 'amount_cents' => 3500]);
+    }
+
     private function rates(array $changes = []): void
     {
         $this->apiAs($this->center->user);

@@ -120,6 +120,10 @@ class RiderJobPay
     /** Called under the existing assignment transaction, never on a historic list/read. */
     public function assign(Parcel $parcel, int $riderId, string $leg, User $actor, ?\Illuminate\Database\Eloquent\Collection $members = null): void
     {
+        // New delivery work receives its 70% allocation through the distribution ledger.
+        // Pickup and transfer remain separate company-funded work; historical delivery pay is unchanged.
+        if ($leg === 'delivery' && $parcel->orderItem
+            && app(\App\Services\Payments\DistributionLedger::class)->manages($parcel->orderItem->order_id)) return;
         if (!$this->installed() || !in_array($leg, ['pickup', 'delivery'], true)
             || !$members || $parcel->orderItem?->order?->delivery_fee_payer !== 'buyer') return;
         $key = $this->workKey($parcel, $leg);

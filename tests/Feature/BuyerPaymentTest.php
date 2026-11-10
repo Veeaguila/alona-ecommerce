@@ -124,6 +124,8 @@ class BuyerPaymentTest extends TestCase
         $payRes->assertSessionHasNoErrors();
         $payRes->assertRedirect(route('buyer.orders.show', $order));
 
+        $this->assertEquals('unpaid', $order->fresh()->payment_status);
+        $this->verifiedSettlement($order);
         $order->refresh();
         $this->assertEquals('paid', $order->payment_status);
 
@@ -232,11 +234,8 @@ class BuyerPaymentTest extends TestCase
             'reference' => 'WEBHOOK-PAY-999',
         ]);
 
-        $webhookRes->assertOk();
-        $webhookRes->assertJson([
-            'status' => 'success',
-            'payment_status' => 'paid',
-        ]);
+        $webhookRes->assertUnprocessable();
+        $this->verifiedSettlement($order);
 
         $order->refresh();
         $this->assertEquals('paid', $order->payment_status);
@@ -316,6 +315,7 @@ class BuyerPaymentTest extends TestCase
             'action' => 'success',
         ]);
         $payResA->assertSessionHasNoErrors();
+        $this->verifiedSettlement($orderA);
         $this->assertEquals('paid', $orderA->fresh()->payment_status);
 
         // 2. Order B: attempted to pay at 61 minutes -> blocked and auto-cancelled
@@ -348,6 +348,18 @@ class BuyerPaymentTest extends TestCase
         $this->assertEquals('Cancelled (unpaid)', $orderB->cancellation_reason);
 
         Carbon::setTestNow();
+    }
+
+    private function verifiedSettlement(Order $order): void
+    {
+        config(['distribution.webhook_secret' => str_repeat('s', 40), 'distribution.merchant' => 'synthetic-merchant',
+            'distribution.settlement_account' => 'synthetic-platform-account']);
+        $timestamp = (string) time();
+        $body = json_encode(['event_id' => 'settled-'.$order->id, 'merchant' => 'synthetic-merchant', 'order_id' => $order->id,
+            'currency' => 'PHP', 'status' => 'settled', 'amount' => $order->total, 'gateway_fee' => '0.00',
+            'reference' => 'synthetic-payment-'.$order->id, 'account' => 'synthetic-platform-account']);
+        $this->call('POST', '/api/webhooks/settlement', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_ALONA_TIMESTAMP' => $timestamp, 'HTTP_X_ALONA_SIGNATURE' => hash_hmac('sha256', $timestamp.'.'.$body, config('distribution.webhook_secret'))], $body)->assertOk();
     }
 }
 

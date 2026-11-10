@@ -4,7 +4,7 @@
     <p class="mt-2 text-sm">Both Riders acknowledge the actual physical handover in My account. Logistics then explicitly confirms custody transfer. Requesting or acknowledging alone never reassigns parcels.</p>
     <p v-if="message" role="status" class="app-feedback mt-3">{{ message }}</p>
     <form v-if="!handovers.some(row => row.status === 'pending')" class="mt-3 space-y-3" @submit.prevent="create">
-      <label class="block">Receiving Rider<select v-model="riderId" aria-label="Receiving Rider" class="app-input" :disabled="busy"><option value="">Choose an approved Online Rider</option><option v-for="rider in riders" :key="rider.id" :value="rider.id">{{ rider.name }} · {{ rider.active_jobs_count }}/3 jobs</option></select></label>
+      <label class="block">Receiving Rider<select v-model="riderId" aria-label="Receiving Rider" class="app-input" :disabled="busy"><option value="">Choose an approved Online Rider</option><option v-for="rider in riders" :key="rider.id" :value="rider.id">{{ rider.name }} · {{ rider.active_jobs_count }} active jobs</option></select></label>
       <label class="block">Handover reason<textarea v-model="reason" aria-label="Handover reason" class="app-input" maxlength="2000" :disabled="busy"></textarea></label>
       <button type="submit" class="app-button-primary" :disabled="busy || !riderId">Request physical handover</button>
     </form>

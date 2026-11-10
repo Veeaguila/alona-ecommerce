@@ -18,6 +18,8 @@ class CommissionService
      */
     public function recordCommissionsForOrder(Order $order): void
     {
+        // The immutable distribution ledger is the sole commission authority for its cohort.
+        if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) return;
         try {
             $status = strtolower((string) ($order->status ?? ''));
             if (! in_array($status, ['completed', 'delivered'], true)) {

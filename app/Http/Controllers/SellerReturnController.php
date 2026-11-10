@@ -256,6 +256,10 @@ class SellerReturnController extends Controller
             // Check if seller wants to immediately refund a refund_only request
             if ($returnRequest->type === 'refund_only' && $request->boolean('refund_now')) {
                 DB::transaction(function () use ($returnRequest, $order, $orderItem, $request) {
+                    // Serialize managed refunds against payout reservation and settlement.
+                    if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) {
+                        \App\Models\Order::withoutEvents(fn () => \App\Models\Order::whereKey($order->id)->lockForUpdate()->firstOrFail());
+                    }
                     $refundAmount = (float) $returnRequest->requested_amount;
 
                     $returnRequest->update([
@@ -491,6 +495,9 @@ class SellerReturnController extends Controller
 
         // Passed or Partial: Issue refund & optionally restock
         DB::transaction(function () use ($returnRequest, $validated, $order, $orderItem, $request, $inspectionStatus) {
+            if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) {
+                \App\Models\Order::withoutEvents(fn () => \App\Models\Order::whereKey($order->id)->lockForUpdate()->firstOrFail());
+            }
             $refundAmount = (float) ($validated['refund_amount'] ?? $returnRequest->requested_amount);
             $restocked = false;
 

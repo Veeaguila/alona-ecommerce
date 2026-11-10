@@ -68,6 +68,11 @@ class CodLedger
                     return $existing;
                 }
                 abort_if(CodCollection::where('parcel_id', $parcelId)->exists(), 409, 'Cash collection is already recorded for this parcel. Corrections require authorized review.');
+                if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) {
+                    $collected = $this->sum(CodCollection::where('order_id', $order->id), 'amount');
+                    abort_if($this->cents((string) $input['amount']) <= 0 || $collected + $this->cents((string) $input['amount']) > $this->cents($order->total),
+                        422, 'Collection exceeds the remaining buyer payment for this order.');
+                }
                 $path ??= $evidence->store('cod-evidence', 'local'); abort_unless($path, 500, 'Cash evidence could not be saved.');
                 $collection = CodCollection::create(['request_key' => $input['request_key'], 'order_id' => $order->id,
                     'parcel_id' => $parcelId, 'rider_id' => $rider->id, 'sorting_center_id' => $parcel->sorting_center_id,

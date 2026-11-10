@@ -1235,6 +1235,7 @@ class BuyerOrderController extends Controller
                         }
 
                         app(\App\Services\SellerShipmentFinance::class)->createMembership($storeOrder);
+                        app(\App\Services\Payments\DistributionLedger::class)->snapshot($storeOrder);
                         $this->createOrderStatusHistory($storeOrder, 'pending');
 
                         $createdOrders[] = $storeOrder;
@@ -1383,6 +1384,7 @@ class BuyerOrderController extends Controller
                 */
 
                 app(\App\Services\SellerShipmentFinance::class)->createMembership($order);
+                app(\App\Services\Payments\DistributionLedger::class)->snapshot($order);
                 $this->createOrderStatusHistory($order, 'pending');
 
                 /*
@@ -1506,6 +1508,10 @@ class BuyerOrderController extends Controller
         }
 
         // BUY-PAY-002: Payment succeeds
+        if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) {
+            return redirect()->route('buyer.orders.show', $order)
+                ->with('status', 'Payment confirmation is pending verification from the payment provider.');
+        }
         DB::transaction(function () use ($order, $validated, $request) {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
@@ -1564,6 +1570,9 @@ class BuyerOrderController extends Controller
         if (!$order) {
             return response()->json(['error' => 'Order not found'], 404);
         }
+
+        abort_if(app(\App\Services\Payments\DistributionLedger::class)->manages($order->id), 422,
+            'This order requires the authenticated settlement adapter.');
 
         if ($order->created_at && $order->created_at->lessThanOrEqualTo(now()->subHour()) && $order->payment_status === 'unpaid') {
             Order::autoCancelExpiredUnpaidOrders();
@@ -2183,19 +2192,22 @@ class BuyerOrderController extends Controller
 
         $sellerId = $orderItem->product?->seller_id ?? null;
 
-        $returnRequest = OrderReturnRequest::create([
-            'order_id' => $orderItem->order_id,
-            'order_item_id' => $orderItem->id,
-            'buyer_id' => $request->user()->id,
-            'seller_id' => $sellerId,
-            'type' => $data['type'],
-            'reason' => $data['reason'],
-            'reason_details' => $data['reason_details'] ?? null,
-            'requested_amount' => (float) ($orderItem->price * $orderItem->quantity),
-            'evidence_images' => $evidencePaths,
-            'response_deadline' => now()->addDays(3),
-            'status' => 'pending',
-        ]);
+        $returnRequest = DB::transaction(function () use ($orderItem, $request, $sellerId, $data, $evidencePaths) {
+            Order::withoutEvents(fn () => Order::whereKey($orderItem->order_id)->lockForUpdate()->firstOrFail());
+            return OrderReturnRequest::create([
+                'order_id' => $orderItem->order_id,
+                'order_item_id' => $orderItem->id,
+                'buyer_id' => $request->user()->id,
+                'seller_id' => $sellerId,
+                'type' => $data['type'],
+                'reason' => $data['reason'],
+                'reason_details' => $data['reason_details'] ?? null,
+                'requested_amount' => (float) ($orderItem->price * $orderItem->quantity),
+                'evidence_images' => $evidencePaths,
+                'response_deadline' => now()->addDays(3),
+                'status' => 'pending',
+            ]);
+        });
 
         // Notify seller
         $this->notifySellerReturnRequest($returnRequest, $orderItem);

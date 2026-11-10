@@ -283,6 +283,20 @@ class SellerReportController extends Controller
      */
     public function calculateOrderEarnings(Order $order, int $sellerId): array
     {
+        $ledger = app(\App\Services\Payments\DistributionLedger::class);
+        if ($ledger->manages($order->id)) {
+            $distribution = \App\Models\PaymentDistribution::where('order_id', $order->id)->firstOrFail();
+            $lines = $distribution->lines()->where('seller_id', $sellerId)->get();
+            $sellerLines = $lines->where('role', 'seller');
+            $gross = (int) $sellerLines->sum('base_cents');
+            $net = (int) $sellerLines->sum(fn ($line) => $ledger->balance($line));
+            $commission = (int) $lines->where('role', 'platform_product')->sum(fn ($line) => $ledger->balance($line));
+            return ['order_id' => $order->id, 'order_number' => $order->order_number,
+                'gross' => $gross / 100, 'seller_voucher_discount' => 0, 'platform_voucher_discount' => $distribution->discount_cents / 100,
+                'shipping_discount' => $distribution->shipping_discount_cents / 100, 'shipping_fee' => $distribution->shipping_cents / 100,
+                'net_subtotal' => $gross / 100, 'commission_rate' => 0.10, 'commission' => $commission / 100,
+                'net_earnings' => $net / 100, 'status' => $order->status, 'settlement_url' => '/payments/distributions'];
+        }
         $sellerItems = $order->items->filter(function ($item) use ($sellerId) {
             return (int) ($item->product?->seller_id) === (int) $sellerId
                 && !in_array($item->status, ['cancelled', 'refunded']);
@@ -357,6 +371,7 @@ class SellerReportController extends Controller
 
         $totalEarned = 0.0;
         foreach ($completedOrders as $order) {
+            if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) continue;
             $breakdown = $this->calculateOrderEarnings($order, $sellerId);
             $totalEarned += $breakdown['net_earnings'];
         }

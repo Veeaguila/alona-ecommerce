@@ -13,7 +13,7 @@
         <select v-model="riderId" aria-label="Pickup Rider" class="app-input" :disabled="busy || loading">
           <option value="">Choose an eligible Rider</option>
           <option v-for="rider in riders" :key="rider.id" :value="rider.id">
-            {{ rider.name }} · {{ rider.presence }} · {{ rider.active_jobs_count }}/3 jobs {{ rider.areas?.length ? '· ' + rider.areas.join(', ') : '' }}
+            {{ rider.name }} · {{ rider.presence }} · {{ rider.active_jobs_count }} active jobs {{ rider.areas?.length ? '· ' + rider.areas.join(', ') : '' }}
           </option>
         </select>
       </label>

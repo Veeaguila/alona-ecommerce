@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/rider/login', [LoginRiderController::class, 'login'])->middleware('throttle:6,1');
 Route::get('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'show']);
 Route::post('/rider/activate/{token}', [\App\Http\Controllers\RiderActivationController::class, 'activate']);
+Route::middleware(['auth:sanctum', 'rider.approved'])->get('/earnings', [\App\Http\Controllers\DeliveryFinanceController::class, 'rider']);
 
 Route::middleware(['auth:sanctum', 'rider.approved'])->prefix('rider')->group(function () {
     Route::post('/pickup-location', [\App\Http\Controllers\Logistics\PickupLocationController::class, 'rider'])->middleware('throttle:30,1');
@@ -224,6 +225,11 @@ Route::post('/logistics/logout', function (Request $request) {
 
 // Payment Webhook (BUY-PAY-005)
 Route::post('/webhooks/payment', [\App\Http\Controllers\BuyerOrderController::class, 'paymentWebhook'])->name('payment.webhook');
+Route::post('/webhooks/settlement', \App\Http\Controllers\PaymentSettlementWebhookController::class)->middleware('throttle:60,1');
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('payments')->group(function () {
+    Route::get('/distributions', [\App\Http\Controllers\PaymentDistributionController::class, 'index']);
+    Route::post('/distributions/{id}/payouts', [\App\Http\Controllers\PaymentDistributionController::class, 'reserve'])->whereNumber('id');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -322,11 +328,9 @@ Route::middleware(['auth:sanctum', 'buyer'])->prefix('buyer')->group(function ()
     Route::post('/payment-methods', [BuyerAccountApiController::class, 'storePaymentMethod']);
     Route::delete('/payment-methods/{id}', [BuyerAccountApiController::class, 'deletePaymentMethod'])->whereNumber('id');
     Route::post('/delete-account', [BuyerAccountApiController::class, 'deleteAccount']);
+});
 
-    // Conversations & Messages
-    Route::get('/conversations', [\App\Http\Controllers\BuyerConversationController::class, 'index']);
-    Route::get('/conversations/{conversation}', [\App\Http\Controllers\BuyerConversationController::class, 'show']);
-    Route::post('/conversations/{conversation}', [\App\Http\Controllers\BuyerConversationController::class, 'store']);
-    Route::post('/conversations/start/{product}', [\App\Http\Controllers\BuyerConversationController::class, 'start']);
-    Route::post('/conversations/start-seller/{seller}', [\App\Http\Controllers\BuyerConversationController::class, 'startWithSeller']);
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('payments')->group(function () {
+    Route::get('/distributions', [\App\Http\Controllers\PaymentDistributionController::class, 'index']);
+    Route::post('/distributions/{id}/payouts', [\App\Http\Controllers\PaymentDistributionController::class, 'reserve'])->whereNumber('id');
 });

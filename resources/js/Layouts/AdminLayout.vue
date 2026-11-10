@@ -623,6 +623,7 @@ const currentDateLabel = computed(() => {
 */
 
 const navigation = [
+    { label: 'Payment Distribution', href: '/payments/distributions', key: 'payment-distribution' },
     {
         label: 'Dashboard',
         href: route('admin.dashboard'),

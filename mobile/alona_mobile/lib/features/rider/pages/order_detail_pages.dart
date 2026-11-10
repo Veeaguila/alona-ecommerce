@@ -6,7 +6,6 @@ import '../services/rider_session.dart';
 import '../theme/rider_theme.dart';
 import '../widgets/address_details.dart';
 import '../widgets/rider_bottom_nav.dart';
-import '../widgets/rider_design_widgets.dart';
 import '../widgets/rider_interactive_map_card.dart';
 import 'rider_portal_page.dart';
 

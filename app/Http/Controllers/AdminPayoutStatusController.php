@@ -48,7 +48,7 @@ class AdminPayoutStatusController extends Controller
         }
 
         $stats = [
-            'total_disbursed' => (float) SellerPayoutRequest::whereIn('status', ['approved', 'completed'])->sum('amount'),
+            'total_disbursed' => (float) SellerPayoutRequest::where('status', 'completed')->sum('amount'),
             'pending_amount' => (float) SellerPayoutRequest::where('status', 'pending')->sum('amount'),
             'processing_amount' => (float) SellerPayoutRequest::where('status', 'processing')->sum('amount'),
             'pending_count' => SellerPayoutRequest::where('status', 'pending')->count(),

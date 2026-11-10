@@ -67,7 +67,17 @@ class _HubScannerModalState extends State<HubScannerModal>
     _batchMode = widget.initialBatchMode;
     if (_nativeCamera) {
       _camera = MobileScannerController(
-        detectionTimeoutMs: 700,
+        detectionTimeoutMs: 200,
+        detectionSpeed: DetectionSpeed.normal,
+        cameraResolution: const Size(1280, 720),
+        formats: const [
+          BarcodeFormat.code128,
+          BarcodeFormat.code39,
+          BarcodeFormat.qrCode,
+          BarcodeFormat.ean13,
+          BarcodeFormat.ean8,
+          BarcodeFormat.upcA,
+        ],
         returnImage: false,
       );
     }

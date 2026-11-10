@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../services/rider_quick_actions.dart';
-import '../theme/rider_theme.dart';
 
 class RiderInteractiveMapCard extends StatefulWidget {
   final String destinationAddress;

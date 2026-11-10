@@ -24,7 +24,6 @@ import 'parcel_scanner_page.dart';
 import 'delivery_success_page.dart';
 import 'cod_and_earnings_tracker_page.dart';
 import '../theme/rider_theme.dart';
-import '../widgets/rider_design_widgets.dart';
 import '../widgets/rider_interactive_map_card.dart';
 import 'order_detail_pages.dart';
 import 'pickup_dashboard_page.dart';

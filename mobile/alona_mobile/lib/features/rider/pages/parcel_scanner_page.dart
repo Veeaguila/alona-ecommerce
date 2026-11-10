@@ -99,7 +99,17 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     super.initState();
     if (nativeCamera && widget.scannerBuilder == null) {
       camera = MobileScannerController(
-        detectionTimeoutMs: 650,
+        detectionTimeoutMs: 200,
+        detectionSpeed: DetectionSpeed.normal,
+        cameraResolution: const Size(1280, 720),
+        formats: const [
+          BarcodeFormat.code128,
+          BarcodeFormat.code39,
+          BarcodeFormat.qrCode,
+          BarcodeFormat.ean13,
+          BarcodeFormat.ean8,
+          BarcodeFormat.upcA,
+        ],
         returnImage: false,
       );
     }
@@ -243,6 +253,12 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.heavyImpact();
       _showScanNotice('⚠️ May issue sa ${item.code}: $msg', isError: true);
+      // Auto-clear _lastCode after 1s so rider can quickly retry without delay
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && _lastCode == item.code) {
+          _lastCode = null;
+        }
+      });
     }
   }
 
@@ -257,7 +273,6 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       scanLocked = true;
       error = null;
     });
-    await stopCamera();
     try {
       final result = await sessionAction(() => api.smartScan(reference.text));
       if (!mounted) return;
@@ -286,6 +301,13 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
             ),
           ),
         );
+        if (mounted) {
+          setState(() {
+            scanLocked = false;
+            reference.clear();
+            error = null;
+          });
+        }
       }
     } catch (smartScanErr) {
       try {
@@ -300,19 +322,36 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
             ),
           ),
         );
+        if (mounted) {
+          setState(() {
+            scanLocked = false;
+            reference.clear();
+            error = null;
+          });
+        }
       } catch (failure) {
         if (mounted) {
-          setState(
-            () => error = failure is SessionFailure
-                ? failure.message
-                : (smartScanErr is SessionFailure
-                    ? smartScanErr.message
-                    : 'Parcel lookup could not be confirmed.'),
-          );
+          final msg = failure is SessionFailure
+              ? failure.message
+              : (smartScanErr is SessionFailure
+                  ? smartScanErr.message
+                  : 'Parcel lookup could not be confirmed.');
+          setState(() => error = msg);
+          _showScanNotice('⚠️ $msg', isError: true);
+          SystemSound.play(SystemSoundType.alert);
+          HapticFeedback.heavyImpact();
         }
       }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+        // Automatically unlock scanning after 1.5 seconds so rider can try again smoothly without getting stuck
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted && !busy) {
+            setState(() => scanLocked = false);
+          }
+        });
+      }
     }
   }
 
@@ -449,7 +488,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
 
           // Camera Viewport Area
           SizedBox(
-            height: mode == ScannerMode.continuousBatch ? 230 : 270,
+            height: mode == ScannerMode.continuousBatch ? 260 : 310,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
@@ -478,13 +517,13 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                 IgnorePointer(
                   child: Center(
                     child: SizedBox(
-                      width: 270,
-                      height: 150,
+                      width: 290,
+                      height: 160,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
                           CustomPaint(
-                            size: const Size(270, 150),
+                            size: const Size(290, 160),
                             painter: ScannerReticlePainter(
                               color: lastScannedToast != null
                                   ? (lastScannedToast!.startsWith('⚠️')

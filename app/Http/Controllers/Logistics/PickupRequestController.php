@@ -24,6 +24,17 @@ class PickupRequestController extends Controller
         $sortingCenterId = (int) $context['center']->id;
         $operatingHubId = $context['hub']?->id;
 
+        // Auto-ensure journeys for active parcels in this center that don't have one yet
+        $unlinkedParcels = \App\Models\Parcel::where(function ($q) use ($sortingCenterId) {
+                $q->where('sorting_center_id', $sortingCenterId)->orWhereNull('sorting_center_id');
+            })
+            ->whereNotIn('status', ['DELIVERED', 'FAILED_RETURNED'])
+            ->whereDoesntHave('hubJourney')
+            ->get();
+        foreach ($unlinkedParcels as $p) {
+            app(\App\Services\HubNetwork::class)->ensureJourney($p);
+        }
+
         $query = PickupRequest::query()
             ->when($context['staff'] && $operatingHubId, function ($query) use ($operatingHubId) {
                 $query->whereHas('parcel.hubJourney', fn ($j) => $j->where('origin_hub_id', $operatingHubId));

@@ -321,7 +321,19 @@ export default {
       }
     }
 
-    onMounted(refresh);
+    onMounted(async () => {
+      await refresh();
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get('reference');
+        if (refParam && refParam.trim()) {
+          reference.value = refParam.trim();
+          await lookup();
+        }
+      } catch (e) {
+        // Ignore URL lookup failure
+      }
+    });
     return { context, hubId, reference, result, queue, busy, fresh, error, notice, confirmed, transportReference, stage, stages, isStaff,
       showBatchDispatch, showBatchReceive, batchDestHubId, batchTransportRef, batchReceiveRef, destinationHubs,
       openBatchDispatchModal, openBatchReceiveModal, executeBatchDispatch, executeBatchReceive,

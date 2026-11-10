@@ -383,6 +383,13 @@ class BuyerAuthController extends Controller
 
         $email = Str::lower(trim($validated['email']));
         $googleId = trim($validated['google_id']);
+        $idToken = $validated['id_token'] ?? null;
+
+        if (! $this->verifyGoogleToken($idToken, $email, $googleId)) {
+            return response()->json([
+                'message' => 'Google token verification is not configured or could not be verified.',
+            ], 503);
+        }
 
         $user = User::where('google_id', $googleId)
             ->orWhere('email', $email)
@@ -490,5 +497,31 @@ class BuyerAuthController extends Controller
             'status' => $user->status,
             'role' => $user->usertype,
         ];
+    }
+
+    private function verifyGoogleToken(?string $idToken, string $email, string $googleId): bool
+    {
+        if (! $idToken || $idToken === 'unverified-token') {
+            return false;
+        }
+        $clientId = config('services.google.client_id');
+        if (! $clientId) {
+            return false;
+        }
+        try {
+            $client = new \GuzzleHttp\Client(['timeout' => 5]);
+            $response = $client->get('https://oauth2.googleapis.com/tokeninfo', [
+                'query' => ['id_token' => $idToken],
+            ]);
+            if ($response->getStatusCode() !== 200) {
+                return false;
+            }
+            $payload = json_decode((string) $response->getBody(), true);
+            return isset($payload['email'], $payload['sub'])
+                && strtolower((string) $payload['email']) === $email
+                && (string) $payload['sub'] === $googleId;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

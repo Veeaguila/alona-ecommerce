@@ -42,20 +42,16 @@ class BuyerOrderApiController extends Controller
     /** All mobile bookings use the web transaction, stock locks, route snapshots and finance membership. */
     public function store(Request $request): JsonResponse
     {
-        if (! $request->filled('request_key')) {
+        if ($request->filled('request_key') && Str::isUuid($request->input('request_key'))) {
+            $key = 'buyer-checkout:'.$request->user()->id.':'.$request->input('request_key');
+            $fingerprint = hash('sha256', json_encode($request->all()));
+            $cached = \Illuminate\Support\Facades\Cache::get($key);
+            if ($cached) {
+                abort_unless(hash_equals($cached['fingerprint'], $fingerprint), 409, 'This checkout reference was already used with different details.');
+                return response()->json($cached['response'], 201);
+            }
+        } else {
             $request->merge(['request_key' => (string) Str::uuid()]);
-        }
-
-        $items = $this->checkoutItems($request);
-
-        if ($request->missing('expected_total') || $request->missing('expected_prices') || $request->missing('expected_shipping_fee')) {
-            $preview = app(\App\Http\Controllers\BuyerOrderController::class)->mobileCheckoutPreview($request, $items);
-            $previewData = $preview->getData(true);
-            $request->merge([
-                'expected_shipping_fee' => $request->input('expected_shipping_fee', $previewData['shipping_fee_before_discount'] ?? 0),
-                'expected_total' => $request->input('expected_total', $previewData['total'] ?? 0),
-                'expected_prices' => $request->input('expected_prices', $previewData['expected_prices'] ?? []),
-            ]);
         }
 
         $request->validate([
@@ -65,6 +61,9 @@ class BuyerOrderApiController extends Controller
             'expected_prices.*' => ['required', 'numeric', 'min:0'],
             'request_key' => ['required', 'uuid'],
         ]);
+
+        $items = $this->checkoutItems($request);
+
         $key = 'buyer-checkout:'.$request->user()->id.':'.$request->input('request_key');
         $fingerprint = hash('sha256', json_encode($request->all()));
         return \Illuminate\Support\Facades\Cache::lock($key.':lock', 60)->block(5, function () use ($request, $key, $fingerprint) {

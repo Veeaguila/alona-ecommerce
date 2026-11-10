@@ -307,6 +307,7 @@ require __DIR__ . '/buyer.php';
 require __DIR__ . '/seller.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/logistics.php';
+require __DIR__ . '/payments.php';
 
 /*
 |--------------------------------------------------------------------------

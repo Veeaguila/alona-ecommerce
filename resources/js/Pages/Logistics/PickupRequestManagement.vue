@@ -110,7 +110,7 @@
                     <button v-if="request.status === 'pending'" type="button" class="app-button-primary app-button-compact" :aria-label="`Confirm pickup for ${request.parcel?.order_id ?? 'unavailable parcel'}`" :disabled="!request.parcel || processingId !== null || loading" @click="confirmPickup(request.id)">
                       {{ processingId === request.id ? 'Confirming...' : 'Confirm pickup' }}
                     </button>
-                    <a v-else-if="request.parcel?.status === 'PICKED_UP'" :href="arrivalUrl(request)" class="app-button-secondary app-button-compact">Confirm arrival in Order Management</a>
+                    <a v-else-if="request.parcel?.status === 'PICKED_UP'" :href="arrivalUrl(request)" class="app-button-secondary app-button-compact">{{ isStaff ? 'Confirm arrival in Hub Workspace' : 'Confirm arrival in Order Management' }}</a>
                     <span v-else>Tracking</span>
                   </td>
                 </tr>
@@ -261,7 +261,12 @@ export default {
         OUT_FOR_DELIVERY: 'Out for Delivery', DELIVERED: 'Delivered', FAILED_RETURNED: 'Failed / Returned' })[parcel.status] ?? parcel.status ?? 'Unknown';
     }
 
+    const isStaff = window.logisticsSession?.operator?.role === 'hub_staff';
+
     function arrivalUrl(request) {
+      if (isStaff) {
+        return `/sorting-center/hub-workspace?reference=${encodeURIComponent(request.parcel?.order_id ?? '')}`;
+      }
       return `/sorting-center/order-management?reference=${encodeURIComponent(request.parcel?.order_id ?? '')}`;
     }
 
@@ -315,6 +320,7 @@ export default {
       statusLabel,
       latestUpdate,
       arrivalUrl,
+      isStaff,
       formatAddress,
       formatRequested,
     };
