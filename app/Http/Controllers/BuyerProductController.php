@@ -305,6 +305,53 @@ class BuyerProductController extends Controller
                 ->toArray();
         }
 
+        // Active Bundle Deals for this Seller & Product
+        $bundleDeals = collect();
+        if ($product->seller_id && \Illuminate\Support\Facades\Schema::hasTable('seller_promotions')) {
+            $now = now();
+            $bundleDeals = \App\Models\SellerPromotion::query()
+                ->where('seller_id', $product->seller_id)
+                ->where('type', 'bundle')
+                ->where('is_active', true)
+                ->whereNull('ended_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+                })
+                ->get()
+                ->filter(fn (\App\Models\SellerPromotion $promo) => $promo->appliesToBundleProduct((int) $product->id))
+                ->map(function ($bundle) use ($product) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 4))
+                        ->where('status', 'approved')
+                        ->get(['id', 'name', 'price', 'image_path']);
+
+                    return [
+                        'id' => $bundle->id,
+                        'name' => $bundle->name,
+                        'seller_id' => $bundle->seller_id,
+                        'min_quantity' => $bundle->min_quantity ?? 2,
+                        'discount_value' => (float) $bundle->discount_value,
+                        'discount_type' => $bundle->discount_type,
+                        'product_ids' => $productIds,
+                        'sample_products' => $sampleProducts->map(fn ($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => (float) $p->price,
+                            'image' => $p->image_path
+                                ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                                : null,
+                        ]),
+                    ];
+                })
+                ->values();
+        }
+
         $userPurchasedCount = 0;
         $userRemainingLimit = null;
         $inWishlist = false;
@@ -327,6 +374,7 @@ class BuyerProductController extends Controller
             'product' => $product,
             'vouchers' => $vouchers,
             'claimed_voucher_ids' => $claimedVoucherIds,
+            'bundle_deals' => $bundleDeals,
             'relatedProducts' => $relatedProducts,
             'sellerStats' => $sellerStats,
             'isGuest' => !auth()->check(),

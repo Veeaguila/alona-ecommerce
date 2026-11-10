@@ -132,7 +132,7 @@ class BuyerCartApiController extends Controller
             $cartItem->quantity = $newQuantity;
             $cartItem->save();
         } else {
-            $variantLabel = $variant ? trim(($variant->color ?? '') . ' ' . ($variant->size ?? '')) : null;
+            $variantLabel = $variant ? $variant->label() : null;
             $cartItem = CartItem::create([
                 'user_id' => $user->id,
                 'product_id' => $product->id,

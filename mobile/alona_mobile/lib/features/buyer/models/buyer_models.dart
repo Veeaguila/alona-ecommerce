@@ -22,6 +22,8 @@ class CategoryModel {
   final int id;
   final String name;
   final String slug;
+  final int? parentId;
+  final List<CategoryModel> subcategories;
   final String? imagePath;
   final int productsCount;
 
@@ -57,6 +59,8 @@ class CategoryModel {
     required this.id,
     required this.name,
     required this.slug,
+    this.parentId,
+    this.subcategories = const [],
     this.imagePath,
     this.productsCount = 0,
   });
@@ -70,44 +74,71 @@ class CategoryModel {
   }
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
+    var subs = <CategoryModel>[];
+    final rawSubs = json['active_subcategories'] ?? json['activeSubcategories'] ?? json['subcategories'];
+    if (rawSubs is List) {
+      subs = rawSubs.map((s) => CategoryModel.fromJson(Map<String, dynamic>.from(s))).toList();
+    }
+
     return CategoryModel(
-      id: json['id'] ?? 0,
+      id: parseInt(json['id']),
       name: json['name'] ?? json['title'] ?? '',
       slug: json['slug'] ?? '',
+      parentId: json['parent_id'] != null ? parseInt(json['parent_id']) : null,
+      subcategories: subs,
       imagePath:
           json['image_path'] ??
           json['image_url'] ??
           json['image'] ??
           json['thumbnail'],
       productsCount:
-          json['products_count'] ??
-          json['product_count'] ??
-          json['productsCount'] ??
-          0,
+          parseInt(
+              json['products_count'] ??
+              json['product_count'] ??
+              json['productsCount'] ??
+              0),
     );
   }
 }
 
 class ProductVariantModel {
   final int id;
+  final String? title;
   final String? color;
   final String? size;
+  final String? combinationKey;
+  final Map<String, dynamic>? variantAttributes;
   final double price;
   final int stock;
   final String? sku;
   final String? imageUrl;
+  final bool isActive;
 
   ProductVariantModel({
     required this.id,
+    this.title,
     this.color,
     this.size,
+    this.combinationKey,
+    this.variantAttributes,
     required this.price,
     required this.stock,
     this.sku,
     this.imageUrl,
+    this.isActive = true,
   });
 
   String get label {
+    if (title != null && title!.trim().isNotEmpty) {
+      return title!.trim();
+    }
+    if (variantAttributes != null && variantAttributes!.isNotEmpty) {
+      final values = variantAttributes!.values
+          .map((v) => v?.toString() ?? '')
+          .where((v) => v.isNotEmpty)
+          .join(' • ');
+      if (values.isNotEmpty) return values;
+    }
     final parts = [
       color,
       size,
@@ -116,14 +147,23 @@ class ProductVariantModel {
   }
 
   factory ProductVariantModel.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? attrs;
+    if (json['variant_attributes'] is Map) {
+      attrs = Map<String, dynamic>.from(json['variant_attributes']);
+    }
+
     return ProductVariantModel(
       id: parseInt(json['id']),
+      title: json['title'] ?? json['label'],
       color: json['color'],
       size: json['size'],
+      combinationKey: json['combination_key']?.toString(),
+      variantAttributes: attrs,
       price: parseDouble(json['price']),
       stock: parseInt(json['stock']),
       sku: json['sku'],
       imageUrl: json['image_url'],
+      isActive: json['is_active'] == null ? true : (json['is_active'] == true || json['is_active'] == 1),
     );
   }
 }
@@ -153,6 +193,46 @@ class ProductStoreVoucherModel {
       value: parseDouble(json['value']),
       minSpend: parseDouble(json['min_spend']),
       isClaimed: json['is_claimed'] == true || json['is_claimed'] == 1,
+    );
+  }
+}
+
+class ProductBundleDealModel {
+  final int id;
+  final String name;
+  final int minQuantity;
+  final double discountValue;
+  final String discountType;
+  final List<int> productIds;
+
+  ProductBundleDealModel({
+    required this.id,
+    required this.name,
+    this.minQuantity = 2,
+    required this.discountValue,
+    this.discountType = 'percentage',
+    this.productIds = const [],
+  });
+
+  String get savingsText {
+    if (discountType == 'percentage') {
+      return '${discountValue.toInt()}% OFF';
+    }
+    return '₱${discountValue.toStringAsFixed(0)} OFF';
+  }
+
+  factory ProductBundleDealModel.fromJson(Map<String, dynamic> json) {
+    var pIds = <int>[];
+    if (json['product_ids'] is List) {
+      pIds = (json['product_ids'] as List).map((id) => parseInt(id)).toList();
+    }
+    return ProductBundleDealModel(
+      id: parseInt(json['id']),
+      name: json['name']?.toString() ?? 'Store Bundle Deal',
+      minQuantity: parseInt(json['min_quantity']) > 0 ? parseInt(json['min_quantity']) : 2,
+      discountValue: parseDouble(json['discount_value']),
+      discountType: json['discount_type']?.toString() ?? 'percentage',
+      productIds: pIds,
     );
   }
 }
@@ -210,6 +290,9 @@ class ProductModel {
   final String imageUrl;
   final List<String> images;
   final List<ProductVariantModel> variants;
+  final List<dynamic> variationTypes;
+  final double? minPrice;
+  final double? maxPrice;
   final String? categoryName;
   final String? categorySlug;
   final String? parentCategoryName;
@@ -235,6 +318,7 @@ class ProductModel {
   final String condition;
   final int? perBuyerLimit;
   final List<ProductStoreVoucherModel> vouchers;
+  final List<ProductBundleDealModel> bundleDeals;
   final List<int> claimedVoucherIds;
   final bool inWishlist;
   final bool isFollowingStore;
@@ -256,6 +340,9 @@ class ProductModel {
     required this.imageUrl,
     this.images = const [],
     this.variants = const [],
+    this.variationTypes = const [],
+    this.minPrice,
+    this.maxPrice,
     this.categoryName,
     this.categorySlug,
     this.parentCategoryName,
@@ -281,6 +368,7 @@ class ProductModel {
     this.condition = 'Brand New',
     this.perBuyerLimit,
     this.vouchers = const [],
+    this.bundleDeals = const [],
     this.claimedVoucherIds = const [],
     this.inWishlist = false,
     this.isFollowingStore = false,
@@ -292,6 +380,13 @@ class ProductModel {
 
   double get effectivePrice =>
       hasFlashSale && flashPrice != null ? flashPrice! : price;
+
+  String get priceRange {
+    if (minPrice != null && maxPrice != null && minPrice != maxPrice) {
+      return '₱${minPrice!.toStringAsFixed(2)} - ₱${maxPrice!.toStringAsFixed(2)}';
+    }
+    return '₱${effectivePrice.toStringAsFixed(2)}';
+  }
 
   int get discountPercentage {
     if (oldPrice != null && oldPrice! > price) {
@@ -334,6 +429,16 @@ class ProductModel {
           .map(
             (v) =>
                 ProductStoreVoucherModel.fromJson(Map<String, dynamic>.from(v)),
+          )
+          .toList();
+    }
+
+    var rawBundleDeals = <ProductBundleDealModel>[];
+    if (json['bundle_deals'] is List) {
+      rawBundleDeals = (json['bundle_deals'] as List)
+          .map(
+            (b) =>
+                ProductBundleDealModel.fromJson(Map<String, dynamic>.from(b)),
           )
           .toList();
     }
@@ -400,6 +505,9 @@ class ProductModel {
       imageUrl: resolvedImageUrl,
       images: rawImages,
       variants: rawVariants,
+      variationTypes: json['variation_types'] is List ? (json['variation_types'] as List) : const [],
+      minPrice: json['min_price'] != null ? parseDouble(json['min_price']) : null,
+      maxPrice: json['max_price'] != null ? parseDouble(json['max_price']) : null,
       categoryName:
           json['category_name'] ??
           catMap?['name']?.toString(),
@@ -443,6 +551,7 @@ class ProductModel {
       condition: json['condition'] ?? 'Brand New',
       perBuyerLimit: json['per_buyer_limit'],
       vouchers: rawVouchers,
+      bundleDeals: rawBundleDeals,
       claimedVoucherIds: rawClaimedVoucherIds,
       inWishlist: json['in_wishlist'] == true,
       isFollowingStore: json['is_following_store'] == true,

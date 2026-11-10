@@ -35,6 +35,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String? _selectedColor;
   String? _selectedSize;
   ProductVariantModel? _selectedVariant;
+  final Map<String, String> _selectedAttributes = {};
   int _quantity = 1;
 
   bool _isWishlisted = false;
@@ -117,6 +118,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _selectedVariant = product.variants.first;
           _selectedColor = _selectedVariant?.color;
           _selectedSize = _selectedVariant?.size;
+          _selectedAttributes.clear();
+          if (_selectedVariant?.variantAttributes != null && _selectedVariant!.variantAttributes!.isNotEmpty) {
+            _selectedVariant!.variantAttributes!.forEach((k, v) {
+              if (v != null && v.toString().isNotEmpty) {
+                _selectedAttributes[k] = v.toString();
+              }
+            });
+          } else {
+            if (_selectedColor != null && _selectedColor!.isNotEmpty) _selectedAttributes['Color'] = _selectedColor!;
+            if (_selectedSize != null && _selectedSize!.isNotEmpty) _selectedAttributes['Size'] = _selectedSize!;
+          }
         }
 
         if (product.hasFlashSale) {
@@ -151,68 +163,127 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return list;
   }
 
-  List<String> get _colors {
-    if (_product == null || _product!.variants.isEmpty) return [];
-    return _product!.variants
-        .map((v) => v.color)
-        .where((c) => c != null && c.isNotEmpty)
-        .cast<String>()
-        .toSet()
-        .toList();
+  Color _resolveColorSwatch(String name) {
+    final lower = name.toLowerCase().trim();
+    switch (lower) {
+      case 'black': return Colors.black;
+      case 'white': return Colors.white;
+      case 'gray':
+      case 'grey': return const Color(0xFF6B7280);
+      case 'charcoal': return const Color(0xFF374151);
+      case 'silver': return const Color(0xFFC0C0C0);
+      case 'red': return const Color(0xFFEF4444);
+      case 'maroon': return const Color(0xFF800000);
+      case 'burgundy': return const Color(0xFF800020);
+      case 'blue': return const Color(0xFF3B82F6);
+      case 'navy': return const Color(0xFF1E3A8A);
+      case 'sky blue': return const Color(0xFF38BDF8);
+      case 'green': return const Color(0xFF10B981);
+      case 'olive': return const Color(0xFF808000);
+      case 'mint': return const Color(0xFFA7F3D0);
+      case 'yellow': return const Color(0xFFFBBF24);
+      case 'mustard': return const Color(0xFFD97706);
+      case 'orange': return const Color(0xFFF97316);
+      case 'pink': return const Color(0xFFEC4899);
+      case 'rose': return const Color(0xFFF43F5E);
+      case 'purple': return const Color(0xFF8B5CF6);
+      case 'lavender': return const Color(0xFFC4B5FD);
+      case 'brown': return const Color(0xFF78350F);
+      case 'beige': return const Color(0xFFF5F5DC);
+      case 'cream': return const Color(0xFFFFFDD0);
+      case 'khaki': return const Color(0xFFC3B091);
+      case 'gold': return const Color(0xFFFFD700);
+      default: return AppColors.primary;
+    }
   }
 
-  List<String> _sizesForColor(String? color) {
-    if (_product == null || _product!.variants.isEmpty) return [];
-    return _product!.variants
-        .where((v) => color == null || v.color == color)
-        .map((v) => v.size)
-        .where((s) => s != null && s.isNotEmpty)
-        .cast<String>()
-        .toSet()
-        .toList();
-  }
+  Map<String, List<String>> get _attributeOptions {
+    if (_product == null || _product!.variants.isEmpty) return {};
+    final Map<String, Set<String>> map = {};
 
-  bool _isSizeOutOfStock(String size) {
-    if (_product == null || _product!.variants.isEmpty) return false;
-    final match = _product!.variants.firstWhere(
-      (v) => (_selectedColor == null || v.color == _selectedColor) && v.size == size,
-      orElse: () => ProductVariantModel(id: 0, price: 0, stock: 0),
-    );
-    return match.stock <= 0;
-  }
-
-  void _selectColor(String color) {
-    setState(() {
-      _selectedColor = color;
-      final availableSizes = _sizesForColor(color);
-      if (_selectedSize != null && !availableSizes.contains(_selectedSize)) {
-        _selectedSize = availableSizes.isNotEmpty ? availableSizes.first : null;
+    // 1. Scan predefined variationTypes if provided by backend
+    if (_product!.variationTypes.isNotEmpty) {
+      for (final vt in _product!.variationTypes) {
+        if (vt is Map) {
+          final name = vt['name']?.toString() ?? '';
+          if (name.isNotEmpty) {
+            map.putIfAbsent(name, () => <String>{});
+          }
+        }
       }
-      _updateVariant();
+    }
+
+    // 2. Scan active variants for attribute values
+    for (final v in _product!.variants) {
+      if (v.variantAttributes != null && v.variantAttributes!.isNotEmpty) {
+        v.variantAttributes!.forEach((k, val) {
+          if (val != null && val.toString().trim().isNotEmpty) {
+            map.putIfAbsent(k, () => <String>{}).add(val.toString().trim());
+          }
+        });
+      } else {
+        if (v.color != null && v.color!.trim().isNotEmpty) {
+          map.putIfAbsent('Color', () => <String>{}).add(v.color!.trim());
+        }
+        if (v.size != null && v.size!.trim().isNotEmpty) {
+          map.putIfAbsent('Size', () => <String>{}).add(v.size!.trim());
+        }
+      }
+    }
+
+    final result = <String, List<String>>{};
+    map.forEach((k, set) {
+      if (set.isNotEmpty) {
+        result[k] = set.toList();
+      }
     });
+    return result;
   }
 
-  void _selectSize(String size) {
+  void _selectAttribute(String attrName, String value) {
     setState(() {
-      _selectedSize = size;
-      _updateVariant();
+      _selectedAttributes[attrName] = value;
+      _matchVariantFromSelectedAttributes();
     });
   }
 
-  void _updateVariant() {
+  void _matchVariantFromSelectedAttributes() {
     if (_product == null || _product!.variants.isEmpty) return;
-    final match = _product!.variants.firstWhere(
-      (v) =>
-          (_selectedColor == null || v.color == _selectedColor) &&
-          (_selectedSize == null || v.size == _selectedSize),
-      orElse: () => _product!.variants.first,
-    );
-    setState(() {
-      _selectedVariant = match;
-      if (_quantity > currentStock && currentStock > 0) {
-        _quantity = currentStock;
+
+    ProductVariantModel? bestMatch;
+
+    for (final v in _product!.variants) {
+      bool allMatch = true;
+      if (v.variantAttributes != null && v.variantAttributes!.isNotEmpty) {
+        for (final entry in _selectedAttributes.entries) {
+          final val = v.variantAttributes![entry.key]?.toString();
+          if (val != null && val.toLowerCase() != entry.value.toLowerCase()) {
+            allMatch = false;
+            break;
+          }
+        }
+      } else {
+        if (_selectedAttributes.containsKey('Color') && v.color != _selectedAttributes['Color']) {
+          allMatch = false;
+        }
+        if (_selectedAttributes.containsKey('Size') && v.size != _selectedAttributes['Size']) {
+          allMatch = false;
+        }
       }
-    });
+
+      if (allMatch) {
+        bestMatch = v;
+        break;
+      }
+    }
+
+    _selectedVariant = bestMatch ?? _product!.variants.first;
+    _selectedColor = _selectedVariant?.color ?? _selectedAttributes['Color'];
+    _selectedSize = _selectedVariant?.size ?? _selectedAttributes['Size'];
+
+    if (_quantity > currentStock && currentStock > 0) {
+      _quantity = currentStock;
+    }
   }
 
   int get currentStock {
@@ -349,9 +420,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               productName: _product!.name,
               unitPrice: unitPrice,
               imageUrl: _product!.imageUrl,
-              variantLabel: _selectedVariant != null
-                  ? '${_selectedVariant!.color ?? ''} ${_selectedVariant!.size ?? ''}'.trim()
-                  : null,
+              variantLabel: _selectedVariant?.label,
             ),
           ),
         ),
@@ -1310,6 +1379,268 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ],
 
+                        // BUNDLE DEALS AVAILABLE (Special Promo)
+                        if (p.bundleDeals.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          ...p.bundleDeals.map((bundle) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFE8F7F6), Color(0xFFF0FDF4)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFB2DFDB), width: 1.2),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 16),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'SPECIAL BUNDLE DEAL',
+                                        style: GoogleFonts.figtree(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.primary,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF043E44),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          bundle.savingsText,
+                                          style: GoogleFonts.figtree(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    bundle.name,
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Buy any ${bundle.minQuantity} participating items from this store to get ${bundle.savingsText} automatically applied at checkout.',
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF475569),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  if (p.sellerId != null && p.sellerId! > 0) ...[
+                                    const SizedBox(height: 10),
+                                    InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => BuyerStoreScreen(
+                                              sellerId: p.sellerId!,
+                                              storeName: p.sellerStoreName ?? p.sellerName,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            'View store bundle items',
+                                            style: GoogleFonts.figtree(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.arrow_forward_rounded, size: 13, color: AppColors.primary),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+
+                        // IN-PAGE PRODUCT VARIATIONS CARD (Android M3 Design)
+                        if (_attributeOptions.isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAF9),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.primary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'SELECT OPTIONS',
+                                          style: GoogleFonts.figtree(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 1.0,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (_selectedVariant != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: currentStock > 0 ? const Color(0xFFE8F7F6) : const Color(0xFFFEE2E2),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          currentStock > 0
+                                              ? (currentStock <= 5 ? 'Only $currentStock left' : 'In Stock ($currentStock)')
+                                              : 'Out of Stock',
+                                          style: GoogleFonts.figtree(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: currentStock > 0 ? AppColors.primary : const Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                ..._attributeOptions.entries.map((entry) {
+                                  final attrName = entry.key;
+                                  final options = entry.value;
+                                  final isColorAttr = attrName.toLowerCase().contains('color');
+                                  final selectedVal = _selectedAttributes[attrName];
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              attrName,
+                                              style: GoogleFonts.figtree(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF334155),
+                                              ),
+                                            ),
+                                            if (selectedVal != null) ...[
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                ': $selectedVal',
+                                                style: GoogleFonts.figtree(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: options.map((opt) {
+                                            final isSelected = selectedVal == opt;
+                                            return InkWell(
+                                              onTap: () => _selectAttribute(attrName, opt),
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? const Color(0xFFE8F7F6) : Colors.white,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(
+                                                    color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                                                    width: isSelected ? 1.8 : 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    if (isColorAttr) ...[
+                                                      Container(
+                                                        width: 14,
+                                                        height: 14,
+                                                        margin: const EdgeInsets.only(right: 6),
+                                                        decoration: BoxDecoration(
+                                                          color: _resolveColorSwatch(opt),
+                                                          shape: BoxShape.circle,
+                                                          border: Border.all(color: const Color(0x33000000), width: 0.8),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                    Text(
+                                                      opt,
+                                                      style: GoogleFonts.figtree(
+                                                        fontSize: 12,
+                                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                                        color: isSelected ? AppColors.primary : const Color(0xFF475569),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         // DESCRIPTION
                         const SizedBox(height: 16),
                         Text(
@@ -1737,112 +2068,96 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     const SizedBox(height: 16),
                     const Divider(color: Color(0xFFE5E7EB)),
 
-                    // Color Selection
-                    if (_colors.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      Text(
-                        'Color',
-                        style: GoogleFonts.figtree(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _colors.map((c) {
-                          final isSelected = _selectedColor == c;
-                          return GestureDetector(
-                            onTap: () {
-                              _selectColor(c);
-                              setSheetState(() {});
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFFE8F7F6) : Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
-                                  width: isSelected ? 1.5 : 1,
-                                ),
-                              ),
-                              child: Text(
-                                c,
-                                style: GoogleFonts.figtree(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                  color: isSelected ? AppColors.primary : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
+                    // Dynamic Variation Attribute Selection
+                    if (_attributeOptions.isNotEmpty) ...[
+                      ..._attributeOptions.entries.map((entry) {
+                        final attrName = entry.key;
+                        final options = entry.value;
+                        final isColorAttr = attrName.toLowerCase().contains('color');
+                        final selectedVal = _selectedAttributes[attrName];
 
-                    // Size Selection
-                    if (_sizesForColor(_selectedColor).isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      Text(
-                        'Size',
-                        style: GoogleFonts.figtree(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _sizesForColor(_selectedColor).map((s) {
-                          final isSelected = _selectedSize == s;
-                          final isOutOfStock = _isSizeOutOfStock(s);
-                          return GestureDetector(
-                            onTap: isOutOfStock
-                                ? null
-                                : () {
-                                    _selectSize(s);
-                                    setSheetState(() {});
-                                  },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isOutOfStock
-                                    ? const Color(0xFFF1F5F9)
-                                    : isSelected
-                                        ? const Color(0xFFE8F7F6)
-                                        : Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isOutOfStock
-                                      ? const Color(0xFFE2E8F0)
-                                      : isSelected
-                                          ? AppColors.primary
-                                          : const Color(0xFFE5E7EB),
-                                  width: isSelected ? 1.5 : 1,
-                                ),
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    attrName,
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  if (selectedVal != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      ': $selectedVal',
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                              child: Text(
-                                s,
-                                style: GoogleFonts.figtree(
-                                  fontSize: 12,
-                                  decoration: isOutOfStock ? TextDecoration.lineThrough : null,
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                  color: isOutOfStock
-                                      ? const Color(0xFF94A3B8)
-                                      : isSelected
-                                          ? AppColors.primary
-                                          : const Color(0xFF64748B),
-                                ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: options.map((opt) {
+                                  final isSelected = selectedVal == opt;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      _selectAttribute(attrName, opt);
+                                      setSheetState(() {});
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFFE8F7F6) : Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+                                          width: isSelected ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isColorAttr) ...[
+                                            Container(
+                                              width: 14,
+                                              height: 14,
+                                              margin: const EdgeInsets.only(right: 6),
+                                              decoration: BoxDecoration(
+                                                color: _resolveColorSwatch(opt),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: const Color(0x33000000), width: 0.8),
+                                              ),
+                                            ),
+                                          ],
+                                          Text(
+                                            opt,
+                                            style: GoogleFonts.figtree(
+                                              fontSize: 12,
+                                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                              color: isSelected ? AppColors.primary : const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                            ],
+                          ),
+                        );
+                      }),
                     ],
 
                     // Quantity Controls

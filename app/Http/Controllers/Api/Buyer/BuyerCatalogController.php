@@ -409,6 +409,41 @@ class BuyerCatalogController extends Controller
                 ->values();
         }
 
+        // Active Bundle Deals for this Seller & Product
+        $bundleDeals = collect();
+        if ($product->seller_id && Schema::hasTable('seller_promotions')) {
+            $now = now();
+            $bundleDeals = \App\Models\SellerPromotion::query()
+                ->where('seller_id', $product->seller_id)
+                ->where('type', 'bundle')
+                ->where('is_active', true)
+                ->whereNull('ended_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+                })
+                ->get()
+                ->filter(fn (\App\Models\SellerPromotion $promo) => $promo->appliesToBundleProduct((int) $product->id))
+                ->map(function ($bundle) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    return [
+                        'id' => $bundle->id,
+                        'name' => $bundle->name,
+                        'seller_id' => $bundle->seller_id,
+                        'min_quantity' => $bundle->min_quantity ?? 2,
+                        'discount_value' => (float) $bundle->discount_value,
+                        'discount_type' => $bundle->discount_type,
+                        'product_ids' => $productIds,
+                    ];
+                })
+                ->values();
+        }
+
         // Record recently viewed & user-specific checks if authenticated
         $user = $request->user('sanctum');
         $claimedVoucherIds = [];
@@ -481,6 +516,9 @@ class BuyerCatalogController extends Controller
                 'flash_ends_at' => $product->flash_ends_at,
                 'flash_remaining' => $product->flash_remaining,
                 'flash_countdown_seconds' => $product->flash_countdown_seconds,
+                'min_price' => (float) ($product->min_price ?? $product->price),
+                'max_price' => (float) ($product->max_price ?? $product->price),
+                'variation_types' => $product->variation_types ?? [],
                 'image_url' => $this->resolveProductImage($product),
                 'images' => $product->images->map(fn ($img) => [
                     'id' => $img->id,
@@ -488,12 +526,17 @@ class BuyerCatalogController extends Controller
                 ]),
                 'variants' => $product->variants->map(fn ($v) => [
                     'id' => $v->id,
+                    'title' => $v->title,
+                    'label' => $v->label(),
                     'color' => $v->color,
                     'size' => $v->size,
+                    'combination_key' => $v->combination_key,
+                    'variant_attributes' => $v->variant_attributes,
                     'price' => (float) $v->price,
                     'stock' => (int) $v->stock,
                     'sku' => $v->sku,
                     'image_url' => $this->resolveImageUrl($v->image_path),
+                    'is_active' => (bool) ($v->is_active ?? true),
                 ]),
                 'category' => $product->category,
                 'seller' => [
@@ -518,6 +561,7 @@ class BuyerCatalogController extends Controller
                     'is_claimed' => in_array($v->id, $claimedVoucherIds),
                 ]),
                 'claimed_voucher_ids' => $claimedVoucherIds,
+                'bundle_deals' => $bundleDeals,
                 'in_wishlist' => $inWishlist,
                 'is_following_store' => $isFollowingStore,
                 'user_purchased_count' => $userPurchasedCount,

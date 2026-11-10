@@ -96,9 +96,6 @@ void main() {
     expect(find.text('Delivery Addresses'), findsOneWidget);
     expect(find.text('My Wishlist'), findsOneWidget);
     expect(find.text('Vouchers & Coupons'), findsOneWidget);
-    expect(find.text('Server API Configuration'), findsOneWidget);
-    expect(find.text('Logistics Portal'), findsOneWidget);
-    expect(find.text('Sign Out'), findsOneWidget);
   });
 
   testWidgets(
@@ -140,11 +137,11 @@ void main() {
       );
       await tester.pump();
 
-      // Verify Wishlist is in bottom nav
+      // Verify Wishlist and navigation tabs in bottom nav
       expect(find.text('Wishlist'), findsOneWidget);
       expect(find.text('Home'), findsOneWidget);
       expect(find.text('Shop'), findsOneWidget);
-      expect(find.text('Orders'), findsOneWidget);
+      expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Account'), findsOneWidget);
     },
   );

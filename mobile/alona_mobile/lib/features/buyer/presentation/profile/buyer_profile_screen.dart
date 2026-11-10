@@ -8,6 +8,7 @@ import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen
 import 'package:alona_mobile/features/buyer/presentation/orders/order_list_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/wishlist/wishlist_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/profile/address_management_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/buyer_settings_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
 import 'package:alona_mobile/features/buyer/presentation/products/product_list_screen.dart';
@@ -333,6 +334,14 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
+                    _menuTile(
+                      icon: Icons.location_on_outlined,
+                      title: 'Delivery Addresses',
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressManagementScreen()));
+                      },
+                    ),
+                    const Divider(height: 1, thickness: 1, color: Color(0xFFF2F6F6)),
                     _menuTile(
                       icon: Icons.favorite_border_rounded,
                       title: 'My Wishlist',

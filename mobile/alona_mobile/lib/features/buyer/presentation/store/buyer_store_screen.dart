@@ -41,6 +41,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   List<ProductReviewModel> _reviews = [];
   List<dynamic> _categories = [];
   List<dynamic> _vouchers = [];
+  List<dynamic> _bundleDeals = [];
   Map<String, dynamic> _stats = {};
 
   String _currentSort = 'popular';
@@ -118,6 +119,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
         _reviews = reviewList;
         _categories = (res['categories'] as List?) ?? [];
         _vouchers = (res['vouchers'] as List?) ?? [];
+        _bundleDeals = (res['bundle_deals'] as List?) ?? [];
         _isFollowing = res['is_following'] == true;
         _isLoading = false;
       });
@@ -722,6 +724,119 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
               itemBuilder: (context, index) {
                 final v = _vouchers[index];
                 return _buildVoucherCard(v);
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Bundle Deals Carousel
+        if (_bundleDeals.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: AppColors.alonaTeal,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Store Bundle Deals',
+                      style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${_bundleDeals.length} active',
+                  style: GoogleFonts.figtree(fontSize: 11.5, color: AppColors.mutedText),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 112,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: _bundleDeals.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final bundle = _bundleDeals[index];
+                final name = bundle['name']?.toString() ?? 'Bundle Deal';
+                final minQty = bundle['min_quantity'] ?? 2;
+                final discountVal = bundle['discount_value'] ?? 0;
+                final discountType = bundle['discount_type']?.toString() ?? 'percentage';
+                final discountLabel = discountType == 'percentage'
+                    ? '${(discountVal is num ? discountVal : double.tryParse(discountVal.toString()) ?? 0).toInt()}% OFF'
+                    : '₱$discountVal OFF';
+
+                return Container(
+                  width: 250,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE8F7F6), Color(0xFFF0FDF4)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFB2DFDB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.alonaTeal,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'BUNDLE',
+                              style: GoogleFonts.figtree(fontSize: 9.5, fontWeight: FontWeight.w900, color: Colors.white),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF043E44),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              discountLabel,
+                              style: GoogleFonts.figtree(fontSize: 10.5, fontWeight: FontWeight.w900, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.figtree(fontSize: 12.5, fontWeight: FontWeight.w800, color: const Color(0xFF1F2937)),
+                      ),
+                      Text(
+                        'Buy any $minQty participating items from this store',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.figtree(fontSize: 10.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ),

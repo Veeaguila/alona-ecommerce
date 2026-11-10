@@ -34,6 +34,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    bundle_deals: {
+        type: Array,
+        default: () => [],
+    },
     claimed_voucher_ids: {
         type: Array,
         default: () => [],
@@ -1796,6 +1800,46 @@ const breadcrumbs = computed(() => {
                                         >
                                             {{ !isGuestUser && claimedVoucherIds.includes(v.id) ? 'Claimed' : 'Claim' }}
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BUNDLE DEALS AVAILABLE (PROMOTIONS) -->
+                            <div
+                                v-if="bundle_deals && bundle_deals.length > 0"
+                                class="mt-4 space-y-2 rounded-xl border border-[#B2DFDB] bg-gradient-to-r from-[#E8F7F6]/80 to-[#F0FDF4]/80 p-3.5"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="flex h-5 w-5 items-center justify-center rounded-md bg-[#087F8C] text-xs text-white">🎁</span>
+                                        <p class="text-[11px] font-bold uppercase tracking-wide text-[#087F8C]">
+                                            Special Bundle Deals
+                                        </p>
+                                    </div>
+                                    <span class="rounded bg-[#043E44] px-2 py-0.5 text-[10px] font-bold text-white">
+                                        Save More
+                                    </span>
+                                </div>
+
+                                <div v-for="bundle in bundle_deals" :key="bundle.id" class="rounded-lg border border-[#087F8C]/20 bg-white p-3 shadow-2xs">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs font-bold text-[#1F2937]">
+                                            {{ bundle.name }}
+                                        </p>
+                                        <span class="rounded-full bg-[#E8F7F6] px-2 py-0.5 text-[11px] font-extrabold text-[#087F8C]">
+                                            {{ bundle.discount_type === 'percentage' ? `${Math.round(bundle.discount_value)}% OFF` : `₱${bundle.discount_value} OFF` }}
+                                        </span>
+                                    </div>
+                                    <p class="mt-1 text-[11px] text-[#64748B]">
+                                        Buy any {{ bundle.min_quantity }} participating items from this store to get discount applied automatically at checkout.
+                                    </p>
+                                    <div v-if="bundle.seller_id" class="mt-2.5">
+                                        <Link
+                                            :href="route('buyer.store', bundle.seller_id)"
+                                            class="inline-flex items-center gap-1 text-[11px] font-bold text-[#087F8C] hover:underline"
+                                        >
+                                            View store bundle items →
+                                        </Link>
                                     </div>
                                 </div>
                             </div>

@@ -8,6 +8,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    categoryVariantMap: {
+        type: Object,
+        default: () => ({}),
+    },
     autoSkuPreview: {
         type: String,
         default: 'ALN-000001',
@@ -41,12 +45,32 @@ const fetchCategoryVariants = async (categoryId) => {
         categoryVariantTypes.value = []
         return
     }
-    loadingVariantTypes.value = true
+
+    // Immediately resolve from preloaded map if present
+    if (props.categoryVariantMap && props.categoryVariantMap[categoryId] && props.categoryVariantMap[categoryId].length > 0) {
+        categoryVariantTypes.value = props.categoryVariantMap[categoryId]
+    }
+
+    loadingVariantTypes.value = categoryVariantTypes.value.length === 0
     try {
-        const res = await fetch(route('seller.categories.variants', categoryId))
+        let url = `/seller/categories/${categoryId}/variants`
+        try {
+            if (typeof route === 'function' && route().has('seller.categories.variants')) {
+                url = route('seller.categories.variants', categoryId)
+            }
+        } catch (_) {}
+
+        const res = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
         if (res.ok) {
             const data = await res.json()
-            categoryVariantTypes.value = data.variant_types || []
+            if (data.variant_types && data.variant_types.length > 0) {
+                categoryVariantTypes.value = data.variant_types
+            }
         }
     } catch (e) {
         console.error('Failed to load category variant types', e)

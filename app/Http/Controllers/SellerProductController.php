@@ -283,11 +283,21 @@ class SellerProductController extends Controller
 
     public function create(): Response
     {
+        $categories = $this->activeCategories();
+        $categoryVariantMap = [];
+        foreach ($categories as $cat) {
+            $effectiveTypes = $cat->getEffectiveVariantTypes();
+            if ($effectiveTypes->isNotEmpty()) {
+                $categoryVariantMap[$cat->id] = $this->formatVariantTypes($effectiveTypes);
+            }
+        }
+
         return Inertia::render('Seller/AddProduct', [
             /*
              * This is the SAME categories table used by Buyer.
              */
-            'categories' => $this->activeCategories(),
+            'categories' => $categories,
+            'categoryVariantMap' => $categoryVariantMap,
             'autoSkuPreview' => Product::generateUniqueSku(),
         ]);
     }
@@ -307,25 +317,33 @@ class SellerProductController extends Controller
                 'name' => $category->name,
                 'slug' => $category->slug,
             ],
-            'variant_types' => $variantTypes->map(function ($type) {
-                return [
-                    'id' => $type->id,
-                    'name' => $type->name,
-                    'slug' => $type->slug,
-                    'display_type' => $type->display_type,
-                    'description' => $type->description,
-                    'values' => $type->activeValues->map(function ($val) {
-                        return [
-                            'id' => $val->id,
-                            'value' => $val->value,
-                            'label' => $val->label,
-                            'hex' => $val->hex_color,
-                            'meta' => $val->meta,
-                        ];
-                    }),
-                ];
-            }),
+            'variant_types' => $this->formatVariantTypes($variantTypes),
         ]);
+    }
+
+    /**
+     * Standardize format of variant types collection for Inertia props and JSON.
+     */
+    private function formatVariantTypes($variantTypes)
+    {
+        return $variantTypes->map(function ($type) {
+            return [
+                'id' => $type->id,
+                'name' => $type->name,
+                'slug' => $type->slug,
+                'display_type' => $type->display_type,
+                'description' => $type->description,
+                'values' => $type->activeValues->map(function ($val) {
+                    return [
+                        'id' => $val->id,
+                        'value' => $val->value,
+                        'label' => $val->label,
+                        'hex' => $val->hex_color,
+                        'meta' => $val->meta,
+                    ];
+                })->values(),
+            ];
+        })->values();
     }
 
 
@@ -523,24 +541,18 @@ class SellerProductController extends Controller
              */
             'categories' => $this->activeCategories(),
 
-            'categoryVariantTypes' => $categoryVariantTypes->map(function ($type) {
-                return [
-                    'id' => $type->id,
-                    'name' => $type->name,
-                    'slug' => $type->slug,
-                    'display_type' => $type->display_type,
-                    'description' => $type->description,
-                    'values' => $type->activeValues->map(function ($val) {
-                        return [
-                            'id' => $val->id,
-                            'value' => $val->value,
-                            'label' => $val->label,
-                            'hex' => $val->hex_color,
-                            'meta' => $val->meta,
-                        ];
-                    }),
-                ];
-            }),
+            'categoryVariantTypes' => $this->formatVariantTypes($categoryVariantTypes),
+
+            'categoryVariantMap' => (function () {
+                $map = [];
+                foreach ($this->activeCategories() as $cat) {
+                    $eff = $cat->getEffectiveVariantTypes();
+                    if ($eff->isNotEmpty()) {
+                        $map[$cat->id] = $this->formatVariantTypes($eff);
+                    }
+                }
+                return $map;
+            })(),
 
             'unansweredQuestions' => $product->questions()
                 ->whereNull('answer')

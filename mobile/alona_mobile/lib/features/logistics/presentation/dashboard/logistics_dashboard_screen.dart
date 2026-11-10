@@ -255,6 +255,187 @@ class _LogisticsDashboardScreenState extends State<LogisticsDashboardScreen> {
 
                     const SizedBox(height: 24),
 
+                    // PAYMENT DISTRIBUTION & COMMISSION MODEL (Web Model Sync)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F7F6),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  color: Color(0xFF087F8C),
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Revenue & Commission Distribution',
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Synchronized with Alona Web Marketplace model',
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 11,
+                                        color: AppColors.mutedText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          const SizedBox(height: 14),
+
+                          // Shipping Fee Distribution (70 / 20 / 10)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Shipping Fee Distribution',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF334155),
+                                ),
+                              ),
+                              Text(
+                                '100% of Delivery Fee',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Segmented bar
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: SizedBox(
+                              height: 10,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 70,
+                                    child: Container(color: const Color(0xFF087F8C)),
+                                  ),
+                                  Expanded(
+                                    flex: 20,
+                                    child: Container(color: const Color(0xFF38BDF8)),
+                                  ),
+                                  Expanded(
+                                    flex: 10,
+                                    child: Container(color: const Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _shareChip('Rider', '70%', const Color(0xFF087F8C)),
+                              _shareChip('Logistics Hub', '20%', const Color(0xFF0284C7)),
+                              _shareChip('Platform', '10%', const Color(0xFF64748B)),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          const SizedBox(height: 14),
+
+                          // Product Sales Distribution (90 / 10)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Product Items Payout',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF334155),
+                                ),
+                              ),
+                              Text(
+                                '100% of Product Value',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: SizedBox(
+                              height: 10,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 90,
+                                    child: Container(color: const Color(0xFF10B981)),
+                                  ),
+                                  Expanded(
+                                    flex: 10,
+                                    child: Container(color: const Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _shareChip('Seller Earnings', '90%', const Color(0xFF10B981)),
+                              _shareChip('Platform Fee', '10%', const Color(0xFF64748B)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
                     Text(
                       'Quick Actions',
                       style: GoogleFonts.figtree(
@@ -410,6 +591,38 @@ class _LogisticsDashboardScreenState extends State<LogisticsDashboardScreen> {
         trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
         onTap: onTap,
       ),
+    );
+  }
+
+  Widget _shareChip(String label, String pct, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          '$label: ',
+          style: GoogleFonts.figtree(
+            fontSize: 11,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        Text(
+          pct,
+          style: GoogleFonts.figtree(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }
