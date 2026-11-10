@@ -1,5 +1,6 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
+import OfferCoverflow from '@/Components/OfferCoverflow.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
@@ -125,11 +126,7 @@ const tickFlashCountdown = () => {
 
 const storeFlashSlider = ref(null)
 const scrollStoreFlash = direction => {
-    const container = storeFlashSlider.value
-    if (!container) return
-    const card = container.querySelector('.product-card')
-    const width = card ? card.getBoundingClientRect().width : 180
-    container.scrollBy({ left: (width + 10) * (direction === 'left' ? -2 : 2), behavior: 'smooth' })
+    direction === 'left' ? storeFlashSlider.value?.previous() : storeFlashSlider.value?.next()
 }
 
 onMounted(() => {
@@ -931,7 +928,7 @@ const formatTime = (timeStr) => {
                                 </div>
 
                                 <!-- Slider Controls -->
-                                <div v-if="flash_sales.length > 2" class="flex items-center gap-1 shrink-0">
+                                <div v-if="flash_sales.length > 1" class="flex items-center gap-1 shrink-0">
                                     <button
                                         type="button"
                                         title="Previous products"
@@ -955,19 +952,19 @@ const formatTime = (timeStr) => {
                                 Limited quantities available at special flash prices!
                             </p>
 
-                            <!-- Compact Horizontal Slider -->
-                            <div
+                            <!-- 3D product card carousel -->
+                            <OfferCoverflow
                                 ref="storeFlashSlider"
-                                class="mt-2.5 flex gap-2.5 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-1"
+                                :items="flash_sales"
+                                label="Flash sale offers"
+                                v-slot="{ item }"
                             >
                                 <Link
-                                    v-for="item in flash_sales"
-                                    :key="item.id"
                                     :href="route('buyer.product', item.product_id)"
-                                    class="product-card group relative flex w-[calc(50%-5px)] sm:w-[calc(33.333%-7px)] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-xl border border-amber-200/70 bg-white p-2 shadow-2xs transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                                    class="product-card group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-white p-2.5"
                                 >
                                     <!-- Image & Badges -->
-                                    <div class="relative h-28 sm:h-32 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
+                                    <div class="relative h-32 sm:h-36 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
                                         <img
                                             v-if="item.image"
                                             :src="item.image"
@@ -1032,7 +1029,7 @@ const formatTime = (timeStr) => {
                                         </div>
                                     </div>
                                 </Link>
-                            </div>
+                            </OfferCoverflow>
                         </div>
 
                         <!-- ==============================================
@@ -1069,12 +1066,14 @@ const formatTime = (timeStr) => {
                                 Add bundle items to your cart to automatically unlock discount at checkout!
                             </p>
 
-                            <!-- Single Unified Card (Hindi Magkakahiwalay) -->
-                            <div class="mt-2.5 overflow-hidden rounded-xl border border-teal-200/80 bg-white shadow-2xs divide-y divide-teal-100/70">
+                            <!-- 3D bundle card carousel -->
+                            <OfferCoverflow
+                                :items="bundle_deals"
+                                label="Bundle deals"
+                                v-slot="{ item: bundle }"
+                            >
                                 <div
-                                    v-for="bundle in bundle_deals"
-                                    :key="bundle.id"
-                                    class="group flex items-center justify-between gap-3 p-2.5 sm:px-3 sm:py-2.5 transition duration-200 hover:bg-[#F2FAF9]"
+                                    class="group flex h-full flex-col justify-between gap-3 rounded-2xl bg-white p-3"
                                 >
                                     <div class="min-w-0 flex-1">
                                         <!-- Line 1: Badge -->
@@ -1088,17 +1087,17 @@ const formatTime = (timeStr) => {
                                         </div>
 
                                         <!-- Line 2: Title -->
-                                        <h3 class="mt-1 truncate text-xs font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
+                                        <h3 class="mt-3 line-clamp-2 text-sm font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
                                             {{ bundle.name }}
                                         </h3>
 
                                         <!-- Line 3: Product Thumbnails -->
-                                        <div class="mt-1.5 flex items-center gap-1.5">
+                                        <div class="mt-4 flex flex-wrap items-center justify-center gap-1.5">
                                             <Link
-                                                v-for="p in bundle.products.slice(0, 4)"
+                                                v-for="p in bundle.products.slice(0, 3)"
                                                 :key="p.id"
                                                 :href="route('buyer.product', p.id)"
-                                                class="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs hover:border-[#087F8C] transition"
+                                                class="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs hover:border-[#087F8C] transition"
                                                 :title="p.name"
                                             >
                                                 <img
@@ -1112,10 +1111,10 @@ const formatTime = (timeStr) => {
                                                 </div>
                                             </Link>
                                             <span
-                                                v-if="bundle.products.length > 4"
+                                                v-if="bundle.products.length > 3"
                                                 class="rounded bg-teal-50 px-1.5 py-0.5 text-[9px] font-extrabold text-teal-700"
                                             >
-                                                +{{ bundle.products.length - 4 }}
+                                                +{{ bundle.products.length - 3 }}
                                             </span>
                                         </div>
                                     </div>
@@ -1126,7 +1125,7 @@ const formatTime = (timeStr) => {
                                         </span>
                                     </div>
                                 </div>
-                            </div>
+                            </OfferCoverflow>
                         </div>
 
                     </div>

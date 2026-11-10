@@ -384,11 +384,139 @@ const isSizeOutOfStock = size => {
 
 const selectedColor = ref(null)
 const selectedSize = ref(null)
+const selectedAttributes = ref({})
+
+const colorHexMap = {
+    'Black': '#111827',
+    'White': '#FFFFFF',
+    'Gray': '#6B7280',
+    'Charcoal': '#374151',
+    'Silver': '#D1D5DB',
+    'Red': '#EF4444',
+    'Maroon': '#800000',
+    'Burgundy': '#800020',
+    'Blue': '#3B82F6',
+    'Navy': '#1E3A8A',
+    'Sky Blue': '#0EA5E9',
+    'Green': '#10B981',
+    'Olive': '#84CC16',
+    'Mint': '#6EE7B7',
+    'Yellow': '#EAB308',
+    'Mustard': '#CA8A04',
+    'Orange': '#F97316',
+    'Pink': '#EC4899',
+    'Rose': '#F43F5E',
+    'Purple': '#A855F7',
+    'Lavender': '#C084FC',
+    'Brown': '#78350F',
+    'Beige': '#F5F5DC',
+    'Cream': '#FFFDD0',
+    'Khaki': '#F0E68C',
+    'Gold': '#EAB308',
+}
+
+const getColorHex = (name) => {
+    if (!name) return '#64748B'
+    return colorHexMap[name] || name.toLowerCase()
+}
+
+const variationTypes = computed(() => {
+    if (Array.isArray(product.value?.variation_types) && product.value.variation_types.length > 0) {
+        return product.value.variation_types.map(vt => ({
+            name: vt.name,
+            options: Array.isArray(vt.options) ? vt.options : []
+        }))
+    }
+    const typeMap = new Map()
+    variants.value.forEach(v => {
+        if (v.variant_attributes && typeof v.variant_attributes === 'object') {
+            Object.entries(v.variant_attributes).forEach(([k, val]) => {
+                if (!typeMap.has(k)) typeMap.set(k, new Set())
+                if (val) typeMap.get(k).add(val)
+            })
+        }
+    })
+    if (typeMap.size > 0) {
+        return Array.from(typeMap.entries()).map(([name, set]) => ({
+            name,
+            options: Array.from(set)
+        }))
+    }
+    const list = []
+    if (colors.value.length > 0) {
+        list.push({ name: 'Color', options: colors.value })
+    }
+    if (allSizes.value.length > 0) {
+        list.push({ name: 'Size', options: allSizes.value })
+    }
+    return list
+})
+
+const isOptionOutOfStock = (typeName, optionVal) => {
+    if (!hasVariants.value) return false
+
+    const candidateVariants = variants.value.filter(v => {
+        let thisVal = null
+        if (v.variant_attributes && typeof v.variant_attributes === 'object') {
+            thisVal = v.variant_attributes[typeName]
+        } else if (typeName.toLowerCase() === 'color') {
+            thisVal = v.color
+        } else if (typeName.toLowerCase() === 'size') {
+            thisVal = v.size
+        }
+        if (String(thisVal ?? '').toLowerCase() !== String(optionVal).toLowerCase()) {
+            return false
+        }
+
+        for (const [otherType, chosen] of Object.entries(selectedAttributes.value)) {
+            if (otherType === typeName || !chosen) continue
+            let otherVal = null
+            if (v.variant_attributes && typeof v.variant_attributes === 'object') {
+                otherVal = v.variant_attributes[otherType]
+            } else if (otherType.toLowerCase() === 'color') {
+                otherVal = v.color
+            } else if (otherType.toLowerCase() === 'size') {
+                otherVal = v.size
+            }
+            if (otherVal !== null && String(otherVal).toLowerCase() !== String(chosen).toLowerCase()) {
+                return false
+            }
+        }
+        return true
+    })
+
+    if (candidateVariants.length === 0) return true
+    return candidateVariants.every(v => Number(v.stock ?? 0) <= 0)
+}
+
+const selectAttributeOption = (typeName, optionVal) => {
+    if (isOptionOutOfStock(typeName, optionVal)) return
+
+    selectedAttributes.value[typeName] = optionVal
+
+    if (typeName.toLowerCase() === 'color') {
+        selectedColor.value = optionVal
+    } else if (typeName.toLowerCase() === 'size') {
+        selectedSize.value = optionVal
+    }
+
+    const variantWithImg = variants.value.find(v => {
+        if (v.image_path) {
+            if (v.variant_attributes && v.variant_attributes[typeName] === optionVal) return true
+            if (typeName.toLowerCase() === 'color' && v.color === optionVal) return true
+        }
+        return false
+    })
+    if (variantWithImg?.image_path) {
+        activeImage.value = imageUrl(variantWithImg.image_path)
+    }
+}
 
 watch(
     selectedColor,
     color => {
         if (!color) return
+        selectedAttributes.value['Color'] = color
 
         // Switch main image when color variant has an image_path (SEL-VAR-008)
         const variantWithImg = variants.value.find(
@@ -404,7 +532,16 @@ watch(
             (!available.includes(selectedSize.value) || isSizeOutOfStock(selectedSize.value))
         ) {
             selectedSize.value = null
+            delete selectedAttributes.value['Size']
         }
+    }
+)
+
+watch(
+    selectedSize,
+    size => {
+        if (size) selectedAttributes.value['Size'] = size
+        else delete selectedAttributes.value['Size']
     }
 )
 
@@ -417,6 +554,26 @@ watch(
 const selectedVariant = computed(() => {
     if (!hasVariants.value) {
         return null
+    }
+
+    if (variationTypes.value.length > 0) {
+        for (const vt of variationTypes.value) {
+            if (!selectedAttributes.value[vt.name]) {
+                return null
+            }
+        }
+
+        return variants.value.find(v => {
+            if (v.variant_attributes && typeof v.variant_attributes === 'object') {
+                return variationTypes.value.every(vt => {
+                    const chosen = selectedAttributes.value[vt.name]
+                    return String(v.variant_attributes[vt.name] ?? '').toLowerCase() === String(chosen).toLowerCase()
+                })
+            }
+            const colorMatch = !selectedAttributes.value['Color'] || String(v.color ?? '').toLowerCase() === String(selectedAttributes.value['Color']).toLowerCase()
+            const sizeMatch = !selectedAttributes.value['Size'] || String(v.size ?? '').toLowerCase() === String(selectedAttributes.value['Size']).toLowerCase()
+            return colorMatch && sizeMatch
+        }) || null
     }
 
     if (hasColorOptions.value && !selectedColor.value) {
@@ -1717,8 +1874,7 @@ const breadcrumbs = computed(() => {
                                     >
                                         {{
                                             hasVariants
-                                                ? colors.length +
-                                                  ' color options'
+                                                ? (variants.length + ' option' + (variants.length === 1 ? '' : 's') + ' available')
                                                 : 'Single option'
                                         }}
                                     </p>
@@ -1726,94 +1882,76 @@ const breadcrumbs = computed(() => {
                             </div>
 
                             <!-- ================================================= -->
-                            <!-- COLOR -->
+                            <!-- DYNAMIC CATEGORY-BASED VARIATION SELECTORS -->
                             <!-- ================================================= -->
 
-                            <div
-                                v-if="
-                                    hasVariants &&
-                                    colors.length
-                                "
-                                class="mt-6"
-                            >
-                                <p
-                                    class="text-xs font-semibold text-[#1F2937]"
-                                >
-                                    Color
-                                </p>
-
+                            <div v-if="hasVariants && variationTypes.length > 0" class="mt-6 space-y-5">
                                 <div
-                                    class="mt-2.5 flex flex-wrap gap-2"
+                                    v-for="vt in variationTypes"
+                                    :key="vt.name"
+                                    class="space-y-2"
                                 >
-                                    <button
-                                        v-for="
-                                            color in colors
-                                        "
-                                        :key="color"
-                                        type="button"
-                                        @click="
-                                            selectedColor =
-                                                color
-                                        "
-                                        class="rounded-lg border px-3 py-1.5 text-xs transition"
-                                        :class="
-                                            selectedColor ===
-                                            color
-                                                ? 'border-[#087F8C] bg-[#E8F7F6] font-semibold text-[#087F8C]'
-                                                : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300'
-                                        "
+                                    <p class="text-xs font-semibold text-[#1F2937]">
+                                        {{ vt.name }}
+                                        <span v-if="selectedAttributes[vt.name]" class="ml-1.5 font-bold text-[#087F8C]">
+                                            : {{ selectedAttributes[vt.name] }}
+                                        </span>
+                                    </p>
+
+                                    <!-- COLOR ATTRIBUTE: SWATCHES -->
+                                    <div
+                                        v-if="vt.name.toLowerCase().includes('color')"
+                                        class="flex flex-wrap gap-2"
                                     >
-                                        {{ color }}
-                                    </button>
-                                </div>
-                            </div>
+                                        <button
+                                            v-for="opt in vt.options"
+                                            :key="opt"
+                                            type="button"
+                                            :disabled="isOptionOutOfStock(vt.name, opt)"
+                                            @click="selectAttributeOption(vt.name, opt)"
+                                            :title="opt"
+                                            :class="[
+                                                'group inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
+                                                isOptionOutOfStock(vt.name, opt)
+                                                    ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through opacity-60'
+                                                    : selectedAttributes[vt.name] === opt
+                                                        ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C] ring-1 ring-[#087F8C]'
+                                                        : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300 bg-white'
+                                            ]"
+                                        >
+                                            <span
+                                                class="h-3.5 w-3.5 rounded-full border border-slate-300 shrink-0"
+                                                :style="{ background: getColorHex(opt) }"
+                                            ></span>
+                                            <span>{{ opt }}</span>
+                                            <span v-if="selectedAttributes[vt.name] === opt" class="text-[10px] font-bold">✓</span>
+                                        </button>
+                                    </div>
 
-                            <!-- ================================================= -->
-                            <!-- SIZE -->
-                            <!-- ================================================= -->
-
-                            <div
-                                v-if="
-                                    hasVariants &&
-                                    sizesForColor(
-                                        selectedColor
-                                    ).length
-                                "
-                                class="mt-5"
-                            >
-                                <p
-                                    class="text-xs font-semibold text-[#1F2937]"
-                                >
-                                    Size
-                                </p>
-
-                                <div
-                                    class="mt-2.5 flex flex-wrap gap-2"
-                                >
-                                    <button
-                                        v-for="
-                                            size in sizesForColor(
-                                                selectedColor
-                                            )
-                                        "
-                                        :key="size"
-                                        type="button"
-                                        :disabled="isSizeOutOfStock(size)"
-                                        @click="
-                                            !isSizeOutOfStock(size) &&
-                                                (selectedSize = size)
-                                        "
-                                        class="rounded-lg border px-3 py-1.5 text-xs transition"
-                                        :class="[
-                                            isSizeOutOfStock(size)
-                                                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through opacity-60'
-                                                : selectedSize === size
-                                                    ? 'border-[#087F8C] bg-[#E8F7F6] font-semibold text-[#087F8C]'
-                                                    : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300',
-                                        ]"
+                                    <!-- OTHER ATTRIBUTES (SIZE, RAM, STORAGE, FLAVOR, ETC.): PILLS -->
+                                    <div
+                                        v-else
+                                        class="flex flex-wrap gap-2"
                                     >
-                                        {{ size }}
-                                    </button>
+                                        <button
+                                            v-for="opt in vt.options"
+                                            :key="opt"
+                                            type="button"
+                                            :disabled="isOptionOutOfStock(vt.name, opt)"
+                                            @click="selectAttributeOption(vt.name, opt)"
+                                            :class="[
+                                                'rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
+                                                isOptionOutOfStock(vt.name, opt)
+                                                    ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through opacity-60'
+                                                    : selectedAttributes[vt.name] === opt
+                                                        ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C] ring-1 ring-[#087F8C]'
+                                                        : 'border-[#E5E7EB] text-[#64748B] hover:border-gray-300 bg-white'
+                                            ]"
+                                        >
+                                            {{ opt }}
+                                            <span v-if="selectedAttributes[vt.name] === opt" class="ml-1 text-[10px] font-bold">✓</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1846,8 +1984,7 @@ const breadcrumbs = computed(() => {
                                 "
                                 class="mt-3 text-xs font-semibold text-[#E85D5D]"
                             >
-                                This color/size combination
-                                is currently out of stock.
+                                This selected combination is currently out of stock.
                             </p>
 
                             <!-- ================================================= -->

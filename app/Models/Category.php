@@ -60,6 +60,41 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function variantTypes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(VariantType::class, 'category_variant_types')
+            ->withPivot(['is_required', 'sort_order'])
+            ->withTimestamps()
+            ->orderBy('category_variant_types.sort_order')
+            ->orderBy('variant_types.name');
+    }
+
+    public function activeVariantTypes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->variantTypes()->where('variant_types.is_active', true);
+    }
+
+    /**
+     * Get effective variant types (inheriting from parent if subcategory has none mapped).
+     */
+    public function getEffectiveVariantTypes()
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('category_variant_types') || ! \Illuminate\Support\Facades\Schema::hasTable('variant_types')) {
+            return collect();
+        }
+
+        $types = $this->activeVariantTypes()->with('activeValues')->get();
+
+        if ($types->isEmpty() && $this->parent_id) {
+            $parent = $this->parent;
+            if ($parent) {
+                return $parent->activeVariantTypes()->with('activeValues')->get();
+            }
+        }
+
+        return $types;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes

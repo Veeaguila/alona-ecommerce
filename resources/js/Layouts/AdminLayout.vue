@@ -323,6 +323,19 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 17a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4zM4 19h1a3 3 0 003-3h8a3 3 0 003 3h1m-16 0V6a2 2 0 012-2h9v11H4zm11-6h5l2 3v3h-2" />
                                 </svg>
 
+                                <!-- Variants -->
+                                <svg
+                                    v-else-if="item.key === 'variants'"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                </svg>
+
                                 <!-- Audit Logs -->
                                 <svg
                                     v-else-if="item.key === 'audit_logs'"
@@ -673,6 +686,11 @@ const navigation = [
         label: 'Categories',
         href: route('admin.categories'),
         key: 'categories',
+    },
+    {
+        label: 'Variant Catalog',
+        href: route('admin.variants'),
+        key: 'variants',
     },
     {
         label: 'Platform Vouchers',

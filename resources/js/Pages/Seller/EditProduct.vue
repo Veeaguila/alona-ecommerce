@@ -1,6 +1,6 @@
 <!-- Seller form for editing an existing product listing. -->
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import SellerLayout from '@/Layouts/SellerLayout.vue'
 
@@ -11,6 +11,11 @@ const props = defineProps({
     },
 
     categories: {
+        type: Array,
+        default: () => [],
+    },
+
+    categoryVariantTypes: {
         type: Array,
         default: () => [],
     },
@@ -45,7 +50,266 @@ const form = useForm({
 
     // New replacement image
     image: null,
+
+    // Variations
+    variants: (props.product.variants || []).map(v => ({
+        id: v.id,
+        color: v.color,
+        size: v.size,
+        variant_attributes: v.variant_attributes || null,
+        combination_key: v.combination_key || null,
+        price: v.price || props.product.price || '',
+        stock: v.stock || 0,
+        weight: v.weight || '',
+        sku: v.sku || '',
+        image_path: v.image_path || null,
+        is_active: v.is_active ?? true,
+    })),
+    variation_types: props.product.variation_types || [],
 })
+
+const categoryVariantTypes = ref(props.categoryVariantTypes || [])
+const loadingVariantTypes = ref(false)
+const selectedVariantTypeIds = ref([])
+const selectedPredefinedValues = ref({})
+const bulkVariantPrice = ref('')
+const bulkVariantStock = ref('')
+
+const totalVariantStock = computed(() => {
+    return (form.variants || []).reduce((total, variant) => {
+        return total + (Number(variant.stock) || 0)
+    }, 0)
+})
+
+const fetchCategoryVariants = async (categoryId) => {
+    if (!categoryId) {
+        categoryVariantTypes.value = []
+        return
+    }
+    loadingVariantTypes.value = true
+    try {
+        const res = await fetch(route('seller.categories.variants', categoryId))
+        if (res.ok) {
+            const data = await res.json()
+            categoryVariantTypes.value = data.variant_types || []
+            populateExistingSelections()
+        }
+    } catch (e) {
+        console.error('Failed to load category variant types', e)
+    } finally {
+        loadingVariantTypes.value = false
+    }
+}
+
+const populateExistingSelections = () => {
+    if (selectedVariantTypeIds.value.length > 0) return
+
+    if (Array.isArray(props.product.variation_types) && props.product.variation_types.length > 0) {
+        props.product.variation_types.forEach(vt => {
+            const matched = categoryVariantTypes.value.find(t => t.name.toLowerCase() === vt.name.toLowerCase())
+            if (matched) {
+                if (!selectedVariantTypeIds.value.includes(matched.id)) {
+                    selectedVariantTypeIds.value.push(matched.id)
+                }
+                selectedPredefinedValues.value[matched.id] = [...(vt.options || [])]
+            }
+        })
+    } else if (Array.isArray(props.product.variants) && props.product.variants.length > 0) {
+        const attributesMap = {}
+        props.product.variants.forEach(v => {
+            if (v.variant_attributes && typeof v.variant_attributes === 'object') {
+                Object.entries(v.variant_attributes).forEach(([attrName, attrVal]) => {
+                    const k = attrName.toLowerCase()
+                    if (!attributesMap[k]) attributesMap[k] = new Set()
+                    if (attrVal) attributesMap[k].add(attrVal)
+                })
+            }
+        })
+
+        const existingColors = [...new Set(props.product.variants.map(v => v.color).filter(Boolean))]
+        const existingSizes = [...new Set(props.product.variants.map(v => v.size).filter(Boolean))]
+
+        categoryVariantTypes.value.forEach(t => {
+            const attrSet = attributesMap[t.name.toLowerCase()]
+            if (attrSet && attrSet.size > 0) {
+                if (!selectedVariantTypeIds.value.includes(t.id)) {
+                    selectedVariantTypeIds.value.push(t.id)
+                }
+                selectedPredefinedValues.value[t.id] = Array.from(attrSet)
+            } else if ((t.slug.includes('color') || t.display_type === 'color_swatch') && existingColors.length > 0) {
+                if (!selectedVariantTypeIds.value.includes(t.id)) {
+                    selectedVariantTypeIds.value.push(t.id)
+                }
+                selectedPredefinedValues.value[t.id] = existingColors
+            } else if (t.slug.includes('size') && existingSizes.length > 0) {
+                if (!selectedVariantTypeIds.value.includes(t.id)) {
+                    selectedVariantTypeIds.value.push(t.id)
+                }
+                selectedPredefinedValues.value[t.id] = existingSizes
+            }
+        })
+    }
+}
+
+const handleCategoryChange = (val) => {
+    const catId = Number(val) || form.category_id
+    if (catId) {
+        fetchCategoryVariants(catId)
+    } else {
+        categoryVariantTypes.value = []
+    }
+}
+
+watch(() => form.category_id, (newCatId) => {
+    if (newCatId) {
+        fetchCategoryVariants(newCatId)
+    } else {
+        categoryVariantTypes.value = []
+    }
+})
+
+// Initial populate
+if (categoryVariantTypes.value.length > 0) {
+    populateExistingSelections()
+} else if (form.category_id) {
+    fetchCategoryVariants(form.category_id)
+}
+
+const toggleVariantTypeSelection = (type) => {
+    const idx = selectedVariantTypeIds.value.indexOf(type.id)
+    if (idx > -1) {
+        selectedVariantTypeIds.value.splice(idx, 1)
+        delete selectedPredefinedValues.value[type.id]
+    } else {
+        selectedVariantTypeIds.value.push(type.id)
+        if (!selectedPredefinedValues.value[type.id]) {
+            selectedPredefinedValues.value[type.id] = []
+        }
+    }
+}
+
+const toggleValueSelection = (typeId, val) => {
+    if (!selectedPredefinedValues.value[typeId]) {
+        selectedPredefinedValues.value[typeId] = []
+    }
+    const arr = selectedPredefinedValues.value[typeId]
+    const idx = arr.indexOf(val)
+    if (idx > -1) {
+        arr.splice(idx, 1)
+    } else {
+        arr.push(val)
+    }
+}
+
+const isValueSelected = (typeId, val) => {
+    return selectedPredefinedValues.value[typeId]?.includes(val) || false
+}
+
+const activeSelectedTypes = computed(() => {
+    return categoryVariantTypes.value.filter(t => selectedVariantTypeIds.value.includes(t.id))
+})
+
+const combinationCountPreview = computed(() => {
+    const chosen = activeSelectedTypes.value.map(t => (selectedPredefinedValues.value[t.id] || []).length).filter(c => c > 0)
+    if (chosen.length === 0) return 0
+    return chosen.reduce((acc, curr) => acc * curr, 1)
+})
+
+const generateCombinations = () => {
+    const active = activeSelectedTypes.value.filter(t => (selectedPredefinedValues.value[t.id] || []).length > 0)
+    if (active.length === 0) return
+
+    const cartesian = (arrays) => {
+        return arrays.reduce((acc, curr) => {
+            const res = []
+            acc.forEach(a => {
+                curr.forEach(b => {
+                    res.push([...a, b])
+                })
+            })
+            return res
+        }, [[]])
+    }
+
+    const valueArrays = active.map(t => selectedPredefinedValues.value[t.id])
+    const cartesianProducts = cartesian(valueArrays)
+
+    const existingMap = new Map()
+    form.variants.forEach(v => {
+        const key = v.combination_key || (v.color + '|' + v.size)
+        existingMap.set(key, v)
+    })
+
+    const newVariants = []
+    const variationTypesPayload = active.map(t => ({
+        name: t.name,
+        options: selectedPredefinedValues.value[t.id] || [],
+    }))
+
+    cartesianProducts.forEach(combo => {
+        const attributes = {}
+        let colorVal = null
+        let sizeVal = null
+
+        active.forEach((t, i) => {
+            const val = combo[i]
+            attributes[t.name] = val
+            if (t.display_type === 'color_swatch' || t.slug.includes('color')) {
+                colorVal = val
+            } else if (t.slug.includes('size')) {
+                sizeVal = val
+            }
+        })
+
+        const vals = Object.values(attributes)
+        if (!colorVal && vals[0]) colorVal = vals[0]
+        if (!sizeVal && vals[1]) sizeVal = vals[1]
+
+        const key = Object.entries(attributes).sort().map(([k, v]) => `${k.toLowerCase()}:${v.toLowerCase()}`).join('|')
+        const existing = existingMap.get(key) || existingMap.get(colorVal + '|' + sizeVal)
+
+        newVariants.push({
+            id: existing?.id ?? null,
+            color: colorVal,
+            size: sizeVal,
+            variant_attributes: attributes,
+            combination_key: key,
+            price: existing?.price ?? (form.price || ''),
+            stock: existing?.stock ?? 0,
+            weight: existing?.weight ?? '',
+            sku: existing?.sku ?? '',
+            image_path: existing?.image_path ?? null,
+            is_active: existing?.is_active ?? true,
+        })
+    })
+
+    form.variants = newVariants
+    form.variation_types = variationTypesPayload
+}
+
+const applyBulkPrice = () => {
+    if (bulkVariantPrice.value === '' || Number(bulkVariantPrice.value) < 0) return
+    form.variants.forEach(v => {
+        v.price = bulkVariantPrice.value
+    })
+}
+
+const applyBulkStock = () => {
+    if (bulkVariantStock.value === '' || Number(bulkVariantStock.value) < 0) return
+    form.variants.forEach(v => {
+        v.stock = Number(bulkVariantStock.value)
+    })
+}
+
+const removeVariant = (index) => {
+    form.variants.splice(index, 1)
+}
+
+const clearAllVariants = () => {
+    form.variants = []
+    selectedVariantTypeIds.value = []
+    selectedPredefinedValues.value = {}
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -654,6 +918,7 @@ const submit = () => {
                                     <select
                                         id="category"
                                         v-model="form.category_id"
+                                        @change="handleCategoryChange($event.target.value)"
                                         class="block w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-4 py-3 pr-10 text-sm text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white focus:ring-2 focus:ring-[#E8F7F6]"
                                     >
                                         <template v-for="category in groupedCategories" :key="category.id">
@@ -698,8 +963,36 @@ const submit = () => {
                                 </p>
                             </div>
 
+                            <!-- PRODUCT SKU (AUTOMATICALLY GENERATED, READ-ONLY) -->
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-semibold text-[#1F2937]">
+                                        Product SKU (Stock Keeping Unit)
+                                    </label>
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-[#E8F7F6] px-2 py-0.5 text-[10px] font-bold text-[#087F8C]">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                        Auto-Generated (Read-Only)
+                                    </span>
+                                </div>
+
+                                <div class="relative mt-2">
+                                    <input
+                                        type="text"
+                                        readonly
+                                        disabled
+                                        :value="props.product.sku || 'ALN-000001'"
+                                        class="block w-full cursor-not-allowed rounded-xl border border-[#BFE3E0] bg-[#F8FAF9] px-4 py-3 font-mono text-xs font-bold text-[#087F8C] shadow-xs"
+                                    />
+                                </div>
+                                <p class="mt-1 text-[10px] text-[#64748B]">
+                                    Unique SKU automatically assigned by the backend. Read-only for sellers.
+                                </p>
+                            </div>
+
                             <!-- SLUG -->
-                            <div class="sm:col-span-2">
+                            <div>
                                 <label
                                     class="block text-xs font-semibold text-[#1F2937]"
                                 >
@@ -958,7 +1251,31 @@ const submit = () => {
                                     Stock Quantity
                                 </label>
 
+                                <div
+                                    v-if="form.variants.length > 0"
+                                    class="mt-2 rounded-xl border border-[#BFE3E0] bg-[#E8F7F6] px-4 py-3"
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-bold text-[#087F8C]">
+                                                Total Variant Stock
+                                            </p>
+
+                                            <p class="mt-0.5 text-[10px] text-[#16845A]">
+                                                Automatically calculated from variants.
+                                            </p>
+                                        </div>
+
+                                        <span
+                                            class="text-xl font-bold tracking-tight text-[#087F8C]"
+                                        >
+                                            {{ totalVariantStock }}
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <input
+                                    v-else
                                     id="stock"
                                     v-model.number="form.stock"
                                     type="number"
@@ -1071,6 +1388,348 @@ const submit = () => {
                                 >
                                     {{ form.errors.description }}
                                 </p>
+                            </div>
+                        </div>
+                    </section>
+
+
+                    <!-- ================================================== -->
+                    <!-- PRODUCT VARIANTS (CATEGORY-BASED PREDEFINED SELECTION) -->
+                    <!-- ================================================== -->
+
+                    <section
+                        class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+                    >
+                        <div
+                            class="border-b border-[#E5E7EB] bg-[#F8FAF9] px-5 py-4"
+                        >
+                            <div
+                                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        >
+                                            <path
+                                                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            />
+                                        </svg>
+                                    </div>
+
+                                    <div>
+                                        <h2 class="text-base font-bold text-[#1F2937]">
+                                            Product Variations
+                                        </h2>
+
+                                        <p class="mt-0.5 text-xs text-[#64748B]">
+                                            Select approved category attributes to generate combinations with independent stock and prices.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    v-if="form.variants.length > 0 || selectedVariantTypeIds.length > 0"
+                                    type="button"
+                                    @click="clearAllVariants"
+                                    class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 hover:text-rose-600"
+                                >
+                                    Clear Variations (Single Product)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6 px-5 py-5">
+                            <!-- Category Notice if none selected -->
+                            <div
+                                v-if="!form.category_id"
+                                class="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAF9] p-6 text-center"
+                            >
+                                <p class="text-xs font-semibold text-slate-600">
+                                    Please select a Category in the Product Information section above to view available variant types.
+                                </p>
+                            </div>
+
+                            <div v-else-if="loadingVariantTypes" class="py-6 text-center text-xs text-slate-500">
+                                Loading approved variant options for this category...
+                            </div>
+
+                            <div v-else-if="categoryVariantTypes.length === 0" class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center">
+                                <p class="text-xs font-semibold text-slate-700">Standard Single Product</p>
+                                <p class="mt-1 text-[11px] text-slate-500">This category does not require variations. Inventory and pricing are managed via the main fields above.</p>
+                            </div>
+
+                            <!-- STEP 1: SELECT VARIANT TYPES -->
+                            <div v-else class="space-y-5">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                                        Step 1: Choose Variation Attributes
+                                    </label>
+                                    <p class="mt-0.5 text-[11px] text-[#64748B]">
+                                        Click to enable the attributes that apply to this product (e.g. Color, Size, Storage).
+                                    </p>
+
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                            v-for="type in categoryVariantTypes"
+                                            :key="type.id"
+                                            type="button"
+                                            @click="toggleVariantTypeSelection(type)"
+                                            :class="[
+                                                'inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition',
+                                                selectedVariantTypeIds.includes(type.id)
+                                                    ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C] shadow-xs ring-1 ring-[#087F8C]'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                            ]"
+                                        >
+                                            <span>{{ selectedVariantTypeIds.includes(type.id) ? '✓' : '+' }}</span>
+                                            <span>{{ type.name }}</span>
+                                            <span class="rounded bg-white/80 px-1.5 py-0.2 text-[10px] text-slate-500">
+                                                {{ type.values ? type.values.length : 0 }}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- STEP 2: SELECT PREDEFINED VALUES -->
+                                <div v-if="activeSelectedTypes.length > 0" class="space-y-4 rounded-xl border border-slate-200 bg-[#F8FAF9] p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                                                Step 2: Select Approved Options
+                                            </label>
+                                            <p class="text-[11px] text-[#64748B]">
+                                                Click options to include them in the variant combinations.
+                                            </p>
+                                        </div>
+
+                                        <div v-if="combinationCountPreview > 0" class="flex items-center gap-3">
+                                            <span class="text-xs font-extrabold text-[#087F8C]">
+                                                {{ combinationCountPreview }} combination{{ combinationCountPreview === 1 ? '' : 's' }}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                @click="generateCombinations"
+                                                class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#066D77]"
+                                            >
+                                                ⚡ Generate Combinations
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-for="type in activeSelectedTypes"
+                                        :key="type.id"
+                                        class="rounded-xl border border-slate-200 bg-white p-3.5"
+                                    >
+                                        <div class="flex items-center justify-between pb-2">
+                                            <span class="text-xs font-bold text-slate-800">{{ type.name }}</span>
+                                            <span class="text-[10px] font-semibold text-slate-400">
+                                                {{ (selectedPredefinedValues[type.id] || []).length }} of {{ type.values.length }} selected
+                                            </span>
+                                        </div>
+
+                                        <!-- COLOR SWATCH PICKER -->
+                                        <div v-if="type.display_type === 'color_swatch'" class="mt-2 flex flex-wrap gap-2">
+                                            <button
+                                                v-for="val in type.values"
+                                                :key="val.id"
+                                                type="button"
+                                                @click="toggleValueSelection(type.id, val.value)"
+                                                :title="val.label || val.value"
+                                                :class="[
+                                                    'group inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
+                                                    isValueSelected(type.id, val.value)
+                                                        ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C] ring-1 ring-[#087F8C]'
+                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                                ]"
+                                            >
+                                                <span
+                                                    class="h-3.5 w-3.5 rounded-full border border-slate-300 shrink-0"
+                                                    :style="{ background: val.hex || '#000000' }"
+                                                ></span>
+                                                <span>{{ val.label || val.value }}</span>
+                                                <span v-if="isValueSelected(type.id, val.value)" class="text-[10px]">✓</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- PILLS PICKER (SIZES, RAM, STORAGE, FLAVOR, ETC.) -->
+                                        <div v-else class="mt-2 flex flex-wrap gap-2">
+                                            <button
+                                                v-for="val in type.values"
+                                                :key="val.id"
+                                                type="button"
+                                                @click="toggleValueSelection(type.id, val.value)"
+                                                :class="[
+                                                    'rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
+                                                    isValueSelected(type.id, val.value)
+                                                        ? 'border-[#087F8C] bg-[#E8F7F6] text-[#087F8C] ring-1 ring-[#087F8C]'
+                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                                ]"
+                                            >
+                                                {{ val.label || val.value }}
+                                                <span v-if="isValueSelected(type.id, val.value)" class="ml-1 text-[10px]">✓</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STEP 3 & 4: COMBINATIONS TABLE & BULK CONTROLS -->
+                                <div v-if="form.variants.length > 0" class="space-y-4">
+                                    <div class="flex flex-col gap-3 rounded-xl border border-[#BFE3E0] bg-[#E8F7F6] p-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h3 class="text-xs font-bold text-[#087F8C]">Bulk Update Combinations</h3>
+                                            <p class="text-[10px] text-[#16845A]">Apply the same price or stock across all generated variants at once.</p>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <div class="flex items-center gap-1">
+                                                <input
+                                                    v-model="bulkVariantPrice"
+                                                    type="number"
+                                                    min="1"
+                                                    step="0.01"
+                                                    placeholder="Price ₱"
+                                                    class="w-24 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-[#087F8C]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    @click="applyBulkPrice"
+                                                    class="rounded-lg bg-[#087F8C] px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-[#066D77]"
+                                                >
+                                                    Set Price
+                                                </button>
+                                            </div>
+
+                                            <div class="flex items-center gap-1">
+                                                <input
+                                                    v-model="bulkVariantStock"
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="Stock"
+                                                    class="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-[#087F8C]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    @click="applyBulkStock"
+                                                    class="rounded-lg bg-[#087F8C] px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-[#066D77]"
+                                                >
+                                                    Set Stock
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- COMBINATION ROWS -->
+                                    <div class="space-y-3">
+                                        <div
+                                            v-for="(variant, index) in form.variants"
+                                            :key="index"
+                                            class="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs"
+                                        >
+                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 font-mono text-[10px] font-bold text-slate-600">
+                                                        {{ index + 1 }}
+                                                    </span>
+
+                                                    <div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                v-if="variant.color"
+                                                                class="h-3 w-3 rounded-full border border-slate-300"
+                                                                :style="{ background: variant.color.toLowerCase() }"
+                                                            ></span>
+                                                            <span class="text-xs font-bold text-slate-800">
+                                                                {{ variant.variant_attributes ? Object.values(variant.variant_attributes).join(' · ') : (variant.color + (variant.size ? ' · ' + variant.size : '')) }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex flex-wrap items-center gap-3">
+                                                    <!-- Price -->
+                                                    <div class="flex items-center gap-1">
+                                                        <label class="text-[10px] font-bold text-slate-400">₱</label>
+                                                        <input
+                                                            v-model="variant.price"
+                                                            type="number"
+                                                            min="1"
+                                                            step="0.01"
+                                                            placeholder="0.00"
+                                                            required
+                                                            class="w-24 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-[#087F8C]"
+                                                        />
+                                                    </div>
+
+                                                    <!-- Stock -->
+                                                    <div class="flex items-center gap-1">
+                                                        <label class="text-[10px] font-bold text-slate-400">Qty</label>
+                                                        <input
+                                                            v-model.number="variant.stock"
+                                                            type="number"
+                                                            min="0"
+                                                            placeholder="0"
+                                                            required
+                                                            class="w-20 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-[#087F8C]"
+                                                        />
+                                                    </div>
+
+                                                    <!-- Optional Weight -->
+                                                    <div class="flex items-center gap-1">
+                                                        <label class="text-[10px] font-bold text-slate-400">kg</label>
+                                                        <input
+                                                            v-model="variant.weight"
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.5"
+                                                            class="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-[#087F8C]"
+                                                        />
+                                                    </div>
+
+                                                    <!-- Remove Row -->
+                                                    <button
+                                                        type="button"
+                                                        @click="removeVariant(index)"
+                                                        class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                                        title="Remove combination"
+                                                    >
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div v-if="form.errors[`variants.${index}.price`]" class="mt-1 text-[10px] text-[#E85D5D]">
+                                                {{ form.errors[`variants.${index}.price`] }}
+                                            </div>
+                                            <div v-if="form.errors[`variants.${index}.stock`]" class="mt-1 text-[10px] text-[#E85D5D]">
+                                                {{ form.errors[`variants.${index}.stock`] }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TOTAL VARIANT STOCK -->
+                                    <div class="flex items-center justify-between rounded-xl border border-[#BFE3E0] bg-[#E8F7F6] px-4 py-3">
+                                        <div>
+                                            <p class="text-xs font-bold text-[#087F8C]">Total Calculated Variant Stock</p>
+                                            <p class="text-[10px] text-[#16845A]">Sum across all {{ form.variants.length }} combinations.</p>
+                                        </div>
+                                        <span class="text-xl font-bold tracking-tight text-[#087F8C]">
+                                            {{ totalVariantStock }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>

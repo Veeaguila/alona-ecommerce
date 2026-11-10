@@ -12,8 +12,12 @@ class ProductVariant extends Model
         'product_id',
         'color',
         'size',
+        'variant_attributes',
+        'combination_key',
         'price',
         'stock',
+        'weight',
+        'is_active',
         'low_stock_alerted',
         'sku',
         'image_path',
@@ -31,14 +35,22 @@ class ProductVariant extends Model
             if ((int) ($variant->stock ?? 0) > 5) {
                 $variant->low_stock_alerted = false;
             }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'combination_key')) {
+                if (empty($variant->combination_key)) {
+                    $variant->combination_key = $variant->generateCombinationKey();
+                }
+            }
         });
     }
 
     protected function casts(): array
     {
         return [
+            'variant_attributes' => 'array',
             'price' => 'decimal:2',
             'stock' => 'integer',
+            'weight' => 'decimal:2',
+            'is_active' => 'boolean',
             'low_stock_alerted' => 'boolean',
         ];
     }
@@ -98,9 +110,47 @@ class ProductVariant extends Model
 
     public function label(): string
     {
+        $attrs = $this->variant_attributes;
+        if (is_array($attrs) && count($attrs) > 0) {
+            $parts = [];
+            foreach ($attrs as $key => $val) {
+                if (filled($val)) {
+                    $parts[] = (string) $val;
+                }
+            }
+            if (count($parts) > 0) {
+                return implode(' - ', $parts);
+            }
+        }
+
         return collect([$this->color, $this->size])
             ->filter(fn ($val) => $val !== null && $val !== '')
             ->implode('-');
+    }
+
+    public function generateCombinationKey(): string
+    {
+        $attrs = $this->variant_attributes;
+        if (is_array($attrs) && count($attrs) > 0) {
+            $pairs = [];
+            foreach ($attrs as $k => $v) {
+                if (filled($v)) {
+                    $pairs[mb_strtolower(trim((string) $k))] = mb_strtolower(trim((string) $v));
+                }
+            }
+            ksort($pairs);
+            $parts = [];
+            foreach ($pairs as $k => $v) {
+                $parts[] = "{$k}:{$v}";
+            }
+            if (!empty($parts)) {
+                return implode('|', $parts);
+            }
+        }
+
+        $c = mb_strtolower(trim((string) ($this->color ?? '')));
+        $s = mb_strtolower(trim((string) ($this->size ?? '')));
+        return "color:{$c}|size:{$s}";
     }
 
     public function getTitleAttribute(): string

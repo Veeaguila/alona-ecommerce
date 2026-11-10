@@ -16,6 +16,7 @@ class Product extends Model
         'category_id',
         'seller_id',
         'name',
+        'sku',
         'slug',
         'description',
         'price',
@@ -68,6 +69,14 @@ class Product extends Model
     protected static function booted(): void
     {
         static::saving(function (self $product): void {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'sku')) {
+                if ($product->exists && !empty($product->getOriginal('sku'))) {
+                    $product->sku = $product->getOriginal('sku');
+                } elseif (empty($product->sku)) {
+                    $product->sku = self::generateUniqueSku();
+                }
+            }
+
             if (empty($product->slug) && !empty($product->name)) {
                 $product->slug = \Illuminate\Support\Str::slug($product->name) . '-' . strtolower(\Illuminate\Support\Str::random(6));
             }
@@ -76,6 +85,23 @@ class Product extends Model
                 $product->low_stock_alerted = false;
             }
         });
+    }
+
+    public static function generateUniqueSku(): string
+    {
+        $maxId = (int) (self::max('id') ?? 0);
+        $candidateNum = $maxId + 1;
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku')) {
+            return 'ALN-' . str_pad((string) $candidateNum, 6, '0', STR_PAD_LEFT);
+        }
+
+        do {
+            $candidate = 'ALN-' . str_pad((string) $candidateNum, 6, '0', STR_PAD_LEFT);
+            $candidateNum++;
+        } while (self::where('sku', $candidate)->exists());
+
+        return $candidate;
     }
 
     protected function casts(): array

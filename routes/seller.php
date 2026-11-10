@@ -66,6 +66,11 @@ Route::middleware([
         'create',
     ])->name('seller.products.create');
 
+    Route::get('/seller/categories/{category}/variants', [
+        SellerProductController::class,
+        'getCategoryVariants',
+    ])->name('seller.categories.variants');
+
     Route::post('/seller/products', [
         SellerProductController::class,
         'store',

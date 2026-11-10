@@ -288,6 +288,43 @@ class SellerProductController extends Controller
              * This is the SAME categories table used by Buyer.
              */
             'categories' => $this->activeCategories(),
+            'autoSkuPreview' => Product::generateUniqueSku(),
+        ]);
+    }
+
+    /**
+     * Get predefined variant types and approved options for a specific category.
+     */
+    public function getCategoryVariants(Category $category): \Illuminate\Http\JsonResponse
+    {
+        $variantTypes = $category->getEffectiveVariantTypes();
+
+        return response()->json([
+            'category_id' => $category->id,
+            'category_name' => $category->name,
+            'category' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ],
+            'variant_types' => $variantTypes->map(function ($type) {
+                return [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'slug' => $type->slug,
+                    'display_type' => $type->display_type,
+                    'description' => $type->description,
+                    'values' => $type->activeValues->map(function ($val) {
+                        return [
+                            'id' => $val->id,
+                            'value' => $val->value,
+                            'label' => $val->label,
+                            'hex' => $val->hex_color,
+                            'meta' => $val->meta,
+                        ];
+                    }),
+                ];
+            }),
         ]);
     }
 
@@ -382,15 +419,28 @@ class SellerProductController extends Controller
                     ]);
                 }
 
+                $hasVariantAttributes = \Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'variant_attributes');
+                $hasCombinationKey = \Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'combination_key');
+
                 foreach ($variants as $variantData) {
-                    $newProduct->variants()->create([
+                    $item = [
                         'color' => $variantData['color'] ?? null,
                         'size' => $variantData['size'] ?? null,
                         'price' => $variantData['price'] ?? ($validated['price'] ?? 0),
                         'stock' => $variantData['stock'],
+                        'weight' => $variantData['weight'] ?? null,
                         'sku' => $variantData['sku'] ?? null,
                         'image_path' => $variantData['image_path'] ?? null,
-                    ]);
+                    ];
+
+                    if ($hasVariantAttributes) {
+                        $item['variant_attributes'] = $variantData['variant_attributes'] ?? ($variantData['attributes'] ?? null);
+                    }
+                    if ($hasCombinationKey) {
+                        $item['combination_key'] = $variantData['combination_key'] ?? null;
+                    }
+
+                    $newProduct->variants()->create($item);
                 }
             });
         } catch (\Throwable $exception) {
@@ -457,6 +507,9 @@ class SellerProductController extends Controller
             403
         );
 
+        $category = $product->category;
+        $categoryVariantTypes = $category ? $category->getEffectiveVariantTypes() : collect();
+
         return Inertia::render('Seller/EditProduct', [
             'product' => $product->load([
                 'category:id,name,slug',
@@ -469,6 +522,25 @@ class SellerProductController extends Controller
              * and Buyer Categories.
              */
             'categories' => $this->activeCategories(),
+
+            'categoryVariantTypes' => $categoryVariantTypes->map(function ($type) {
+                return [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'slug' => $type->slug,
+                    'display_type' => $type->display_type,
+                    'description' => $type->description,
+                    'values' => $type->activeValues->map(function ($val) {
+                        return [
+                            'id' => $val->id,
+                            'value' => $val->value,
+                            'label' => $val->label,
+                            'hex' => $val->hex_color,
+                            'meta' => $val->meta,
+                        ];
+                    }),
+                ];
+            }),
 
             'unansweredQuestions' => $product->questions()
                 ->whereNull('answer')
@@ -2016,8 +2088,19 @@ class SellerProductController extends Controller
                 continue;
             }
 
+            $attrs = $variant['variant_attributes'] ?? ($variant['attributes'] ?? null);
             $rawColor = $variant['color'] ?? null;
             $rawSize = $variant['size'] ?? null;
+
+            if (is_array($attrs) && count($attrs) > 0) {
+                $attrValues = array_values($attrs);
+                if (empty($rawColor) && isset($attrValues[0])) {
+                    $rawColor = $attrValues[0];
+                }
+                if (empty($rawSize) && isset($attrValues[1])) {
+                    $rawSize = $attrValues[1];
+                }
+            }
 
             $color = filled($rawColor) ? trim((string) $rawColor) : null;
             $size = filled($rawSize) ? trim((string) $rawSize) : null;
@@ -2032,8 +2115,24 @@ class SellerProductController extends Controller
             }
 
             // Check duplicate combination case-insensitively (SEL-VAR-004)
-            $combinationKey = mb_strtolower($color ?? '__none__') . '|' . mb_strtolower($size ?? '__none__');
-            if ($color !== null || $size !== null) {
+            if (is_array($attrs) && count($attrs) > 0) {
+                $pairs = [];
+                foreach ($attrs as $k => $v) {
+                    if (filled($v)) {
+                        $pairs[mb_strtolower(trim((string) $k))] = mb_strtolower(trim((string) $v));
+                    }
+                }
+                ksort($pairs);
+                $combParts = [];
+                foreach ($pairs as $k => $v) {
+                    $combParts[] = "{$k}:{$v}";
+                }
+                $combinationKey = implode('|', $combParts);
+            } else {
+                $combinationKey = mb_strtolower($color ?? '__none__') . '|' . mb_strtolower($size ?? '__none__');
+            }
+
+            if ($color !== null || $size !== null || ! empty($combinationKey)) {
                 if (in_array($combinationKey, $seenCombinations, true)) {
                     $errors["variants.{$index}"] = 'Duplicate variation combination (options are not case-sensitive).';
                     $errors['variation_options'] = 'Duplicate variation option (not case-sensitive).';
@@ -2122,8 +2221,11 @@ class SellerProductController extends Controller
                 'id' => isset($variant['id']) && is_numeric($variant['id']) ? (int) $variant['id'] : null,
                 'color' => $color,
                 'size' => $size,
+                'variant_attributes' => $attrs,
+                'combination_key' => $combinationKey,
                 'price' => $variantPrice,
                 'stock' => is_numeric($rawStock) ? (int) $rawStock : 0,
+                'weight' => isset($variant['weight']) && is_numeric($variant['weight']) ? (float) $variant['weight'] : null,
                 'sku' => $sku,
                 'image_path' => $variantImagePath,
             ];
@@ -2146,7 +2248,7 @@ class SellerProductController extends Controller
     ): void {
         $existingVariants = $product->variants()->get();
 
-        // Map incoming variants to existing variants by case-insensitive (color, size)
+        // Map incoming variants to existing variants by id, combination_key, or case-insensitive (color, size)
         $matchedExistingIds = [];
         $incomingMatchedMap = [];
 
@@ -2154,6 +2256,14 @@ class SellerProductController extends Controller
             $match = $existingVariants->first(function (ProductVariant $ev) use ($variantData, $matchedExistingIds) {
                 if (in_array($ev->id, $matchedExistingIds, true)) {
                     return false;
+                }
+
+                if (! empty($variantData['id']) && (int) $ev->id === (int) $variantData['id']) {
+                    return true;
+                }
+
+                if (! empty($variantData['combination_key']) && $ev->combination_key === $variantData['combination_key']) {
+                    return true;
                 }
 
                 return mb_strtolower((string) ($ev->color ?? '')) === mb_strtolower((string) ($variantData['color'] ?? ''))
@@ -2208,14 +2318,25 @@ class SellerProductController extends Controller
                 $toDelete->delete();
             }
 
+            $hasVariantAttributes = \Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'variant_attributes');
+            $hasCombinationKey = \Illuminate\Support\Facades\Schema::hasColumn('product_variants', 'combination_key');
+
             foreach ($variants as $index => $variantData) {
                 $payload = [
                     'color' => $variantData['color'] ?? null,
                     'size' => $variantData['size'] ?? null,
                     'price' => $variantData['price'] ?? ($defaultPrice > 0 ? $defaultPrice : $product->price),
                     'stock' => (int) $variantData['stock'],
+                    'weight' => $variantData['weight'] ?? null,
                     'sku' => $variantData['sku'] ?? null,
                 ];
+
+                if ($hasVariantAttributes) {
+                    $payload['variant_attributes'] = $variantData['variant_attributes'] ?? null;
+                }
+                if ($hasCombinationKey) {
+                    $payload['combination_key'] = $variantData['combination_key'] ?? null;
+                }
 
                 if (! empty($variantData['image_path'])) {
                     $payload['image_path'] = $variantData['image_path'];

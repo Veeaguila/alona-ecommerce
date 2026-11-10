@@ -120,7 +120,7 @@ class GuestProductController extends Controller
         $product->load([
             'category:id,name,slug',
             'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
-            'variants:id,product_id,color,size,stock',
+            'variants',
             'images:id,product_id,image_path',
             'reviews' => fn ($query) => $query
                 ->with('user:id,name')

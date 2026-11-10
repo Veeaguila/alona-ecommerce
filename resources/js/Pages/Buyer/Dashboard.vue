@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import Icon from '@/Components/Icon.vue'
+import OfferCoverflow from '@/Components/OfferCoverflow.vue'
 
 const props = defineProps({
     categories: {
@@ -1079,36 +1080,12 @@ let flashTimerInterval = null
 
 const flashSlider = ref(null)
 const scrollFlash = direction => {
-    const container = flashSlider.value
-    if (!container) return
-    const card = container.querySelector('.product-card')
-    const cardWidth = card ? card.getBoundingClientRect().width : 180
-    const scrollAmount = (cardWidth + 10) * (direction === 'left' ? -2 : 2)
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+    direction === 'left' ? flashSlider.value?.previous() : flashSlider.value?.next()
 }
 
-const bundleIndex = ref(0)
-const nextBundle = () => {
-    if (!props.bundleDeals || !props.bundleDeals.length) return
-    if (bundleIndex.value + 3 >= props.bundleDeals.length) {
-        bundleIndex.value = 0
-    } else {
-        bundleIndex.value += 3
-    }
-}
-const prevBundle = () => {
-    if (!props.bundleDeals || !props.bundleDeals.length) return
-    if (bundleIndex.value - 3 < 0) {
-        bundleIndex.value = Math.max(0, props.bundleDeals.length - 3)
-    } else {
-        bundleIndex.value -= 3
-    }
-}
-const visibleBundleDeals = computed(() => {
-    if (!Array.isArray(props.bundleDeals) || !props.bundleDeals.length) return []
-    if (props.bundleDeals.length <= 3) return props.bundleDeals
-    return props.bundleDeals.slice(bundleIndex.value, bundleIndex.value + 3)
-})
+const bundleSlider = ref(null)
+const nextBundle = () => bundleSlider.value?.next()
+const prevBundle = () => bundleSlider.value?.previous()
 
 const tickFlashCountdown = () => {
     const now = new Date().getTime()
@@ -1790,19 +1767,19 @@ onUnmounted(() => {
                                 Grab hot discounts before the timer expires. Limited quantities available!
                             </p>
 
-                            <!-- Compact Horizontal Slider (Exact 3 items visible on desktop, 2 on mobile) -->
-                            <div
+                            <!-- 3D product card carousel -->
+                            <OfferCoverflow
                                 ref="flashSlider"
-                                class="mt-2.5 flex gap-2.5 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-1"
+                                :items="flashSales"
+                                label="Flash sale offers"
+                                v-slot="{ item }"
                             >
                                 <Link
-                                    v-for="item in flashSales"
-                                    :key="item.id"
                                     :href="safeRoute('buyer.product', '#', item.product_id)"
-                                    class="product-card group relative flex w-[calc(50%-5px)] sm:w-[calc(33.333%-7px)] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-xl border border-amber-200/70 bg-white p-2 shadow-2xs transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                                    class="product-card group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-white p-2.5"
                                 >
                                     <!-- Image & Badges -->
-                                    <div class="relative h-28 sm:h-32 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
+                                    <div class="relative h-32 sm:h-36 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
                                         <img
                                             v-if="item.image"
                                             :src="item.image"
@@ -1867,7 +1844,7 @@ onUnmounted(() => {
                                         </div>
                                     </div>
                                 </Link>
-                            </div>
+                            </OfferCoverflow>
                         </div>
 
                         <!-- ==============================================
@@ -1900,7 +1877,7 @@ onUnmounted(() => {
 
                                 <!-- Pagination / Navigation Arrows for Bundles -->
                                 <div class="flex items-center gap-2 shrink-0">
-                                    <div v-if="bundleDeals.length > 3" class="flex items-center gap-1">
+                                    <div v-if="bundleDeals.length > 1" class="flex items-center gap-1">
                                         <button
                                             type="button"
                                             title="Previous bundles"
@@ -1932,12 +1909,15 @@ onUnmounted(() => {
                                 Buy multiple items from the same store and unlock instant percentage discounts at checkout!
                             </p>
 
-                            <!-- Single Unified Card (Hindi Magkakahiwalay) -->
-                            <div class="mt-2.5 overflow-hidden rounded-xl border border-teal-200/80 bg-white shadow-2xs divide-y divide-teal-100/70">
+                            <!-- 3D bundle card carousel -->
+                            <OfferCoverflow
+                                ref="bundleSlider"
+                                :items="bundleDeals"
+                                label="Bundle deals"
+                                v-slot="{ item: bundle }"
+                            >
                                 <div
-                                    v-for="bundle in visibleBundleDeals"
-                                    :key="bundle.id"
-                                    class="group flex items-center justify-between gap-3 p-2.5 sm:px-3 sm:py-2.5 transition duration-200 hover:bg-[#F2FAF9]"
+                                    class="group flex h-full flex-col justify-between gap-3 rounded-2xl bg-white p-3"
                                 >
                                     <div class="min-w-0 flex-1">
                                         <!-- Line 1: Badge + Store -->
@@ -1951,16 +1931,16 @@ onUnmounted(() => {
                                         </div>
 
                                         <!-- Line 2: Title -->
-                                        <h3 class="mt-1 truncate text-xs font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
+                                        <h3 class="mt-3 line-clamp-2 text-sm font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
                                             {{ bundle.name }}
                                         </h3>
 
                                         <!-- Line 3: Product Thumbnails -->
-                                        <div class="mt-1.5 flex items-center gap-1.5">
+                                        <div class="mt-4 flex flex-wrap items-center justify-center gap-1.5">
                                             <div
                                                 v-for="p in bundle.products.slice(0, 3)"
                                                 :key="p.id"
-                                                class="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs"
+                                                class="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs"
                                                 :title="p.name"
                                             >
                                                 <img
@@ -1985,13 +1965,13 @@ onUnmounted(() => {
                                     <!-- Action Button -->
                                     <Link
                                         :href="safeRoute('buyer.store.show', `/store/${bundle.seller_id}`, bundle.seller_id)"
-                                        class="shrink-0 inline-flex items-center gap-1 rounded-lg bg-[#087F8C] px-3 py-1.5 text-[11px] font-bold text-white shadow-2xs transition hover:bg-[#066B76] active:scale-95"
+                                        class="shrink-0 inline-flex items-center justify-center gap-1 rounded-lg bg-[#087F8C] px-3 py-1.5 text-[11px] font-bold text-white shadow-2xs transition hover:bg-[#066B76] active:scale-95"
                                     >
                                         <span>View Store</span>
                                         <span>→</span>
                                     </Link>
                                 </div>
-                            </div>
+                            </OfferCoverflow>
                         </div>
 
                     </div>

@@ -334,6 +334,23 @@ Route::prefix('admin')
 
         /*
         |--------------------------------------------------------------------------
+        | MASTER VARIANT CATALOG
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/variants', [\App\Http\Controllers\AdminVariantController::class, 'index'])->name('admin.variants');
+        Route::get('/variants/index', [\App\Http\Controllers\AdminVariantController::class, 'index'])->name('admin.variants.index');
+        Route::post('/variants/types', [\App\Http\Controllers\AdminVariantController::class, 'storeType'])->name('admin.variants.types.store');
+        Route::patch('/variants/types/{variantType}', [\App\Http\Controllers\AdminVariantController::class, 'updateType'])->name('admin.variants.types.update');
+        Route::patch('/variants/types/{variantType}/toggle', [\App\Http\Controllers\AdminVariantController::class, 'toggleType'])->name('admin.variants.types.toggle');
+        Route::post('/variants/types/{variantType}/values', [\App\Http\Controllers\AdminVariantController::class, 'storeValue'])->name('admin.variants.values.store');
+        Route::patch('/variants/values/{variantValue}', [\App\Http\Controllers\AdminVariantController::class, 'updateValue'])->name('admin.variants.values.update');
+        Route::patch('/variants/values/{variantValue}/toggle', [\App\Http\Controllers\AdminVariantController::class, 'toggleValue'])->name('admin.variants.values.toggle');
+        Route::match(['patch', 'post'], '/categories/{category}/variant-mappings', [\App\Http\Controllers\AdminVariantController::class, 'updateCategoryMappings'])->name('admin.categories.variant-mappings');
+        Route::get('/variants/coverage-report', [\App\Http\Controllers\AdminVariantController::class, 'coverageReport'])->name('admin.variants.coverage-report');
+
+        /*
+        |--------------------------------------------------------------------------
         | PLATFORM VOUCHERS & CAMPAIGNS
         |--------------------------------------------------------------------------
         */

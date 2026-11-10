@@ -26,7 +26,7 @@ class BuyerProductController extends Controller
         $products = Product::query()
             ->with([
                 'category:id,name,slug',
-                'variants:id,product_id,color,size,price,stock,sku,image_path',
+                'variants',
             ])
             ->where('status', 'approved')
 
@@ -206,7 +206,7 @@ class BuyerProductController extends Controller
 
             'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
 
-            'variants:id,product_id,color,size,price,stock,sku,image_path',
+            'variants',
 
             'images:id,product_id,image_path',
 
