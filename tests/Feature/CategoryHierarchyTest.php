@@ -12,6 +12,27 @@ class CategoryHierarchyTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_descendant_lookup_traverses_every_level_and_stops_at_cycles(): void
+    {
+        $root = Category::create(['name' => 'Cycle Root Fixture', 'slug' => 'cycle-root-fixture']);
+        $child = Category::create(['name' => 'Cycle Child Fixture', 'slug' => 'cycle-child-fixture', 'parent_id' => $root->id]);
+        $leaf = Category::create(['name' => 'Cycle Leaf Fixture', 'slug' => 'cycle-leaf-fixture', 'parent_id' => $child->id]);
+        $this->assertEqualsCanonicalizing([$root->id, $child->id, $leaf->id], $root->getDescendantIds());
+        $root->update(['parent_id' => $leaf->id]);
+        $this->assertEqualsCanonicalizing([$root->id, $child->id, $leaf->id], $root->getDescendantIds());
+    }
+
+    public function test_admin_cannot_move_category_beneath_a_deep_descendant(): void
+    {
+        $root = Category::create(['name' => 'Deep Root Fixture', 'slug' => 'deep-root-fixture']);
+        $child = Category::create(['name' => 'Deep Child Fixture', 'slug' => 'deep-child-fixture', 'parent_id' => $root->id]);
+        $leaf = Category::create(['name' => 'Deep Leaf Fixture', 'slug' => 'deep-leaf-fixture', 'parent_id' => $child->id]);
+        $this->actingAs($this->createAdmin())->patch(route('admin.categories.update', $root), [
+            'name' => $root->name, 'slug' => $root->slug, 'parent_id' => $leaf->id, 'is_active' => true,
+        ])->assertSessionHasErrors('parent_id');
+        $this->assertNull($root->fresh()->parent_id);
+    }
+
     protected function createAdmin(): User
     {
         return User::factory()->create([

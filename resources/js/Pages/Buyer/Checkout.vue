@@ -5,6 +5,10 @@ import { Head, Link, useForm } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 
 const props = defineProps({
+    claimed_vouchers: {
+        type: Array,
+        default: () => [],
+    },
     items: {
         type: Array,
         default: () => [],
@@ -102,7 +106,7 @@ watch(
     }
 )
 
-const voucherInput = ref('')
+const selectingVoucherId = ref(null)
 const appliedVouchers = ref({
     store: null,
     platform: null,
@@ -110,9 +114,6 @@ const appliedVouchers = ref({
 })
 const appliedVoucherList = computed(() => {
     return Object.values(appliedVouchers.value).filter(Boolean)
-})
-const appliedVoucher = computed(() => {
-    return appliedVoucherList.value[0] || null
 })
 const voucherError = ref('')
 const voucherLoading = ref(false)
@@ -339,13 +340,8 @@ const selectedServiceability = computed(() => {
     return address ? props.address_serviceability[address.id] : null
 })
 
-const applyVoucher = async () => {
-    const code = voucherInput.value.trim()
-
-    if (!code) {
-        voucherError.value = 'Please enter a voucher code.'
-        return
-    }
+const applyVoucher = async voucher => {
+    if (voucherLoading.value || form.processing || appliedVouchers.value[voucher.category]) return
 
     if (!selectedItems.value.length) {
         voucherError.value = 'No cart items are selected.'
@@ -353,6 +349,7 @@ const applyVoucher = async () => {
     }
 
     voucherLoading.value = true
+    selectingVoucherId.value = voucher.id
     voucherError.value = ''
 
     try {
@@ -378,7 +375,7 @@ const applyVoucher = async () => {
                 },
 
                 body: JSON.stringify({
-                    voucher_code: code,
+                    voucher_id: voucher.id,
                     selected_items: selectedItems.value,
                     applied_codes: appliedVoucherList.value.map(v => v.code),
                     shipping_method: form.shipping_method,
@@ -392,14 +389,13 @@ const applyVoucher = async () => {
             const cat = data.voucher.category || (data.voucher.type === 'free_shipping' ? 'shipping' : (data.voucher.is_platform ? 'platform' : 'store'))
             appliedVouchers.value[cat] = data.voucher
             syncFormVouchers()
-            voucherInput.value = ''
             voucherError.value = ''
             return
         }
 
         voucherError.value =
             data.message ||
-            'Invalid voucher code.'
+            'This voucher cannot be applied to your order.'
     } catch (error) {
         console.error(
             'Voucher validation error:',
@@ -410,6 +406,7 @@ const applyVoucher = async () => {
             'Failed to validate voucher. Please try again.'
     } finally {
         voucherLoading.value = false
+        selectingVoucherId.value = null
     }
 }
 
@@ -433,6 +430,7 @@ const removeItemFromCheckout = itemId => {
 }
 
 const submit = () => {
+    if (voucherLoading.value || form.processing) return
     if (!selectedItems.value.length) return
     if (!form.shipping_address.trim()) return
     if (form.shipping_method !== 'pickup' && selectedServiceability.value?.state === 'unsupported') return
@@ -1053,6 +1051,7 @@ const submit = () => {
                                 type="submit"
                                 :disabled="
                                     form.processing ||
+                                    voucherLoading ||
                                     (form.shipping_method !== 'pickup' && selectedServiceability?.state === 'unsupported') ||
                                     !form.shipping_address.trim() ||
                                     !selectedItems.length ||
@@ -1104,11 +1103,11 @@ const submit = () => {
                             </div>
 
                             <h3 class="mt-1 text-sm font-extrabold text-[#1F2937]">
-                                Promo Code
+                                My Vouchers
                             </h3>
 
                             <p class="mt-1 text-xs leading-5 text-[#64748B]">
-                                Apply up to 3 vouchers (1 Store + 1 Platform + 1 Free Shipping).
+                                Select your claimed vouchers. Apply up to 1 Store, 1 Platform, and 1 Free Shipping voucher.
                             </p>
 
                             <!-- Applied Vouchers List -->
@@ -1141,6 +1140,7 @@ const submit = () => {
                                         <button
                                             type="button"
                                             @click="removeVoucher(v.category || (v.type === 'free_shipping' ? 'shipping' : (v.is_platform ? 'platform' : 'store')))"
+                                            :disabled="voucherLoading || form.processing"
                                             class="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#188154] hover:bg-white transition"
                                         >
                                             Remove
@@ -1149,28 +1149,31 @@ const submit = () => {
                                 </div>
                             </div>
 
-                            <!-- Input to add voucher -->
-                            <div v-if="appliedVoucherList.length < 3" class="mt-3">
-                                <div class="flex min-w-0 gap-2">
-                                    <input
-                                        v-model="voucherInput"
-                                        type="text"
-                                        autocomplete="off"
-                                        placeholder="Enter voucher code"
-                                        class="min-w-0 flex-1 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-xs uppercase outline-none transition placeholder:text-[#94A3B8] focus:border-[#16A6A0] focus:bg-white focus:ring-4 focus:ring-[#E8F7F6]"
-                                        @keydown.enter.prevent="applyVoucher"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        @click="applyVoucher"
-                                        :disabled="voucherLoading || !voucherInput.trim()"
-                                        class="shrink-0 rounded-xl bg-[#087F8C] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#066C76] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3.5"
-                                    >
-                                        {{ voucherLoading ? 'Checking...' : 'Apply' }}
-                                    </button>
-                                </div>
+                            <!-- Claimed vouchers: select without entering a code. -->
+                            <div v-if="props.claimed_vouchers.length" class="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                                <button
+                                    v-for="voucher in props.claimed_vouchers"
+                                    :key="voucher.id"
+                                    type="button"
+                                    :disabled="voucherLoading || form.processing || !!appliedVouchers[voucher.category]"
+                                    :aria-pressed="appliedVouchers[voucher.category]?.id === voucher.id"
+                                    class="flex w-full items-center justify-between gap-2 rounded-xl border border-[#D5E4E3] bg-white p-3 text-left transition hover:border-[#087F8C] hover:bg-[#E8F7F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#087F8C] disabled:cursor-default disabled:opacity-60"
+                                    @click="applyVoucher(voucher)"
+                                >
+                                    <span class="min-w-0">
+                                        <span class="block text-xs font-extrabold text-[#087F8C]">
+                                            {{ voucher.type === 'free_shipping' ? 'Free Shipping' : (voucher.type === 'percentage' ? `${Number(voucher.value)}% OFF` : `${money(voucher.value)} OFF`) }}
+                                        </span>
+                                        <span class="mt-0.5 block text-[10px] text-[#64748B]">{{ voucher.code }} · {{ voucher.seller_name || 'Platform' }}</span>
+                                        <span class="mt-0.5 block text-[10px] text-[#64748B]">{{ voucher.min_spend > 0 ? `Min. spend ${money(voucher.min_spend)}` : 'No minimum spend' }}<template v-if="voucher.max_discount > 0"> · Up to {{ money(voucher.max_discount) }}</template></span>
+                                    </span>
+                                    <span class="shrink-0 text-[10px] font-bold text-[#087F8C]">
+                                        {{ selectingVoucherId === voucher.id ? 'Checking...' : (appliedVouchers[voucher.category]?.id === voucher.id ? 'Applied' : (appliedVouchers[voucher.category] ? 'Remove current first' : 'Select')) }}
+                                    </span>
+                                </button>
                             </div>
+                            <p v-else class="mt-3 text-xs text-[#64748B]">No active claimed vouchers yet.</p>
+                            <Link :href="route('buyer.vouchers', { tab: 'browse' })" class="mt-3 inline-flex text-xs font-bold text-[#087F8C] hover:underline">Claim vouchers</Link>
 
                             <p
                                 v-if="voucherError"

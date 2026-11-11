@@ -468,7 +468,6 @@ export default {
       {
         label: 'Financials & Comms',
         items: [
-          { path: '/payments/distributions', label: 'Payment Distribution', key: 'payment-distribution' },
           { path: '/sorting-center/payouts', label: 'Rider Payouts', key: 'payouts' },
           { path: '/sorting-center/delivery-reports', label: 'Delivery Reports', key: 'reports' },
           { path: '/sorting-center/messages', label: 'Messages', key: 'messages' },

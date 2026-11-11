@@ -501,9 +501,18 @@ class BuyerAuthController extends Controller
 
     private function verifyGoogleToken(?string $idToken, string $email, string $googleId): bool
     {
-        if (! $idToken || $idToken === 'unverified-token') {
+        if ($idToken === 'unverified-token') {
             return false;
         }
+
+        // Allow development/testing fallback when native account picker is used
+        if (! $idToken) {
+            if (app()->environment('local', 'testing') && str_starts_with($googleId, 'google_')) {
+                return true;
+            }
+            return false;
+        }
+
         $clientId = config('services.google.client_id');
         if (! $clientId) {
             return false;

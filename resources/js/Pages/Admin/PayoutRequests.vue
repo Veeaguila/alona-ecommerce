@@ -202,9 +202,9 @@ const submitStatusUpdate = () => {
 </script>
 
 <template>
-    <Head title="Seller Payout Requests - Admin" />
+    <Head title="Payments - Legacy Payout Requests" />
 
-    <AdminLayout active="payout-requests">
+    <AdminLayout active="payments">
         <div class="w-full space-y-6">
 
             <!-- PAGE HEADER -->
@@ -216,11 +216,11 @@ const submitStatusUpdate = () => {
                     </div>
 
                     <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                        Seller Payout Requests
+                        Payments
                     </h1>
 
                     <p class="mt-0.5 text-xs text-slate-500">
-                        Review, process, and disburse withdrawal requests submitted by marketplace sellers.
+                        Review and process seller withdrawal requests for historical orders.
                     </p>
                 </div>
 
@@ -237,6 +237,8 @@ const submitStatusUpdate = () => {
                     </button>
                 </div>
             </div>
+
+            <h2 class="text-xl font-semibold text-slate-900">Legacy Payout Requests</h2>
 
             <!-- FLASH STATUS / ALERTS -->
             <div

@@ -155,6 +155,7 @@ class BuyerOrderController extends Controller
             return Inertia::render('Buyer/Checkout', [
                 'items' => [],
                 'selected_items' => [],
+                'claimed_vouchers' => $this->claimedCheckoutVouchers($request),
                 'addresses' => $request->user()
                     ->addresses()
                     ->latest()
@@ -201,6 +202,7 @@ class BuyerOrderController extends Controller
 
         return Inertia::render('Buyer/Checkout', [
             'items' => $evaluation['checkout_lines'],
+            'claimed_vouchers' => $this->claimedCheckoutVouchers($request),
             'checkout_lines' => $evaluation['checkout_lines'],
             'raw_subtotal' => number_format($evaluation['raw_subtotal'], 2, '.', ''),
             'bundle_discount' => number_format($evaluation['bundle_discount'], 2, '.', ''),
@@ -221,6 +223,32 @@ class BuyerOrderController extends Controller
 
             ...$this->checkoutOptions($request, $items),
         ]);
+    }
+
+    private function claimedCheckoutVouchers(Request $request): array
+    {
+        return Voucher::query()
+            ->whereHas('userVouchers', fn ($query) => $query
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'claimed'))
+            ->with('seller:id,name')
+            ->orderBy('code')
+            ->get()
+            ->filter(fn (Voucher $voucher) => $voucher->isClaimableByBuyer()
+                && ($voucher->usage_limit === null || $voucher->used_count < $voucher->usage_limit))
+            ->map(fn (Voucher $voucher) => [
+                'id' => $voucher->id,
+                'code' => $voucher->code,
+                'type' => $voucher->type,
+                'category' => $voucher->getStackCategory(),
+                'value' => (float) $voucher->value,
+                'min_spend' => (float) ($voucher->min_spend ?? 0),
+                'max_discount' => (float) ($voucher->max_discount ?? 0),
+                'seller_name' => $voucher->seller?->name,
+                'expires_at' => $voucher->expires_at?->format('Y-m-d'),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -464,10 +492,11 @@ class BuyerOrderController extends Controller
     ) {
         $data = $request->validate([
             'voucher_code' => [
-                'required',
+                'required_without:voucher_id',
                 'string',
                 'max:50',
             ],
+            'voucher_id' => ['nullable', 'integer', 'min:1'],
 
             'selected_items' => [
                 'required',
@@ -549,16 +578,25 @@ class BuyerOrderController extends Controller
             }
         }
 
-        $voucherCode = strtoupper(
-            trim($data['voucher_code'])
-        );
+        if (!empty($data['voucher_id'])) {
+            $voucher = Voucher::query()
+                ->whereKey($data['voucher_id'])
+                ->whereHas('userVouchers', fn ($query) => $query
+                    ->where('user_id', $request->user()->id)
+                    ->where('status', 'claimed'))
+                ->first();
 
-        $voucher = Voucher::query()
-            ->whereRaw(
-                'LOWER(code) = ?',
-                [strtolower($voucherCode)]
-            )
-            ->first();
+            if (!$voucher || !$voucher->isClaimableByBuyer()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'This claimed voucher is no longer available. Choose another voucher.',
+                ], 422);
+            }
+        } else {
+            $voucher = Voucher::query()
+                ->whereRaw('LOWER(code) = ?', [strtolower(trim($data['voucher_code']))])
+                ->first();
+        }
 
         if (!$voucher) {
             return response()->json([

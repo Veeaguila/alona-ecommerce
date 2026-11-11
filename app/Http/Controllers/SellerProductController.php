@@ -187,26 +187,22 @@ class SellerProductController extends Controller
                     )
             )
 
-            ->when(
-                $stockStatus !== 'All Stock',
-                function ($q) use ($stockStatus) {
-                    match ($stockStatus) {
-                        'Out of Stock' =>
-                            $q->where('stock', 0),
-
-                        'Low Stock' =>
-                            $q->whereBetween('stock', [1, 5]),
-
-                        'In Stock' =>
-                            $q->where('stock', '>', 5),
-
-                        default => $q,
-                    };
-                }
-            )
-
             ->latest()
             ->get();
+
+        // Match the product's most urgent variant status, not its aggregate stock.
+        $products = $products->filter(function ($product) use ($stockStatus) {
+            $minimum = $product->variants->isNotEmpty()
+                ? (int) $product->variants->min('stock')
+                : (int) $product->stock;
+
+            return match ($stockStatus) {
+                'Out of Stock' => $minimum === 0,
+                'Low Stock' => $minimum > 0 && $minimum <= 5,
+                'In Stock' => $minimum > 5,
+                default => true,
+            };
+        })->values();
 
         $summary = [
             'total_products' => Product::where(

@@ -626,7 +626,6 @@ const profileInitial = computed(() => {
 })
 
 const navigation = [
-    { label: 'Payment Distribution', href: '/payments/distributions', key: 'payment-distribution' },
     {
         label: 'Dashboard',
         href: route('seller.dashboard'),

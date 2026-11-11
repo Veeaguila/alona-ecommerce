@@ -116,6 +116,9 @@ const roleLabel = (role) => {
         case 'admin':
             return 'Administrator'
 
+        case 'sorting_center':
+            return 'Logistics'
+
         default:
             return role || 'Unknown'
     }
@@ -134,6 +137,9 @@ const roleColor = (role) => {
 
         case 'admin':
             return 'bg-slate-100 text-slate-700 ring-slate-600/10'
+
+        case 'sorting_center':
+            return 'bg-blue-50 text-blue-700 ring-blue-600/10'
 
         default:
             return 'bg-slate-100 text-slate-600 ring-slate-600/10'
@@ -782,12 +788,6 @@ const errors = computed(() => {
                     </p>
                 </div>
 
-                <Link
-                    :href="route('admin.dashboard')"
-                    class="inline-flex items-center self-start rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-[11px] font-bold text-[#64748B] shadow-sm transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] lg:self-auto"
-                >
-                    ← Dashboard
-                </Link>
             </div>
 
             <!-- FLASH -->
@@ -821,41 +821,34 @@ const errors = computed(() => {
             >
                 <div class="px-5 py-4">
                     <div
-                        class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
+                        class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between"
                     >
                         <div
-                            class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap"
+                            class="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_160px_160px] lg:items-end"
                         >
 
                             <!-- SEARCH -->
 
-                            <div class="relative">
-                                <svg
-                                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                >
-                                    <circle cx="11" cy="11" r="7" />
-                                    <path d="m20 20-4-4" />
-                                </svg>
+                            <label class="block min-w-0 sm:col-span-2 lg:col-span-1">
+                                <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Search</span>
 
                                 <input
                                     :value="filters.search ?? ''"
                                     type="text"
                                     placeholder="Search users..."
-                                    class="w-full rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] py-2.5 pl-9 pr-3 text-[11px] text-[#1F2937] outline-none transition placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white sm:w-64"
+                                    class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
                                     @input="updateSearch"
                                     @keyup.enter="applyFilters"
                                 />
-                            </div>
+                            </label>
 
                             <!-- ROLE -->
 
-                            <select
+                            <label class="block min-w-0">
+                                <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Role</span>
+                                <select
                                 :value="filters.role ?? 'all'"
-                                class="rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-[11px] font-medium text-[#64748B] outline-none transition focus:border-[#087F8C] focus:bg-white"
+                                class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white pr-9"
                                 @change="updateRole"
                             >
                                 <option value="all">
@@ -874,16 +867,19 @@ const errors = computed(() => {
                                     Couriers
                                 </option>
 
-                                <option value="admin">
-                                    Administrators
+                                <option value="sorting_center">
+                                    Logistics
                                 </option>
                             </select>
+                            </label>
 
                             <!-- STATUS -->
 
-                            <select
+                            <label class="block min-w-0">
+                                <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Account status</span>
+                                <select
                                 :value="filters.status ?? 'all'"
-                                class="rounded-lg border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2.5 text-[11px] font-medium text-[#64748B] outline-none transition focus:border-[#087F8C] focus:bg-white"
+                                class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white pr-9"
                                 @change="updateStatusFilter"
                             >
                                 <option value="all">
@@ -910,16 +906,8 @@ const errors = computed(() => {
                                     Rejected
                                 </option>
                             </select>
+                            </label>
 
-                            <!-- SEARCH -->
-
-                            <button
-                                type="button"
-                                class="rounded-lg bg-[#087F8C] px-4 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#066C77]"
-                                @click="applyFilters"
-                            >
-                                Search
-                            </button>
                         </div>
 
                         <!-- COUNT -->

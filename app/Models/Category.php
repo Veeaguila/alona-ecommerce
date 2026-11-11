@@ -276,8 +276,17 @@ class Category extends Model
     public function getDescendantIds(): array
     {
         $ids = [$this->id];
-        $childIds = $this->children()->pluck('id')->all();
+        $pending = $ids;
 
-        return array_values(array_unique(array_merge($ids, $childIds)));
+        while ($pending !== []) {
+            $pending = static::query()
+                ->whereIn('parent_id', $pending)
+                ->whereNotIn('id', $ids)
+                ->pluck('id')
+                ->all();
+            $ids = array_merge($ids, $pending);
+        }
+
+        return $ids;
     }
 }

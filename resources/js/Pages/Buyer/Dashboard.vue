@@ -164,6 +164,8 @@ const slugify = value => {
 const formatPromotionValue = promotion => {
     if (!promotion) return ''
 
+    if (promotion.type === 'free_shipping') return 'Free Shipping'
+
     const value = Number(promotion.value ?? 0)
 
     return promotion.type === 'percentage'
@@ -203,7 +205,6 @@ const promotionDaysLeft = expiresAt => {
 }
 
 const claimingPromotionId = ref(null)
-const copiedPromotionCode = ref(null)
 
 const claimPromotion = voucherId => {
     if (props.isGuest) {
@@ -222,15 +223,6 @@ const claimPromotion = voucherId => {
             },
         }
     )
-}
-
-const copyPromotionCode = code => {
-    if (!code) return
-    navigator.clipboard?.writeText(code)
-    copiedPromotionCode.value = code
-    setTimeout(() => {
-        copiedPromotionCode.value = null
-    }, 2000)
 }
 
 /*
@@ -1078,15 +1070,6 @@ const flashSaleCountdown = ref({
 })
 let flashTimerInterval = null
 
-const flashSlider = ref(null)
-const scrollFlash = direction => {
-    direction === 'left' ? flashSlider.value?.previous() : flashSlider.value?.next()
-}
-
-const bundleSlider = ref(null)
-const nextBundle = () => bundleSlider.value?.next()
-const prevBundle = () => bundleSlider.value?.previous()
-
 const tickFlashCountdown = () => {
     const now = new Date().getTime()
     let targetTime
@@ -1692,9 +1675,12 @@ onUnmounted(() => {
 
             <section
                 v-if="(flashSales && flashSales.length) || (bundleDeals && bundleDeals.length)"
-                class="alona-reveal border-y border-amber-100/80 bg-[#FFFDF9]"
+                class="alona-reveal relative overflow-hidden bg-[#F4B942]"
             >
-                <div class="mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
+                <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/20"></div>
+                <div aria-hidden="true" class="pointer-events-none absolute -bottom-28 left-[45%] h-64 w-64 rounded-full bg-[#087F8C]/10"></div>
+
+                <div class="relative mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
                     <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8 xl:gap-10">
 
                         <!-- ==============================================
@@ -1705,7 +1691,7 @@ onUnmounted(() => {
                             <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                        <span class="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
                                         <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#087F8C]">
                                             Limited Time
                                         </p>
@@ -1713,7 +1699,7 @@ onUnmounted(() => {
 
                                     <div class="mt-1 flex flex-wrap items-center gap-2">
                                         <div class="flex items-center gap-1">
-                                            <span class="text-base sm:text-lg">⚡</span>
+                                            <Icon name="bolt" class="h-5 w-5 shrink-0 text-[#087F8C]" />
                                             <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
                                                 Flash Sales
                                             </h2>
@@ -1733,43 +1719,14 @@ onUnmounted(() => {
                                     </div>
                                 </div>
 
-                                <!-- Controls & See All -->
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <div class="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            title="Previous products"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
-                                            @click="scrollFlash('left')"
-                                        >
-                                            ‹
-                                        </button>
-                                        <button
-                                            type="button"
-                                            title="Next products"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
-                                            @click="scrollFlash('right')"
-                                        >
-                                            ›
-                                        </button>
-                                    </div>
-
-                                    <Link
-                                        :href="safeRoute('buyer.products')"
-                                        class="hidden text-[11px] font-bold text-[#087F8C] transition hover:text-[#066B76] sm:inline"
-                                    >
-                                        See all →
-                                    </Link>
-                                </div>
                             </div>
 
-                            <p class="mt-0.5 text-[11px] text-[#64748B] truncate">
+                            <p class="mt-0.5 text-[11px] text-slate-700 truncate">
                                 Grab hot discounts before the timer expires. Limited quantities available!
                             </p>
 
                             <!-- 3D product card carousel -->
                             <OfferCoverflow
-                                ref="flashSlider"
                                 :items="flashSales"
                                 label="Flash sale offers"
                                 v-slot="{ item }"
@@ -1796,7 +1753,7 @@ onUnmounted(() => {
                                             v-if="item.discount_percentage > 0"
                                             class="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                         >
-                                            <span>⚡</span>
+                                            <Icon name="bolt" class="h-3 w-3" />
                                             <span>-{{ item.discount_percentage }}%</span>
                                         </span>
 
@@ -1837,7 +1794,7 @@ onUnmounted(() => {
                                                     ></div>
                                                 </div>
                                                 <div class="mt-0.5 flex items-center justify-between text-[9px] text-gray-500">
-                                                    <span class="font-bold text-amber-600">🔥 {{ item.sold_quantity }} sold</span>
+                                                    <span class="inline-flex items-center gap-0.5 font-bold text-amber-600"><Icon name="flame" class="h-3 w-3" /> {{ item.sold_quantity }} sold</span>
                                                     <span>{{ item.remaining }} left</span>
                                                 </div>
                                             </div>
@@ -1865,7 +1822,7 @@ onUnmounted(() => {
                                     </div>
 
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="text-base sm:text-lg">🎁</span>
+                                        <Icon name="gift" class="h-5 w-5 shrink-0 text-[#087F8C]" />
                                         <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
                                             Bundle Deals
                                         </h2>
@@ -1875,43 +1832,14 @@ onUnmounted(() => {
                                     </div>
                                 </div>
 
-                                <!-- Pagination / Navigation Arrows for Bundles -->
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <div v-if="bundleDeals.length > 1" class="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            title="Previous bundles"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
-                                            @click="prevBundle"
-                                        >
-                                            ‹
-                                        </button>
-                                        <button
-                                            type="button"
-                                            title="Next bundles"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 shadow-2xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] active:scale-95"
-                                            @click="nextBundle"
-                                        >
-                                            ›
-                                        </button>
-                                    </div>
-
-                                    <Link
-                                        :href="safeRoute('buyer.products')"
-                                        class="hidden text-[11px] font-bold text-[#087F8C] transition hover:text-[#066B76] sm:inline"
-                                    >
-                                        Shop bundles →
-                                    </Link>
-                                </div>
                             </div>
 
-                            <p class="mt-0.5 text-[11px] text-[#64748B] truncate">
+                            <p class="mt-0.5 text-[11px] text-slate-700 truncate">
                                 Buy multiple items from the same store and unlock instant percentage discounts at checkout!
                             </p>
 
                             <!-- 3D bundle card carousel -->
                             <OfferCoverflow
-                                ref="bundleSlider"
                                 :items="bundleDeals"
                                 label="Bundle deals"
                                 v-slot="{ item: bundle }"
@@ -1950,7 +1878,7 @@ onUnmounted(() => {
                                                     class="h-full w-full rounded object-cover"
                                                 />
                                                 <div v-else class="flex h-full items-center justify-center text-[8px] text-slate-400">
-                                                    📦
+                                                    <Icon name="package" class="h-5 w-5" />
                                                 </div>
                                             </div>
                                             <span
@@ -1968,7 +1896,7 @@ onUnmounted(() => {
                                         class="shrink-0 inline-flex items-center justify-center gap-1 rounded-lg bg-[#087F8C] px-3 py-1.5 text-[11px] font-bold text-white shadow-2xs transition hover:bg-[#066B76] active:scale-95"
                                     >
                                         <span>View Store</span>
-                                        <span>→</span>
+                                        <Icon name="arrow-right" class="h-3 w-3" />
                                     </Link>
                                 </div>
                             </OfferCoverflow>
@@ -2216,12 +2144,12 @@ onUnmounted(() => {
 
                     <div
                         v-if="props.promotions.length"
-                        class="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                     >
                         <div
                             v-for="promotion in props.promotions"
                             :key="promotion.id"
-                            class="group relative flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#E5E7EB] bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
+                            class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
                         >
                             <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#E8F7F6]/60"></div>
 
@@ -2257,30 +2185,14 @@ onUnmounted(() => {
                                 </div>
 
                                 <!-- VALUE & MIN SPEND -->
-                                <div class="relative mt-4">
-                                    <p class="text-2xl font-black tracking-tight text-[#087F8C]">
+                                <div class="relative mt-2">
+                                    <p class="text-lg font-black tracking-tight text-[#087F8C]">
                                         {{ formatPromotionValue(promotion) }}
                                     </p>
 
                                     <p class="mt-1 text-xs text-[#64748B]">
                                         {{ Number(promotion.min_spend ?? 0) > 0 ? `Min. spend ₱${Number(promotion.min_spend).toLocaleString('en-PH')}` : 'No minimum spend' }}
                                     </p>
-                                </div>
-
-                                <!-- VOUCHER CODE BOX -->
-                                <div class="relative mt-3 flex items-center justify-between gap-2 rounded-xl border border-dashed border-[#087F8C]/30 bg-[#F8FAF9] px-3 py-2">
-                                    <span class="truncate font-mono text-xs font-black tracking-wider text-gray-900">
-                                        {{ promotion.code }}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        class="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-extrabold transition"
-                                        :class="copiedPromotionCode === promotion.code ? 'bg-[#16A34A] text-white' : 'bg-[#087F8C] text-white hover:bg-[#16A6A0]'"
-                                        @click="copyPromotionCode(promotion.code)"
-                                    >
-                                        {{ copiedPromotionCode === promotion.code ? 'Copied!' : 'Copy' }}
-                                    </button>
                                 </div>
 
                                 <!-- EXPIRY INFO -->
@@ -2293,21 +2205,21 @@ onUnmounted(() => {
                             </div>
 
                             <!-- CLAIM ACTION BUTTON -->
-                            <div class="relative mt-4 pt-3 border-t border-[#F1F5F9]">
+                            <div class="relative mt-3 pt-2 border-t border-[#F1F5F9]">
                                 <button
                                     v-if="promotion.is_claimed"
                                     type="button"
                                     disabled
-                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#DCFCE7] py-2.5 text-xs font-extrabold text-[#16A34A] cursor-default shadow-sm"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#DCFCE7] py-2 text-xs font-extrabold text-[#16A34A] cursor-default shadow-sm"
                                 >
-                                    <span>✓</span>
-                                    <span>Claimed to Your Account</span>
+                                    <Icon name="check" class="h-4 w-4" />
+                                    <span>Claimed</span>
                                 </button>
                                 <button
                                     v-else
                                     type="button"
                                     :disabled="claimingPromotionId === promotion.id"
-                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#087F8C] py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#087F8C] py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
                                     @click="claimPromotion(promotion.id)"
                                 >
                                     <span><Icon name="ticket" class="h-4 w-4" /></span>

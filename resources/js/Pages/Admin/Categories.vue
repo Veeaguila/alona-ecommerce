@@ -130,44 +130,43 @@ const deleteCategory = (cat) => {
             </div>
 
             <!-- Filters -->
-            <div class="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-                <div class="min-w-[240px] flex-1">
+            <div class="mt-6 grid items-end gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_200px_160px]">
+                <label class="block min-w-0 sm:col-span-2 lg:col-span-1">
+                    <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Search</span>
                     <input
                         v-model="search"
                         type="text"
                         placeholder="Search categories by name or slug..."
-                        class="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
+                        class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3.5 py-2 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
                         @keyup.enter="applyFilters"
                     />
-                </div>
+                </label>
 
+                <label class="block min-w-0">
+                    <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Category level</span>
                 <select
                     v-model="type"
-                    class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                    class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] py-2 pl-3.5 pr-9 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
                     @change="applyFilters"
                 >
                     <option value="all">All Levels</option>
                     <option value="root">Top-Level Categories</option>
                     <option value="sub">Subcategories</option>
                 </select>
+                </label>
 
+                <label class="block min-w-0">
+                    <span class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Status</span>
                 <select
                     v-model="status"
-                    class="rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] px-3 py-2 text-xs text-[#1F2937] outline-none focus:border-[#087F8C]"
+                    class="h-9 w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] py-2 pl-3.5 pr-9 text-xs text-[#1F2937] outline-none transition focus:border-[#087F8C] focus:bg-white"
                     @change="applyFilters"
                 >
                     <option value="all">All Statuses</option>
                     <option value="active">Active Only</option>
                     <option value="inactive">Inactive Only</option>
                 </select>
-
-                <button
-                    type="button"
-                    class="rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#066D78]"
-                    @click="applyFilters"
-                >
-                    Filter
-                </button>
+                </label>
             </div>
 
             <!-- Categories Table -->

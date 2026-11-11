@@ -13,6 +13,7 @@ use App\Models\UserVoucher;
 use App\Models\Voucher;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class BuyerVouchersTest extends TestCase
@@ -26,6 +27,98 @@ class BuyerVouchersTest extends TestCase
     protected Product $productA1;
     protected Product $productA2;
     protected Product $productB;
+
+    public function test_claimed_voucher_can_be_selected_without_typing_a_code(): void
+    {
+        $item = CartItem::create(['user_id' => $this->buyer->id, 'product_id' => $this->productA1->id, 'quantity' => 2]);
+        $voucher = Voucher::create([
+            'code' => 'SELECT50', 'is_platform' => true, 'type' => 'fixed',
+            'value' => 50, 'min_spend' => 300, 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->buyer)->post(route('buyer.vouchers.claim', $voucher))
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('buyer.checkout', ['selected_items' => [$item->id]]))
+            ->assertInertia(fn (Assert $page) => $page->component('Buyer/Checkout')
+                ->has('claimed_vouchers', 1)
+                ->where('claimed_vouchers.0.id', $voucher->id)
+                ->where('claimed_vouchers.0.category', 'platform'));
+
+        $this->postJson(route('buyer.vouchers.validate'), [
+            'voucher_id' => $voucher->id, 'selected_items' => [$item->id],
+        ])->assertOk()->assertJson([
+            'valid' => true,
+            'voucher' => ['id' => $voucher->id, 'code' => 'SELECT50', 'discount' => 50],
+        ]);
+
+        $this->post(route('buyer.orders.store'), [
+            'shipping_address' => '123 Coastal Road, Tagbilaran City, Bohol',
+            'payment_method' => 'cod', 'shipping_method' => 'standard',
+            'selected_items' => [$item->id], 'voucher_codes' => ['SELECT50'],
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('user_vouchers', [
+            'user_id' => $this->buyer->id, 'voucher_id' => $voucher->id, 'status' => 'used',
+        ]);
+        $this->assertEquals(50, (float) Order::latest('id')->firstOrFail()->discount);
+    }
+
+    public function test_checkout_only_lists_own_active_claimed_vouchers(): void
+    {
+        $other = User::factory()->create(['usertype' => 'buyer', 'status' => 'approved']);
+        $cases = [
+            'AVAILABLE' => [],
+            'UNCLAIMED' => [],
+            'OTHERBUYER' => [],
+            'USED' => [],
+            'EXPIREDCLAIM' => [],
+            'INACTIVE' => ['is_active' => false],
+            'ENDED' => ['ended_at' => now()],
+            'EXPIRED' => ['expires_at' => now()->subDay()],
+            'FUTURE' => ['starts_at' => now()->addDay()],
+            'EXHAUSTED' => ['usage_limit' => 1, 'used_count' => 1],
+            'ZEROQUOTA' => ['usage_limit' => 0],
+            'CODEONLY' => ['display_mode' => 'code_only'],
+        ];
+        foreach ($cases as $code => $attributes) {
+            $voucher = Voucher::create(array_merge([
+                'code' => $code, 'type' => 'fixed', 'value' => 10, 'is_active' => true,
+            ], $attributes));
+            if ($code === 'UNCLAIMED') continue;
+            $claim = [
+                'user_id' => $code === 'OTHERBUYER' ? $other->id : $this->buyer->id,
+                'voucher_id' => $voucher->id,
+                'status' => match ($code) { 'USED' => 'used', 'EXPIREDCLAIM' => 'expired', default => 'claimed' },
+            ];
+            UserVoucher::create($claim);
+        }
+
+        $this->actingAs($this->buyer)->get(route('buyer.checkout'))
+            ->assertInertia(fn (Assert $page) => $page->has('claimed_vouchers', 1)
+                ->where('claimed_vouchers.0.code', 'AVAILABLE'));
+    }
+
+    public function test_selecting_voucher_requires_an_active_claim_owned_by_the_buyer(): void
+    {
+        $item = CartItem::create(['user_id' => $this->buyer->id, 'product_id' => $this->productA1->id, 'quantity' => 2]);
+        $voucher = Voucher::create(['code' => 'OWNED10', 'type' => 'fixed', 'value' => 10, 'is_active' => true]);
+        $selection = ['voucher_id' => $voucher->id, 'selected_items' => [$item->id]];
+        $this->actingAs($this->buyer)->postJson(route('buyer.vouchers.validate'), $selection)->assertUnprocessable();
+        $claim = UserVoucher::create(['user_id' => $this->sellerB->id, 'voucher_id' => $voucher->id, 'status' => 'claimed']);
+        $this->postJson(route('buyer.vouchers.validate'), $selection)->assertUnprocessable();
+        $claim->update(['user_id' => $this->buyer->id, 'status' => 'used']);
+        $this->postJson(route('buyer.vouchers.validate'), $selection)->assertUnprocessable();
+        $claim->update(['status' => 'claimed']);
+        $voucher->update(['expires_at' => now()->subDay()]);
+        $this->postJson(route('buyer.vouchers.validate'), $selection)->assertUnprocessable();
+        $voucher->update(['expires_at' => null, 'min_spend' => 500]);
+        $this->postJson(route('buyer.vouchers.validate'), $selection)->assertUnprocessable()
+            ->assertJsonPath('valid', false);
+        $voucher->update(['min_spend' => 0]);
+        $this->postJson(route('buyer.vouchers.validate'), $selection)->assertOk()->assertJsonPath('valid', true);
+        $this->postJson(route('buyer.vouchers.validate'), $selection + ['applied_codes' => ['OWNED10']])
+            ->assertUnprocessable()->assertJsonPath('message', 'This voucher is already applied.');
+    }
 
     protected function setUp(): void
     {

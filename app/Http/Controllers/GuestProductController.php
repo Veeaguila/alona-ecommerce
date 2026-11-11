@@ -18,8 +18,11 @@ class GuestProductController extends Controller
         }
         $search = trim((string) $request->input('search', ''));
         $category = $request->input('category', 'all');
-        $maxPrice = $request->input('max_price', 5000);
+        $maxPrice = $request->input('max_price');
         $sort = $request->input('sort', 'featured');
+        $categoryIds = $category !== 'all'
+            ? (Category::where('slug', $category)->first()?->getDescendantIds() ?? [])
+            : [];
 
         $products = Product::query()
             ->with('category:id,name,slug')
@@ -36,12 +39,7 @@ class GuestProductController extends Controller
 
             ->when(
                 $category !== 'all',
-                fn ($query) => $query->whereHas(
-                    'category',
-                    fn ($categoryQuery) =>
-                        $categoryQuery->where('slug', $category)
-                            ->orWhereHas('parent', fn ($pq) => $pq->where('slug', $category))
-                )
+                fn ($query) => $query->whereIn('category_id', $categoryIds)
             )
 
             ->when(
@@ -101,7 +99,7 @@ class GuestProductController extends Controller
             'filters' => [
                 'search' => $search,
                 'category' => $category,
-                'max_price' => (int) $maxPrice,
+                'max_price' => is_numeric($maxPrice) ? (float) $maxPrice : null,
                 'sort' => $sort,
             ],
         ]);

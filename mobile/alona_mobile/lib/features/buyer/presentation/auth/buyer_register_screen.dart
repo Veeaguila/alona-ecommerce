@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -367,7 +368,10 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
         // Native channel not registered
       }
 
-      final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      final googleSignIn = GoogleSignIn(
+        serverClientId: ApiConfig.googleServerClientId,
+        scopes: ['email', 'profile'],
+      );
       await googleSignIn.signOut().catchError((_) => null);
 
       GoogleSignInAccount? account;

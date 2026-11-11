@@ -42,8 +42,8 @@ const totalVariantStock = computed(() => {
     )
 })
 
-const stockStatus = computed(() => {
-    const stock = Number(form.stock || 0)
+const variantStockStatus = quantity => {
+    const stock = Number(quantity || 0)
 
     if (stock === 0) {
         return {
@@ -66,7 +66,11 @@ const stockStatus = computed(() => {
         class: 'border-[#BBE7D3] bg-[#ECFDF5] text-[#16845A]',
         dot: 'bg-[#22A06B]',
     }
-})
+}
+
+const stockStatus = computed(() => variantStockStatus(hasVariants.value
+    ? Math.min(...form.variants.map(variant => Number(variant.stock || 0)))
+    : form.stock))
 
 const productImage = computed(() => {
     if (!product.value.image_path) {
@@ -632,7 +636,7 @@ const formatDate = (dateString) => {
                                                 <p
                                                     class="mt-0.5 text-xs text-[#64748B]"
                                                 >
-                                                    Update stock for each variant.
+                                                    Update stock for each variant. Low Stock means 1–5 units; Out of Stock means 0.
                                                 </p>
                                             </div>
                                         </div>
@@ -707,6 +711,7 @@ const formatDate = (dateString) => {
                                                 </td>
 
                                                 <td class="px-5 py-4">
+                                                    <span class="mb-2 inline-flex rounded-full border px-2 py-1 text-[10px] font-bold" :class="variantStockStatus(variant.stock).class">{{ variantStockStatus(variant.stock).label }}</span>
                                                     <div class="flex items-center gap-2">
                                                         <div class="max-w-[130px]">
                                                             <input
@@ -773,6 +778,7 @@ const formatDate = (dateString) => {
                                                 >
                                                     Variant {{ index + 1 }}
                                                 </p>
+                                                <span class="mt-1 inline-flex rounded-full border px-2 py-1 text-[10px] font-bold" :class="variantStockStatus(variant.stock).class">{{ variantStockStatus(variant.stock).label }}</span>
 
                                                 <p
                                                     class="mt-1 truncate text-sm font-bold text-[#1F2937]"

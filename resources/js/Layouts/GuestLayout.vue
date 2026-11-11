@@ -351,18 +351,10 @@ onUnmounted(() => {
                     <template v-else>
                         <button
                             type="button"
-                            class="inline-flex h-9 sm:h-10 items-center rounded-xl px-3 sm:px-3.5 text-xs sm:text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6]"
+                            class="inline-flex h-9 sm:h-10 items-center rounded-xl bg-[#087F8C] px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold text-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
                             @click="openAuthModal('login')"
                         >
-                            Log in
-                        </button>
-
-                        <button
-                            type="button"
-                            class="inline-flex h-9 sm:h-10 items-center rounded-xl bg-[#087F8C] px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold text-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:bg-[#066B76] hover:shadow-md"
-                            @click="openAuthModal('register')"
-                        >
-                            Sign Up
+                            Sign in
                         </button>
                     </template>
                 </div>
@@ -537,25 +529,13 @@ onUnmounted(() => {
 
                             <!-- GUEST -->
                             <template v-else>
-                                <div class="grid grid-cols-2 gap-2">
-
-                                    <button
-                                        type="button"
-                                        class="flex h-11 w-full items-center justify-center rounded-xl border border-[#E5E7EB] px-4 text-sm font-extrabold text-[#087F8C] transition duration-200 hover:bg-[#E8F7F6] active:scale-[0.98]"
-                                        @click="openAuthModal('login')"
-                                    >
-                                        Log in
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
-                                        @click="openAuthModal('register')"
-                                    >
-                                        Sign Up
-                                    </button>
-
-                                </div>
+                                <button
+                                    type="button"
+                                    class="flex h-11 w-full items-center justify-center rounded-xl bg-[#087F8C] px-4 text-sm font-extrabold text-white transition duration-200 hover:bg-[#066B76] active:scale-[0.98]"
+                                    @click="openAuthModal('login')"
+                                >
+                                    Sign in
+                                </button>
                             </template>
                         </div>
 

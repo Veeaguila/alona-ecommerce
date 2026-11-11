@@ -15,7 +15,7 @@ class AdminUserController extends Controller
     public function index(Request $request)
     {
         $query = User::query()
-            ->whereIn('usertype', ['buyer', 'seller', 'rider', 'admin']);
+            ->whereIn('usertype', ['buyer', 'seller', 'rider', 'sorting_center']);
 
         /*
         |--------------------------------------------------------------------------
@@ -74,7 +74,7 @@ class AdminUserController extends Controller
         return Inertia::render('Admin/Users', [
             'title' => 'Users',
             'eyebrow' => 'User management',
-            'description' => 'Review buyers, sellers, couriers, and administrators and manage their marketplace access.',
+            'description' => 'Review buyers, sellers, couriers, and logistics accounts and manage their marketplace access.',
             'active' => 'users',
 
             'users' => $users,
@@ -93,7 +93,7 @@ class AdminUserController extends Controller
     public function show(User $user)
     {
         abort_unless(
-            in_array($user->usertype, ['buyer', 'seller', 'rider', 'admin'], true),
+            in_array($user->usertype, ['buyer', 'seller', 'rider', 'admin', 'sorting_center'], true),
             404
         );
 
@@ -146,7 +146,7 @@ class AdminUserController extends Controller
         User $user
     ): RedirectResponse {
         abort_unless(
-            in_array($user->usertype, ['buyer', 'seller', 'rider', 'admin'], true),
+            in_array($user->usertype, ['buyer', 'seller', 'rider', 'admin', 'sorting_center'], true),
             404
         );
 

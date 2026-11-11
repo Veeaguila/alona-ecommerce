@@ -2,11 +2,28 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
-  // Configure the target explicitly; opening the app must not target production.
-  static const String fallbackBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://shopalona.online',
-  );
+  static const String liveProductionUrl = 'https://shopalona.online';
+  static const String googleServerClientId =
+      '205454384304-bfdpb445o92v968jlgf3jesi4hvoc280.apps.googleusercontent.com';
+
+  /// Automatically resolves the correct backend URL:
+  /// - In Release mode (Production APK/Live): Always connects to https://shopalona.online
+  /// - In Debug mode (Development): Connects to local dev server (10.0.2.2:8000 for Android, 127.0.0.1:8000 for Desktop/Web)
+  static String get defaultBaseUrl {
+    const fromEnv = String.fromEnvironment('API_BASE_URL');
+    if (fromEnv.isNotEmpty) return fromEnv;
+
+    if (kReleaseMode) {
+      return liveProductionUrl;
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000';
+    }
+    return 'http://127.0.0.1:8000';
+  }
+
+  static const String fallbackBaseUrl = liveProductionUrl;
   static String _baseUrl = fallbackBaseUrl;
 
   static String get baseUrl => _baseUrl;
@@ -17,13 +34,34 @@ class ApiConfig {
     if (cleaned.endsWith('/api')) {
       cleaned = cleaned.substring(0, cleaned.length - 4);
     }
+    // On Android debug emulator, translate 127.0.0.1/localhost to 10.0.2.2
+    if (!kReleaseMode && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (cleaned.contains('127.0.0.1:8000')) {
+        cleaned = cleaned.replaceAll('127.0.0.1:8000', '10.0.2.2:8000');
+      } else if (cleaned.contains('localhost:8000')) {
+        cleaned = cleaned.replaceAll('localhost:8000', '10.0.2.2:8000');
+      }
+    }
     return cleaned;
   }
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('custom_base_url');
-    final target = (saved != null && saved.trim().isNotEmpty) ? saved : fallbackBaseUrl;
+
+    String target;
+    if (kReleaseMode) {
+      // In live release mode, default to official live production URL
+      target = (saved != null && saved.trim().isNotEmpty && !saved.contains('127.0.0.1') && !saved.contains('10.0.2.2'))
+          ? saved
+          : liveProductionUrl;
+    } else {
+      // In debug mode, default to local development server unless custom specified
+      target = (saved != null && saved.trim().isNotEmpty && saved != liveProductionUrl)
+          ? saved
+          : defaultBaseUrl;
+    }
+
     _baseUrl = _cleanBaseUrl(target);
   }
 

@@ -66,22 +66,20 @@ class BuyerCategoryController extends Controller
         $selectedSubSlug = trim((string) $request->input('subcategory', ''));
 
         // Determine target category IDs for filtering products & stores
-        $targetCategoryIds = [$category->id];
+        $targetCategoryIds = $category->getDescendantIds();
 
         if ($selectedSubSlug !== '') {
             $selectedSub = Category::where('slug', $selectedSubSlug)
-                ->where('parent_id', $category->id)
+                ->whereIn('id', $targetCategoryIds)
+                ->where('id', '!=', $category->id)
                 ->where('is_active', true)
                 ->first();
 
             if ($selectedSub) {
-                $targetCategoryIds = [$selectedSub->id];
+                $targetCategoryIds = $selectedSub->getDescendantIds();
             } else {
                 $selectedSubSlug = '';
             }
-        } elseif ($category->isRoot()) {
-            // Include root category products and all active subcategory products
-            $targetCategoryIds = $category->getDescendantIds();
         }
 
         // Subquery for actual sold count per product from order items (excluding cancelled)

@@ -75,6 +75,42 @@ class SellerInventoryTest extends TestCase
         ];
     }
 
+    public function test_stock_monitoring_filters_by_the_lowest_variant_and_keeps_all_variants(): void
+    {
+        $low = $this->createProduct(['stock' => 85]);
+        $empty = $this->createProduct(['stock' => 80]);
+        $healthy = $this->createProduct(['stock' => 20]);
+        $plainLow = $this->createProduct(['stock' => 3]);
+        foreach ([[$low, [80, 5]], [$empty, [80, 0]], [$healthy, [6, 14]]] as [$product, $stocks]) {
+            foreach ($stocks as $index => $stock) {
+                ProductVariant::create([
+                    'product_id' => $product->id, 'color' => 'Option '.$index,
+                    'size' => 'Default', 'stock' => $stock,
+                ]);
+            }
+        }
+        $this->createProduct(['seller_id' => $this->buyer->id, 'stock' => 2]);
+
+        foreach ([
+            'Low Stock' => [$low->id, $plainLow->id],
+            'Out of Stock' => [$empty->id],
+            'In Stock' => [$healthy->id],
+            'All Stock' => [$low->id, $empty->id, $healthy->id, $plainLow->id],
+        ] as $status => $expected) {
+            $this->actingAs($this->seller)->get(route('seller.stock-monitoring', ['stock_status' => $status]))
+                ->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                    ->component('Seller/StockMonitoring')
+                    ->has('products', count($expected))
+                    ->where('products', function ($products) use ($expected, $low) {
+                        $rows = collect($products);
+                        $ids = $rows->pluck('id')->sort()->values()->all();
+                        sort($expected);
+                        $lowRow = $rows->firstWhere('id', $low->id);
+                        return $ids === $expected && (! $lowRow || count($lowRow['variants']) === 2);
+                    }));
+        }
+    }
+
     /**
      * SEL-INV-001: Stock deducted when COD order is placed
      */

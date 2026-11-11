@@ -1,5 +1,6 @@
 <script setup>
 import Icon from '@/Components/Icon.vue'
+import { ref, onMounted, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 
@@ -23,7 +24,7 @@ const props = defineProps({
         default: () => ({
             search: '',
             category: 'all',
-            max_price: 5000,
+            max_price: null,
             sort: 'featured',
         }),
     },
@@ -70,18 +71,32 @@ const formatPrice = price => {
 |--------------------------------------------------------------------------
 */
 
+const categoryBar = ref(null)
+const revealSelectedCategory = () => {
+    const bar = categoryBar.value
+    const selected = bar?.querySelector('[aria-pressed="true"]')
+    if (!selected) return
+    const buttonRect = selected.getBoundingClientRect()
+    const barRect = bar.getBoundingClientRect()
+    if (buttonRect.left < barRect.left || buttonRect.right > barRect.right) {
+        bar.scrollTo({ left: bar.scrollLeft + buttonRect.left - barRect.left - (bar.clientWidth - buttonRect.width) / 2 })
+    }
+}
+onMounted(revealSelectedCategory)
+watch(() => props.filters.category, revealSelectedCategory, { flush: 'post' })
+
 const changeCategory = category => {
     router.get(
         route('guest.products'),
         {
             search: props.filters.search || undefined,
             category: category || 'all',
-            max_price: props.filters.max_price ?? 5000,
+            max_price: props.filters.max_price ?? undefined,
             sort: props.filters.sort || 'featured',
         },
         {
             preserveState: true,
-            preserveScroll: false,
+            preserveScroll: true,
         }
     )
 }
@@ -106,6 +121,9 @@ const changeCategory = category => {
                 <!-- ===================================================== -->
 
                 <div
+                    ref="categoryBar"
+                    role="group"
+                    aria-label="Filter products by category"
                     class="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1"
                 >
                     <!-- ALL -->
@@ -117,6 +135,7 @@ const changeCategory = category => {
                                 ? 'border-[#087F8C] bg-[#087F8C] text-white'
                                 : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
                         "
+                        :aria-pressed="(props.filters.category || 'all') === 'all'"
                         @click="changeCategory('all')"
                     >
                         All
@@ -133,6 +152,7 @@ const changeCategory = category => {
                                 ? 'border-[#087F8C] bg-[#087F8C] text-white'
                                 : 'border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#087F8C]/40 hover:text-[#087F8C]'
                         "
+                        :aria-pressed="props.filters.category === category.slug"
                         @click="changeCategory(category.slug)"
                     >
                         {{ category.name }}

@@ -1320,7 +1320,7 @@ const breadcrumbs = computed(() => {
                         <!-- ================================================= -->
 
                         <div
-                            class="relative flex flex-col items-center justify-center gap-4 bg-[#E8F7F6] p-8"
+                            class="relative flex min-w-0 flex-col items-center justify-center gap-4 bg-[#E8F7F6] p-3 sm:p-4"
                         >
                             <!-- WISHLIST HEART BUTTON (BUY-WISH-001 & BUY-WISH-005) -->
                             <button
@@ -1349,7 +1349,7 @@ const breadcrumbs = computed(() => {
                             <!-- MAIN IMAGE -->
 
                             <div
-                                class="flex h-56 w-56 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md sm:h-64 sm:w-64"
+                                class="flex aspect-square w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md"
                             >
                                 <img
                                     v-if="activeImage"
@@ -1358,7 +1358,7 @@ const breadcrumbs = computed(() => {
                                         product.name ||
                                         'Product image'
                                     "
-                                    class="h-full w-full object-cover"
+                                    class="h-full w-full object-contain"
                                     loading="eager"
                                 />
 

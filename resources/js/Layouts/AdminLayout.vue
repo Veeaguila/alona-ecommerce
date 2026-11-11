@@ -230,7 +230,7 @@
 
                                 <!-- Payout Requests -->
                                 <svg
-                                    v-else-if="item.key === 'payout-requests'"
+                                    v-else-if="item.key === 'payments'"
                                     xmlns="http://www.w3.org/2000/svg"
                                     class="h-[18px] w-[18px] shrink-0"
                                     fill="none"
@@ -636,7 +636,6 @@ const currentDateLabel = computed(() => {
 */
 
 const navigation = [
-    { label: 'Payment Distribution', href: '/payments/distributions', key: 'payment-distribution' },
     {
         label: 'Dashboard',
         href: route('admin.dashboard'),
@@ -673,9 +672,9 @@ const navigation = [
         key: 'commission-report',
     },
     {
-        label: 'Payout Requests',
+        label: 'Payments',
         href: route('admin.payout-requests'),
-        key: 'payout-requests',
+        key: 'payments',
     },
     {
         label: 'Chat / Messaging',
@@ -743,8 +742,8 @@ const isActive = (item) => {
         case 'commission-report':
             return path.startsWith('/admin/reports/commission')
 
-        case 'payout-requests':
-            return path.startsWith('/admin/payout-requests')
+        case 'payments':
+            return path.startsWith('/payments') || path.startsWith('/admin/payout-requests')
 
         case 'messages':
             return path.startsWith('/admin/messages')

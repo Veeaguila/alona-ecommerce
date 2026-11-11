@@ -144,95 +144,26 @@ const stockTextClass = stock => {
     return 'text-[#1F2937]'
 }
 
-const variantLabel = variant => {
-    const parts = []
-
-    if (variant.color) {
-        parts.push(variant.color)
+// One row per product; the least-stocked variant determines replenishment status.
+const monitoredRows = computed(() => props.products.map(product => {
+    const variants = product.variants ?? []
+    const quantities = variants.length
+        ? variants.map(variant => Number(variant.stock ?? 0))
+        : [Number(product.stock ?? 0)]
+    return {
+        id: 'product-' + product.id,
+        productId: product.id,
+        name: product.name,
+        category: product.category?.name ?? 'Uncategorized',
+        image_path: product.image_path,
+        price: product.price,
+        sold_count: product.sold_count ?? 0,
+        variant: variants.length ? variants.length + ' variants' : 'Default',
+        stock: quantities.reduce((total, quantity) => total + quantity, 0),
+        minimumStock: Math.min(...quantities),
+        hasVariant: variants.length > 0,
     }
-
-    if (variant.size) {
-        parts.push(variant.size)
-    }
-
-    return parts.length
-        ? parts.join(' / ')
-        : 'Default'
-}
-
-/*
-|--------------------------------------------------------------------------
-| Products With Variants
-|--------------------------------------------------------------------------
-*/
-
-const monitoredRows = computed(() => {
-    const rows = []
-
-    props.products.forEach(product => {
-        const variants = product.variants ?? []
-
-        if (variants.length > 0) {
-            variants.forEach(variant => {
-                rows.push({
-                    id: `variant-${variant.id}`,
-
-                    productId: product.id,
-
-                    name: product.name,
-
-                    category:
-                        product.category?.name ??
-                        'Uncategorized',
-
-                    image_path: product.image_path,
-
-                    price: product.price,
-
-                    sold_count:
-                        product.sold_count ?? 0,
-
-                    variant: variantLabel(variant),
-
-                    stock:
-                        Number(variant.stock ?? 0),
-
-                    hasVariant: true,
-                })
-            })
-
-            return
-        }
-
-        rows.push({
-            id: `product-${product.id}`,
-
-            productId: product.id,
-
-            name: product.name,
-
-            category:
-                product.category?.name ??
-                'Uncategorized',
-
-            image_path: product.image_path,
-
-            price: product.price,
-
-            sold_count:
-                product.sold_count ?? 0,
-
-            variant: 'Default',
-
-            stock:
-                Number(product.stock ?? 0),
-
-            hasVariant: false,
-        })
-    })
-
-    return rows
-})
+}))
 
 /*
 |--------------------------------------------------------------------------
@@ -251,21 +182,21 @@ const monitoredTotalStock = computed(() => {
 
 const monitoredInStock = computed(() => {
     return monitoredRows.value.filter(
-        row => row.stock > 5
+        row => row.minimumStock > 5
     ).length
 })
 
 const monitoredLowStock = computed(() => {
     return monitoredRows.value.filter(
         row =>
-            row.stock > 0 &&
-            row.stock <= 5
+            row.minimumStock > 0 &&
+            row.minimumStock <= 5
     ).length
 })
 
 const monitoredOutOfStock = computed(() => {
     return monitoredRows.value.filter(
-        row => row.stock === 0
+        row => row.minimumStock === 0
     ).length
 })
 
@@ -346,7 +277,7 @@ const formatDate = (dateString) => {
                         <p
                             class="mt-0.5 text-xs text-slate-500"
                         >
-                            Monitor product and variant stock levels, thresholds, and replenishment needs.
+                            One row per product. Status follows the lowest variant stock; open Manage Stock for variant details.
                         </p>
                     </div>
 
@@ -715,7 +646,7 @@ const formatDate = (dateString) => {
                                     <th
                                         class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
                                     >
-                                        Variant
+                                        Variants
                                     </th>
 
                                     <th
@@ -727,7 +658,7 @@ const formatDate = (dateString) => {
                                     <th
                                         class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]"
                                     >
-                                        Stock
+                                        Total Stock
                                     </th>
 
                                     <th
@@ -831,7 +762,7 @@ const formatDate = (dateString) => {
                                     <td class="px-4 py-3">
                                         <span
                                             class="text-sm font-bold"
-                                            :class="stockTextClass(row.stock)"
+                                            :class="stockTextClass(row.minimumStock)"
                                         >
                                             {{ row.stock }}
                                         </span>
@@ -848,9 +779,9 @@ const formatDate = (dateString) => {
                                     <td class="px-4 py-3">
                                         <span
                                             class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold"
-                                            :class="getStockStatus(row.stock).class"
+                                            :class="getStockStatus(row.minimumStock).class"
                                         >
-                                            {{ getStockStatus(row.stock).label }}
+                                            {{ getStockStatus(row.minimumStock).label }}
                                         </span>
                                     </td>
 
@@ -963,9 +894,9 @@ const formatDate = (dateString) => {
 
                                         <span
                                             class="shrink-0 rounded-full border px-2 py-1 text-[9px] font-bold"
-                                            :class="getStockStatus(row.stock).class"
+                                            :class="getStockStatus(row.minimumStock).class"
                                         >
-                                            {{ getStockStatus(row.stock).label }}
+                                            {{ getStockStatus(row.minimumStock).label }}
                                         </span>
                                     </div>
 
@@ -978,7 +909,7 @@ const formatDate = (dateString) => {
                                             <p
                                                 class="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#94A3B8]"
                                             >
-                                                Variant
+                                                Variants
                                             </p>
 
                                             <p
@@ -992,12 +923,12 @@ const formatDate = (dateString) => {
                                             <p
                                                 class="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#94A3B8]"
                                             >
-                                                Stock
+                                                Total Stock
                                             </p>
 
                                             <p
                                                 class="mt-0.5 text-sm font-bold"
-                                                :class="stockTextClass(row.stock)"
+                                                :class="stockTextClass(row.minimumStock)"
                                             >
                                                 {{ row.stock }}
                                             </p>

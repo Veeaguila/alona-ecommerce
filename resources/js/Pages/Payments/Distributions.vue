@@ -1,12 +1,25 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({ role: String, summary: Object, completed_deliveries: Number, distributions: Array,
     page: Number, pages: Number, settlement_account: String, rules: Array, costs: Array, cod: Object });
 const admin = computed(() => props.role === 'admin');
 const roleTitle = computed(() => ({ admin: 'Platform', seller: 'Seller', sorting_center: 'Logistics', rider: 'Rider' }[props.role]));
 const pageState = usePage();
+const refreshing = ref(false);
+const refresh = () => {
+    if (refreshing.value) return;
+    refreshing.value = true;
+    router.reload({ onFinish: () => { refreshing.value = false; } });
+};
+const metricTone = (field) => {
+    if (['paid', 'reconciled', 'recognized_platform_revenue'].includes(field)) return 'emerald';
+    if (['pending', 'discounts'].includes(field)) return 'amber';
+    if (['collected', 'reserved'].includes(field)) return 'blue';
+    return 'teal';
+};
 const home = computed(() => ({ admin: '/admin/dashboard', seller: '/seller/dashboard', sorting_center: '/sorting-center/dashboard', rider: '/' }[props.role]));
 const metrics = computed(() => {
     const common = [['allocation', 'Allocated earnings'], ['pending', 'Pending earnings'], ['available', 'Available balance'], ['reserved', 'Reserved payouts'], ['paid', 'Completed payouts'], ['reversals', 'Reversed allocations']];
@@ -54,43 +67,67 @@ const submit = () => form.transform((data) => {
         : ['request_key', 'refund_id', 'item_id', 'component', 'liability', 'amount', 'reference', 'evidence'];
     return Object.fromEntries(keys.map(k => [k, data[k]]));
 }).post(endpoint.value, { preserveScroll: true, onSuccess: () => { panel.value = null; } });
-const rule = useForm({ shipping_method: 'standard', available: true, block_shortfall: false,
-    logistics_cost_cents: 0, logistics_margin_cents: 0, rider_cost_cents: 0, rider_minimum_cents: 0, blocked_zones: [] });
-const blockedZones = ref('');
-const loadRule = () => {
-    const saved = props.rules.find(r => r.shipping_method === rule.shipping_method);
-    for (const field of ['logistics_cost_cents', 'logistics_margin_cents', 'rider_cost_cents', 'rider_minimum_cents']) rule[field] = saved?.[field] ?? 0;
-    rule.available = saved ? Boolean(saved.available) : true;
-    rule.block_shortfall = Boolean(saved?.block_shortfall);
-    blockedZones.value = saved?.blocked_zones ? (typeof saved.blocked_zones === 'string' ? JSON.parse(saved.blocked_zones) : saved.blocked_zones).join('\n') : '';
-};
-loadRule();
 const cost = useForm({ product_id: '', cost_cents: 0, minimum_margin_cents: 0, block_shortfall: false });
 </script>
 
 <template>
-    <Head title="Payment Distribution" />
-    <main class="min-h-screen bg-slate-50 text-slate-800">
-        <header class="border-b border-teal-900/10 bg-white px-5 py-6">
+    <Head :title="admin ? 'Payments - Settlements & Payouts' : 'Payment Distribution'" />
+    <component :is="admin ? AdminLayout : 'div'" :active="admin ? 'payments' : undefined">
+    <main :class="admin ? 'settlement-admin w-full space-y-6 text-slate-800' : 'min-h-screen bg-slate-50 text-slate-800'">
+        <header v-if="admin" class="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#087F8C]">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    <span>Financial Administration</span>
+                </div>
+                <h1 class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Payments</h1>
+                <p class="mt-0.5 text-xs text-slate-500">Review allocations, reconcile funds, and process payouts for new-policy orders.</p>
+            </div>
+            <button type="button" :disabled="refreshing" @click="refresh" class="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-2 text-xs font-semibold text-[#64748B] shadow-xs transition hover:border-[#087F8C] hover:bg-[#E8F7F6] hover:text-[#087F8C] disabled:opacity-50">
+                <svg class="h-3.5 w-3.5" :class="{ 'animate-spin': refreshing }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                {{ refreshing ? 'Refreshing…' : 'Refresh List' }}
+            </button>
+        </header>
+        <header v-else class="border-b border-teal-900/10 bg-white px-5 py-6">
             <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-                <div><Link :href="home" class="text-sm font-medium text-teal-700">← Back to dashboard</Link>
-                    <h1 class="mt-3 text-2xl font-bold">Payment distribution</h1>
+                <div><Link v-if="!admin" :href="home" class="text-sm font-medium text-teal-700">← Back to dashboard</Link>
+                    <h1 class="mt-3 text-2xl font-bold">{{ admin ? 'Payments' : 'Payment distribution' }}</h1>
                     <p class="mt-1 text-sm text-slate-500">{{ roleTitle }} account · PHP · New settlement policy</p></div>
                 <div class="rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900">Product: 90% Seller / 10% Alona<br>Shipping: 70% Rider / 20% Logistics / 10% Alona</div>
             </div>
         </header>
-        <div class="mx-auto max-w-7xl space-y-6 px-5 py-6">
+        <div :class="admin ? 'w-full space-y-6' : 'mx-auto max-w-7xl space-y-6 px-5 py-6'">
+            <h2 v-if="admin" class="text-xl font-semibold">Settlements &amp; Payouts</h2>
             <p v-if="pageState.props.flash?.status" role="status" class="rounded-xl border border-teal-200 bg-teal-50 p-4">{{ pageState.props.flash.status }}</p>
-            <p class="text-sm text-slate-600">Allocations become available after verified delivery, the settlement waiting period, cleared disputes, and reconciled funding. Completed payouts require a confirmed transfer. Historical orders remain in their existing reports.</p>
-            <section aria-label="Financial overview" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <article v-for="[field, label] in metrics" :key="field" class="rounded-xl border border-slate-200 bg-white p-5">
-                    <p class="text-sm text-slate-500">{{ label }}</p><p class="mt-2 text-2xl font-semibold tabular-nums">{{ currency(summary[field]) }}</p>
+            <section aria-label="Financial overview" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <article v-for="[field, label] in metrics" :key="field" class="metric-card rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs transition hover:shadow-sm" :data-tone="metricTone(field)">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold uppercase tracking-wider text-[#64748B]">{{ label }}</p>
+                            <p class="metric-value mt-2 break-words text-2xl font-black tabular-nums">{{ currency(summary[field]) }}</p>
+                        </div>
+                        <span v-if="admin" class="metric-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <template v-if="metricTone(field) === 'emerald'"><circle cx="12" cy="12" r="9" /><path stroke-linecap="round" stroke-linejoin="round" d="m8 12 3 3 5-6" /></template>
+                                <template v-else-if="metricTone(field) === 'amber'"><circle cx="12" cy="12" r="9" /><path stroke-linecap="round" d="M12 7v5l3 2" /></template>
+                                <template v-else><rect x="3" y="5" width="18" height="14" rx="3" /><path stroke-linecap="round" d="M3 10h18M7 15h3" /></template>
+                            </svg>
+                        </span>
+                    </div>
                 </article>
             </section>
+            <div class="rounded-2xl border border-[#E5E7EB] bg-white p-5 text-xs leading-relaxed text-slate-500">
+                <p v-if="admin" class="mb-2 font-semibold text-[#087F8C]">Product: 90% Seller / 10% Alona · Shipping: 70% Rider / 20% Logistics / 10% Alona</p>
+                <p>Allocations become available after verified delivery, the settlement waiting period, cleared disputes, and reconciled funding. Completed payouts require a confirmed transfer. Historical orders remain in their existing reports.</p>
+            </div>
             <p v-if="role === 'rider' || role === 'sorting_center'" class="text-sm">Completed deliveries: <strong>{{ completed_deliveries }}</strong>. COD cash is separate from earnings.</p>
-            <section class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                <div class="border-b p-5"><h2 class="font-semibold">Orders and settlements</h2><p class="mt-1 text-sm text-slate-500">Review allocations, holds, payout history and adjustments.</p></div>
-                <p v-if="!distributions.length" class="p-10 text-center text-slate-500">No orders under this settlement policy yet.</p>
+            <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-xs">
+                <div class="border-b border-[#E5E7EB] p-5"><h2 class="font-semibold text-slate-900">Orders and settlements</h2><p class="mt-1 text-xs text-slate-500">Review allocations, holds, payout history and adjustments.</p></div>
+                <div v-if="!distributions.length" class="flex flex-col items-center px-5 py-14 text-center">
+                    <span class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" /><path stroke-linecap="round" d="M3 10h18M7 15h3" /></svg></span>
+                    <h3 class="text-sm font-semibold text-slate-900">No settlements found</h3>
+                    <p class="mt-1 text-xs text-slate-500">There are no orders under this settlement policy yet.</p>
+                </div>
                 <article v-for="order in distributions" :key="order.id" class="border-b last:border-0">
                     <button type="button" class="flex w-full flex-wrap items-center justify-between gap-3 p-5 text-left hover:bg-slate-50" :aria-expanded="expanded === order.id" @click="expanded = expanded === order.id ? null : order.id">
                         <div class="font-semibold">{{ order.order_number }}<span class="ml-3 text-xs font-normal text-slate-500">{{ order.shipping_method }} · {{ order.order_status }}</span></div>
@@ -112,16 +149,7 @@ const cost = useForm({ product_id: '', cost_cents: 0, minimum_margin_cents: 0, b
                 </article>
                 <nav v-if="pages > 1" class="flex justify-between p-4" aria-label="Pagination"><Link v-if="page > 1" :href="`?page=${page - 1}`">Previous</Link><span>{{ page }} / {{ pages }}</span><Link v-if="page < pages" :href="`?page=${page + 1}`">Next</Link></nav>
             </section>
-            <section v-if="admin" class="rounded-xl border bg-white p-5">
-                <h2 class="font-semibold">Delivery profitability controls</h2><p class="mt-1 text-sm text-slate-500">Costs and minimums are per seller shipment, in centavos (100 = ₱1). Shares stay fixed. Zone names are matched against the delivery address.</p>
-                <form class="mt-4 grid gap-4 md:grid-cols-3" @submit.prevent="rule.blocked_zones = blockedZones.split('\n').map(z => z.trim()).filter(Boolean); rule.post('/payments/profitability', { preserveScroll: true })">
-                    <label>Delivery option<select v-model="rule.shipping_method" @change="loadRule"><option>standard</option><option>express</option><option>pickup</option></select></label>
-                    <label v-for="[field, label] in [['logistics_cost_cents', 'Logistics operating cost'], ['logistics_margin_cents', 'Logistics minimum margin'], ['rider_cost_cents', 'Rider delivery cost'], ['rider_minimum_cents', 'Rider minimum net earnings']]" :key="field">{{ label }}<input v-model.number="rule[field]" type="number" min="0" step="1" required></label>
-                    <label>Unavailable zones (one per line)<textarea v-model="blockedZones" rows="3"></textarea></label>
-                    <label class="check"><input v-model="rule.available" type="checkbox"> Delivery option available</label><label class="check"><input v-model="rule.block_shortfall" type="checkbox"> Block orders below minimums</label>
-                    <div><button class="action" :disabled="rule.processing">Save controls</button><Link href="/admin/shipping-rates" class="ml-3 text-sm text-teal-700">Delivery zones and fees</Link></div><p v-for="error in rule.errors" :key="error" role="alert" class="text-red-700">{{ error }}</p>
-                </form>
-            </section>
+
             <section v-if="role === 'seller'" class="rounded-xl border bg-white p-5"><h2 class="font-semibold">Declared product costs</h2><p class="text-sm text-slate-500">Validate your selling price after the 10% commission. Enter costs in centavos.</p><form class="mt-4 grid gap-4 sm:grid-cols-3" @submit.prevent="cost.post('/payments/product-costs', { preserveScroll: true })"><label>Product ID<input v-model="cost.product_id" type="number" min="1" required></label><label>Unit cost (centavos)<input v-model.number="cost.cost_cents" type="number" min="0" required></label><label>Minimum margin (centavos)<input v-model.number="cost.minimum_margin_cents" type="number" min="0" required></label><label class="check"><input v-model="cost.block_shortfall" type="checkbox"> Block sales below minimum</label><button class="action" :disabled="cost.processing">Save declared cost</button><p v-for="error in cost.errors" :key="error" role="alert" class="text-red-700">{{ error }}</p></form><p v-for="entry in costs" :key="entry.id" class="mt-3 text-sm">Product {{ entry.product_id }} · Cost {{ entry.cost_cents }} centavos · Margin {{ entry.minimum_margin_cents }} centavos · {{ entry.block_shortfall ? 'Block shortfall' : 'Warn on shortfall' }}</p></section>
         </div>
         <div v-if="panel" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/50 p-4" @click.self="panel = null">
@@ -143,6 +171,7 @@ const cost = useForm({ product_id: '', cost_cents: 0, minimum_margin_cents: 0, b
             </section>
         </div>
     </main>
+    </component>
 </template>
 
 <style scoped>
@@ -152,4 +181,19 @@ input:not([type=checkbox]), select, textarea { display: block; width: 100%; marg
 .action { display: inline-block; border-radius: .5rem; background: #0f766e; color: white; padding: .65rem 1rem; font-size: .875rem; font-weight: 600; }
 .action:disabled { opacity: .5; cursor: wait; }
 th, td { padding-right: 1rem; }
+.settlement-admin .metric-value { color: #087f8c; }
+.settlement-admin .metric-icon { background: #e8f7f6; color: #087f8c; }
+.settlement-admin [data-tone=emerald] .metric-value { color: #059669; }
+.settlement-admin [data-tone=emerald] .metric-icon { background: #ecfdf5; color: #059669; }
+.settlement-admin [data-tone=amber] .metric-value { color: #d97706; }
+.settlement-admin [data-tone=amber] .metric-icon { background: #fffbeb; color: #d97706; }
+.settlement-admin [data-tone=blue] .metric-value { color: #2563eb; }
+.settlement-admin [data-tone=blue] .metric-icon { background: #eff6ff; color: #2563eb; }
+.settlement-admin .action { background: #087f8c; border-radius: .75rem; font-size: .75rem; transition: background .15s; }
+.settlement-admin .action:hover { background: #066775; }
+.settlement-admin input:not([type=checkbox]), .settlement-admin select, .settlement-admin textarea { border-color: #e5e7eb; border-radius: .75rem; background: #f8fafc; }
+.settlement-admin input:focus, .settlement-admin select:focus, .settlement-admin textarea:focus { outline: 2px solid #087f8c; outline-offset: 2px; }
+.settlement-admin thead { background: #f8fafc; font-size: .625rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+.settlement-admin th, .settlement-admin td { padding: .875rem 1rem; }
+.settlement-admin .action:focus-visible { outline: 2px solid #087f8c; outline-offset: 3px; }
 </style>

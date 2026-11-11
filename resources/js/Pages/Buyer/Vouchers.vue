@@ -41,7 +41,6 @@ const tabs = [
 ]
 
 const claimingId = ref(null)
-const copiedCode = ref(null)
 
 const money = value => {
     const amount = Number(value ?? 0)
@@ -68,15 +67,6 @@ const isExpiringSoon = expiresAt => {
     const now = new Date().getTime()
     const diffDays = (exp - now) / (1000 * 60 * 60 * 24)
     return diffDays >= 0 && diffDays <= 3
-}
-
-const copyCode = code => {
-    if (!code) return
-    navigator.clipboard.writeText(code)
-    copiedCode.value = code
-    setTimeout(() => {
-        copiedCode.value = null
-    }, 2000)
 }
 
 const selectTab = tabKey => {
@@ -321,14 +311,6 @@ const pagination = computed(() => {
                                 </div>
 
                                 <div class="mt-3 flex gap-2">
-                                    <button
-                                        type="button"
-                                        class="flex-1 rounded-xl border border-[#D5E4E3] bg-white py-2 text-xs font-bold text-[#087F8C] transition hover:bg-[#E8F7F6]"
-                                        @click="copyCode(item.voucher?.code)"
-                                    >
-                                        {{ copiedCode === item.voucher?.code ? 'Copied! ✓' : 'Copy Code' }}
-                                    </button>
-
                                     <Link
                                         v-if="item.status === 'claimed'"
                                         :href="route('buyer.cart')"
