@@ -86,7 +86,7 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
     final searchResults = _searchResults;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         titleSpacing: canPop ? 0 : 16,
         backgroundColor: Colors.white,

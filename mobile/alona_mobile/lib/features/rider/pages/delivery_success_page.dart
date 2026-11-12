@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/rider_theme.dart';
 
 class DeliverySuccessPage extends StatelessWidget {
   final String reference;
@@ -9,8 +10,11 @@ class DeliverySuccessPage extends StatelessWidget {
     this.returnToScanner = false,
   });
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('Delivery recorded'),
       automaticallyImplyLeading: false,
     ),
@@ -60,5 +64,5 @@ class DeliverySuccessPage extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ));
 }

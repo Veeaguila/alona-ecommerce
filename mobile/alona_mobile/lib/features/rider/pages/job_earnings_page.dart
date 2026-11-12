@@ -170,9 +170,12 @@ class _JobEarningsPageState extends State<JobEarningsPage>
     ],
   );
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: RiderColors.background,
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
+    backgroundColor: RiderColors.portalBackground,
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('My Earnings'),
       actions: [
         IconButton(
@@ -206,7 +209,7 @@ class _JobEarningsPageState extends State<JobEarningsPage>
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: RiderColors.teal,
+                    gradient: RiderColors.headerGradient,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -346,7 +349,7 @@ class _JobEarningsPageState extends State<JobEarningsPage>
               ),
             ],
           ),
-  );
+  ));
 }
 
 class _ReceivingDialog extends StatefulWidget {

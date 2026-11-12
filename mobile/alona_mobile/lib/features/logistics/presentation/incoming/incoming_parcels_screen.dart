@@ -104,12 +104,25 @@ class _IncomingParcelsScreenState extends State<IncomingParcelsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const LogisticsBanner(
+              icon: Icons.qr_code_scanner_rounded,
+              title: 'Parcel check-in',
+              subtitle: 'Register arriving parcels into the sorting workflow.',
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.035),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,126 +182,145 @@ class _IncomingParcelsScreenState extends State<IncomingParcelsScreen> {
             const SizedBox(height: 16),
 
             if (_errorMessage != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: AppColors.error,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: GoogleFonts.figtree(
-                          color: AppColors.error,
-                          fontSize: 13,
+              FadeSlideIn(
+                key: ValueKey('error-$_errorMessage'),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.error,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: GoogleFonts.figtree(
+                            color: AppColors.error,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
             if (_successMessage != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      color: AppColors.success,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _successMessage!,
-                        style: GoogleFonts.figtree(
-                          color: AppColors.success,
-                          fontSize: 13,
+              FadeSlideIn(
+                key: ValueKey('success-$_successMessage'),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _successMessage!,
+                          style: GoogleFonts.figtree(
+                            color: AppColors.success,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
             if (_foundParcel != null) ...[
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary, width: 1.5),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Parcel Found',
-                          style: GoogleFonts.figtree(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        StatusBadge(status: _foundParcel!.status),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    _infoRow('Order ID', _foundParcel!.orderId),
-                    const SizedBox(height: 8),
-                    _infoRow('Destination', _foundParcel!.fullDeliveryAddress),
-                    if (_foundParcel!.collectionAddress != null) ...[
-                      const SizedBox(height: 8),
-                      _infoRow(
-                        'Origin / Pickup',
-                        _foundParcel!.collectionAddress!,
+              FadeSlideIn(
+                key: ValueKey('parcel-${_foundParcel!.orderId}'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.primary, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    if (_foundParcel!.hubRoute != null)
-                      AlonaButton(
-                        text: 'Receive at the recorded hub',
-                        onPressed: _isMarking
-                            ? null
-                            : () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const HubWorkspaceScreen(),
-                                ),
-                              ),
-                      )
-                    else
-                      AlonaButton(
-                        text: 'Confirm Parcel Arrived at Center',
-                        icon: Icons.check_circle_outline,
-                        isLoading: _isMarking,
-                        onPressed:
-                            _isLoading ||
-                                _isMarking ||
-                                _foundParcel!.status != 'PICKED_UP'
-                            ? null
-                            : _markArrived,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Parcel Found',
+                            style: GoogleFonts.figtree(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          StatusBadge(status: _foundParcel!.status),
+                        ],
                       ),
-                  ],
+                      const Divider(height: 20),
+                      _infoRow('Order ID', _foundParcel!.orderId),
+                      const SizedBox(height: 8),
+                      _infoRow(
+                        'Destination',
+                        _foundParcel!.fullDeliveryAddress,
+                      ),
+                      if (_foundParcel!.collectionAddress != null) ...[
+                        const SizedBox(height: 8),
+                        _infoRow(
+                          'Origin / Pickup',
+                          _foundParcel!.collectionAddress!,
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      if (_foundParcel!.hubRoute != null)
+                        AlonaButton(
+                          text: 'Receive at the recorded hub',
+                          onPressed: _isMarking
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HubWorkspaceScreen(),
+                                  ),
+                                ),
+                        )
+                      else
+                        AlonaButton(
+                          text: 'Confirm Parcel Arrived at Center',
+                          icon: Icons.check_circle_outline,
+                          isLoading: _isMarking,
+                          onPressed:
+                              _isLoading ||
+                                  _isMarking ||
+                                  _foundParcel!.status != 'PICKED_UP'
+                              ? null
+                              : _markArrived,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],

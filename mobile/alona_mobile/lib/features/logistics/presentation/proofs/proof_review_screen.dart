@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/features/logistics/presentation/workflow_widgets.dart';
 import 'package:alona_mobile/core/utils/date_formatter.dart';
 import 'package:alona_mobile/shared/widgets/alona_text_field.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
@@ -127,76 +128,79 @@ class _ProofReviewScreenState extends State<ProofReviewScreen> {
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final proof = _proofs[index];
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryLight,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      proof.type,
-                                      style: GoogleFonts.figtree(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
+                        return FadeSlideIn(
+                          index: index,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryLight,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        proof.type,
+                                        style: GoogleFonts.figtree(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (proof.capturedAt != null)
-                                    Text(
-                                      DateFormatter.formatWithTime(
-                                        DateTime.tryParse(proof.capturedAt!),
+                                    if (proof.capturedAt != null)
+                                      Text(
+                                        DateFormatter.formatWithTime(
+                                          DateTime.tryParse(proof.capturedAt!),
+                                        ),
+                                        style: GoogleFonts.figtree(
+                                          fontSize: 11,
+                                          color: AppColors.textMuted,
+                                        ),
                                       ),
-                                      style: GoogleFonts.figtree(
-                                        fontSize: 11,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Rider: ${proof.riderName}',
-                                style: GoogleFonts.figtree(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  ],
                                 ),
-                              ),
-                              if (proof.notes != null) ...[
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  'Notes: ${proof.notes}',
+                                  'Rider: ${proof.riderName}',
                                   style: GoogleFonts.figtree(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                if (proof.notes != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Notes: ${proof.notes}',
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                                if (proof.filePath != null) ...[
+                                  const SizedBox(height: 12),
+                                  ProtectedProofImage(
+                                    key: ValueKey(proof.id),
+                                    proofId: proof.id,
+                                  ),
+                                ],
                               ],
-                              if (proof.filePath != null) ...[
-                                const SizedBox(height: 12),
-                                ProtectedProofImage(
-                                  key: ValueKey(proof.id),
-                                  proofId: proof.id,
-                                ),
-                              ],
-                            ],
+                            ),
                           ),
                         );
                       },

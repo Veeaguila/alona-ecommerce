@@ -304,7 +304,7 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
     final isAuth = widget.authState.isBuyerAuthenticated;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -758,7 +758,7 @@ class _BuyerHelpCenterPageState extends State<_BuyerHelpCenterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -1397,7 +1397,7 @@ class _BuyerFaqPageState extends State<_BuyerFaqPage> {
   Widget build(BuildContext context) {
     final list = _filteredFaqs;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -1809,7 +1809,7 @@ class _BuyerComplaintsPageState extends State<_BuyerComplaintsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -2103,7 +2103,7 @@ class _BuyerProtectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -2369,7 +2369,7 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -2634,7 +2634,7 @@ class _BuyerAccountDetailsPage extends StatelessWidget {
     final user = authState.buyerUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -2985,7 +2985,7 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     ].where((s) => s.isNotEmpty).join(' ');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -3362,7 +3362,7 @@ class _BuyerBanksAndCardsPageState extends State<_BuyerBanksAndCardsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -3766,7 +3766,7 @@ class _BuyerChangePasswordPageState extends State<_BuyerChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -3937,7 +3937,7 @@ class _BuyerPrivacySettingsPageState extends State<_BuyerPrivacySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -4132,7 +4132,7 @@ class _BuyerPoliciesPageState extends State<_BuyerPoliciesPage> {
         : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

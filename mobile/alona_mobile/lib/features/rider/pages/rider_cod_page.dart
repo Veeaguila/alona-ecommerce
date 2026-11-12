@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../theme/rider_theme.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
@@ -218,8 +219,11 @@ class _RiderCodPageState extends State<RiderCodPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('COD cash'),
       actions: [
         IconButton(
@@ -352,5 +356,5 @@ class _RiderCodPageState extends State<RiderCodPage> {
           ),
       ],
     ),
-  );
+  ));
 }

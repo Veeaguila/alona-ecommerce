@@ -19,7 +19,7 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
-  static const Color _bgScaffold = Color(0xFFF2F6F6);
+  static const Color _bgScaffold = AppColors.buyerBackground;
   static const Color _darkTeal = Color(0xFF087F8C);
   static const Color _headingColor = Color(0xFF132228);
 
@@ -107,11 +107,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
         titleSpacing: canPop ? 0 : 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+        ),
         automaticallyImplyLeading: false,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
@@ -123,13 +126,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  border: Border.all(color: AppColors.buyerBorder, width: 1),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
@@ -143,7 +146,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         decoration: InputDecoration(
                           hintText: 'Search products, brands...',
                           hintStyle: GoogleFonts.figtree(
-                            color: AppColors.textLight,
+                            color: AppColors.textMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -171,7 +174,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
             // Right side: Message and Cart icons
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
               tooltip: 'Messages',
               onPressed: () {
                 Navigator.push(
@@ -181,7 +184,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(

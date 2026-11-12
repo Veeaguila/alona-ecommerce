@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/rider_theme.dart';
 
 import '../services/rider_session.dart';
 import '../widgets/rider_bottom_nav.dart';
@@ -31,18 +32,28 @@ class _RiderShellPageState extends State<RiderShellPage> {
     final pages = [
       PickupDashboardPage(session: widget.session, active: _currentTab == 0),
       DeliveryDashboardPage(session: widget.session, active: _currentTab == 1),
-      CodAndEarningsTrackerPage(session: widget.session, active: _currentTab == 2),
+      CodAndEarningsTrackerPage(
+        session: widget.session,
+        active: _currentTab == 2,
+        showBottomNavigation: false,
+      ),
       RiderChatPage(session: widget.session),
       RiderAccountPage(session: widget.session),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _currentTab, children: pages),
+    return RiderTheme.wrap(Scaffold(
+      body: IndexedStack(
+        index: _currentTab,
+        children: [
+          for (var index = 0; index < pages.length; index++)
+            HeroMode(enabled: index == _currentTab, child: pages[index]),
+        ],
+      ),
       bottomNavigationBar: RiderBottomNav(
         currentIndex: _currentTab,
         session: widget.session,
         onTabSelected: (index) => setState(() => _currentTab = index),
       ),
-    );
+    ));
   }
 }

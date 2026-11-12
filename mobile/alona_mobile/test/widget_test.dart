@@ -9,8 +9,52 @@ import 'package:alona_mobile/shared/widgets/alona_button.dart';
 import 'package:alona_mobile/features/buyer/presentation/orders/order_list_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/buyer_profile_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
+import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
+import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
 
 void main() {
+  testWidgets('Product cards fit compact phone grids with larger text', (
+    WidgetTester tester,
+  ) async {
+    final product = ProductModel(
+      id: 1,
+      name: 'Radiant Citrus Eau de Parfum',
+      slug: 'sample-product',
+      price: 1200,
+      oldPrice: 1500,
+      stock: 20,
+      rating: 5,
+      reviewsCount: 2,
+      categoryName: 'Electronics & Mobiles',
+      sellerStoreName: 'Sample store',
+      imageUrl: '',
+    );
+
+    for (final scale in [1.0, 1.3]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.buyerTheme,
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 156,
+                  height: 241,
+                  child: ProductCard(product: product),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('₱1,200.00'), findsOneWidget);
+    }
+  });
+
   testWidgets('StatusBadge renders correctly with status', (
     WidgetTester tester,
   ) async {

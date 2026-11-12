@@ -187,73 +187,101 @@ class _ParcelSortingScreenState extends State<ParcelSortingScreen> {
           : _parcels.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(24),
-              child: EmptyStateView(
-                icon: Icons.check_circle_outline,
-                title: 'All arrived parcels sorted',
-                message: 'No pending unsorted parcels at the center right now.',
+              child: FadeSlideIn(
+                child: EmptyStateView(
+                  icon: Icons.check_circle_outline,
+                  title: 'All arrived parcels sorted',
+                  message:
+                      'No pending unsorted parcels at the center right now.',
+                ),
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _parcels.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              itemCount: _parcels.length + 1,
+              separatorBuilder: (_, index) =>
+                  SizedBox(height: index == 0 ? 18 : 12),
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  return const LogisticsBanner(
+                    icon: Icons.category_rounded,
+                    title: 'Sort arrived parcels',
+                    subtitle: 'Route each parcel to its delivery area.',
+                  );
+                }
+                final index = i - 1;
                 final p = _parcels[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            p.orderId,
-                            style: GoogleFonts.figtree(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                return FadeSlideIn(
+                  index: index,
+                  child: AccentCard(
+                    accent: AppColors.accent,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const IconTile(
+                              Icons.inventory_2_rounded,
+                              color: AppColors.primary,
                             ),
-                          ),
-                          const StatusBadge(
-                            status: 'AT_SORTING_CENTER',
-                            customLabel: 'Unsorted',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Destination: ${p.fullDeliveryAddress}',
-                        style: GoogleFonts.figtree(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                p.orderId,
+                                style: GoogleFonts.figtree(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const StatusBadge(
+                              status: 'AT_SORTING_CENTER',
+                              customLabel: 'Unsorted',
+                            ),
+                          ],
                         ),
-                      ),
-                      const Divider(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 1),
+                              child: Icon(
+                                Icons.place_outlined,
+                                size: 16,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Destination: ${p.fullDeliveryAddress}',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
                             onPressed: _mutating
                                 ? null
                                 : () => _showSortDialog(p),
-                            icon: const Icon(Icons.sort_rounded, size: 16),
+                            icon: const Icon(Icons.sort_rounded, size: 18),
                             label: const Text('Sort to Area'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
+                              minimumSize: const Size(64, 44),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

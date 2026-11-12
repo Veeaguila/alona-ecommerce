@@ -62,7 +62,7 @@ class _BuyerConversationsScreenState extends State<BuyerConversationsScreen> {
   Widget build(BuildContext context) {
     if (!ApiClient.isAuthenticated) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
@@ -152,7 +152,7 @@ class _BuyerConversationsScreenState extends State<BuyerConversationsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),

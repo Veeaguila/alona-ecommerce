@@ -74,7 +74,7 @@ class _BuyerMainScreenState extends State<BuyerMainScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFDC2626),
+                color: AppColors.sale,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
@@ -120,12 +120,12 @@ class _BuyerMainScreenState extends State<BuyerMainScreen> {
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.border, width: 1.2),
+            gradient: AppColors.buyerNavigationGradient,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.oceanTeal, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: AppColors.alonaTeal.withValues(alpha: 0.10),
+                color: AppColors.primaryDark.withValues(alpha: 0.24),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -137,7 +137,7 @@ class _BuyerMainScreenState extends State<BuyerMainScreen> {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(20),
             child: BottomNavigationBar(
               currentIndex: _currentIndex,
               onTap: (index) {
@@ -148,9 +148,9 @@ class _BuyerMainScreenState extends State<BuyerMainScreen> {
                 _refreshUnreadNotificationsCount();
               },
               type: BottomNavigationBarType.fixed,
-              backgroundColor: AppColors.white,
-              selectedItemColor: AppColors.alonaTeal,
-              unselectedItemColor: AppColors.mutedText,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: AppColors.accentGold,
+              unselectedItemColor: Colors.white.withValues(alpha: 0.85),
               selectedLabelStyle: GoogleFonts.figtree(
                 fontWeight: FontWeight.w700,
                 fontSize: 11,

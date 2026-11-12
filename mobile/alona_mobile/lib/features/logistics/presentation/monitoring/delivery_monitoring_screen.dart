@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/features/logistics/presentation/workflow_widgets.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/shared/widgets/status_badge.dart';
 import 'package:alona_mobile/features/logistics/models/logistics_models.dart';
@@ -111,98 +112,137 @@ class _DeliveryMonitoringScreenState extends State<DeliveryMonitoringScreen>
           : parcels.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(24),
-              child: EmptyStateView(
-                icon: Icons.local_shipping_outlined,
-                title: 'No parcels in this status',
-                message: 'Parcels matching this operational status will be displayed here.',
+              child: FadeSlideIn(
+                child: EmptyStateView(
+                  icon: Icons.local_shipping_outlined,
+                  title: 'No parcels in this status',
+                  message: 'Parcels matching this operational status will be displayed here.',
+                ),
               ),
             )
           : RefreshIndicator(
               onRefresh: _loadParcels,
               color: AppColors.primary,
               child: ListView.separated(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 itemCount: parcels.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final p = parcels[index];
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  ParcelOperationsScreen(parcelId: p.id),
-                            ),
-                          ),
-                          child: const Text('Parcel operations and proofs'),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              p.orderId,
-                              style: GoogleFonts.figtree(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                  final delivered = p.status == 'DELIVERED';
+                  final hasRider = p.assignedRiderName != null;
+                  return FadeSlideIn(
+                    index: index,
+                    child: AccentCard(
+                      accent: delivered ? AppColors.success : AppColors.primary,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              IconTile(
+                                delivered
+                                    ? Icons.task_alt_rounded
+                                    : Icons.local_shipping_rounded,
+                                color: delivered
+                                    ? AppColors.success
+                                    : AppColors.primary,
                               ),
-                            ),
-                            StatusBadge(
-                              status: p.status,
-                              customLabel: p.status == 'DELIVERED'
-                                  ? 'Delivered'
-                                  : null,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Delivery Address:',
-                          style: GoogleFonts.figtree(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                        Text(
-                          p.fullDeliveryAddress,
-                          style: GoogleFonts.figtree(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const Divider(height: 20),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.person_pin_circle_outlined,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              p.assignedRiderName != null
-                                  ? 'Rider: ${p.assignedRiderName}'
-                                  : 'No rider assigned yet',
-                              style: GoogleFonts.figtree(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: p.assignedRiderName != null
-                                    ? AppColors.textPrimary
-                                    : AppColors.textMuted,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  p.orderId,
+                                  style: GoogleFonts.figtree(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
+                              StatusBadge(
+                                status: p.status,
+                                customLabel: delivered ? 'Delivered' : null,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Delivery Address:',
+                            style: GoogleFonts.figtree(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            p.fullDeliveryAddress,
+                            style: GoogleFonts.figtree(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: hasRider
+                                  ? AppColors.lightTeal
+                                  : AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person_pin_circle_outlined,
+                                  size: 16,
+                                  color: hasRider
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    hasRider
+                                        ? 'Rider: ${p.assignedRiderName}'
+                                        : 'No rider assigned yet',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: hasRider
+                                          ? AppColors.primaryDark
+                                          : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 24),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ParcelOperationsScreen(parcelId: p.id),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.open_in_new_rounded,
+                                size: 16,
+                              ),
+                              label: const Text('Parcel operations and proofs'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

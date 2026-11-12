@@ -208,8 +208,8 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage>
   Widget build(BuildContext context) {
     final currentFiltered = filteredRows;
 
-    return Scaffold(
-      backgroundColor: RiderColors.background,
+    return RiderTheme.wrap(Scaffold(
+      backgroundColor: RiderColors.portalBackground,
       body: Column(
         children: [
           // Screen 10 Header Banner (Teal)
@@ -404,9 +404,9 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage>
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        gradient: RiderColors.cardGradient,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: RiderColors.border),
+                        border: Border.all(color: RiderColors.portalBorder),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.02),
@@ -523,6 +523,6 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage>
         currentIndex: 1,
         session: riderSession,
       ),
-    );
+    ));
   }
 }

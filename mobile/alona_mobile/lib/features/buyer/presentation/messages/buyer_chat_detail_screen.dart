@@ -294,7 +294,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         elevation: 0.5,
         backgroundColor: AppColors.white,
