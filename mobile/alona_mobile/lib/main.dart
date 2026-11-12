@@ -32,7 +32,9 @@ class AlonaApp extends StatelessWidget {
             '${authState.activeModule}:${authState.sessionRevision}',
           ),
           title: 'Alona E-Commerce',
-          theme: AppTheme.lightTheme,
+          theme: authState.isBuyerModule
+              ? AppTheme.buyerTheme
+              : AppTheme.logisticsTheme,
           debugShowCheckedModeBanner: false,
           home: _buildHome(),
         );
