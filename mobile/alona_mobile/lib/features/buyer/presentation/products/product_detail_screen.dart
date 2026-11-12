@@ -665,12 +665,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAF9),
+        backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          surfaceTintColor: Colors.transparent,
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+          ),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1F2937)),
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -682,12 +687,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (_error != null || _product == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAF9),
+        backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          surfaceTintColor: Colors.transparent,
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+          ),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1F2937)),
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -728,13 +738,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+        ),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1F2937)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -744,23 +758,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           style: GoogleFonts.figtree(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F2937),
+            color: AppColors.white,
           ),
         ),
         actions: [
           IconButton(
             icon: Icon(
               _isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: _isWishlisted ? const Color(0xFFE11D48) : const Color(0xFF64748B),
+              color: AppColors.white,
             ),
             onPressed: _toggleWishlist,
           ),
           IconButton(
-            icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B)),
+            icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.white),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.flag_outlined, color: Color(0xFF64748B), size: 20),
+            icon: const Icon(Icons.flag_outlined, color: AppColors.white, size: 20),
             tooltip: 'Report Product',
             onPressed: _showReportDialog,
           ),

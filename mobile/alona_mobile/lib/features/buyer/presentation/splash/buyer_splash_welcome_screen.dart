@@ -515,6 +515,7 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                               onPressed: _openLogin,
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
+                                backgroundColor: Colors.transparent,
                                 side: const BorderSide(
                                   color: Colors.white,
                                   width: 1.5,

@@ -3,6 +3,7 @@ import '../widgets/rider_presence_control.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/rider_content.dart';
 
@@ -368,7 +369,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: RiderColors.cardGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -593,9 +594,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   else if (isAssigned)
                     Container(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0F766E), Color(0xFF14A39A)],
-                        ),
+                        gradient: RiderColors.headerGradient,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -632,9 +631,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                   else if (isOutForDelivery)
                     Container(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0F766E), Color(0xFF14A39A)],
-                        ),
+                        gradient: RiderColors.headerGradient,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -730,27 +727,8 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RiderColors.background,
-      floatingActionButton: widget.parcelId == null
-          ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFFFBBF24),
-              foregroundColor: const Color(0xFF1E293B),
-              icon: const Icon(Icons.qr_code_scanner, size: 24),
-              label: const Text(
-                'Scan Barcode',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-              ),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ParcelScannerPage(session: riderSession),
-                ),
-              ).then((_) {
-                if (mounted) refresh();
-              }),
-            )
-          : null,
+    return RiderTheme.wrap(Scaffold(
+      backgroundColor: RiderColors.portalBackground,
       body: Column(
         children: [
           _header(context),
@@ -759,7 +737,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
               onRefresh: refresh,
               child: ListView(
                 controller: scroll,
-                padding: riderPagePadding(context),
+                padding: riderPagePadding(context).copyWith(top: 16),
                 children: [
                   RiderPresenceControl(session: riderSession),
                   if (error != null) ...[
@@ -815,7 +793,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          gradient: RiderColors.cardGradient,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
@@ -1000,7 +978,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _miniActionCard({
@@ -1078,7 +1056,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: RiderColors.cardGradient,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isOutForDelivery ? const Color(0xFF0F766E) : const Color(0xFFF59E0B),
@@ -1503,332 +1481,254 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
   }
 
   Widget _scanHeroCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFBBF24),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.qr_code_scanner,
-              size: 28,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Smart Barcode Scanner',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Scan to pickup from store, self-assign at hub, or deliver to buyer.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFBBF24),
-              foregroundColor: const Color(0xFF1E293B),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            ),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ParcelScannerPage(session: riderSession),
-              ),
-            ).then((_) {
-              if (mounted) refresh();
-            }),
-            child: const Text(
-              'Scan',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _codCounterHeroCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFDE68A)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.calculate_outlined,
-              size: 24,
-              color: Color(0xFFD97706),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'COD Cash Counter',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: RiderColors.text,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'I-count ang barya at perang papel bago mag-remit sa hub.',
-                  style: TextStyle(
-                    color: RiderColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFD97706),
-              side: const BorderSide(color: Color(0xFFD97706)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CodAndEarningsTrackerPage(
-                  session: riderSession,
-                  initialTabIndex: 0,
-                ),
-              ),
-            ),
-            child: const Text('Bilangin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B7A83), Color(0xFF0F766E), Color(0xFF0D9488)],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        MediaQuery.of(context).padding.top + 14,
-        20,
-        20,
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: -100,
-            right: -80,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: RiderColors.amber.withValues(alpha: 0.28),
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ParcelScannerPage(session: riderSession),
+          ),
+        ).then((_) {
+          if (mounted) refresh();
+        }),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(gradient: RiderColors.headerGradient),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: RiderColors.amber,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.qr_code_scanner,
+                  size: 22,
+                  color: RiderColors.tealDark,
+                ),
               ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Scan waybill',
+                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'For pickups and deliveries',
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _codCounterHeroCard(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CodAndEarningsTrackerPage(
+              session: riderSession,
+              initialTabIndex: 0,
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: RiderColors.cardGradient,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: RiderColors.portalBorder),
+          ),
+          child: const Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (widget.parcelId != null) ...[
-                    const BackButton(color: Colors.white),
-                    const SizedBox(width: 4),
-                  ] else ...[
-                    InkWell(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              RiderNotificationsPage(session: riderSession),
+              Icon(Icons.calculate_outlined, size: 24, color: RiderColors.teal),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'COD cash counter',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Count cash before remitting',
+                      style: TextStyle(fontSize: 12, color: RiderColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              Icon(Icons.chevron_right_rounded, color: RiderColors.teal, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _header(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          gradient: RiderColors.headerGradient,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.of(context).padding.top + 10,
+          20,
+          20,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -100,
+              right: -80,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: RiderColors.amber.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (widget.parcelId != null) ...[
+                      const BackButton(color: Colors.white),
+                      const SizedBox(width: 4),
+                    ],
+                    Expanded(
+                      child: Text(
+                        widget.parcelId == null
+                            ? 'Deliveries'
+                            : 'Delivery details',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25),
+                    ),
+                    if (widget.parcelId == null) ...[
+                      const SizedBox(width: 12),
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                RiderNotificationsPage(session: riderSession),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 22,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
+                    ],
                   ],
-                  Expanded(
-                    child: Text(
-                      widget.parcelId == null
-                          ? 'Deliveries'
-                          : 'Delivery details',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Refresh',
-                    color: Colors.white,
-                    onPressed:
-                        loading ||
-                            actionParcelId != null ||
-                            proofFlow ||
-                            loggingOut
-                        ? null
-                        : refresh,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                  IconButton(
-                    iconSize: 20,
-                    onPressed: loggingOut ? null : logout,
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Colors.white,
-                    ),
-                    tooltip: 'Sign out',
-                  ),
-                ],
-              ),
-              if (widget.parcelId == null) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBBF24),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'My deliveries · ${deliveries.length}',
-                        style: const TextStyle(
-                          color: Color(0xFF78350F),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              PickupDashboardPage(session: riderSession),
-                        ),
-                      ),
-                      child: Container(
+                ),
+                if (widget.parcelId == null) ...[
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F5A56),
+                          color: const Color(0xFFFBBF24),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'Available pickups',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                        child: Text(
+                          'My deliveries · ${deliveries.length}',
+                          style: const TextStyle(
+                            color: Color(0xFF78350F),
+                            fontWeight: FontWeight.w800,
                             fontSize: 13,
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PickupDashboardPage(session: riderSession),
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F5A56),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Available pickups',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

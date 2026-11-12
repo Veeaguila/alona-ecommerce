@@ -12,12 +12,14 @@ class CodAndEarningsTrackerPage extends StatefulWidget {
   final RiderSession? session;
   final bool active;
   final int initialTabIndex;
+  final bool showBottomNavigation;
 
   const CodAndEarningsTrackerPage({
     super.key,
     this.session,
     this.active = true,
     this.initialTabIndex = 0,
+    this.showBottomNavigation = true,
   });
 
   @override
@@ -35,7 +37,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   late final api = RiderFinanceApi(riderSession);
 
   late TabController _tabController;
-  bool loading = true;
+  bool loading = false;
   String? error;
 
   // Standard Rider Maximum Cash Holding Limit before Remittance is required
@@ -69,11 +71,12 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     5: 0,
     1: 0,
   };
+  late final Map<int, TextEditingController> _countControllers;
 
   double get countedCashTotal {
     double sum = 0.0;
     _denominations.forEach((denom, count) {
-      sum += denom * count;
+      sum += denom * count.toDouble();
     });
     return sum;
   }
@@ -81,7 +84,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   double get billsTotal {
     double sum = 0.0;
     for (final denom in [1000, 500, 200, 100, 50, 20]) {
-      sum += denom * (_denominations[denom] ?? 0);
+      sum += denom * (_denominations[denom] ?? 0).toDouble();
     }
     return sum;
   }
@@ -89,7 +92,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   double get coinsTotal {
     double sum = 0.0;
     for (final denom in [10, 5, 1]) {
-      sum += denom * (_denominations[denom] ?? 0);
+      sum += denom * (_denominations[denom] ?? 0).toDouble();
     }
     return sum;
   }
@@ -97,6 +100,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   @override
   void initState() {
     super.initState();
+    _countControllers = {
+      for (final denom in _denominations.keys)
+        denom: TextEditingController(text: '0'),
+    };
     _tabController = TabController(
       length: 2,
       vsync: this,
@@ -118,6 +125,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
+    for (final controller in _countControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -141,17 +151,21 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
         for (final b in balances) {
           if (b is Map && b['balance'] != null) {
             balanceSum += double.tryParse('${b['balance']}') ?? 0.0;
-            if (foundHub.isEmpty && b['name'] != null && b['name'].toString().trim().isNotEmpty) {
+            if (foundHub.isEmpty &&
+                b['name'] != null &&
+                b['name'].toString().trim().isNotEmpty) {
               foundHub = b['name'].toString().trim();
             }
           }
         }
       }
 
-      final collections =
-          codRes['collections'] is List ? (codRes['collections'] as List) : [];
-      final remittances =
-          codRes['remittances'] is List ? (codRes['remittances'] as List) : [];
+      final collections = codRes['collections'] is List
+          ? (codRes['collections'] as List)
+          : [];
+      final remittances = codRes['remittances'] is List
+          ? (codRes['remittances'] as List)
+          : [];
 
       // Parse Earnings
       final summary = earnRes['summary'] as Map?;
@@ -176,7 +190,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = e is SessionFailure ? e.message : 'Hindi ma-load ang financial data.';
+        error = e is SessionFailure
+            ? e.message
+            : 'Hindi ma-load ang financial data.';
       });
     }
   }
@@ -185,15 +201,27 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     HapticFeedback.selectionClick();
     setState(() {
       final current = _denominations[denom] ?? 0;
-      final updated = current + delta;
+      final updated = (BigInt.from(current) + BigInt.from(delta)).toInt();
       _denominations[denom] = updated < 0 ? 0 : updated;
+      _syncCountInput(denom);
     });
+  }
+
+  void _syncCountInput(int denom) {
+    final text = '${_denominations[denom]}';
+    _countControllers[denom]!.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 
   void _resetCashCounter() {
     HapticFeedback.mediumImpact();
     setState(() {
       _denominations.updateAll((key, value) => 0);
+      for (final denom in _denominations.keys) {
+        _syncCountInput(denom);
+      }
     });
   }
 
@@ -209,6 +237,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     }
     setState(() {
       _denominations.addAll(newDenoms);
+      for (final denom in _denominations.keys) {
+        _syncCountInput(denom);
+      }
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -220,58 +251,77 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RiderColors.background,
-      appBar: AppBar(
-        title: const Text('COD Cash & Earnings'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3.5,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-          tabs: const [
-            Tab(icon: Icon(Icons.point_of_sale_rounded), text: 'COD Cash & Remittance'),
-            Tab(icon: Icon(Icons.account_balance_wallet_rounded), text: 'Kinita / Earnings'),
+    return RiderTheme.wrap(
+      Scaffold(
+        backgroundColor: RiderColors.portalBackground,
+        appBar: AppBar(
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+          ),
+          title: const Text('COD Cash & Earnings'),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: RiderColors.amber,
+            indicatorWeight: 3.5,
+            labelColor: RiderColors.amber,
+            unselectedLabelColor: Colors.white70,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.point_of_sale_rounded),
+                text: 'COD Cash & Remittance',
+              ),
+              Tab(
+                icon: Icon(Icons.account_balance_wallet_rounded),
+                text: 'Kinita / Earnings',
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh details',
+              onPressed: loading ? null : loadAllData,
+            ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh details',
-            onPressed: loading ? null : loadAllData,
-          ),
-        ],
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: RiderColors.danger),
-                        const SizedBox(height: 12),
-                        Text(error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        FilledButton(onPressed: loadAllData, child: const Text('Subukan Muli')),
-                      ],
-                    ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: RiderColors.danger,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: loadAllData,
+                        child: const Text('Subukan Muli'),
+                      ),
+                    ],
                   ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildCodCashTab(),
-                    _buildEarningsTab(),
-                  ],
                 ),
-      bottomNavigationBar: widget.session != null
-          ? RiderBottomNav(currentIndex: 2, session: widget.session!)
-          : null,
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [_buildCodCashTab(), _buildEarningsTab()],
+              ),
+        bottomNavigationBar:
+            widget.showBottomNavigation && widget.session != null
+            ? RiderBottomNav(currentIndex: 2, session: widget.session!)
+            : null,
+      ),
     );
   }
 
@@ -281,12 +331,16 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
   Widget _buildCodCashTab() {
     final counted = countedCashTotal;
     final diff = counted - expectedCodBalance;
-    final isExact = (diff.abs() < 0.01) && (expectedCodBalance > 0 || counted > 0);
+    final isExact =
+        (diff.abs() < 0.01) && (expectedCodBalance > 0 || counted > 0);
     final isShort = diff < -0.01;
     final isOver = diff > 0.01;
 
     // Remittance limit ratio calculation
-    final limitRatio = (expectedCodBalance / kRiderCodRemittanceLimit).clamp(0.0, 1.0);
+    final limitRatio = (expectedCodBalance / kRiderCodRemittanceLimit).clamp(
+      0.0,
+      1.0,
+    );
     final isNearLimit = expectedCodBalance >= (kRiderCodRemittanceLimit * 0.8);
     final isOverLimit = expectedCodBalance >= kRiderCodRemittanceLimit;
 
@@ -306,7 +360,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
               gradient: LinearGradient(
                 colors: isNearLimit
                     ? const [Color(0xFF991B1B), Color(0xFFDC2626)]
-                    : const [Color(0xFF0F766E), Color(0xFF134E4A)],
+                    : RiderColors.headerGradient.colors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -324,32 +378,44 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.lock_clock_rounded, color: Colors.white70, size: 16),
+                        Icon(
+                          Icons.lock_clock_rounded,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
                         SizedBox(width: 6),
-                        Text(
-                          'Kailangang I-remit sa Hub (COD)',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            'Kailangang I-remit sa Hub (COD)',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white24,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         expectedCodBalance > 0
-                            ? (isNearLimit ? '⚠️ Limit Alert' : 'Pending Remittance')
+                            ? (isNearLimit
+                                  ? '⚠️ Limit Alert'
+                                  : 'Pending Remittance')
                             : 'Cleared / Zero Balance',
                         style: const TextStyle(
                           color: Colors.white,
@@ -373,7 +439,11 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.warehouse_rounded, color: Colors.white70, size: 14),
+                    const Icon(
+                      Icons.warehouse_rounded,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -401,12 +471,16 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
                         children: [
                           const Text(
                             'Remittance Safe Limit:',
-                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
                           ),
                           Text(
                             '₱${expectedCodBalance.toStringAsFixed(0)} / ₱${kRiderCodRemittanceLimit.toStringAsFixed(0)} (${(limitRatio * 100).toStringAsFixed(0)}%)',
@@ -429,8 +503,8 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                             isOverLimit
                                 ? const Color(0xFFEF4444)
                                 : (isNearLimit
-                                    ? const Color(0xFFFBBF24)
-                                    : const Color(0xFF34D399)),
+                                      ? const Color(0xFFFBBF24)
+                                      : const Color(0xFF34D399)),
                           ),
                         ),
                       ),
@@ -439,14 +513,16 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         isOverLimit
                             ? '🚨 LUMAMPAS SA LIMIT! Mag-remit agad sa Hub bago tumanggap ng susunod na delivery batch.'
                             : (isNearLimit
-                                ? '⚠️ Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
-                                : (expectedCodBalance > 0
-                                    ? '✅ Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
-                                    : '🎉 Walang pending remittance. Ligtas at handa sa biyahe!')),
+                                  ? '⚠️ Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
+                                  : (expectedCodBalance > 0
+                                        ? '✅ Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
+                                        : '🎉 Walang pending remittance. Ligtas at handa sa biyahe!')),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isNearLimit ? Colors.amberAccent : Colors.white70,
+                          color: isNearLimit
+                              ? Colors.amberAccent
+                              : Colors.white70,
                         ),
                       ),
                     ],
@@ -478,8 +554,12 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     ),
                     icon: const Icon(Icons.navigation_rounded, size: 18),
                     label: const Text(
-                      'I-NAVIGATE SA HUB CASHIER (Waze / Maps)',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                      'I-navigate sa Hub Cashier',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -494,91 +574,79 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
           // -----------------------------------------------------------
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: RiderColors.border),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-              ],
-            ),
+            decoration: _sectionDecoration,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                const Row(
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.calculate_rounded, color: Color(0xFF0F766E), size: 22),
-                        SizedBox(width: 8),
-                        Text(
-                          'Denomination Cash Counter',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                        ),
-                      ],
+                    Icon(
+                      Icons.calculate_rounded,
+                      color: RiderColors.teal,
+                      size: 22,
                     ),
-                    Row(
-                      children: [
-                        if (expectedCodBalance > 0)
-                          TextButton.icon(
-                            onPressed: _autoMatchExact,
-                            icon: const Icon(Icons.bolt_rounded, size: 16),
-                            label: const Text('Auto-Match', style: TextStyle(fontSize: 11)),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF0F766E),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              minimumSize: Size.zero,
-                            ),
-                          ),
-                        TextButton.icon(
-                          onPressed: counted > 0 ? _resetCashCounter : null,
-                          icon: const Icon(Icons.restart_alt, size: 16),
-                          label: const Text('Reset', style: TextStyle(fontSize: 11)),
-                          style: TextButton.styleFrom(
-                            foregroundColor: RiderColors.danger,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: Size.zero,
-                          ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Denomination Cash Counter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 const Text(
                   'I-bilang ang iyong perang papel at barya para makasigurong eksakto bago ibigay sa hub cashier.',
-                  style: TextStyle(fontSize: 12, color: RiderColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: RiderColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 // Live Count Display vs Target Disparity HUD
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: isExact
                         ? const Color(0xFFD1FAE5)
                         : (isShort
-                            ? const Color(0xFFFEE2E2)
-                            : (isOver ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9))),
+                              ? const Color(0xFFFEE2E2)
+                              : (isOver
+                                    ? const Color(0xFFFEF3C7)
+                                    : const Color(0xFFF1F5F9))),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isExact
                           ? const Color(0xFF10B981)
                           : (isShort
-                              ? const Color(0xFFEF4444)
-                              : (isOver ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1))),
+                                ? const Color(0xFFEF4444)
+                                : (isOver
+                                      ? const Color(0xFFF59E0B)
+                                      : const Color(0xFFCBD5E1))),
                       width: 1.5,
                     ),
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Text(
                             'Kabuuang Nabilang sa Bulsa:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           Text(
                             'PHP ${counted.toStringAsFixed(2)}',
@@ -588,10 +656,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                               color: isExact
                                   ? const Color(0xFF065F46)
                                   : (isShort
-                                      ? const Color(0xFF991B1B)
-                                      : (isOver
-                                          ? const Color(0xFF92400E)
-                                          : const Color(0xFF334155))),
+                                        ? const Color(0xFF991B1B)
+                                        : (isOver
+                                              ? const Color(0xFF92400E)
+                                              : const Color(0xFF334155))),
                             ),
                           ),
                         ],
@@ -603,12 +671,16 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                             isExact
                                 ? Icons.check_circle_rounded
                                 : (isShort
-                                    ? Icons.error_rounded
-                                    : (isOver ? Icons.warning_rounded : Icons.info_rounded)),
+                                      ? Icons.error_rounded
+                                      : (isOver
+                                            ? Icons.warning_rounded
+                                            : Icons.info_rounded)),
                             size: 18,
                             color: isExact
                                 ? const Color(0xFF059669)
-                                : (isShort ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
+                                : (isShort
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFD97706)),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -616,16 +688,18 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                               isExact
                                   ? 'TUGMA ANG PERA! Eksaktong PHP ${counted.toStringAsFixed(2)} (Handa nang i-remit)'
                                   : (isShort
-                                      ? 'KULANG ng PHP ${(-diff).toStringAsFixed(2)} kumpara sa kailangang remit'
-                                      : (isOver
-                                          ? 'SOBRA ng PHP ${diff.toStringAsFixed(2)} kumpara sa kailangang remit'
-                                          : 'Pindutin ang + o +5 sa bawat denominasyon para magbilang')),
+                                        ? 'KULANG ng PHP ${(-diff).toStringAsFixed(2)} kumpara sa kailangang remit'
+                                        : (isOver
+                                              ? 'SOBRA ng PHP ${diff.toStringAsFixed(2)} kumpara sa kailangang remit'
+                                              : 'I-type ang bilang o gamitin ang mga button sa bawat denominasyon para magbilang')),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: isExact
                                     ? const Color(0xFF065F46)
-                                    : (isShort ? const Color(0xFF991B1B) : const Color(0xFF92400E)),
+                                    : (isShort
+                                          ? const Color(0xFF991B1B)
+                                          : const Color(0xFF92400E)),
                               ),
                             ),
                           ),
@@ -642,7 +716,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0FDFA),
                           borderRadius: BorderRadius.circular(10),
@@ -652,20 +729,28 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           children: [
                             const Text('💵', style: TextStyle(fontSize: 16)),
                             const SizedBox(width: 6),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Papel (Bills)',
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Papel (Bills)',
                                     style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0F766E))),
-                                Text('₱${billsTotal.toStringAsFixed(2)}',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F766E),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${billsTotal.toStringAsFixed(2)}',
                                     style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF0F766E))),
-                              ],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF0F766E),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -674,7 +759,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     const SizedBox(width: 10),
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
@@ -684,20 +772,28 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           children: [
                             const Text('🪙', style: TextStyle(fontSize: 16)),
                             const SizedBox(width: 6),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Barya (Coins)',
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Barya (Coins)',
                                     style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF475569))),
-                                Text('₱${coinsTotal.toStringAsFixed(2)}',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${coinsTotal.toStringAsFixed(2)}',
                                     style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF334155))),
-                              ],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF334155),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -706,79 +802,76 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // Counter actions
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (expectedCodBalance > 0)
+                      _buildCounterAction(
+                        icon: Icons.bolt_rounded,
+                        label: 'Auto-Match',
+                        color: RiderColors.teal,
+                        onPressed: _autoMatchExact,
+                      ),
+                    _buildCounterAction(
+                      icon: Icons.restart_alt,
+                      label: 'Reset',
+                      color: RiderColors.danger,
+                      onPressed: counted > 0 ? _resetCashCounter : null,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
 
                 // Section 1: Perang Papel (Banknotes)
-                const Row(
-                  children: [
-                    Text(
-                      '💵 MGA PERANG PAPEL (BANKNOTES)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F766E),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ...[1000, 500, 200, 100, 50, 20].map(
-                  (denom) => _buildDenominationRow(denom, _denominations[denom] ?? 0),
-                ),
+                _buildDenominationGroupLabel('Perang Papel', 'Bills'),
+                const SizedBox(height: 8),
+                _buildDenominationGroup([1000, 500, 200, 100, 50, 20]),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 20),
 
                 // Section 2: Barya (Coins)
-                const Row(
-                  children: [
-                    Text(
-                      '🪙 MGA BARYA (COINS)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF475569),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ...[10, 5, 1].map(
-                  (denom) => _buildDenominationRow(denom, _denominations[denom] ?? 0),
-                ),
+                _buildDenominationGroupLabel('Barya', 'Coins'),
+                const SizedBox(height: 8),
+                _buildDenominationGroup([10, 5, 1]),
               ],
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
           // -----------------------------------------------------------
           // COD COLLECTIONS & REMITTANCES HISTORY SECTION
           // -----------------------------------------------------------
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: RiderColors.border),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-              ],
-            ),
+            decoration: _sectionDecoration,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.history_rounded, color: Color(0xFF0F766E), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Talaan ng Transaksyon',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        Icon(
+                          Icons.history_rounded,
+                          color: RiderColors.teal,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Talaan ng Transaksyon',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -795,13 +888,22 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 const SizedBox(height: 12),
 
                 // Segmented Filter Bar
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
-                    _buildFilterChip('all', 'Lahat (${codCollections.length + codRemittances.length})'),
-                    const SizedBox(width: 6),
-                    _buildFilterChip('collections', 'Koleksyon (${codCollections.length})'),
-                    const SizedBox(width: 6),
-                    _buildFilterChip('remittances', 'Remit (${codRemittances.length})'),
+                    _buildFilterChip(
+                      'all',
+                      'Lahat (${codCollections.length + codRemittances.length})',
+                    ),
+                    _buildFilterChip(
+                      'collections',
+                      'Koleksyon (${codCollections.length})',
+                    ),
+                    _buildFilterChip(
+                      'remittances',
+                      'Remit (${codRemittances.length})',
+                    ),
                   ],
                 ),
 
@@ -813,7 +915,11 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.receipt_long_outlined, size: 36, color: Colors.grey),
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
                           SizedBox(height: 8),
                           Text(
                             'Walang record sa napiling filter.',
@@ -848,7 +954,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
           color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? const Color(0xFF0F766E)
+                : const Color(0xFFE2E8F0),
           ),
         ),
         child: Text(
@@ -897,14 +1005,15 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     final amount = item['amount']?.toString() ?? '0.00';
     final dateStr = (item['recorded_at'] ?? item['created_at'])?.toString();
     final formattedDate = dateStr != null && dateStr.isNotEmpty
-        ? (DateTime.tryParse(dateStr)?.toLocal().toString().substring(0, 16) ?? dateStr)
+        ? (DateTime.tryParse(dateStr)?.toLocal().toString().substring(0, 16) ??
+              dateStr)
         : '';
 
     final parcel = item['parcel'] as Map?;
     final title = isCollection
         ? (parcel?['order_id'] != null
-            ? 'Order #${parcel!['order_id']}'
-            : 'COD Parcel #${item['parcel_id'] ?? item['id']}')
+              ? 'Order #${parcel!['order_id']}'
+              : 'COD Parcel #${item['parcel_id'] ?? item['id']}')
         : 'Remittance #${item['id']} to Hub';
 
     return Padding(
@@ -912,10 +1021,14 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isCollection ? const Color(0xFFF0FDFA) : const Color(0xFFEFF6FF),
+          color: isCollection
+              ? const Color(0xFFF0FDFA)
+              : const Color(0xFFEFF6FF),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isCollection ? const Color(0xFFCCFBF1) : const Color(0xFFDBEAFE),
+            color: isCollection
+                ? const Color(0xFFCCFBF1)
+                : const Color(0xFFDBEAFE),
           ),
         ),
         child: Row(
@@ -923,12 +1036,18 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isCollection ? const Color(0xFFD1FAE5) : const Color(0xFFBFDBFE),
+                color: isCollection
+                    ? const Color(0xFFD1FAE5)
+                    : const Color(0xFFBFDBFE),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                isCollection ? Icons.payments_rounded : Icons.account_balance_rounded,
-                color: isCollection ? const Color(0xFF059669) : const Color(0xFF1D4ED8),
+                isCollection
+                    ? Icons.payments_rounded
+                    : Icons.account_balance_rounded,
+                color: isCollection
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF1D4ED8),
                 size: 20,
               ),
             ),
@@ -939,12 +1058,18 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   if (formattedDate.isNotEmpty)
                     Text(
                       formattedDate,
-                      style: const TextStyle(fontSize: 11, color: RiderColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: RiderColors.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -957,7 +1082,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
-                    color: isCollection ? const Color(0xFF065F46) : const Color(0xFF1E40AF),
+                    color: isCollection
+                        ? const Color(0xFF065F46)
+                        : const Color(0xFF1E40AF),
                   ),
                 ),
                 Text(
@@ -965,7 +1092,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isCollection ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                    color: isCollection
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF2563EB),
                   ),
                 ),
               ],
@@ -976,133 +1105,259 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     );
   }
 
+  static final BoxDecoration _sectionDecoration = BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: RiderColors.border),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.04),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
+
+  Widget _buildCounterAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(
+          color: onPressed == null
+              ? RiderColors.border
+              : color.withValues(alpha: 0.4),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: const StadiumBorder(),
+      ),
+    );
+  }
+
+  Widget _buildDenominationGroupLabel(String title, String subtitle) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: title.toUpperCase(),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: RiderColors.text,
+            ),
+          ),
+          TextSpan(
+            text: '  ·  $subtitle',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: RiderColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      style: const TextStyle(fontSize: 12, letterSpacing: 0.6),
+    );
+  }
+
+  Widget _buildDenominationGroup(List<int> denoms) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: RiderColors.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < denoms.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, thickness: 1, color: RiderColors.border),
+            _buildDenominationRow(denoms[i], _denominations[denoms[i]] ?? 0),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildDenominationRow(int denom, int count) {
-    final isCoin = denom <= 10;
-    final rowTotal = denom * count;
+    final hasCount = count > 0;
+    final rowTotal = denom * count.toDouble();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: count > 0 ? const Color(0xFFF0FDFA) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: count > 0 ? const Color(0xFF99F6E4) : const Color(0xFFE2E8F0),
-            width: count > 0 ? 1.5 : 1.0,
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Denomination + live subtotal
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '₱$denom',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: RiderColors.text,
+                      ),
+                    ),
+                    if (hasCount)
+                      Text(
+                        'x $count piraso',
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: RiderColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (hasCount)
+                Text(
+                  '₱${rowTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: RiderColors.teal,
+                  ),
+                ),
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            // Denomination Badge
-            Container(
-              width: 68,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: isCoin ? const Color(0xFFE2E8F0) : const Color(0xFFCCFBF1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '₱$denom',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                  color: isCoin ? const Color(0xFF475569) : const Color(0xFF0F766E),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Subtotal for this bill
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    count > 0 ? 'x $count piraso' : 'x 0',
-                    style: TextStyle(
-                      fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 12,
-                      color: count > 0 ? RiderColors.text : RiderColors.textSecondary,
+          const SizedBox(height: 10),
+          // Stepper + quick add
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: hasCount
+                          ? RiderColors.teal
+                          : RiderColors.inputBorder,
                     ),
                   ),
-                  Text(
-                    '₱${rowTotal.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: count > 0 ? const Color(0xFF0F766E) : Colors.grey.shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Stepper controls: -1, count, +1
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline, size: 22),
-              color: count > 0 ? RiderColors.danger : Colors.grey.shade300,
-              onPressed: count > 0 ? () => _adjustDenomination(denom, -1) : null,
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-            ),
-            SizedBox(
-              width: 30,
-              child: Text(
-                '$count',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_circle, size: 22),
-              color: const Color(0xFF0F766E),
-              onPressed: () => _adjustDenomination(denom, 1),
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-            ),
-            // Quick +5 button
-            InkWell(
-              onTap: () => _adjustDenomination(denom, 5),
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-                margin: const EdgeInsets.only(left: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  '+5',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0284C7),
-                  ),
-                ),
-              ),
-            ),
-            // Quick +10 button for rapid count
-            InkWell(
-              onTap: () => _adjustDenomination(denom, 10),
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                margin: const EdgeInsets.only(left: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDE9FE),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  '+10',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6D28D9),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 22),
+                        color: RiderColors.textSecondary,
+                        disabledColor: Colors.grey.shade300,
+                        onPressed: hasCount
+                            ? () => _adjustDenomination(denom, -1)
+                            : null,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Bawasan',
+                      ),
+                      Expanded(
+                        child: Semantics(
+                          label: 'Bilang ng ₱$denom',
+                          child: TextField(
+                            key: ValueKey('denomination-count-$denom'),
+                            controller: _countControllers[denom],
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            selectAllOnFocus: true,
+                            textAlign: TextAlign.center,
+                            cursorColor: RiderColors.teal,
+                            style: const TextStyle(
+                              color: RiderColors.text,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              TextInputFormatter.withFunction((
+                                oldValue,
+                                newValue,
+                              ) {
+                                return newValue.text.isEmpty ||
+                                        int.tryParse(newValue.text) != null
+                                    ? newValue
+                                    : oldValue;
+                              }),
+                            ],
+                            decoration: const InputDecoration(
+                              hintText: '0',
+                              isDense: true,
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _denominations[denom] =
+                                    int.tryParse(value) ?? 0;
+                              });
+                            },
+                            onSubmitted: (_) => _syncCountInput(denom),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, size: 22),
+                        color: RiderColors.teal,
+                        onPressed: () => _adjustDenomination(denom, 1),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Dagdagan',
+                      ),
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              _buildQuickAddChip(denom, 5),
+              const SizedBox(width: 6),
+              _buildQuickAddChip(denom, 10),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAddChip(int denom, int amount) {
+    return Material(
+      color: RiderColors.mintBanner,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => _adjustDenomination(denom, amount),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 44,
+          constraints: const BoxConstraints(minWidth: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          child: Text(
+            '+$amount',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: RiderColors.tealDark,
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1123,11 +1378,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: RiderColors.headerGradient,
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
@@ -1140,8 +1391,8 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Kabuuang Kinita (Total Earnings)',
@@ -1151,15 +1402,24 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white24,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.verified_rounded, size: 14, color: Colors.white),
+                          Icon(
+                            Icons.verified_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'Alona Verified',
@@ -1199,11 +1459,20 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.check_circle_outline, color: Colors.white70, size: 14),
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  color: Colors.white70,
+                                  size: 14,
+                                ),
                                 SizedBox(width: 4),
-                                Text(
-                                  'Nabayaran Na',
-                                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                                Expanded(
+                                  child: Text(
+                                    'Nabayaran Na',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -1233,11 +1502,20 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.schedule, color: Colors.white70, size: 14),
+                                Icon(
+                                  Icons.schedule,
+                                  color: Colors.white70,
+                                  size: 14,
+                                ),
                                 SizedBox(width: 4),
-                                Text(
-                                  'Papasok / Unpaid',
-                                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                                Expanded(
+                                  child: Text(
+                                    'Papasok / Unpaid',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -1272,7 +1550,11 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
             ),
             child: const Row(
               children: [
-                Icon(Icons.event_available_rounded, color: Color(0xFF2563EB), size: 24),
+                Icon(
+                  Icons.event_available_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 24,
+                ),
                 SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1289,7 +1571,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       SizedBox(height: 2),
                       Text(
                         'Awtomatikong nire-release ang delivery commission sa iyong bangko o e-wallet pagkatapos ma-audit ng Hub Cashier ang nai-remit na COD.',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF1E3A8A)),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF1E3A8A),
+                        ),
                       ),
                     ],
                   ),
@@ -1304,26 +1589,39 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: RiderColors.amberSurfaceGradient,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: RiderColors.border),
+              border: Border.all(color: RiderColors.portalBorder),
               boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.receipt_long_rounded, color: Color(0xFF0F766E), size: 20),
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          color: Color(0xFF0F766E),
+                          size: 20,
+                        ),
                         SizedBox(width: 8),
-                        Text(
-                          'Talaan ng Delivery Fee',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        Expanded(
+                          child: Text(
+                            'Talaan ng Delivery Fee',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1340,12 +1638,15 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 const SizedBox(height: 12),
 
                 // Filter Chips
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
-                    _buildEarningsFilterChip('all', 'Lahat (${earningsRows.length})'),
-                    const SizedBox(width: 6),
+                    _buildEarningsFilterChip(
+                      'all',
+                      'Lahat (${earningsRows.length})',
+                    ),
                     _buildEarningsFilterChip('paid', 'Nabayaran Na'),
-                    const SizedBox(width: 6),
                     _buildEarningsFilterChip('unpaid', 'Papasok Pa'),
                   ],
                 ),
@@ -1358,7 +1659,11 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.inventory_2_outlined, size: 36, color: Colors.grey),
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
                           SizedBox(height: 8),
                           Text(
                             'Walang recorded delivery earnings sa filter na ito.',
@@ -1393,7 +1698,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
           color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? const Color(0xFF0F766E)
+                : const Color(0xFFE2E8F0),
           ),
         ),
         child: Text(
@@ -1422,7 +1729,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     final amount = row['amount'] ?? '0.00';
     final status = (row['payout_status'] ?? 'pending').toString().toLowerCase();
     final earnedAt = row['earned_at'] != null
-        ? DateTime.tryParse('${row['earned_at']}')?.toLocal().toString().substring(0, 16)
+        ? DateTime.tryParse('${row['earned_at']}')
+              ?.toLocal()
+              .toString()
+              .substring(0, 16)
         : '';
     final isPaid = status == 'paid';
 
@@ -1442,12 +1752,18 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                color: isPaid
+                    ? const Color(0xFFDCFCE7)
+                    : const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                isPaid ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                isPaid
+                    ? Icons.check_circle_rounded
+                    : Icons.pending_actions_rounded,
+                color: isPaid
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFFD97706),
                 size: 20,
               ),
             ),
@@ -1458,12 +1774,18 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 children: [
                   Text(
                     'Delivery Commission #${row['id']}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                   if (earnedAt != null && earnedAt.isNotEmpty)
                     Text(
                       earnedAt,
-                      style: const TextStyle(fontSize: 11, color: RiderColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: RiderColors.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -1476,13 +1798,20 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
-                    color: isPaid ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                    color: isPaid
+                        ? const Color(0xFF15803D)
+                        : const Color(0xFFB45309),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                    color: isPaid
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFFEF3C7),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1490,7 +1819,9 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: isPaid ? const Color(0xFF166534) : const Color(0xFF92400E),
+                      color: isPaid
+                          ? const Color(0xFF166534)
+                          : const Color(0xFF92400E),
                     ),
                   ),
                 ),

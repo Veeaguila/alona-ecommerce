@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
@@ -23,12 +24,12 @@ class BuyerProfileScreen extends StatefulWidget {
 }
 
 class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
-  static const Color _bgScaffold = Color(0xFFF2F6F6);
-  static const Color _darkTeal = Color(0xFF087F8C);
-  static const Color _lightTeal = Color(0xFFE3F3F1);
-  static const Color _cardBorder = Color(0xFFE2EBE9);
-  static const Color _headingColor = Color(0xFF132228);
-  static const Color _subtitleColor = Color(0xFF6B7C7C);
+  static const Color _bgScaffold = AppColors.buyerBackground;
+  static const Color _darkTeal = AppColors.primary;
+  static const Color _lightTeal = AppColors.lightTeal;
+  static const Color _cardBorder = AppColors.border;
+  static const Color _headingColor = AppColors.textPrimary;
+  static const Color _subtitleColor = AppColors.textMuted;
 
   List<ProductModel> _recommendedProducts = [];
   bool _isLoadingRecommended = true;
@@ -124,11 +125,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  gradient: AppColors.buyerBrandGradient,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: AppColors.buyerDeepTeal.withValues(alpha: 0.20),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -141,7 +142,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                             width: 58,
                             height: 58,
                             decoration: const BoxDecoration(
-                              color: _darkTeal,
+                              color: AppColors.accentGold,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
@@ -154,7 +155,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                               style: GoogleFonts.figtree(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: AppColors.buyerDeepTeal,
                               ),
                             ),
                           ),
@@ -170,7 +171,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                                   style: GoogleFonts.figtree(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w800,
-                                    color: _headingColor,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -180,14 +181,14 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.figtree(
                                     fontSize: 13,
-                                    color: _subtitleColor,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: _lightTeal,
+                                    color: AppColors.accentGold,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -195,7 +196,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                                     style: GoogleFonts.figtree(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: _darkTeal,
+                                      color: AppColors.buyerDeepTeal,
                                     ),
                                   ),
                                 ),
@@ -211,7 +212,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                               border: Border.all(color: _cardBorder),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: _darkTeal),
+                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.buyerDeepTeal),
                               tooltip: 'Edit Profile',
                               padding: EdgeInsets.zero,
                               onPressed: () => _openSettings(initialPage: 'profile'),
@@ -224,16 +225,17 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                         children: [
                           Text(
                             'Welcome to Alona',
-                            style: GoogleFonts.figtree(fontSize: 17, fontWeight: FontWeight.w800, color: _headingColor),
+                            style: GoogleFonts.figtree(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Log in or register to place orders, track shipments, and claim coupons.',
-                            style: GoogleFonts.figtree(fontSize: 13, color: _subtitleColor),
+                            style: GoogleFonts.figtree(fontSize: 13, color: Colors.white),
                           ),
                           const SizedBox(height: 16),
                           AlonaButton(
                             text: 'Log In / Register',
+                            variant: ButtonVariant.secondary,
                             onPressed: () {
                               Navigator.push(
                                 context,

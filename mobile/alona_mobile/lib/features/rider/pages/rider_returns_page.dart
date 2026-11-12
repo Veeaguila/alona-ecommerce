@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/rider_theme.dart';
 
 import '../services/rider_session.dart';
 import '../services/rider_portal_api.dart';
@@ -121,8 +122,11 @@ class _RiderReturnsPageState extends State<RiderReturnsPage> {
     _ => status,
   };
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('Return to Seller'),
       actions: [
         IconButton(
@@ -226,5 +230,5 @@ class _RiderReturnsPageState extends State<RiderReturnsPage> {
         ),
       ],
     ),
-  );
+  ));
 }

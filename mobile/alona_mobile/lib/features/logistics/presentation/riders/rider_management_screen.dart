@@ -192,105 +192,111 @@ class _RiderManagementScreenState extends State<RiderManagementScreen>
                 final r = _riders[index];
                 final isPending = r.approvalStatus.toLowerCase() == 'pending';
 
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: AppColors.primaryLight,
-                            child: const Icon(
-                              Icons.two_wheeler_rounded,
-                              color: AppColors.primary,
-                              size: 20,
+                return FadeSlideIn(
+                  index: index,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppColors.primaryLight,
+                              child: const Icon(
+                                Icons.two_wheeler_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  r.name,
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (r.phone != null)
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    r.phone!,
+                                    r.name,
                                     style: GoogleFonts.figtree(
-                                      fontSize: 12,
-                                      color: AppColors.textMuted,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                              ],
+                                  if (r.phone != null)
+                                    Text(
+                                      r.phone!,
+                                      style: GoogleFonts.figtree(
+                                        fontSize: 12,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                          StatusBadge(status: r.approvalStatus),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          _metaItem('Vehicle', r.vehicleType ?? 'Not recorded'),
-                          const SizedBox(width: 20),
-                          _metaItem('Plate Number', r.plateNumber ?? 'N/A'),
-                          const SizedBox(width: 20),
-                          _metaItem(
-                            'Fleet Status',
-                            r.isActive ? 'Active' : 'Inactive',
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 20),
-                      if (r.approvalStatus == 'approved' && r.isActive)
-                        TextButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => _manageCoverage(r),
-                          child: const Text('Manage delivery areas'),
+                            StatusBadge(status: r.approvalStatus),
+                          ],
                         ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (isPending) ...[
-                            OutlinedButton(
-                              onPressed: () => _rejectRider(r.id),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                              ),
-                              child: const Text('Reject'),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          children: [
+                            _metaItem(
+                              'Vehicle',
+                              r.vehicleType ?? 'Not recorded',
                             ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () => _approveRider(r.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                              ),
-                              child: const Text('Approve'),
-                            ),
-                          ] else if (r.approvalStatus == 'approved') ...[
-                            OutlinedButton(
-                              onPressed: () => _toggleActive(r),
-                              child: Text(
-                                r.isActive ? 'Deactivate' : 'Activate',
-                              ),
+                            const SizedBox(width: 20),
+                            _metaItem('Plate Number', r.plateNumber ?? 'N/A'),
+                            const SizedBox(width: 20),
+                            _metaItem(
+                              'Fleet Status',
+                              r.isActive ? 'Active' : 'Inactive',
                             ),
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                        const Divider(height: 20),
+                        if (r.approvalStatus == 'approved' && r.isActive)
+                          TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _manageCoverage(r),
+                            child: const Text('Manage delivery areas'),
+                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (isPending) ...[
+                              OutlinedButton(
+                                onPressed: () => _rejectRider(r.id),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                ),
+                                child: const Text('Reject'),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () => _approveRider(r.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                ),
+                                child: const Text('Approve'),
+                              ),
+                            ] else if (r.approvalStatus == 'approved') ...[
+                              OutlinedButton(
+                                onPressed: () => _toggleActive(r),
+                                child: Text(
+                                  r.isActive ? 'Deactivate' : 'Activate',
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

@@ -73,16 +73,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final canPop = Navigator.canPop(context);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         titleSpacing: canPop ? 0 : 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+        ),
         automaticallyImplyLeading: false,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
@@ -94,13 +97,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  border: Border.all(color: AppColors.buyerBorder, width: 1),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
@@ -117,7 +120,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               ? 'Search in ${widget.categoryName}...'
                               : 'Search products, brands...',
                           hintStyle: GoogleFonts.figtree(
-                            color: AppColors.textLight,
+                            color: AppColors.textMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -146,7 +149,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
             // Right side: Message and Cart icons
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
               tooltip: 'Messages',
               onPressed: () {
                 Navigator.push(
@@ -156,7 +159,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(
@@ -173,7 +176,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Filter / Sort Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.white,
+            color: AppColors.buyerBackground,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -235,15 +238,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
         style: GoogleFonts.figtree(
           fontSize: 13,
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-          color: isSelected ? Colors.white : const Color(0xFF334155),
+          color: isSelected ? Colors.white : AppColors.primaryDark,
         ),
       ),
       selected: isSelected,
-      selectedColor: AppColors.primary,
-      backgroundColor: AppColors.surfaceAlt,
+      selectedColor: AppColors.primaryDark,
+      backgroundColor: AppColors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       side: BorderSide(
-        color: isSelected ? AppColors.primary : const Color(0xFF334155),
+        color: isSelected ? AppColors.primaryDark : AppColors.buyerBorder,
         width: 1.0,
       ),
       checkmarkColor: Colors.white,

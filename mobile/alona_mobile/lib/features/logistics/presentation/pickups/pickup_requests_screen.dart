@@ -192,87 +192,92 @@ class _PickupRequestsScreenState extends State<PickupRequestsScreen> {
                         row['status'] == 'confirmed' &&
                         ['PLACED', 'PREPARING'].contains(p['status']) &&
                         p['pickup_rider_id'] == null;
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              p['order_id'],
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(
-                              '${row['seller']?['name'] ?? 'Seller'} · ${row['status']} · ${p['status']}',
-                            ),
-                            Text(
-                              'Seller collection: ${p['collection_address'] ?? 'Not recorded'}',
-                            ),
-                            Text(
-                              'Buyer destination: ${p['delivery_address'] ?? 'Not recorded'}',
-                            ),
-                            if (p['pickup_rider'] != null)
+                    return FadeSlideIn(
+                      index: index,
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                'Pickup Rider: ${p['pickup_rider']['name']}',
+                                p['order_id'],
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                            if (row['status'] == 'confirmed')
-                              TextButton(
-                                onPressed: _busy
-                                    ? null
-                                    : () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              ParcelOperationsScreen(
-                                                parcelId: p['id'],
+                              Text(
+                                '${row['seller']?['name'] ?? 'Seller'} · ${row['status']} · ${p['status']}',
+                              ),
+                              Text(
+                                'Seller collection: ${p['collection_address'] ?? 'Not recorded'}',
+                              ),
+                              Text(
+                                'Buyer destination: ${p['delivery_address'] ?? 'Not recorded'}',
+                              ),
+                              if (p['pickup_rider'] != null)
+                                Text(
+                                  'Pickup Rider: ${p['pickup_rider']['name']}',
+                                ),
+                              if (row['status'] == 'confirmed')
+                                TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ParcelOperationsScreen(
+                                                  parcelId: p['id'],
+                                                ),
+                                          ),
+                                        ),
+                                  child: const Text(
+                                    'Parcel operations / handover',
+                                  ),
+                                ),
+                              if (row['status'] == 'pending')
+                                FilledButton(
+                                  onPressed: _busy ? null : () => _accept(row),
+                                  child: const Text('Accept pickup request'),
+                                ),
+                              if (canDispatch)
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    FilledButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _assign(p),
+                                      child: const Text('Assign pickup Rider'),
+                                    ),
+                                    OutlinedButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _run(
+                                              () => LogisticsService.act(
+                                                'pickup-dispatch/${p['id']}/nearest',
                                               ),
+                                            ),
+                                      child: const Text('Offer nearest Rider'),
+                                    ),
+                                  ],
+                                ),
+                              if (row['timeline'] is List)
+                                ExpansionTile(
+                                  title: const Text('Tracking history'),
+                                  children: [
+                                    for (final event in row['timeline'])
+                                      ListTile(
+                                        title: Text(
+                                          '${event['label'] ?? event['note'] ?? event['status'] ?? ''}',
+                                        ),
+                                        subtitle: Text(
+                                          '${event['occurred_at'] ?? 'Not recorded'}',
                                         ),
                                       ),
-                                child: const Text(
-                                  'Parcel operations / handover',
+                                  ],
                                 ),
-                              ),
-                            if (row['status'] == 'pending')
-                              FilledButton(
-                                onPressed: _busy ? null : () => _accept(row),
-                                child: const Text('Accept pickup request'),
-                              ),
-                            if (canDispatch)
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  FilledButton(
-                                    onPressed: _busy ? null : () => _assign(p),
-                                    child: const Text('Assign pickup Rider'),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: _busy
-                                        ? null
-                                        : () => _run(
-                                            () => LogisticsService.act(
-                                              'pickup-dispatch/${p['id']}/nearest',
-                                            ),
-                                          ),
-                                    child: const Text('Offer nearest Rider'),
-                                  ),
-                                ],
-                              ),
-                            if (row['timeline'] is List)
-                              ExpansionTile(
-                                title: const Text('Tracking history'),
-                                children: [
-                                  for (final event in row['timeline'])
-                                    ListTile(
-                                      title: Text(
-                                        '${event['label'] ?? event['note'] ?? event['status'] ?? ''}',
-                                      ),
-                                      subtitle: Text(
-                                        '${event['occurred_at'] ?? 'Not recorded'}',
-                                      ),
-                                    ),
-                                ],
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );

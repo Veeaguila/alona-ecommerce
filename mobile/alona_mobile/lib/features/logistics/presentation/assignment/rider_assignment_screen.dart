@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/features/logistics/presentation/workflow_widgets.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/shared/widgets/status_badge.dart';
 import 'package:alona_mobile/features/logistics/models/logistics_models.dart';
@@ -121,61 +122,64 @@ class _RiderAssignmentScreenState extends State<RiderAssignmentScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final p = _parcels[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            p.orderId,
-                            style: GoogleFonts.figtree(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          StatusBadge(status: p.status),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Address: ${p.fullDeliveryAddress}',
-                        style: GoogleFonts.figtree(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Divider(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _assigning
-                                ? null
-                                : () => _showAssignDialog(p),
-                            icon: const Icon(
-                              Icons.person_add_alt_1_outlined,
-                              size: 16,
-                            ),
-                            label: const Text('Assign Rider'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
+                return FadeSlideIn(
+                  index: index,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              p.orderId,
+                              style: GoogleFonts.figtree(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            StatusBadge(status: p.status),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Address: ${p.fullDeliveryAddress}',
+                          style: GoogleFonts.figtree(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _assigning
+                                  ? null
+                                  : () => _showAssignDialog(p),
+                              icon: const Icon(
+                                Icons.person_add_alt_1_outlined,
+                                size: 16,
+                              ),
+                              label: const Text('Assign Rider'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

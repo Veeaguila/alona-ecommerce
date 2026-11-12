@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/rider_theme.dart';
 
 import '../widgets/rider_content.dart';
 
@@ -220,7 +221,7 @@ class _RiderAddressEditPageState extends State<RiderAddressEditPage>
     validator: (v) => v == null ? 'Choose $label.' : null,
   );
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
     appBar: AppBar(title: const Text('Update address')),
     body: Form(
       key: form,
@@ -291,5 +292,5 @@ class _RiderAddressEditPageState extends State<RiderAddressEditPage>
         ],
       ),
     ),
-  );
+  ));
 }

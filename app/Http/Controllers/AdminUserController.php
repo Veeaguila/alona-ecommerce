@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminUserController extends Controller
@@ -196,12 +197,21 @@ class AdminUserController extends Controller
 
         $reason = trim((string) ($validated['reason'] ?? ''));
 
-        $user->update([
-            'status' => $validated['status'],
-            'rejection_reason' => $reason !== ''
-                ? $reason
-                : null,
-        ]);
+        DB::transaction(function () use ($user, $validated, $reason) {
+            $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if ($user->usertype === 'sorting_center') {
+                if ($validated['status'] === 'approved') {
+                    app(\App\Services\SortingCenterApproval::class)->approve($user);
+                } elseif (in_array($validated['status'], ['pending', 'rejected'], true)) {
+                    $user->sortingCenter()->update(['approval_status' => $validated['status']]);
+                }
+            }
+
+            $user->update([
+                'status' => $validated['status'],
+                'rejection_reason' => $reason !== '' ? $reason : null,
+            ]);
+        });
 
         return back()->with(
             'status',

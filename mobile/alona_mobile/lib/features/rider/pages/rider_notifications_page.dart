@@ -178,9 +178,12 @@ class _RiderNotificationsPageState extends State<RiderNotificationsPage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: RiderColors.background,
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
+    backgroundColor: RiderColors.portalBackground,
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('Notifications'),
       actions: [
         IconButton(
@@ -401,5 +404,5 @@ class _RiderNotificationsPageState extends State<RiderNotificationsPage>
         ],
       ),
     ),
-  );
+  ));
 }

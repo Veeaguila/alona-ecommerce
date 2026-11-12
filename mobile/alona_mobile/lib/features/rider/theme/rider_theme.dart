@@ -28,97 +28,123 @@ class RiderColors {
   // Standard semantic colors
   static const Color success = Color(0xFF059669);
   static const Color danger = Color(0xFFDC2626);
+
+  static const Color portalBackground = mintBanner;
+  static const Color portalBorder = Color(0xFFB9E6E6);
+  static const LinearGradient headerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [tealDark, teal, tealDark],
+  );
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [card, mintBanner],
+    stops: [0.5, 1],
+  );
+  static const LinearGradient amberSurfaceGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [card, amberBadge],
+  );
 }
 
 class RiderTheme {
-  static ThemeData get theme {
-    return ThemeData(
-      useMaterial3: true,
-      fontFamily: 'Roboto',
-      scaffoldBackgroundColor: RiderColors.background,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: RiderColors.teal,
-        primary: RiderColors.teal,
-        secondary: RiderColors.amber,
-        surface: RiderColors.card,
+  static Widget wrap(Widget child) => Theme(data: theme, child: child);
+
+  static final ThemeData theme = ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Roboto',
+    scaffoldBackgroundColor: RiderColors.portalBackground,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: RiderColors.teal,
+      primary: RiderColors.teal,
+      secondary: RiderColors.amber,
+      onPrimary: Colors.white,
+      onSecondary: RiderColors.text,
+      secondaryContainer: RiderColors.amberBadge,
+      onSecondaryContainer: RiderColors.amberBadgeText,
+      surface: RiderColors.card,
+      surfaceContainerHighest: RiderColors.mintBanner,
+      surfaceTint: Colors.transparent,
+      outline: RiderColors.portalBorder,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: RiderColors.tealDark,
+      foregroundColor: Colors.white,
+      centerTitle: false,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: 60,
+      titleTextStyle: TextStyle(
+        color: Colors.white,
+        fontFamily: 'Roboto',
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
       ),
-      appBarTheme: const AppBarTheme(
+    ),
+    cardTheme: CardThemeData(
+      color: RiderColors.card,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: RiderColors.portalBorder),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 16,
+      ),
+      errorMaxLines: 3,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: RiderColors.inputBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: RiderColors.inputBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: RiderColors.teal, width: 2),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
         backgroundColor: RiderColors.teal,
         foregroundColor: Colors.white,
-        centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        toolbarHeight: 60,
-        titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontFamily: 'Roboto',
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: RiderColors.card,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
+        minimumSize: const Size(48, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: RiderColors.border),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'Roboto',
         ),
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: RiderColors.tealDark,
+        minimumSize: const Size(48, 50),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        side: const BorderSide(color: RiderColors.teal),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
         ),
-        errorMaxLines: 3,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: RiderColors.inputBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: RiderColors.inputBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: RiderColors.teal, width: 2),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Roboto',
         ),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: RiderColors.teal,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(48, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Roboto',
-          ),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: RiderColors.text,
-          minimumSize: const Size(48, 50),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          side: const BorderSide(color: Color(0xFF64748B)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Roboto',
-          ),
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }

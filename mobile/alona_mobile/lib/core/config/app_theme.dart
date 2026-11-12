@@ -53,9 +53,39 @@ class AppColors {
   static const Color sale = Color(0xFFE85D5D);
   static const Color error = Color(0xFFE85D5D);
 
+  static const Color buyerBackground = lightTeal;
+  static const Color buyerBorder = Color(0xFFB2DFDB);
+  static const Color buyerDeepTeal = Color(0xFF044D55);
+  static const LinearGradient buyerBrandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryDark, primary, buyerDeepTeal],
+  );
+  static const LinearGradient buyerNavigationGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [buyerDeepTeal, Color(0xFF044850)],
+  );
+  static const LinearGradient buyerCardGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [white, lightTeal],
+    stops: [0.5, 1],
+  );
+  static const LinearGradient buyerWarmGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [white, Color(0xFFFFF6DF)],
+  );
+
   // Logistics Specific Dark Palette
   static const Color logisticsHeader = Color(0xFF087F8C);
   static const Color logisticsSidebar = Color(0xFF044D55);
+
+  // Buyer web flash-sale progress, from Tailwind amber-400 to Alona teal.
+  static const LinearGradient saleProgressGradient = LinearGradient(
+    colors: [Color(0xFFFBBF24), primary],
+  );
 }
 
 class AppTheme {
@@ -65,6 +95,204 @@ class AppTheme {
   static const Color darkSlate = AppColors.textPrimary;
   static const Color bodyMuted = AppColors.textMuted;
   static const Color lightBg = AppColors.background;
+
+  static ThemeData get buyerTheme {
+    final theme = lightTheme;
+    return theme.copyWith(
+      scaffoldBackgroundColor: AppColors.buyerBackground,
+      colorScheme: theme.colorScheme.copyWith(
+        onSecondary: AppColors.textPrimary,
+        outline: AppColors.border,
+        surfaceTint: Colors.transparent,
+      ),
+      appBarTheme: theme.appBarTheme.copyWith(
+        surfaceTintColor: Colors.transparent,
+      ),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.oceanTeal, width: 1.5),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: theme.outlinedButtonTheme.style?.merge(
+          OutlinedButton.styleFrom(
+            backgroundColor: AppColors.white,
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.border),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Logistics module polish: same Alona palette and Figtree type, with
+  /// softer shapes, clearer hierarchy and consistent component spacing.
+  static ThemeData get logisticsTheme {
+    final theme = lightTheme;
+    final radius12 = BorderRadius.circular(12);
+    return theme.copyWith(
+      colorScheme: theme.colorScheme.copyWith(
+        surfaceTint: Colors.transparent,
+        outline: AppColors.border,
+        outlineVariant: AppColors.borderLight,
+      ),
+      appBarTheme: theme.appBarTheme.copyWith(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        shape: const Border(bottom: BorderSide(color: AppColors.border)),
+        titleTextStyle: GoogleFonts.figtree(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+          color: AppColors.textPrimary,
+        ),
+        iconTheme: const IconThemeData(color: AppColors.primaryDark),
+        actionsIconTheme: const IconThemeData(color: AppColors.primaryDark),
+      ),
+      cardTheme: theme.cardTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        elevation: 1,
+        clipBehavior: Clip.antiAlias,
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        iconColor: AppColors.primary,
+        titleTextStyle: GoogleFonts.figtree(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+        subtitleTextStyle: GoogleFonts.figtree(
+          fontSize: 12,
+          height: 1.35,
+          color: AppColors.textMuted,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: radius12),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.border,
+        thickness: 1,
+        space: 1,
+      ),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        fillColor: AppColors.surface,
+        prefixIconColor: AppColors.primary,
+        labelStyle: GoogleFonts.figtree(
+          fontSize: 14,
+          color: AppColors.textMuted,
+        ),
+        floatingLabelStyle: GoogleFonts.figtree(
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: theme.elevatedButtonTheme.style?.merge(
+          ElevatedButton.styleFrom(
+            minimumSize: const Size(64, 48),
+            shape: RoundedRectangleBorder(borderRadius: radius12),
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(64, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: radius12),
+          textStyle: GoogleFonts.figtree(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: theme.outlinedButtonTheme.style?.merge(
+          OutlinedButton.styleFrom(
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.primaryDark,
+            minimumSize: const Size(64, 48),
+            side: const BorderSide(color: AppColors.border, width: 1.2),
+            shape: RoundedRectangleBorder(borderRadius: radius12),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          shape: RoundedRectangleBorder(borderRadius: radius12),
+          textStyle: GoogleFonts.figtree(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      chipTheme: theme.chipTheme.copyWith(
+        shape: const StadiumBorder(side: BorderSide(color: AppColors.border)),
+        side: const BorderSide(color: AppColors.border),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      tabBarTheme: theme.tabBarTheme.copyWith(
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: AppColors.border,
+        indicator: const UnderlineTabIndicator(
+          borderSide: BorderSide(color: AppColors.primary, width: 3),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(3)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        titleTextStyle: GoogleFonts.figtree(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+        contentTextStyle: GoogleFonts.figtree(
+          fontSize: 14,
+          height: 1.45,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primaryDark,
+        contentTextStyle: GoogleFonts.figtree(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: radius12),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+        linearTrackColor: AppColors.lightTeal,
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+    );
+  }
 
   static ThemeData get lightTheme {
     return ThemeData(

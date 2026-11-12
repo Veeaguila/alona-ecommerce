@@ -60,11 +60,7 @@ class _OrderHeader extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B7A83), Color(0xFF0F766E), Color(0xFF0D9488)],
-        ),
+        gradient: RiderColors.headerGradient,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
@@ -216,9 +212,9 @@ class _ContactCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: RiderColors.cardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: RiderColors.border),
+        border: Border.all(color: RiderColors.portalBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,9 +396,9 @@ Widget _card({required Widget child}) => Container(
   width: double.infinity,
   padding: const EdgeInsets.all(18),
   decoration: BoxDecoration(
-    color: Colors.white,
+    gradient: RiderColors.cardGradient,
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: RiderColors.border),
+    border: Border.all(color: RiderColors.portalBorder),
   ),
   child: child,
 );
@@ -460,8 +456,8 @@ class _PickupOrderPageState extends State<PickupOrderPage> {
   @override
   Widget build(BuildContext context) {
     final pickup = widget.pickup;
-    return Scaffold(
-      backgroundColor: RiderColors.background,
+    return RiderTheme.wrap(Scaffold(
+      backgroundColor: RiderColors.portalBackground,
       body: Column(
         children: [
           _OrderHeader(
@@ -553,9 +549,7 @@ class _PickupOrderPageState extends State<PickupOrderPage> {
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0F766E), Color(0xFF14A39A)],
-                      ),
+                      gradient: RiderColors.headerGradient,
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
@@ -620,7 +614,7 @@ class _PickupOrderPageState extends State<PickupOrderPage> {
       bottomNavigationBar: widget.session != null
           ? RiderBottomNav(currentIndex: 0, session: widget.session!)
           : null,
-    );
+    ));
   }
 }
 
@@ -673,8 +667,8 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
     final delivery = widget.delivery;
     final canResolve = widget.onDeliver != null || widget.onFail != null;
     final step = canResolve ? 3 : 2;
-    return Scaffold(
-      backgroundColor: RiderColors.background,
+    return RiderTheme.wrap(Scaffold(
+      backgroundColor: RiderColors.portalBackground,
       body: Column(
         children: [
           _OrderHeader(
@@ -727,9 +721,9 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      gradient: RiderColors.cardGradient,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: RiderColors.border),
+                      border: Border.all(color: RiderColors.portalBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -869,6 +863,6 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
       bottomNavigationBar: widget.session != null
           ? RiderBottomNav(currentIndex: 1, session: widget.session!)
           : null,
-    );
+    ));
   }
 }
