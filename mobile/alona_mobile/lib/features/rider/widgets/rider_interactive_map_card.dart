@@ -371,7 +371,7 @@ class _RiderInteractiveMapCardState extends State<RiderInteractiveMapCard> {
                       child: CustomPaint(painter: _RouteLinePainter()),
                     ),
 
-                  // Center Marker: Destination Drop-off Pin 📍
+                  // Center Marker: Destination Drop-off Pin
                   Padding(
                     padding: const EdgeInsets.only(left: 12, right: 60),
                     child: Column(
@@ -414,7 +414,7 @@ class _RiderInteractiveMapCardState extends State<RiderInteractiveMapCard> {
                     ),
                   ),
 
-                  // Rider Live Location Pin 🛵 (Offset simulated if available)
+                  // Rider Live Location Pin (Offset simulated if available)
                   if (_riderPosition != null)
                     Positioned(
                       left: 120,

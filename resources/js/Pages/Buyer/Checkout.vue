@@ -946,8 +946,9 @@ const submit = () => {
                                             × {{ itemQuantity(item) }}
                                         </span>
 
-                                        <span v-if="item.bundle_applied" class="mt-0.5 block text-[10px] font-bold text-[#087F8C]">
-                                            🎁 {{ item.bundle_name || 'Bundle Discount Applied' }}
+                                        <span v-if="item.bundle_applied" class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-[#087F8C]">
+                                            <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                                            <span>{{ item.bundle_name || 'Bundle Discount Applied' }}</span>
                                         </span>
                                     </span>
 
@@ -969,8 +970,9 @@ const submit = () => {
                                     v-if="Number(bundle_discount || 0) > 0"
                                     class="flex items-center justify-between gap-3 text-xs"
                                 >
-                                    <span class="min-w-0 truncate font-bold text-[#22A06B]">
-                                        🎁 Bundle Savings
+                                    <span class="min-w-0 inline-flex items-center gap-1 truncate font-bold text-[#22A06B]">
+                                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                                        <span>Bundle Savings</span>
                                     </span>
                                     <span class="shrink-0 font-bold text-[#22A06B]">
                                         -{{ money(Number(bundle_discount)) }}

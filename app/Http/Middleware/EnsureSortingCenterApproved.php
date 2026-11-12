@@ -33,7 +33,8 @@ class EnsureSortingCenterApproved
             }
             if ($request->is('sorting-center/pickup-requests*') || $request->is('api/sorting-center/pickup-requests*') || $request->is('api/sorting-center/pickup-dispatch*')
                 || $request->is('sorting-center/delivery-management*') || $request->is('api/sorting-center/parcels*') || $request->is('api/sorting-center/areas*')
-                || $request->is('sorting-center/rider-assignment*') || $request->is('api/sorting-center/cod*') || $request->is('sorting-center/cod*')) {
+                || $request->is('sorting-center/rider-assignment*') || $request->is('api/sorting-center/cod*') || $request->is('sorting-center/cod*')
+                || $request->is('sorting-center/messages*') || $request->is('api/sorting-center/messages*')) {
                 return $next($request);
             }
             abort(403, 'Use your assigned hub workspace. Company-wide operations require the company administrator.');

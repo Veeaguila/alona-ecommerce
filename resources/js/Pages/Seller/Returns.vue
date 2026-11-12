@@ -881,8 +881,8 @@ const hasActiveFilters = computed(() => {
 
                                     <!-- STAGE 6: IN DISPUTE (SEL-RET-005) -->
                                     <div v-else-if="req.status === 'in_dispute'" class="rounded-xl bg-purple-50 p-2.5 text-xs text-purple-900 border border-purple-200">
-                                        <span class="font-bold block flex items-center gap-1 text-purple-800">
-                                            <span>⚠️</span>
+                                        <span class="font-bold flex items-center gap-1 text-purple-800">
+                                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                                             <span>In Dispute</span>
                                         </span>
                                         <span class="text-[11px] text-purple-700 block mt-0.5 leading-snug">

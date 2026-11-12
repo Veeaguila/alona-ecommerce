@@ -165,7 +165,7 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textPrimary, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(

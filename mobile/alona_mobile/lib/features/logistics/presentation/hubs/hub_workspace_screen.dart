@@ -156,7 +156,7 @@ class _HubWorkspaceScreenState extends State<HubWorkspaceScreen> {
         SnackBar(
           content: Text(
             matchedIds.isNotEmpty
-                ? '✔ Selected ${matchedIds.length} parcel(s) from scanner.'
+                ? 'Selected ${matchedIds.length} parcel(s) from scanner.'
                 : 'Scanned ${result.batchCodes.length} barcode(s), but none matched active parcels in this hub queue.',
           ),
           backgroundColor: matchedIds.isNotEmpty
@@ -289,7 +289,7 @@ class _HubWorkspaceScreenState extends State<HubWorkspaceScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '🚚 Batch Dispatch (${_selectedIds.length} Parcels)',
+                          'Batch Dispatch (${_selectedIds.length} Parcels)',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                       ),
@@ -388,7 +388,7 @@ class _HubWorkspaceScreenState extends State<HubWorkspaceScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('🚚 $msg'),
+                                content: Text('$msg'),
                                 backgroundColor: const Color(0xFF0F766E),
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -448,7 +448,7 @@ class _HubWorkspaceScreenState extends State<HubWorkspaceScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '📥 Batch Receive (${_selectedIds.length} Parcels)',
+                          'Batch Receive (${_selectedIds.length} Parcels)',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                       ),
@@ -523,7 +523,7 @@ class _HubWorkspaceScreenState extends State<HubWorkspaceScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('📥 $msg'),
+                                content: Text('$msg'),
                                 backgroundColor: const Color(0xFF4338CA),
                                 behavior: SnackBarBehavior.floating,
                               ),

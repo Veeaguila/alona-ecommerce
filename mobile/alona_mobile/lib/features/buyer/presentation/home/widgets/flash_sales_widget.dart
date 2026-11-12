@@ -130,7 +130,7 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text('⚡', style: TextStyle(fontSize: 18)),
+                const Icon(Icons.bolt_outlined, size: 22, color: AppColors.accent),
               ],
             ),
             if (widget.flashSales.isNotEmpty && _remaining > Duration.zero)

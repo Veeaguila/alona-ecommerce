@@ -907,7 +907,7 @@ const formatTime = (timeStr) => {
 
                                     <div class="mt-1 flex flex-wrap items-center gap-2">
                                         <div class="flex items-center gap-1">
-                                            <span class="text-base sm:text-lg">⚡</span>
+                                            <svg class="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                             <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
                                                 Flash Deals
                                             </h2>
@@ -981,7 +981,7 @@ const formatTime = (timeStr) => {
                                             v-if="item.discount_percentage > 0"
                                             class="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                         >
-                                            <span>⚡</span>
+                                            <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                             <span>-{{ item.discount_percentage }}%</span>
                                         </span>
 
@@ -1022,7 +1022,10 @@ const formatTime = (timeStr) => {
                                                     ></div>
                                                 </div>
                                                 <div class="mt-0.5 flex items-center justify-between text-[9px] text-gray-500">
-                                                    <span class="font-bold text-amber-600">🔥 {{ item.sold_quantity }} sold</span>
+                                                    <span class="inline-flex items-center gap-0.5 font-bold text-amber-600">
+                                                        <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                                                        <span>{{ item.sold_quantity }} sold</span>
+                                                    </span>
                                                     <span>{{ item.remaining }} left</span>
                                                 </div>
                                             </div>
@@ -1051,7 +1054,7 @@ const formatTime = (timeStr) => {
                                     </div>
 
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="text-base sm:text-lg">🎁</span>
+                                        <svg class="h-4 w-4 sm:h-5 sm:w-5 text-[#087F8C] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                         <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
                                             Bundle Deals
                                         </h2>
@@ -1107,7 +1110,7 @@ const formatTime = (timeStr) => {
                                                     class="h-full w-full rounded object-cover"
                                                 />
                                                 <div v-else class="flex h-full items-center justify-center text-[8px] text-slate-400">
-                                                    📦
+                                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                                                 </div>
                                             </Link>
                                             <span
@@ -1171,14 +1174,14 @@ const formatTime = (timeStr) => {
                                     v-if="product.has_active_flash_sale"
                                     class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                 >
-                                    <span>⚡</span>
+                                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                     <span>Flash Sale</span>
                                 </span>
                                 <span
                                     v-else-if="isProductInBundle(product.id)"
                                     class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
                                 >
-                                    <span>🎁</span>
+                                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                     <span>Bundle Promo</span>
                                 </span>
                             </div>
@@ -1388,14 +1391,14 @@ const formatTime = (timeStr) => {
                                     v-if="product.has_active_flash_sale"
                                     class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                 >
-                                    <span>⚡</span>
+                                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                     <span>Flash Sale</span>
                                 </span>
                                 <span
                                     v-else-if="isProductInBundle(product.id)"
                                     class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
                                 >
-                                    <span>🎁</span>
+                                    <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                     <span>Bundle Promo</span>
                                 </span>
                             </div>

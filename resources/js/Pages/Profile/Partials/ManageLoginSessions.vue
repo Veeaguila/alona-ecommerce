@@ -55,16 +55,7 @@ const revokeSingleSession = sessionId => {
     })
 }
 
-const getDeviceIcon = deviceType => {
-    switch (deviceType) {
-        case 'mobile':
-            return '📱'
-        case 'tablet':
-            return '📟'
-        default:
-            return '🖥️'
-    }
-}
+const getDeviceIcon = deviceType => deviceType || 'desktop'
 </script>
 
 <template>
@@ -90,10 +81,12 @@ const getDeviceIcon = deviceType => {
                 <div class="flex items-start gap-3 sm:gap-4">
                     <!-- DEVICE ICON -->
                     <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-xs"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs"
                         :class="session.is_current_device ? 'bg-[#E8F7F6] text-[#087F8C]' : 'bg-gray-100 text-gray-500'"
                     >
-                        {{ getDeviceIcon(session.device_type) }}
+                        <svg v-if="session.device_type === 'mobile'" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                        <svg v-else-if="session.device_type === 'tablet'" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                        <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     </div>
 
                     <!-- SESSION INFO -->

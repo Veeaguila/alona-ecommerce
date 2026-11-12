@@ -58,8 +58,6 @@ const quickReplies = [
     'Thank you so much!',
 ]
 
-const emojis = ['😊', '👍', '❤️', '🙏', '📦', '✨', '👋', '💯']
-
 let pollInterval = null
 
 const getCsrfToken = () => {
@@ -1029,21 +1027,6 @@ onUnmounted(() => {
                                         </svg>
                                     </button>
 
-                                    <!-- Emoji Button -->
-                                    <button
-                                        type="button"
-                                        @click="showEmojiPicker = !showEmojiPicker"
-                                        title="Add emoji"
-                                        class="w-6 h-6 flex items-center justify-center text-[#64748B] hover:text-[#087F8C] transition cursor-pointer"
-                                    >
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                                            <line x1="9" y1="9" x2="9.01" y2="9" />
-                                            <line x1="15" y1="9" x2="15.01" y2="9" />
-                                        </svg>
-                                    </button>
-
                                     <!-- Quick Reply Chips (Alona Themed) -->
                                     <div class="hidden sm:flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                                         <button
@@ -1056,22 +1039,6 @@ onUnmounted(() => {
                                             {{ reply }}
                                         </button>
                                     </div>
-                                </div>
-
-                                <!-- Emoji Popover -->
-                                <div
-                                    v-if="showEmojiPicker"
-                                    class="absolute left-0 bottom-8 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-2 flex gap-1 z-30"
-                                >
-                                    <button
-                                        v-for="e in emojis"
-                                        :key="e"
-                                        type="button"
-                                        @click="appendEmoji(e)"
-                                        class="text-base hover:scale-125 transition p-1 cursor-pointer"
-                                    >
-                                        {{ e }}
-                                    </button>
                                 </div>
                             </div>
 

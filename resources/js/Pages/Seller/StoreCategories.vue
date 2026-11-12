@@ -390,7 +390,10 @@
                 </div>
 
                 <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 space-y-2">
-                    <p class="font-bold">⚠️ Warning: Products will NOT be deleted!</p>
+                    <p class="font-bold flex items-center gap-1.5">
+                        <svg class="h-4 w-4 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>Warning: Products will NOT be deleted!</span>
+                    </p>
                     <p>
                         Deleting <strong>"{{ categoryToDelete.name }}"</strong> will remove this category from your storefront.
                         All assigned products will be moved to <strong>Uncategorized</strong> and will remain active and buyable in your store.

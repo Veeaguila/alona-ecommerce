@@ -184,7 +184,7 @@ class RiderQuickActions {
 }
 
 /// Compact 3-action bar for Delivery & Pickup list cards:
-/// [ 🗺️ Maps / Waze ] [ 💬 SMS ] [ 📞 Call ]
+/// [ Maps / Waze ] [ SMS ] [ Call ]
 class RiderCardQuickActions extends StatelessWidget {
   final String address;
   final String phone;

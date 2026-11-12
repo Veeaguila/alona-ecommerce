@@ -159,7 +159,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(

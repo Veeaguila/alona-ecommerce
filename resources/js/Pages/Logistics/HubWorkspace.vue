@@ -59,7 +59,10 @@
         </template>
         <div v-if="result.can_open_delivery_management" class="mt-4 p-4 rounded-xl border border-teal-200 bg-teal-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p class="font-bold text-teal-950 text-sm">📦 Parcel is Arrived & Ready to Sort</p>
+            <p class="font-bold text-teal-950 text-sm inline-flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-teal-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <span>Parcel is Arrived & Ready to Sort</span>
+            </p>
             <p class="text-xs text-teal-800 mt-0.5">Assign this parcel to its City Delivery Area so a delivery rider can take it.</p>
           </div>
           <a href="/sorting-center/delivery-management" class="app-button-primary !text-xs !py-2 !px-4 text-center">
@@ -68,7 +71,10 @@
         </div>
         <div v-if="result.can_open_delivery_assignment" class="mt-4 p-4 rounded-xl border border-indigo-200 bg-indigo-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p class="font-bold text-indigo-950 text-sm">🛵 Ready for Delivery Assignment</p>
+            <p class="font-bold text-indigo-950 text-sm inline-flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-indigo-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span>Ready for Delivery Assignment</span>
+            </p>
             <p class="text-xs text-indigo-800 mt-0.5">Assign this sorted parcel to an online delivery rider.</p>
           </div>
           <a href="/sorting-center/rider-assignment" class="app-button-primary !text-xs !py-2 !px-4 text-center !bg-indigo-700 hover:!bg-indigo-800">
@@ -80,11 +86,13 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="app-section-title">Work at this hub</h2>
           <div class="flex flex-wrap items-center gap-2">
-            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-teal-800 border-teal-300 bg-teal-50 hover:bg-teal-100 cursor-pointer" :disabled="busy" @click="openBatchDispatchModal">
-              🚚 Batch Transfer Dispatch
+            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-teal-800 border-teal-300 bg-teal-50 hover:bg-teal-100 cursor-pointer inline-flex items-center gap-1.5" :disabled="busy" @click="openBatchDispatchModal">
+              <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span>Batch Transfer Dispatch</span>
             </button>
-            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-indigo-800 border-indigo-300 bg-indigo-50 hover:bg-indigo-100 cursor-pointer" :disabled="busy" @click="openBatchReceiveModal">
-              📥 Batch Transfer Receive
+            <button type="button" class="app-button-secondary !text-xs !py-1.5 !px-3 font-semibold text-indigo-800 border-indigo-300 bg-indigo-50 hover:bg-indigo-100 cursor-pointer inline-flex items-center gap-1.5" :disabled="busy" @click="openBatchReceiveModal">
+              <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+              <span>Batch Transfer Receive</span>
             </button>
           </div>
         </div>
@@ -92,7 +100,10 @@
         <!-- Batch Dispatch Modal -->
         <div v-if="showBatchDispatch" class="mt-4 rounded-xl border border-teal-300 bg-teal-50/90 p-4">
           <div class="flex items-center justify-between pb-2 border-b border-teal-200">
-            <h3 class="font-bold text-teal-950 text-sm">🚚 Dispatch Linehaul Transfer (Batch Manifest)</h3>
+            <h3 class="font-bold text-teal-950 text-sm inline-flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-teal-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span>Dispatch Linehaul Transfer (Batch Manifest)</span>
+            </h3>
             <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-bold" @click="showBatchDispatch = false">✕ Close</button>
           </div>
           <div class="mt-3 grid gap-3 sm:grid-cols-2">
@@ -117,7 +128,10 @@
         <!-- Batch Receive Modal -->
         <div v-if="showBatchReceive" class="mt-4 rounded-xl border border-indigo-300 bg-indigo-50/90 p-4">
           <div class="flex items-center justify-between pb-2 border-b border-indigo-200">
-            <h3 class="font-bold text-indigo-950 text-sm">📥 Receive Arrived Linehaul Truck (Batch Receive)</h3>
+            <h3 class="font-bold text-indigo-950 text-sm inline-flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-indigo-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+              <span>Receive Arrived Linehaul Truck (Batch Receive)</span>
+            </h3>
             <button type="button" class="text-xs text-slate-500 hover:text-slate-800 font-bold" @click="showBatchReceive = false">✕ Close</button>
           </div>
           <div class="mt-3">
@@ -139,8 +153,9 @@
           <div class="min-w-0">
             <p class="font-semibold">{{ journey.parcel.order_id }}</p>
             <p class="mt-1 break-words text-sm text-slate-600">{{ journey.origin_hub.name }} → {{ journey.destination_hub.name }}</p>
-            <p v-if="['PLACED', 'PREPARING'].includes(journey.parcel.status)" class="mt-1 text-xs text-amber-700 font-medium">
-              🏪 Seller: {{ journey.parcel.collection_address }}
+            <p v-if="['PLACED', 'PREPARING'].includes(journey.parcel.status)" class="mt-1 text-xs text-amber-700 font-medium inline-flex items-center gap-1 flex-wrap">
+              <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Seller: {{ journey.parcel.collection_address }}</span>
               <span class="ml-1 text-slate-500">· Rider: {{ journey.parcel.pickup_rider?.name ? journey.parcel.pickup_rider.name : 'Unassigned (Waiting for pickup)' }}</span>
             </p>
             <p class="mt-1 text-xs font-semibold text-teal-700">{{ journey.parcel.status === 'AT_SORTING_CENTER' ? 'At ' + (journey.origin_hub?.name || 'Hub') : journey.parcel.status.replaceAll('_', ' ') }}</p>
@@ -174,7 +189,7 @@ export default {
     const destinationHubs = computed(() => (context.value?.hubs || []).filter(h => Number(h.id) !== Number(hubId.value)));
     const stages = [
       { value: 'all', label: 'All active bookings' },
-      { value: 'pending_pickup', label: '🏪 Pending Seller Pickups (Tindahan)' },
+      { value: 'pending_pickup', label: 'Pending Seller Pickups (Tindahan)' },
       { value: 'pickup_inbound', label: 'Incoming pickups' },
       { value: 'dispatch_ready', label: 'Ready to transfer' },
       { value: 'transfer_inbound', label: 'Incoming transfers' },

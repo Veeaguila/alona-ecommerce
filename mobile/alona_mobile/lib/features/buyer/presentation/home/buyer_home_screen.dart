@@ -89,6 +89,33 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
+            // Alona Brand Icon matching Web Header
+            Container(
+              width: 36,
+              height: 36,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                'assets/images/alona-icon.png',
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
             // Left side: Top Search Bar
             Expanded(
               child: GestureDetector(
@@ -141,7 +168,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
@@ -929,7 +956,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  const Text('🔥', style: TextStyle(fontSize: 16)),
+                                  const Icon(Icons.local_fire_department_outlined, size: 20, color: AppColors.accent),
                                 ],
                               ),
                               TextButton(

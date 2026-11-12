@@ -243,7 +243,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('⚡ Na-match na ang eksaktong bilang ng bills at barya!'),
+        content: Text('Na-match na ang eksaktong bilang ng bills at barya!'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -414,7 +414,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       child: Text(
                         expectedCodBalance > 0
                             ? (isNearLimit
-                                  ? '⚠️ Limit Alert'
+                                  ? 'Limit Alert'
                                   : 'Pending Remittance')
                             : 'Cleared / Zero Balance',
                         style: const TextStyle(
@@ -511,12 +511,12 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       const SizedBox(height: 8),
                       Text(
                         isOverLimit
-                            ? '🚨 LUMAMPAS SA LIMIT! Mag-remit agad sa Hub bago tumanggap ng susunod na delivery batch.'
+                            ? 'LUMAMPAS SA LIMIT! Mag-remit agad sa Hub bago tumanggap ng susunod na delivery batch.'
                             : (isNearLimit
-                                  ? '⚠️ Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
+                                  ? 'Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
                                   : (expectedCodBalance > 0
-                                        ? '✅ Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
-                                        : '🎉 Walang pending remittance. Ligtas at handa sa biyahe!')),
+                                        ? 'Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
+                                        : 'Walang pending remittance. Ligtas at handa sa biyahe!')),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -727,7 +727,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         ),
                         child: Row(
                           children: [
-                            const Text('💵', style: TextStyle(fontSize: 16)),
+                            const Icon(Icons.payments_outlined, size: 18, color: Color(0xFF0F766E)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Column(
@@ -770,7 +770,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         ),
                         child: Row(
                           children: [
-                            const Text('🪙', style: TextStyle(fontSize: 16)),
+                            const Icon(Icons.monetization_on_outlined, size: 18, color: Color(0xFF475569)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Column(

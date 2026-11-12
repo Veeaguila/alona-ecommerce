@@ -230,4 +230,134 @@ class HubWorkspaceController extends Controller
             ],
         ]);
     }
+
+    public function sidebarCounts(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $context = app(HubAccess::class)->context($user);
+        $sortingCenterId = (int) $context['center']->id;
+        $isStaff = (bool) $context['staff'];
+        $operatingHubId = $context['hub']?->id ? (int) $context['hub']->id : null;
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('parcel_hub_journeys')) {
+            $unlinkedParcels = Parcel::where(function ($q) use ($sortingCenterId) {
+                $q->where('sorting_center_id', $sortingCenterId)->orWhereNull('sorting_center_id');
+            })
+                ->whereNotIn('status', ['DELIVERED', 'FAILED_RETURNED'])
+                ->whereDoesntHave('hubJourney')
+                ->limit(25)
+                ->get();
+            foreach ($unlinkedParcels as $p) {
+                app(HubNetwork::class)->ensureJourney($p);
+            }
+        }
+
+        // 1. Hub Workspace actionable count (incoming pickups + ready to transfer + incoming transfers)
+        $hubWorkspaceCount = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('parcel_hub_journeys')) {
+            $allHubCounts = app(HubOperations::class)->counts($sortingCenterId);
+            if ($isStaff && $operatingHubId) {
+                $hc = $allHubCounts[$operatingHubId] ?? [];
+                $hubWorkspaceCount = (int) (($hc['pickup_inbound'] ?? 0) + ($hc['dispatch_ready'] ?? 0) + ($hc['transfer_inbound'] ?? 0));
+            } else {
+                foreach ($allHubCounts as $hc) {
+                    $hubWorkspaceCount += (int) (($hc['pickup_inbound'] ?? 0) + ($hc['dispatch_ready'] ?? 0) + ($hc['transfer_inbound'] ?? 0));
+                }
+            }
+        }
+
+        // 2. Pickup Requests actionable count (pending or confirmed awaiting pickup from seller)
+        $pickupRequestsCount = \App\Models\PickupRequest::query()
+            ->when($isStaff && $operatingHubId, function ($query) use ($operatingHubId) {
+                $query->whereHas('parcel.hubJourney', fn ($j) => $j->where('origin_hub_id', $operatingHubId));
+            })
+            ->where(function ($query) use ($sortingCenterId): void {
+                $query->whereNull('sorting_center_id')
+                    ->orWhere('sorting_center_id', $sortingCenterId);
+            })
+            ->where(function ($query): void {
+                $query->where('status', 'pending')
+                    ->orWhere(function ($q): void {
+                        $q->where('status', 'confirmed')
+                            ->whereHas('parcel', fn ($p) => $p->whereIn('status', ['PLACED', 'PREPARING']));
+                    });
+            })
+            ->whereHas('parcel', function ($query) use ($sortingCenterId): void {
+                $query->where('sorting_center_id', $sortingCenterId)
+                    ->orWhere(function ($query): void {
+                        $query->whereNull('sorting_center_id')->where('pickup_requests.status', 'pending');
+                    });
+            })
+            ->whereDoesntHave('parcel.orderItem', function ($query): void {
+                $query->where('status', 'cancelled');
+            })
+            ->count();
+
+        // 3. Parcel Sorting count (arrived at hub, unsorted)
+        $parcelSortingCount = Parcel::query()
+            ->where('sorting_center_id', $sortingCenterId)
+            ->where('status', 'AT_SORTING_CENTER')
+            ->whereNull('sorted_area_id')
+            ->when($isStaff && $operatingHubId, function ($query) use ($operatingHubId) {
+                $query->whereHas('hubJourney', fn ($q) => $q->where('current_hub_id', $operatingHubId)->orWhere('destination_hub_id', $operatingHubId));
+            })
+            ->when(app(HubNetwork::class)->available(), function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('hubJourney')
+                        ->orWhereHas('hubJourney', fn ($j) => $j->whereNotNull('destination_received_at')->orWhereColumn('origin_hub_id', 'destination_hub_id'));
+                });
+            })
+            ->count();
+
+        // 4. Delivery Assignment count (sorted, awaiting delivery rider assignment)
+        $deliveryAssignmentCount = Parcel::query()
+            ->where('sorting_center_id', $sortingCenterId)
+            ->where('status', 'AT_SORTING_CENTER')
+            ->whereNotNull('sorted_area_id')
+            ->whereNull('assigned_rider_id')
+            ->when($isStaff && $operatingHubId, function ($query) use ($operatingHubId) {
+                $query->whereHas('hubJourney', fn ($q) => $q->where('destination_hub_id', $operatingHubId));
+            })
+            ->when(app(HubNetwork::class)->available(), function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('hubJourney')
+                        ->orWhereHas('hubJourney', fn ($j) => $j->whereNotNull('destination_received_at'));
+                });
+            })
+            ->count();
+
+        // 5. Delivery Monitoring count (out for delivery / in hub transit)
+        $deliveryMonitoringCount = Parcel::query()
+            ->where('sorting_center_id', $sortingCenterId)
+            ->whereIn('status', ['OUT_FOR_DELIVERY', 'IN_HUB_TRANSIT'])
+            ->count();
+
+        // 6. Riders pending approval
+        $ridersPendingCount = \App\Models\Rider::query()
+            ->where('sorting_center_id', $sortingCenterId)
+            ->where('approval_status', 'pending')
+            ->count();
+
+        // 7. Unread messages count
+        $unreadMessagesCount = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('sorting_center_messages')) {
+            $unreadMessagesCount = \App\Models\SortingCenterMessage::query()
+                ->where('recipient_id', $user->id)
+                ->whereNull('read_at')
+                ->whereHas('conversation', fn ($q) => $q->where('sorting_center_id', $sortingCenterId))
+                ->count();
+        }
+
+        return response()->json([
+            'data' => [
+                'hub_workspace' => $hubWorkspaceCount,
+                'pickup_requests' => $pickupRequestsCount,
+                'parcel_sorting' => $parcelSortingCount,
+                'delivery_assignment' => $deliveryAssignmentCount,
+                'delivery_monitoring' => $deliveryMonitoringCount,
+                'riders_pending' => $ridersPendingCount,
+                'unread_messages' => $unreadMessagesCount,
+            ],
+        ]);
+    }
 }

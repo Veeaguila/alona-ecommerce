@@ -432,7 +432,10 @@ const reasonLabel = (val) => {
                         </div>
                         <div class="rounded-xl bg-slate-100 p-2.5">
                             <div class="text-[10px] font-bold uppercase text-slate-500">Storewide Avg</div>
-                            <div class="text-sm font-black text-[#087F8C]">⭐ {{ Number(props.stats.combined_rating_avg || 0).toFixed(1) }}</div>
+                            <div class="text-sm font-black text-[#087F8C] inline-flex items-center justify-center gap-1">
+                                <span class="text-amber-400">★</span>
+                                <span>{{ Number(props.stats.combined_rating_avg || 0).toFixed(1) }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

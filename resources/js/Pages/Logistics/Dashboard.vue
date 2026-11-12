@@ -69,14 +69,17 @@
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div class="flex items-center gap-2">
-                <span class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-[#087F8C] text-white text-xs font-bold">⚡</span>
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-[#087F8C] text-white text-xs font-bold">
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </span>
                 <h3 class="text-base font-bold text-slate-900">Universal Logistics Smart Scanner</h3>
               </div>
               <p class="text-xs text-slate-600 mt-1">Scan any Waybill, Tracking Number, or Order Reference to process inbound hub receipts, middle-mile linehaul dispatches, or delivery rider releases.</p>
             </div>
             <div class="flex items-center gap-2">
               <a href="/sorting-center/hub-workspace" class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-bold text-white hover:bg-[#065A63] transition shadow-xs">
-                <span>🚚 Open Hub Workspace</span>
+                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span>Open Hub Workspace</span>
                 <span>→</span>
               </a>
             </div>

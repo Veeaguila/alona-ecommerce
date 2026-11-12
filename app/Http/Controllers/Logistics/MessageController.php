@@ -183,7 +183,14 @@ class MessageController extends Controller
 
     private function actor(User $user): array
     {
-        if ($user->usertype === 'sorting_center') {
+        if ($user->usertype === 'sorting_center' || $user->usertype === 'hub_staff') {
+            $staff = app(\App\Services\HubAccess::class)->membership($user);
+            if ($staff) {
+                $context = app(\App\Services\HubAccess::class)->context($user);
+
+                return [$user, (int) $context['center']->id, $context['center']];
+            }
+
             $center = SortingCenter::query()->where('user_id', $user->id)->firstOrFail();
 
             return [$user, $center->id, $center];
@@ -206,7 +213,7 @@ class MessageController extends Controller
 
     private function recipientUsers(User $user, int $centerId): Collection
     {
-        if ($user->usertype === 'sorting_center') {
+        if ($user->usertype === 'sorting_center' || $user->usertype === 'hub_staff') {
             return User::query()
                 ->whereIn('id', Rider::query()
                     ->where('sorting_center_id', $centerId)

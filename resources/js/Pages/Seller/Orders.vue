@@ -767,13 +767,15 @@ watch(
                                                 v-if="order.order?.shipping_method === 'express'"
                                                 class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700"
                                             >
-                                                ⚡ Express
+                                                <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                                <span>Express</span>
                                             </span>
                                             <span
                                                 v-else-if="order.order?.shipping_method === 'pickup'"
                                                 class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700"
                                             >
-                                                🏪 Store Pickup
+                                                <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                                <span>Store Pickup</span>
                                             </span>
                                             <span
                                                 v-else
@@ -942,13 +944,15 @@ watch(
                                             v-if="order.order?.shipping_method === 'express'"
                                             class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700"
                                         >
-                                            ⚡ Express
+                                            <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                            <span>Express</span>
                                         </span>
                                         <span
                                             v-else-if="order.order?.shipping_method === 'pickup'"
                                             class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700"
                                         >
-                                            🏪 Store Pickup
+                                            <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                            <span>Store Pickup</span>
                                         </span>
                                         <span
                                             v-else

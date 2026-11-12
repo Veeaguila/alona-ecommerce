@@ -445,7 +445,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                       constraints: const BoxConstraints(),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.white, size: 22),
+                      icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.white, size: 22),
                       tooltip: 'Cart',
                       onPressed: () {
                         Navigator.push(

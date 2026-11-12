@@ -958,8 +958,8 @@ const formatMoney = (value) => {
                     class="mt-4 rounded-xl border border-teal-200 bg-teal-50/80 p-4 text-xs text-teal-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs"
                 >
                     <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white font-bold text-base shadow-xs">
-                            🚚
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white font-bold shadow-xs">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                         </div>
                         <div>
                             <div class="font-bold text-sm text-teal-950 flex flex-wrap items-center gap-2">
@@ -1250,9 +1250,9 @@ const formatMoney = (value) => {
 
                                 <span
                                     v-else
-                                    class="text-4xl"
+                                    class="flex items-center justify-center text-gray-400"
                                 >
-                                    📦
+                                    <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                                 </span>
                             </div>
 
@@ -1391,10 +1391,12 @@ const formatMoney = (value) => {
                                 <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Shipping Method</p>
                                 <div class="mt-1 flex items-center gap-2">
                                     <span v-if="orderSummary?.is_express" class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700">
-                                        ⚡ Express Delivery (1-3 days Priority Courier)
+                                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        <span>Express Delivery (1-3 days Priority Courier)</span>
                                     </span>
                                     <span v-else-if="orderSummary?.is_pickup" class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
-                                        🏪 In-Store Pickup (Customer collects at seller store)
+                                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        <span>In-Store Pickup (Customer collects at seller store)</span>
                                     </span>
                                     <span v-else class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-700">
                                         Standard Delivery (3-7 days Courier)
@@ -1601,9 +1603,9 @@ const formatMoney = (value) => {
                             class="flex items-center gap-3"
                         >
                             <div
-                                class="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-lg"
+                                class="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-500"
                             >
-                                👤
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
 
                             <div>
@@ -1649,7 +1651,8 @@ const formatMoney = (value) => {
                                 v-else-if="isPaymentAwaitingConfirmation"
                                 class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700"
                             >
-                                ⏳ Needs Confirmation
+                                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span>Needs Confirmation</span>
                             </span>
                             <span
                                 v-else

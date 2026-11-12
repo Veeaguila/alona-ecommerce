@@ -236,61 +236,6 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
     );
   }
 
-  void _showEmojiSheet() {
-    final emojis = ['👋', '👍', '❤️', '😊', '🙏', '📦', '🚚', '✨', '🔥', '💯'];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Quick Reactions',
-                  style: GoogleFonts.figtree(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: emojis.map((e) {
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _textController.text = '${_textController.text}$e';
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(e, style: const TextStyle(fontSize: 22)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -673,13 +618,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                             fontSize: 13,
                             color: AppColors.mutedText,
                           ),
-                          contentPadding: const EdgeInsets.only(left: 14, right: 6, top: 9, bottom: 9),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.sentiment_satisfied_outlined, color: AppColors.mutedText, size: 20),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: _showEmojiSheet,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                           border: InputBorder.none,
                           isDense: true,
                         ),

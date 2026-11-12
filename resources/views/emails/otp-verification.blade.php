@@ -44,7 +44,7 @@
                                     <td align="center" style="padding-bottom: 8px;">
                                         <!-- Alona Bag Logo Icon -->
                                         <div style="display: inline-block; width: 44px; height: 44px; background-color: rgba(255, 255, 255, 0.18); border-radius: 12px; text-align: center; line-height: 44px; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);">
-                                            <span style="font-size: 24px; vertical-align: middle;">🛍️</span>
+                                            <span style="font-size: 20px; font-weight: 800; color: #FFFFFF; vertical-align: middle;">A</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -91,7 +91,7 @@
                                         <!-- Expiry Badge -->
                                         <div style="margin-top: 10px; display: inline-block; background-color: rgba(8, 127, 140, 0.12); border-radius: 20px; padding: 4px 14px;">
                                             <span style="color: #045C68; font-size: 11px; font-weight: 600;">
-                                                ⏱️ Expires in <strong>5 minutes</strong>
+                                                Expires in <strong>5 minutes</strong>
                                             </span>
                                         </div>
                                     </td>
@@ -103,7 +103,7 @@
                                 <tr>
                                     <td style="padding: 12px 16px;">
                                         <p style="margin: 0; color: #92400E; font-size: 12px; line-height: 1.5;">
-                                            🔒 <strong>Security Warning:</strong> Never share this verification code with anyone, including individuals claiming to be Alona support staff.
+                                            <strong>Security Warning:</strong> Never share this verification code with anyone, including individuals claiming to be Alona support staff.
                                         </p>
                                     </td>
                                 </tr>

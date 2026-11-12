@@ -213,8 +213,8 @@ function quickScanItem(orderId) {
             <section class="mt-6 rounded-2xl border-2 border-teal-500/40 bg-gradient-to-br from-teal-950 via-slate-900 to-slate-950 p-6 text-white shadow-xl">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-teal-800/60 pb-3">
                     <div class="flex items-center gap-2.5">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 border border-teal-400/30 text-lg">
-                            📷
+                        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
                         </div>
                         <div>
                             <h2 class="text-base font-bold text-teal-100">Universal Smart Scanner</h2>
@@ -248,10 +248,11 @@ function quickScanItem(orderId) {
                     </div>
                     <button
                         type="submit"
-                        class="rounded-xl bg-teal-500 px-6 py-3 text-sm font-bold text-slate-950 shadow-md hover:bg-teal-400 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-6 py-3 text-sm font-bold text-slate-950 shadow-md hover:bg-teal-400 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                         :disabled="scanning || !scanRef"
                     >
-                        {{ scanning ? 'Scanning…' : '📷 Scan Waybill' }}
+                        <svg v-if="!scanning" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                        <span>{{ scanning ? 'Scanning…' : 'Scan Waybill' }}</span>
                     </button>
                 </form>
 
@@ -264,8 +265,10 @@ function quickScanItem(orderId) {
                 <div v-if="scanResult" class="mt-4 rounded-xl border border-teal-600/40 bg-slate-800/80 p-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="text-lg">
-                                {{ scanResult.action_taken === 'DELIVERED' ? '🎉' : scanResult.action_taken === 'OUT_FOR_DELIVERY' ? '🚚' : '📦' }}
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300">
+                                <svg v-if="scanResult.action_taken === 'DELIVERED'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                <svg v-else-if="scanResult.action_taken === 'OUT_FOR_DELIVERY'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                             </span>
                             <h3 class="font-bold text-white text-sm">{{ scanResult.title }}</h3>
                         </div>
@@ -303,7 +306,10 @@ function quickScanItem(orderId) {
                     <div v-if="scanResult.action_needed === 'CAPTURE_PHOTO_PROOF'" class="mt-4 rounded-xl border border-amber-500/40 bg-amber-950/40 p-4">
                         <div class="flex items-center justify-between pb-2 border-b border-amber-800/40">
                             <div>
-                                <h4 class="font-bold text-amber-200 text-sm">📸 Delivery Photo Proof & Collection</h4>
+                                <h4 class="font-bold text-amber-200 text-sm inline-flex items-center gap-1.5">
+                                    <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                    <span>Delivery Photo Proof & Collection</span>
+                                </h4>
                                 <p class="text-xs text-amber-300/80">Capture photo of package handed to buyer to complete delivery</p>
                             </div>
                             <span v-if="scanResult.is_cod" class="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-black text-slate-950">
@@ -321,8 +327,9 @@ function quickScanItem(orderId) {
                         <div class="mt-3 flex flex-col sm:flex-row items-center gap-3">
                             <label class="flex-1 w-full cursor-pointer rounded-xl border border-dashed border-amber-400/50 bg-slate-900/60 p-3 text-center hover:border-amber-400">
                                 <input type="file" accept="image/*" capture="environment" class="hidden" @change="handlePhotoChange" />
-                                <span v-if="!photoPreview" class="text-xs text-amber-200 font-semibold">
-                                    📷 Tap to take photo proof with camera
+                                <span v-if="!photoPreview" class="text-xs text-amber-200 font-semibold inline-flex items-center justify-center gap-1.5">
+                                    <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                    <span>Tap to take photo proof with camera</span>
                                 </span>
                                 <div v-else class="flex items-center justify-center gap-2">
                                     <img :src="photoPreview" alt="Proof" class="h-10 w-10 rounded object-cover border border-amber-400" />
@@ -413,10 +420,11 @@ function quickScanItem(orderId) {
                         </div>
                         <button
                             type="button"
-                            class="shrink-0 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 cursor-pointer"
+                            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 cursor-pointer"
                             @click="quickScanItem(pickup.order_id)"
                         >
-                            📷 Scan Pickup
+                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                            <span>Scan Pickup</span>
                         </button>
                     </li>
                 </ul>
@@ -452,18 +460,20 @@ function quickScanItem(orderId) {
                                     ]">
                                         {{ parcel.status.replaceAll('_', ' ') }}
                                     </span>
-                                    <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
-                                        ⚡ EXPRESS
+                                    <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="inline-flex items-center gap-0.5 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
+                                        <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        <span>EXPRESS</span>
                                     </span>
                                 </div>
                                 <p class="mt-1 text-xs text-slate-500">{{ parcel.delivery_address }}</p>
                             </div>
                             <button
                                 type="button"
-                                class="shrink-0 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 active:scale-95 cursor-pointer"
+                                class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 active:scale-95 cursor-pointer"
                                 @click="quickScanItem(parcel.order_id)"
                             >
-                                📷 Scan this
+                                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                                <span>Scan this</span>
                             </button>
                         </div>
                     </li>

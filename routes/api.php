@@ -40,6 +40,7 @@ Route::post('/rider/register', [PartnerRegistrationController::class, 'store'])-
 Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('hub.operator')->prefix('sorting-center/hub-workspace')->group(function () {
         Route::get('/', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'index']);
+        Route::get('/sidebar-counts', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'sidebarCounts']);
         Route::get('/queue', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'queue']);
         Route::get('/lookup', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'lookup'])->middleware('throttle:60,1');
         Route::post('/actions', [\App\Http\Controllers\Logistics\HubWorkspaceController::class, 'act'])->middleware('throttle:30,1');

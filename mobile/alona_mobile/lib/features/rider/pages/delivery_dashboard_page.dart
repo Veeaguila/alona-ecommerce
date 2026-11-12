@@ -1133,8 +1133,14 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                         children: [
                           Row(
                             children: [
+                              Icon(
+                                isOutForDelivery ? Icons.location_on_outlined : Icons.schedule_outlined,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
                               Text(
-                                isOutForDelivery ? '📍 CURRENT NEXT STOP' : '⏳ NEXT DISPATCH STOP',
+                                isOutForDelivery ? 'CURRENT NEXT STOP' : 'NEXT DISPATCH STOP',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -1338,7 +1344,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
 
                   const SizedBox(height: 16),
 
-                  // 1-Tap Thumb Action Bar: [ 🚗 Waze/Maps ] [ 📞 Call ] [ 💬 SMS ]
+                  // 1-Tap Thumb Action Bar: [ Waze/Maps ] [ Call ] [ SMS ]
                   Row(
                     children: [
                       // Navigation Button

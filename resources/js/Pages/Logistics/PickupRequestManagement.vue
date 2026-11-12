@@ -84,7 +84,8 @@
                   </td>
                   <td data-label="Method">
                     <span v-if="request.is_express || request.shipping_method === 'express'" class="rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 text-[11px] font-black inline-flex items-center gap-1">
-                      ⚡ Express
+                      <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      <span>Express</span>
                     </span>
                     <span v-else class="text-xs text-gray-600 font-medium">
                       Standard

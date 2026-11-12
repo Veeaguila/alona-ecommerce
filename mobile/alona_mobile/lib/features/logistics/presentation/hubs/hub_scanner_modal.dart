@@ -143,8 +143,8 @@ class _HubScannerModalState extends State<HubScannerModal>
       SnackBar(
         content: Text(
           isNew
-              ? '✔ Added: $code (${_scannedCodes.length} in batch)'
-              : 'ℹ Already scanned: $code',
+              ? 'Added: $code (${_scannedCodes.length} in batch)'
+              : 'Already scanned: $code',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         duration: const Duration(seconds: 1),
@@ -280,13 +280,20 @@ class _HubScannerModalState extends State<HubScannerModal>
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: Colors.tealAccent, width: 1.5),
                         ),
-                        child: Text(
-                          '📦 ${_scannedCodes.length} Parcel(s) Scanned',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_scannedCodes.length} Parcel(s) Scanned',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

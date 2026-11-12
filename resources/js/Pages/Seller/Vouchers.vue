@@ -742,7 +742,8 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                     <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-base font-bold text-[#1F2937]">⚡ Flash Sales</h2>
+                                <svg class="h-4 w-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                <h2 class="text-base font-bold text-[#1F2937]">Flash Sales</h2>
                                 <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
                                     {{ flash_sales.length }}
                                 </span>
@@ -788,7 +789,8 @@ const statusMessage = computed(() => page.props.flash?.status ?? '')
                     <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-base font-bold text-[#1F2937]">🎁 Bundles & Buy X Get Y</h2>
+                                <svg class="h-4 w-4 text-[#087F8C] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                                <h2 class="text-base font-bold text-[#1F2937]">Bundles & Buy X Get Y</h2>
                                 <span class="rounded-full bg-[#E8F7F6] px-2.5 py-0.5 text-xs font-bold text-[#087F8C]">
                                     {{ promotions.length }}
                                 </span>

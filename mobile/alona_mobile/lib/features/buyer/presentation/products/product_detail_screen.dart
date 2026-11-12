@@ -770,7 +770,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             onPressed: _toggleWishlist,
           ),
           IconButton(
-            icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.white),
+            icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.white),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
           ),
           IconButton(

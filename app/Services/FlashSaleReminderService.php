@@ -84,7 +84,7 @@ class FlashSaleReminderService
             BuyerNotification::create([
                 'user_id' => $reminder->user_id,
                 'type' => 'flash_sale_reminder',
-                'title' => "⚡ Flash Sale Reminder: {$productName}",
+                'title' => "Flash Sale Reminder: {$productName}",
                 'message' => "Flash sale starts at {$startTime} for ₱{$flashPrice}! Don't miss out.",
                 'action_url' => $reminder->product_id ? "/buyer/product/{$reminder->product_id}" : null,
             ]);

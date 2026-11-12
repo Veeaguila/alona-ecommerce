@@ -70,6 +70,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
   String? error;
   String? cameraError;
   String? lastScannedToast;
+  bool lastScannedToastIsError = false;
   Timer? toastTimer;
 
   // Continuous Batch State
@@ -159,9 +160,17 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
 
   void _showScanNotice(String message, {bool isError = false}) {
     toastTimer?.cancel();
-    setState(() => lastScannedToast = message);
+    setState(() {
+      lastScannedToast = message;
+      lastScannedToastIsError = isError;
+    });
     toastTimer = Timer(const Duration(milliseconds: 2500), () {
-      if (mounted) setState(() => lastScannedToast = null);
+      if (mounted) {
+        setState(() {
+          lastScannedToast = null;
+          lastScannedToastIsError = false;
+        });
+      }
     });
   }
 
@@ -197,7 +206,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         batchItems[existingIndex].status == BatchItemStatus.success) {
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.heavyImpact();
-      _showScanNotice('⚠️ Nai-scan na ito: $clean (Duplicate)', isError: true);
+      _showScanNotice('Nai-scan na ito: $clean (Duplicate)', isError: true);
       return;
     }
 
@@ -210,7 +219,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         batchItems.removeAt(existingIndex);
       }
       batchItems.insert(0, item);
-      _showScanNotice('⚡ Na-scan: $clean (Inaalam ang detalye...)');
+      _showScanNotice('Na-scan: $clean (Inaalam ang detalye...)');
     });
 
     _processBatchScan(item);
@@ -242,7 +251,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
 
       SystemSound.play(SystemSoundType.click);
       HapticFeedback.mediumImpact();
-      _showScanNotice('✅ Na-load: ${item.code} (${item.buyerName})');
+      _showScanNotice('Na-load: ${item.code} (${item.buyerName})');
     } catch (e) {
       if (!mounted) return;
       final msg = e is SessionFailure ? e.message : 'Hindi ma-load ang parcel.';
@@ -252,7 +261,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       });
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.heavyImpact();
-      _showScanNotice('⚠️ May issue sa ${item.code}: $msg', isError: true);
+      _showScanNotice('May issue sa ${item.code}: $msg', isError: true);
       // Auto-clear _lastCode after 1s so rider can quickly retry without delay
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted && _lastCode == item.code) {
@@ -337,7 +346,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                   ? smartScanErr.message
                   : 'Parcel lookup could not be confirmed.');
           setState(() => error = msg);
-          _showScanNotice('⚠️ $msg', isError: true);
+          _showScanNotice(msg, isError: true);
           SystemSound.play(SystemSoundType.alert);
           HapticFeedback.heavyImpact();
         }
@@ -456,13 +465,13 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                     segments: const [
                       ButtonSegment(
                         value: ScannerMode.continuousBatch,
-                        label: Text('⚡ Mabilisang Bodega (Batch)'),
-                        icon: Icon(Icons.all_inclusive, size: 18),
+                        label: Text('Mabilisang Bodega (Batch)'),
+                        icon: Icon(Icons.bolt_outlined, size: 18),
                       ),
                       ButtonSegment(
                         value: ScannerMode.singleLookup,
-                        label: Text('🔍 Single Lookup'),
-                        icon: Icon(Icons.search, size: 18),
+                        label: Text('Single Lookup'),
+                        icon: Icon(Icons.search_outlined, size: 18),
                       ),
                     ],
                     selected: {mode},
@@ -526,7 +535,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                             size: const Size(290, 160),
                             painter: ScannerReticlePainter(
                               color: lastScannedToast != null
-                                  ? (lastScannedToast!.startsWith('⚠️')
+                                  ? (lastScannedToastIsError
                                       ? RiderColors.danger
                                       : const Color(0xFF10B981))
                                   : const Color(0xFFFBBF24),
@@ -541,7 +550,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                                 colors: [
                                   Colors.transparent,
                                   (lastScannedToast != null &&
-                                          lastScannedToast!.startsWith('⚠️'))
+                                          lastScannedToastIsError)
                                       ? const Color(0xFFEF4444)
                                       : const Color(0xFFFBBF24),
                                   Colors.transparent,
@@ -550,7 +559,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                               boxShadow: [
                                 BoxShadow(
                                   color: (lastScannedToast != null &&
-                                          lastScannedToast!.startsWith('⚠️'))
+                                          lastScannedToastIsError)
                                       ? const Color(0xFFEF4444)
                                           .withValues(alpha: 0.8)
                                       : const Color(0xFFFBBF24)
@@ -670,7 +679,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: lastScannedToast!.startsWith('⚠️')
+                        color: lastScannedToastIsError
                             ? const Color(0xFF991B1B).withValues(alpha: 0.9)
                             : const Color(0xFF0F766E).withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
@@ -705,13 +714,20 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                             color: Colors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            '📦 Na-load: $successfulCount${errorCount > 0 ? ' · ⚠️ $errorCount Issue' : ''}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 14),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Na-load: $successfulCount${errorCount > 0 ? ' · $errorCount Issue' : ''}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (totalBatchCod > 0)

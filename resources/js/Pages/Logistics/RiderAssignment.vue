@@ -76,7 +76,8 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-black uppercase tracking-wide text-white shadow-sm flex items-center gap-1">
-                    ⚡ EXPRESS
+                    <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>EXPRESS</span>
                   </span>
                   <span class="rounded-full bg-[var(--app-primary)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
                     {{ parcel.sorted_area?.name || parcel.delivery_municipality || 'Area Assigned' }}

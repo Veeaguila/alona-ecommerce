@@ -2478,8 +2478,9 @@ const activeSection = computed(() => {
                                 alt="Full Banner Preview"
                                 class="h-[240px] sm:h-[300px] w-full object-cover rounded-xl"
                             />
-                            <div class="absolute bottom-3 left-3 rounded-lg bg-black/60 backdrop-blur px-3 py-1.5 text-[11px] font-semibold text-white shadow">
-                                🔗 Entire banner clicks through to: <code class="text-[#F4B942]">{{ currentEditSlide.primary_button_url || '/products' }}</code>
+                            <div class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-black/60 backdrop-blur px-3 py-1.5 text-[11px] font-semibold text-white shadow">
+                                <svg class="h-3.5 w-3.5 text-[#F4B942] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                <span>Entire banner clicks through to: <code class="text-[#F4B942]">{{ currentEditSlide.primary_button_url || '/products' }}</code></span>
                             </div>
                         </div>
 

@@ -1767,8 +1767,9 @@ const breadcrumbs = computed(() => {
                                 class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs shadow-sm"
                             >
                                 <div class="flex items-center gap-2 font-bold text-amber-900">
-                                    <span class="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-sm">
-                                        ⚡ Flash Sale
+                                    <span class="inline-flex items-center gap-1 rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white shadow-sm">
+                                        <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        <span>Flash Sale</span>
                                     </span>
                                     <span v-if="product.flash_remaining_label" class="text-red-600 font-extrabold">
                                         {{ product.flash_remaining_label }}
@@ -1811,7 +1812,8 @@ const breadcrumbs = computed(() => {
                                     :disabled="remindingFlashSale"
                                     @click="toggleFlashReminder(product.upcoming_flash_sale.id)"
                                 >
-                                    <span>{{ product.upcoming_flash_sale.has_reminder ? '✓ Reminder Set' : '🔔 Remind Me' }}</span>
+                                    <svg v-if="!product.upcoming_flash_sale.has_reminder" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                                    <span>{{ product.upcoming_flash_sale.has_reminder ? '✓ Reminder Set' : 'Remind Me' }}</span>
                                 </button>
                             </div>
 
@@ -1856,7 +1858,9 @@ const breadcrumbs = computed(() => {
                             >
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="flex h-5 w-5 items-center justify-center rounded-md bg-[#087F8C] text-xs text-white">🎁</span>
+                                        <span class="flex h-5 w-5 items-center justify-center rounded-md bg-[#087F8C] text-xs text-white">
+                                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                                        </span>
                                         <p class="text-[11px] font-bold uppercase tracking-wide text-[#087F8C]">
                                             Special Bundle Deals
                                         </p>

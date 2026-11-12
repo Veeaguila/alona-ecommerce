@@ -110,8 +110,9 @@
                 >
                   <td class="whitespace-nowrap">{{ parcel.order_id }}</td>
                   <td class="whitespace-nowrap">
-                    <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black">
-                      ⚡ Express
+                    <span v-if="parcel.shipping_method === 'express' || parcel.is_express" class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black">
+                      <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      <span>Express</span>
                     </span>
                     <span v-else-if="parcel.shipping_method === 'pickup'" class="rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
                       Pickup

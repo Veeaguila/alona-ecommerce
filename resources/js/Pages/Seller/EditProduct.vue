@@ -1545,7 +1545,8 @@ const submit = () => {
                                                 @click="generateCombinations"
                                                 class="inline-flex items-center gap-1.5 rounded-xl bg-[#087F8C] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#066D77]"
                                             >
-                                                ⚡ Generate Combinations
+                                                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                                <span>Generate Combinations</span>
                                             </button>
                                         </div>
                                     </div>

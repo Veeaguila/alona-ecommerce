@@ -228,7 +228,7 @@ class LogisticsSmartScan
                 return [
                     'success' => true,
                     'stage' => 'delivered',
-                    'title' => 'Delivered Successfully! 🎉',
+                    'title' => 'Delivered Successfully!',
                     'message' => "Parcel {$parcel->order_id} marked as Delivered." . ($isCod ? " Cash collected: ₱" . number_format($codAmount, 2) : ""),
                     'action_taken' => 'DELIVERED',
                     'parcel' => $this->summary($parcel->fresh()),

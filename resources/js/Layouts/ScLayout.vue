@@ -228,7 +228,25 @@
                   </svg>
                 </span>
 
-                <span class="truncate">{{ item.label }}</span>
+                <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+
+                <!-- Live Notification Badge on the Side -->
+                <span
+                  v-if="getBadgeCount(item.path) > 0"
+                  class="ml-auto inline-flex min-w-[22px] shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold leading-none shadow-xs transition"
+                  :class="
+                    isActive(item.path)
+                      ? 'bg-[#043E44] text-white'
+                      : 'bg-[#F5A711] text-[#043E44]'
+                  "
+                  :title="`${getBadgeCount(item.path)} pending item(s)`"
+                >
+                  <span
+                    class="h-1.5 w-1.5 rounded-full animate-pulse"
+                    :class="isActive(item.path) ? 'bg-[#F5A711]' : 'bg-[#043E44]'"
+                  ></span>
+                  {{ getBadgeCount(item.path) > 99 ? '99+' : getBadgeCount(item.path) }}
+                </span>
               </a>
             </nav>
           </div>
@@ -334,9 +352,9 @@
           <div class="flex shrink-0 items-center gap-2 sm:gap-3">
             <!-- Quick Link / Refresh Button -->
             <a
-              href="/sorting-center/dashboard"
+              :href="isHubStaff ? '/sorting-center/hub-workspace' : '/sorting-center/dashboard'"
               class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:border-[#16A6A0] hover:bg-[#E8F7F6] hover:text-[#087F8C]"
-              title="Dashboard Overview"
+              title="Active Queue Notifications"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -352,6 +370,12 @@
                   d="M15 17h5l-1.4-1.8A2 2 0 0118 14V10a6 6 0 00-12 0v4a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
                 />
               </svg>
+              <span
+                v-if="totalBadgeCount > 0"
+                class="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#F5A711] px-1 text-[10px] font-extrabold text-[#043E44] shadow-xs"
+              >
+                {{ totalBadgeCount > 99 ? '99+' : totalBadgeCount }}
+              </span>
             </a>
 
             <!-- Center Status -->
@@ -482,6 +506,86 @@ export default {
     const pageTitle = computed(() => props.title);
     const logoUrl = '/images/alona.png';
 
+    const sidebarCounts = ref({
+      hub_workspace: 0,
+      pickup_requests: 0,
+      parcel_sorting: 0,
+      delivery_assignment: 0,
+      delivery_monitoring: 0,
+      riders_pending: 0,
+      unread_messages: 0,
+    });
+
+    const getBadgeCount = (path) => {
+      switch (path) {
+        case '/sorting-center/hub-workspace':
+          return Number(sidebarCounts.value.hub_workspace || 0);
+        case '/sorting-center/pickup-requests':
+          return Number(sidebarCounts.value.pickup_requests || 0);
+        case '/sorting-center/delivery-management':
+          return Number(sidebarCounts.value.parcel_sorting || 0);
+        case '/sorting-center/rider-assignment':
+          return Number(sidebarCounts.value.delivery_assignment || 0);
+        case '/sorting-center/delivery-monitoring':
+          return Number(sidebarCounts.value.delivery_monitoring || 0);
+        case '/sorting-center/riders':
+          return Number(sidebarCounts.value.riders_pending || 0);
+        case '/sorting-center/messages':
+          return Number(sidebarCounts.value.unread_messages || 0);
+        default:
+          return 0;
+      }
+    };
+
+    const totalBadgeCount = computed(() => {
+      if (isHubStaff) {
+        return (
+          Number(sidebarCounts.value.hub_workspace || 0) +
+          Number(sidebarCounts.value.pickup_requests || 0) +
+          Number(sidebarCounts.value.parcel_sorting || 0) +
+          Number(sidebarCounts.value.delivery_assignment || 0) +
+          Number(sidebarCounts.value.unread_messages || 0)
+        );
+      }
+      return (
+        Number(sidebarCounts.value.pickup_requests || 0) +
+        Number(sidebarCounts.value.parcel_sorting || 0) +
+        Number(sidebarCounts.value.delivery_assignment || 0) +
+        Number(sidebarCounts.value.delivery_monitoring || 0) +
+        Number(sidebarCounts.value.riders_pending || 0) +
+        Number(sidebarCounts.value.unread_messages || 0)
+      );
+    });
+
+    let countsBusy = false;
+    const loadSidebarCounts = async () => {
+      if (countsBusy || typeof fetch !== 'function') return;
+      const token = window.logisticsSession?.token || localStorage.getItem('logistics_auth_token');
+      if (!token) return;
+      countsBusy = true;
+      try {
+        const res = await fetch('/api/sorting-center/hub-workspace/sidebar-counts', {
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data) {
+            sidebarCounts.value = {
+              ...sidebarCounts.value,
+              ...json.data,
+            };
+          }
+        }
+      } catch (_) {
+        // silent fallback
+      } finally {
+        countsBusy = false;
+      }
+    };
+
     const isActive = (path) => {
       const current = window.location.pathname;
       return current === path;
@@ -539,22 +643,50 @@ export default {
     };
 
     let interval;
+    let countsInterval;
+    let actionRefreshTimer;
+    const handleActionClick = (e) => {
+      const btn = e.target?.closest?.('button, [type="submit"]');
+      if (btn) {
+        clearTimeout(actionRefreshTimer);
+        actionRefreshTimer = setTimeout(loadSidebarCounts, 900);
+      }
+    };
+
     onUnmounted(() => {
       clearInterval(interval);
+      clearInterval(countsInterval);
+      clearTimeout(actionRefreshTimer);
       document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('click', handleActionClick, true);
+      window.removeEventListener('alona:logistics-realtime', loadSidebarCounts);
+      window.removeEventListener('alona:realtime-reconnected', loadSidebarCounts);
     });
 
     onMounted(() => {
       updateDateTime();
+      loadSidebarCounts();
       interval = setInterval(updateDateTime, 60000);
+      countsInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          loadSidebarCounts();
+        }
+      }, 5000);
       document.addEventListener('click', handleOutsideClick);
+      document.addEventListener('click', handleActionClick, true);
+      window.addEventListener('alona:logistics-realtime', loadSidebarCounts);
+      window.addEventListener('alona:realtime-reconnected', loadSidebarCounts);
 
       const echo = initAlonaRealtime();
       if (echo) {
-        echo.private('logistics.global').listen('*', () => {});
+        echo.private('logistics.global').listen('*', () => {
+          loadSidebarCounts();
+        });
         const centerId = window.logisticsSession?.sorting_center?.id || localStorage.getItem('sortingCenterId');
         if (centerId) {
-          echo.private(`logistics.center.${centerId}`).listen('*', () => {});
+          echo.private(`logistics.center.${centerId}`).listen('*', () => {
+            loadSidebarCounts();
+          });
         }
       }
 
@@ -588,6 +720,10 @@ export default {
       isActive,
       logout,
       logoUrl,
+      sidebarCounts,
+      getBadgeCount,
+      totalBadgeCount,
+      loadSidebarCounts,
     };
   },
 };

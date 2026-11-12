@@ -88,14 +88,26 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
         Container(
           width: 36,
           height: 36,
+          padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.14),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(11),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 4,
+                offset: Offset(0, 1),
+              ),
+            ],
           ),
-          child: const Icon(
-            Icons.local_shipping_rounded,
-            size: 20,
-            color: AppColors.accent,
+          child: Image.asset(
+            'assets/images/alona-icon.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.view_in_ar_outlined,
+              size: 20,
+              color: AppColors.primary,
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -243,18 +255,18 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
                   'Dashboard',
                 ),
                 _navItem(
-                  Icons.qr_code_scanner_outlined,
-                  Icons.qr_code_scanner_rounded,
+                  Icons.view_in_ar_outlined,
+                  Icons.view_in_ar_rounded,
                   'Check-In',
                 ),
                 _navItem(
-                  Icons.category_outlined,
-                  Icons.category_rounded,
+                  Icons.view_week_outlined,
+                  Icons.view_week_rounded,
                   'Sorting',
                 ),
                 _navItem(
-                  Icons.track_changes_outlined,
-                  Icons.track_changes_rounded,
+                  Icons.map_outlined,
+                  Icons.map_rounded,
                   'Monitoring',
                 ),
                 _navItem(
@@ -410,21 +422,21 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
             _buildOpCard(
               title: 'Hub workspace',
               subtitle: 'Receive, dispatch and receive transfers',
-              icon: Icons.warehouse_outlined,
+              icon: Icons.view_in_ar_outlined,
               color: Colors.teal,
               onTap: () => open(const HubWorkspaceScreen()),
             ),
             _buildOpCard(
               title: 'Outbound readiness',
               subtitle: 'Check the assigned delivery handoff',
-              icon: Icons.output,
+              icon: Icons.local_shipping_outlined,
               color: Colors.blue,
               onTap: () => open(const OutboundParcelsScreen()),
             ),
             _buildOpCard(
               title: 'Pickup Requests',
               subtitle: 'Seller warehouse pickups',
-              icon: Icons.storefront_outlined,
+              icon: Icons.calendar_today_outlined,
               color: Colors.deepOrange,
               onTap: () => open(const PickupRequestsScreen()),
             ),
@@ -442,14 +454,14 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
             _buildOpCard(
               title: 'Rider Assignment',
               subtitle: 'Assign parcels to riders',
-              icon: Icons.person_add_alt_1_outlined,
+              icon: Icons.groups_outlined,
               color: AppColors.primary,
               onTap: () => open(const RiderAssignmentScreen()),
             ),
             _buildOpCard(
               title: 'Rider Fleet',
               subtitle: 'Manage active delivery riders',
-              icon: Icons.two_wheeler_outlined,
+              icon: Icons.groups_outlined,
               color: Colors.indigo,
               onTap: () => open(const RiderManagementScreen()),
             ),
@@ -481,7 +493,7 @@ class _LogisticsMainScreenState extends State<LogisticsMainScreen> {
             _buildOpCard(
               title: 'Reports & Analytics',
               subtitle: 'Turnaround & status metrics',
-              icon: Icons.analytics_outlined,
+              icon: Icons.bar_chart_outlined,
               color: Colors.purple,
               onTap: () => open(const LogisticsReportsScreen()),
             ),
