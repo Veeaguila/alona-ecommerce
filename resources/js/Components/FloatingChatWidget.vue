@@ -8,8 +8,10 @@ import {
     watch,
 } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const page = usePage()
+const { listen, onReconnect } = useRealtime()
 
 const user = computed(() => page.props.auth?.user ?? null)
 const isBuyer = computed(() => user.value && (user.value.usertype === 'buyer' || !user.value.usertype))
@@ -110,6 +112,15 @@ const getSellerName = conv => {
     return conv?.seller?.store_name || conv?.seller?.name || 'Seller'
 }
 
+const isSellerOnline = conv => {
+    return Boolean(conv?.seller?.is_online)
+}
+
+const getSellerPresenceLabel = conv => {
+    if (conv?.seller?.is_online) return 'Active now'
+    return conv?.seller?.presence_label || 'Offline'
+}
+
 const getSellerInitial = conv => {
     return getSellerName(conv).charAt(0).toUpperCase()
 }
@@ -200,7 +211,14 @@ const fetchConversations = async (keepSelection = true) => {
         if (keepSelection && selectedConversation.value) {
             const found = conversations.value.find(c => c.id === selectedConversation.value.id)
             if (found) {
-                selectedConversation.value = { ...found, ...selectedConversation.value }
+                selectedConversation.value = {
+                    ...selectedConversation.value,
+                    ...found,
+                    seller: {
+                        ...(selectedConversation.value.seller || {}),
+                        ...(found.seller || {}),
+                    },
+                }
             }
         } else if (!selectedConversation.value && conversations.value.length > 0) {
             selectConversation(conversations.value[0], false)
@@ -261,8 +279,16 @@ const refreshActiveConversation = async () => {
 
         if (response.ok) {
             const data = await response.json()
+            if (data.conversation?.seller && selectedConversation.value) {
+                selectedConversation.value.seller = {
+                    ...(selectedConversation.value.seller || {}),
+                    ...data.conversation.seller,
+                }
+            }
             const newMessages = data.messages || []
-            if (newMessages.length !== messages.value.length) {
+            const prevLastId = messages.value[messages.value.length - 1]?.id
+            const nextLastId = newMessages[newMessages.length - 1]?.id
+            if (newMessages.length !== messages.value.length || prevLastId !== nextLastId) {
                 messages.value = newMessages
                 scrollToBottom()
             }
@@ -444,14 +470,61 @@ onMounted(() => {
     if (isBuyer.value) {
         fetchConversations(false)
 
+        if (user.value?.id) {
+            listen(`buyer.${user.value.id}`, 'chat.message_sent', (payload) => {
+                const incoming = payload?.message
+                const convId = Number(payload?.conversation_id || incoming?.conversation_id || 0)
+                if (incoming && selectedConversation.value && Number(selectedConversation.value.id) === convId) {
+                    const exists = messages.value.some((m) => Number(m.id) === Number(incoming.id))
+                    if (!exists) {
+                        messages.value.push(incoming)
+                        scrollToBottom()
+                    }
+                }
+                fetchConversations(true)
+            })
+        }
+
+        listen('catalog.global', 'presence.updated', (payload) => {
+            const targetUserId = Number(payload?.user_id || 0)
+            if (!targetUserId) return
+
+            conversations.value.forEach((conv) => {
+                if (Number(conv.seller_id || conv.seller?.id) === targetUserId && conv.seller) {
+                    conv.seller.is_online = Boolean(payload.is_online)
+                    conv.seller.presence_label = payload.presence_label || (payload.is_online ? 'Active now' : 'Offline')
+                    conv.seller.last_seen_at = payload.last_seen_at || null
+                }
+            })
+
+            if (
+                selectedConversation.value &&
+                Number(selectedConversation.value.seller_id || selectedConversation.value.seller?.id) === targetUserId
+            ) {
+                selectedConversation.value.seller = {
+                    ...(selectedConversation.value.seller || {}),
+                    is_online: Boolean(payload.is_online),
+                    presence_label: payload.presence_label || (payload.is_online ? 'Active now' : 'Offline'),
+                    last_seen_at: payload.last_seen_at || null,
+                }
+            }
+        }, { isPrivate: false })
+
+        onReconnect(() => {
+            if (isOpen.value && !isMinimized.value) {
+                refreshActiveConversation()
+            }
+            fetchConversations(true)
+        })
+
         pollInterval = setInterval(() => {
             if (isOpen.value && !isMinimized.value) {
                 refreshActiveConversation()
                 fetchConversations(true)
             } else {
-                fetchConversations(false)
+                fetchConversations(true)
             }
-        }, 12000)
+        }, 2500)
 
         window.addEventListener('open-buyer-chat', handleGlobalChatOpen)
     }
@@ -687,8 +760,14 @@ onUnmounted(() => {
                                         {{ getSellerInitial(conv) }}
                                     </div>
 
-                                    <!-- Online dot -->
-                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                                    <!-- Online / Offline dot -->
+                                    <span
+                                        :class="[
+                                            'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-colors',
+                                            isSellerOnline(conv) ? 'bg-emerald-500' : 'bg-slate-300'
+                                        ]"
+                                        :title="getSellerPresenceLabel(conv)"
+                                    />
                                 </div>
 
                                 <!-- Text Content -->
@@ -746,9 +825,19 @@ onUnmounted(() => {
                                     <h3 class="text-xs font-extrabold text-[#1F2937] truncate flex items-center gap-1.5">
                                         {{ getSellerName(selectedConversation) }}
                                     </h3>
-                                    <div class="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                        <span>Active today</span>
+                                    <div
+                                        :class="[
+                                            'flex items-center gap-1 text-[10px] font-semibold transition-colors',
+                                            isSellerOnline(selectedConversation) ? 'text-emerald-600' : 'text-[#94A3B8]'
+                                        ]"
+                                    >
+                                        <span
+                                            :class="[
+                                                'w-1.5 h-1.5 rounded-full transition-colors',
+                                                isSellerOnline(selectedConversation) ? 'bg-emerald-500' : 'bg-slate-300'
+                                            ]"
+                                        />
+                                        <span>{{ getSellerPresenceLabel(selectedConversation) }}</span>
                                     </div>
                                 </div>
                             </div>

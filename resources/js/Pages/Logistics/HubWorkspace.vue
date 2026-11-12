@@ -182,7 +182,18 @@ export default {
       { value: 'out_for_delivery', label: 'Out for delivery' },
     ];
     let disposed = false, generation = 0, requestKey = '';
-    onUnmounted(() => { disposed = true; generation++; });
+    const handleRealtimeRefresh = async () => {
+      if (disposed || busy.value || !hubId.value) return;
+      try {
+        queue.value = await readQueue(queue.value?.current_page || 1);
+      } catch (_) {}
+    };
+    onUnmounted(() => {
+      disposed = true;
+      generation++;
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
     function invalidate() { generation++; result.value = null; confirmed.value = false; transportReference.value = ''; requestKey = ''; notice.value = ''; }
     async function request(path, body) {
       const token = localStorage.getItem('logistics_auth_token');
@@ -322,6 +333,8 @@ export default {
     }
 
     onMounted(async () => {
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
       await refresh();
       try {
         const urlParams = new URLSearchParams(window.location.search);

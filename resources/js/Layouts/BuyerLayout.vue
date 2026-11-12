@@ -13,8 +13,13 @@ import {
 } from '@inertiajs/vue3'
 import FloatingChatWidget from '@/Components/FloatingChatWidget.vue'
 import AppFooter from '@/Components/AppFooter.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const page = usePage()
+const { listen, listenPublic, onStateUpdate, onReconnect, reloadProps } = useRealtime()
+const realtimeCartCount = ref(null)
+const realtimeNotifCount = ref(null)
+const realtimeNotifPrepends = ref([])
 
 const isConversationsPage = computed(() => {
     return page.component === 'Buyer/Conversations'
@@ -108,16 +113,22 @@ const buyerCounts = computed(() =>
 )
 
 const cartCount = computed(() =>
-    Number(
-        buyerCounts.value.cart ??
-        buyerCounts.value.cart_count ??
-        0
-    )
+    realtimeCartCount.value !== null
+        ? Number(realtimeCartCount.value)
+        : Number(
+            buyerCounts.value.cart ??
+            buyerCounts.value.cart_count ??
+            0
+        )
 )
 
 const notificationCount = computed(() => {
     if (notificationsMarkedRead.value) {
         return 0
+    }
+
+    if (realtimeNotifCount.value !== null) {
+        return Number(realtimeNotifCount.value)
     }
 
     return Number(
@@ -148,7 +159,16 @@ const notificationItems = computed(() => {
             ? source.data
             : []
 
-    return items.slice(0, 5).map((item, index) => {
+    const combined = [...realtimeNotifPrepends.value, ...items]
+    const seenIds = new Set()
+    const deduped = combined.filter((item) => {
+        const key = item?.id ?? item?.uuid ?? JSON.stringify(item)
+        if (seenIds.has(key)) return false
+        seenIds.add(key)
+        return true
+    })
+
+    return deduped.slice(0, 5).map((item, index) => {
         const data = item?.data ?? {}
 
         return {
@@ -606,6 +626,61 @@ onMounted(() => {
         'keydown',
         handleEscape
     )
+
+    // Real-time catalog stock & promotion updates
+    listenPublic('catalog.global', 'inventory.updated', () => {
+        if (['Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show', 'Buyer/Cart', 'Buyer/Checkout', 'Buyer/Wishlist', 'Buyer/Store'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+
+    listenPublic('catalog.global', 'promotion.updated', () => {
+        if (['Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show', 'Buyer/Cart', 'Buyer/Checkout'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+
+    listenPublic('catalog.global', 'promotion.expired', () => {
+        if (['Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show', 'Buyer/Cart', 'Buyer/Checkout'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+
+    if (user.value?.id) {
+        const buyerChannel = `buyer.${user.value.id}`
+
+        listen(buyerChannel, '*', (eventName, payload) => {
+            if (eventName === 'notification.created' && payload?.notification) {
+                notificationsMarkedRead.value = false
+                realtimeNotifPrepends.value = [payload.notification, ...realtimeNotifPrepends.value].slice(0, 5)
+                realtimeNotifCount.value = (realtimeNotifCount.value ?? Number(buyerCounts.value.notifications ?? 0)) + 1
+            }
+
+            if (
+                eventName.startsWith('order.') ||
+                eventName.startsWith('parcel.') ||
+                eventName.startsWith('return.') ||
+                eventName.startsWith('finance.') ||
+                eventName.startsWith('pickup.') ||
+                (eventName === 'chat.message_sent' && page.component === 'Buyer/Conversations')
+            ) {
+                reloadProps()
+            }
+        })
+    }
+
+    onStateUpdate((roleState) => {
+        if (roleState?.buyer) {
+            realtimeCartCount.value = roleState.buyer.cart_count
+            if (!notificationsMarkedRead.value) {
+                realtimeNotifCount.value = roleState.buyer.unread_notifications
+            }
+        }
+    })
+
+    onReconnect(() => {
+        reloadProps()
+    })
 
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)

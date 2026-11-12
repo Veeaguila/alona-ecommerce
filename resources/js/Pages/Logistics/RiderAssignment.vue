@@ -152,7 +152,7 @@
 </template>
 
 <script>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
@@ -244,7 +244,22 @@ export default {
       ].filter(Boolean).join(', ');
     }
 
-    onMounted(loadParcels);
+    const handleRealtimeRefresh = () => {
+      if (!loading.value && !assigningId.value) {
+        loadParcels();
+      }
+    };
+
+    onMounted(() => {
+      loadParcels();
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
 
     return {
       token,

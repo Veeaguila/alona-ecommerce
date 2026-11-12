@@ -116,6 +116,17 @@ const formatDate = (date) => {
     })
 }
 
+const formatPickupDate = (date) => {
+    if (!date) return '—'
+    const d = new Date(String(date).includes('T') ? date : `${date}T00:00:00`)
+    if (Number.isNaN(d.getTime())) return String(date)
+    return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
+}
+
 const printDocument = () => {
     window.print()
 }
@@ -297,7 +308,7 @@ onMounted(() => {
                         </div>
                         <div v-if="item.scheduled_pickup_date">
                             <span class="text-slate-500">Pickup Date:</span>
-                            <strong class="ml-1 font-mono">{{ item.scheduled_pickup_date }}</strong>
+                            <strong class="ml-1 font-mono">{{ formatPickupDate(item.scheduled_pickup_date) }}</strong>
                             <span class="ml-1 text-[9px] uppercase font-bold text-slate-600">({{ item.pickup_time_slot || 'Anytime' }})</span>
                         </div>
                     </div>

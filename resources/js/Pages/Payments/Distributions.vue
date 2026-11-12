@@ -1,19 +1,35 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useRealtime } from '@/Composables/useRealtime';
 
 const props = defineProps({ role: String, summary: Object, completed_deliveries: Number, distributions: Array,
     page: Number, pages: Number, settlement_account: String, rules: Array, costs: Array, cod: Object });
 const admin = computed(() => props.role === 'admin');
 const roleTitle = computed(() => ({ admin: 'Platform', seller: 'Seller', sorting_center: 'Logistics', rider: 'Rider' }[props.role]));
 const pageState = usePage();
+const { listen, onReconnect, reloadProps } = useRealtime();
 const refreshing = ref(false);
 const refresh = () => {
     if (refreshing.value) return;
     refreshing.value = true;
     router.reload({ onFinish: () => { refreshing.value = false; } });
 };
+
+onMounted(() => {
+    const userId = pageState.props.auth?.user?.id;
+    if (props.role === 'admin') {
+        listen('admin.global', '*', () => reloadProps());
+    } else if (props.role === 'seller' && userId) {
+        listen(`seller.${userId}`, '*', () => reloadProps());
+    } else if (props.role === 'rider' && userId) {
+        listen(`rider.${userId}`, '*', () => reloadProps());
+    } else if (props.role === 'sorting_center') {
+        listen('logistics.global', '*', () => reloadProps());
+    }
+    onReconnect(() => reloadProps());
+});
 const metricTone = (field) => {
     if (['paid', 'reconciled', 'recognized_platform_revenue'].includes(field)) return 'emerald';
     if (['pending', 'discounts'].includes(field)) return 'amber';
@@ -29,6 +45,18 @@ const metrics = computed(() => {
     return [['shipping_fees', 'Shipping fees'], ['shipping_commission', 'Alona platform fee · 10%'], ...common, ['cod_obligation', 'Pending COD remittances']];
 });
 const currency = (value) => `₱${String(value ?? '0.00').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+const formatDate = (value) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+};
 const labels = { seller: 'Seller · 90%', platform_product: 'Alona product · 10%', rider: 'Rider · 70%', logistics: 'Logistics · 20%', platform_shipping: 'Alona shipping · 10%' };
 const expanded = ref(null);
 const panel = ref(null);
@@ -144,7 +172,7 @@ const cost = useForm({ product_id: '', cost_cents: 0, minimum_margin_cents: 0, b
                             </template></tbody></table></div>
                         <div v-if="admin" class="flex flex-wrap gap-3"><button class="action" @click="open('receipt', order.id)">Reconcile receipt</button><button class="action" @click="open('refund', order.id)">Reconcile refund</button><span class="self-center text-sm text-slate-500">Funded {{ currency(order.reconciled) }} · Refunded {{ currency(order.refunds) }} · Discounts {{ currency(order.discounts) }}</span></div>
                         <details v-if="admin" class="text-sm"><summary class="cursor-pointer text-teal-700">Collection, remittance and refund records</summary><div class="mt-3 grid gap-3 md:grid-cols-3"><div v-for="(records, name) in order.sources" :key="name"><h3 class="font-semibold capitalize">{{ name }}</h3><p v-if="!records.length">None</p><pre v-for="record in records" :key="record.id" class="mt-2 whitespace-pre-wrap rounded bg-slate-50 p-2 text-xs">{{ JSON.stringify(record, null, 2) }}</pre></div></div></details>
-                        <details class="text-sm"><summary class="cursor-pointer text-teal-700">Transaction and adjustment history</summary><ol class="mt-3 space-y-2"><li v-for="event in order.events" :key="event.id" class="rounded bg-slate-50 p-3">{{ event.at }} · {{ event.kind.replaceAll('_', ' ') }} · {{ currency(event.amount) }}<pre v-if="admin" class="mt-1 whitespace-pre-wrap text-xs text-slate-500">{{ JSON.stringify(event.details, null, 2) }}</pre></li></ol></details>
+                        <details class="text-sm"><summary class="cursor-pointer text-teal-700">Transaction and adjustment history</summary><ol class="mt-3 space-y-2"><li v-for="event in order.events" :key="event.id" class="rounded bg-slate-50 p-3">{{ formatDate(event.at) }} · {{ event.kind.replaceAll('_', ' ') }} · {{ currency(event.amount) }}<pre v-if="admin" class="mt-1 whitespace-pre-wrap text-xs text-slate-500">{{ JSON.stringify(event.details, null, 2) }}</pre></li></ol></details>
                     </div>
                 </article>
                 <nav v-if="pages > 1" class="flex justify-between p-4" aria-label="Pagination"><Link v-if="page > 1" :href="`?page=${page - 1}`">Previous</Link><span>{{ page }} / {{ pages }}</span><Link v-if="page < pages" :href="`?page=${page + 1}`">Next</Link></nav>

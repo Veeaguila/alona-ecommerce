@@ -165,6 +165,8 @@ export default {
       clearInterval(pollTimer);
       document.removeEventListener('visibilitychange', refreshVisible);
       window.removeEventListener('focus', refreshVisible);
+      window.removeEventListener('alona:logistics-realtime', refreshVisible);
+      window.removeEventListener('alona:realtime-reconnected', refreshVisible);
     });
 
     async function requestJson(url, options = {}) {
@@ -298,6 +300,8 @@ export default {
       pollTimer = setInterval(refreshVisible, 15000);
       document.addEventListener('visibilitychange', refreshVisible);
       window.addEventListener('focus', refreshVisible);
+      window.addEventListener('alona:logistics-realtime', refreshVisible);
+      window.addEventListener('alona:realtime-reconnected', refreshVisible);
     });
 
     return {

@@ -1069,20 +1069,34 @@ const flashSaleCountdown = ref({
     seconds: '00',
 })
 let flashTimerInterval = null
+let flashExpiredReloaded = false
 
 const tickFlashCountdown = () => {
-    const now = new Date().getTime()
+    const now = (typeof window !== 'undefined' && window.Echo?.getAuthoritativeNowMs)
+        ? window.Echo.getAuthoritativeNowMs()
+        : new Date().getTime()
     let targetTime
 
     if (props.flashSaleEndTime) {
         targetTime = new Date(props.flashSaleEndTime).getTime()
     } else {
-        const endOfDay = new Date()
+        const endOfDay = new Date(now)
         endOfDay.setHours(23, 59, 59, 999)
         targetTime = endOfDay.getTime()
     }
 
     const diff = Math.max(0, Math.floor((targetTime - now) / 1000))
+    if (diff <= 0 && props.flashSaleEndTime && !flashExpiredReloaded) {
+        flashExpiredReloaded = true
+        router.reload({
+            only: ['flashSales', 'flashSaleEndTime', 'products', 'featuredProducts', 'bundleDeals'],
+            preserveScroll: true,
+            preserveState: true,
+        })
+    } else if (diff > 0) {
+        flashExpiredReloaded = false
+    }
+
     const h = Math.floor(diff / 3600)
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60

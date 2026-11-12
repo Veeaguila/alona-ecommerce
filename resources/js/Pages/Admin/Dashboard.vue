@@ -83,13 +83,24 @@ const recentOrders = computed(() =>
 |--------------------------------------------------------------------------
 */
 
+const formatDateTime = (value) => {
+    if (!value) return 'Recently'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return String(value)
+    return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+}
+
 const recentApplications = computed(() =>
     props.applications?.map((application) => ({
         name: application.name || application.email,
         role: application.usertype,
-        created_at: application.created_at
-            ? new Date(application.created_at).toLocaleDateString()
-            : 'Recently',
+        created_at: formatDateTime(application.created_at),
     })) ?? []
 )
 

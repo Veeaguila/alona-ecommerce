@@ -201,6 +201,19 @@ const verificationBadge = computed(() => {
     }
 })
 
+const formatDateTime = (value) => {
+    if (!value) return '—'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return String(value)
+    return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+}
+
 /*
 |--------------------------------------------------------------------------
 | Password & Login Sessions (SELLER-66)
@@ -762,7 +775,7 @@ const submitDeleteAccount = () => {
                         </div>
 
                         <div v-if="verification.last_updated_at" class="text-xs text-slate-400">
-                            Last updated: <strong class="text-slate-600">{{ verification.last_updated_at }}</strong>
+                            Last updated: <strong class="text-slate-600">{{ formatDateTime(verification.last_updated_at) }}</strong>
                         </div>
                     </div>
 

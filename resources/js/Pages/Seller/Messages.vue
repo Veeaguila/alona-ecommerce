@@ -1,6 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 import SellerLayout from '@/Layouts/SellerLayout.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const props = defineProps({
     conversations: {
@@ -11,6 +13,80 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+})
+
+const page = usePage()
+const { listen, onReconnect } = useRealtime()
+const sellerUserId = computed(() => page.props.auth?.user?.id ?? null)
+
+const localConversations = ref([...props.conversations])
+watch(
+    () => props.conversations,
+    (next) => {
+        localConversations.value = Array.isArray(next) ? [...next] : []
+    },
+    { deep: true }
+)
+
+const isBuyerOnline = (conversation) => Boolean(conversation?.buyer?.is_online)
+const getBuyerPresenceLabel = (conversation) => {
+    if (conversation?.buyer?.is_online) return 'Active now'
+    return conversation?.buyer?.presence_label || 'Offline'
+}
+
+const refreshConversations = async () => {
+    try {
+        const res = await fetch(route('seller.messages'), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data.conversations)) {
+                localConversations.value = data.conversations
+            }
+        }
+    } catch (_) {
+        // Ignore transient network errors
+    }
+}
+
+let pollTimer = null
+
+onMounted(() => {
+    if (sellerUserId.value) {
+        listen(`seller.${sellerUserId.value}`, 'chat.message_sent', () => {
+            refreshConversations()
+        })
+    }
+
+    listen('catalog.global', 'presence.updated', (payload) => {
+        const targetId = Number(payload?.user_id || 0)
+        if (!targetId) return
+        localConversations.value.forEach((conv) => {
+            if (Number(conv.buyer_id || conv.buyer?.id) === targetId && conv.buyer) {
+                conv.buyer.is_online = Boolean(payload.is_online)
+                conv.buyer.presence_label = payload.presence_label || (payload.is_online ? 'Active now' : 'Offline')
+                conv.buyer.last_seen_at = payload.last_seen_at || null
+            }
+        })
+    }, { isPrivate: false })
+
+    onReconnect(() => {
+        refreshConversations()
+    })
+
+    pollTimer = setInterval(() => {
+        refreshConversations()
+    }, 2500)
+})
+
+onUnmounted(() => {
+    if (pollTimer) {
+        clearInterval(pollTimer)
+    }
 })
 
 const formatDate = (value) =>
@@ -61,13 +137,13 @@ const formatDate = (value) =>
                             </div>
 
                             <div class="rounded-full bg-[#E8F7F6] px-2.5 py-1 text-[10px] font-bold text-[#087F8C]">
-                                {{ props.conversations.length }} {{ props.conversations.length === 1 ? 'conversation' : 'conversations' }}
+                                {{ localConversations.length }} {{ localConversations.length === 1 ? 'conversation' : 'conversations' }}
                             </div>
                         </div>
                     </div>
 
                     <!-- Empty State -->
-                    <div v-if="!props.conversations.length" class="px-5 py-14 text-center">
+                    <div v-if="!localConversations.length" class="px-5 py-14 text-center">
                         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8FAF9] text-[#94A3B8]">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h8M8 14h5m7-2a8 8 0 01-8 8 8.4 8.4 0 01-3.1-.6L4 21l1.6-3.8A8 8 0 1120 12z" />
@@ -84,7 +160,7 @@ const formatDate = (value) =>
                     <!-- Conversation List -->
                     <div v-else class="divide-y divide-[#E5E7EB]">
                         <Link
-                            v-for="conversation in props.conversations"
+                            v-for="conversation in localConversations"
                             :key="conversation.id"
                             :href="route('seller.messages.show', conversation.id)"
                             class="group block px-5 py-4 transition hover:bg-[#F8FAF9]"
@@ -101,9 +177,16 @@ const formatDate = (value) =>
                                 </div>
                                 <div
                                     v-else
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8F7F6] text-sm font-bold text-[#087F8C]"
+                                    class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8F7F6] text-sm font-bold text-[#087F8C]"
                                 >
                                     {{ (conversation.buyer?.name || 'C').charAt(0).toUpperCase() }}
+                                    <span
+                                        :class="[
+                                            'absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white transition-colors',
+                                            isBuyerOnline(conversation) ? 'bg-emerald-500' : 'bg-slate-300'
+                                        ]"
+                                        :title="getBuyerPresenceLabel(conversation)"
+                                    />
                                 </div>
 
                                 <!-- Conversation Details -->

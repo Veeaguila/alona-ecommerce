@@ -411,6 +411,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { initAlonaRealtime } from '@/realtime/echo';
 
 export default {
   name: 'ScLayout',
@@ -547,6 +548,15 @@ export default {
       updateDateTime();
       interval = setInterval(updateDateTime, 60000);
       document.addEventListener('click', handleOutsideClick);
+
+      const echo = initAlonaRealtime();
+      if (echo) {
+        echo.private('logistics.global').listen('*', () => {});
+        const centerId = window.logisticsSession?.sorting_center?.id || localStorage.getItem('sortingCenterId');
+        if (centerId) {
+          echo.private(`logistics.center.${centerId}`).listen('*', () => {});
+        }
+      }
 
       const sessionStr = localStorage.getItem('logistics_auth_session');
       if (sessionStr) {

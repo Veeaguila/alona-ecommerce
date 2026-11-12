@@ -72,7 +72,7 @@
             <table class="app-data-table">
               <caption class="sr-only">Delivery records for the applied date range</caption>
               <thead><tr><th>Parcel ID</th><th>Tracking reference</th><th>Buyer</th><th>Seller</th><th>Delivery Rider</th><th>Status</th><th>Province</th><th>City</th><th>Sorted at</th><th>Delivered at</th></tr></thead>
-              <tbody><tr v-for="row in transactions" :key="row.parcel_id"><td>{{ row.parcel_id }}</td><td>{{ row.order_id }}</td><td>{{ row.buyer_name }}</td><td>{{ row.seller_name }}</td><td>{{ row.rider_name }}</td><td>{{ row.status }}</td><td>{{ row.delivery_province }}</td><td>{{ row.delivery_municipality }}</td><td>{{ row.sorted_at || 'Not recorded' }}</td><td>{{ row.delivered_at || 'Not recorded' }}</td></tr></tbody>
+              <tbody><tr v-for="row in transactions" :key="row.parcel_id"><td>{{ row.parcel_id }}</td><td>{{ row.order_id }}</td><td>{{ row.buyer_name }}</td><td>{{ row.seller_name }}</td><td>{{ row.rider_name }}</td><td>{{ row.status }}</td><td>{{ row.delivery_province }}</td><td>{{ row.delivery_municipality }}</td><td>{{ row.sorted_at ? formatDate(row.sorted_at) : 'Not recorded' }}</td><td>{{ row.delivered_at ? formatDate(row.delivered_at) : 'Not recorded' }}</td></tr></tbody>
             </table>
           </div>
           <div class="flex flex-wrap items-center gap-3">
@@ -456,6 +456,19 @@ export default {
       return map[status] || (status ? status.replaceAll('_', ' ') : 'Unknown');
     }
 
+    function formatDate(value) {
+      if (!value) return 'Not recorded';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
+
     // Clean up Chart.js instances when component unmounts
     onBeforeUnmount(() => { disposed = true; exportAbort?.abort(); destroyCharts(); });
 
@@ -473,6 +486,7 @@ export default {
       barCanvas,
       generateReport,
       formatStatus,
+      formatDate,
     };
   },
 };

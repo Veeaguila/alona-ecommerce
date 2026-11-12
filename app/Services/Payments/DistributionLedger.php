@@ -123,6 +123,17 @@ class DistributionLedger
             'actor_id' => $actor?->id, 'source_type' => $sourceType, 'source_id' => $sourceId,
             'external_reference' => $reference, 'details' => json_encode($details, JSON_THROW_ON_ERROR), 'created_at' => now(),
         ]);
+        app(\App\Services\RealtimeBroadcastService::class)->broadcastFinancialUpdate(
+            (int) $d->order_id,
+            'ledger_' . $kind,
+            [
+                'distribution_id' => (int) $d->id,
+                'line_id' => $line,
+                'kind' => $kind,
+                'amount_cents' => $amount,
+                'policy' => (string) $d->policy,
+            ]
+        );
         return $this->events($d->id)->find($id);
     }
 

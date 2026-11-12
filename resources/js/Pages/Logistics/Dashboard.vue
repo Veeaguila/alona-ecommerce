@@ -127,7 +127,7 @@
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm mt-3" aria-label="Parcels in selected status bucket">
                 <thead><tr><th>Tracking reference</th><th>Seller</th><th>Buyer</th><th>Pickup Rider</th><th>Delivery Rider</th><th>Status</th><th>Created</th></tr></thead>
-                <tbody><tr v-for="parcel in summaryParcels" :key="parcel.id"><td>{{ parcel.order_id }}</td><td>{{ parcel.seller?.name || 'Not recorded' }}</td><td>{{ parcel.buyer?.name || 'Not recorded' }}</td><td>{{ parcel.pickup_rider?.name || 'Unassigned' }}</td><td>{{ parcel.assigned_rider?.name || 'Unassigned' }}</td><td>{{ parcel.status }}</td><td>{{ parcel.created_at }}</td></tr></tbody>
+                <tbody><tr v-for="parcel in summaryParcels" :key="parcel.id"><td>{{ parcel.order_id }}</td><td>{{ parcel.seller?.name || 'Not recorded' }}</td><td>{{ parcel.buyer?.name || 'Not recorded' }}</td><td>{{ parcel.pickup_rider?.name || 'Unassigned' }}</td><td>{{ parcel.assigned_rider?.name || 'Unassigned' }}</td><td>{{ parcel.status }}</td><td>{{ formatDate(parcel.created_at) }}</td></tr></tbody>
               </table>
             </div>
             <div class="flex gap-3 mt-3"><button type="button" class="app-button-secondary" :disabled="listLoading || listPage <= 1" @click="loadParcels(selectedBucket, listPage - 1)">Previous parcels</button><button type="button" class="app-button-secondary" :disabled="listLoading || listPage >= listLastPage" @click="loadParcels(selectedBucket, listPage + 1)">Next parcels</button></div>
@@ -316,9 +316,35 @@ export default {
       }
     }
 
+    const handleRealtimeRefresh = () => {
+      if (!loading.value && !scanBusy.value) {
+        loadDashboard();
+      }
+    };
+
     onMounted(() => {
       loadDashboard();
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
     });
+
+    onUnmounted(() => {
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    function formatDate(value) {
+      if (!value) return 'Not recorded';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
 
     return {
       token,
@@ -340,6 +366,7 @@ export default {
       applyDateFilter,
       filterToday,
       clearDates,
+      formatDate,
     };
   },
 };

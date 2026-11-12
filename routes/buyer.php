@@ -47,6 +47,11 @@ Route::get('/buyer/store/{seller}', [
     'show',
 ])->name('buyer.store.show');
 
+Route::get('/buyer/stores/{seller}', [
+    BuyerStoreController::class,
+    'show',
+])->name('buyer.store');
+
 Route::get('/buyer/categories', [
     BuyerCategoryController::class,
     'index',

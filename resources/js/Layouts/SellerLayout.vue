@@ -578,16 +578,46 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const sidebarOpen = ref(false)
 
 const form = useForm({})
 
 const page = usePage()
+const { listen, listenPublic, onStateUpdate, onReconnect, reloadProps } = useRealtime()
+const realtimeSellerNotifCount = ref(null)
+const realtimeSellerMsgCount = ref(null)
 
 const user = computed(() => page.props.auth?.user ?? {})
+
+onMounted(() => {
+    if (user.value?.id) {
+        listen(`seller.${user.value.id}`, '*', (eventName) => {
+            if (eventName === 'notification.created') {
+                realtimeSellerNotifCount.value = (realtimeSellerNotifCount.value ?? Number(page.props.sellerCounts?.notifications ?? 0)) + 1
+            }
+            reloadProps()
+        })
+    }
+
+    listenPublic('catalog.global', 'promotion.expired', () => {
+        reloadProps()
+    })
+
+    onStateUpdate((roleState) => {
+        if (roleState?.seller) {
+            realtimeSellerNotifCount.value = roleState.seller.unread_notifications
+            realtimeSellerMsgCount.value = roleState.seller.unread_messages
+        }
+    })
+
+    onReconnect(() => {
+        reloadProps()
+    })
+})
 
 const profileName = computed(() => {
     return user.value.store_name || user.value.name || 'Seller'
@@ -697,6 +727,9 @@ const accountNavigation = [
 ]
 
 const unreadNotificationsCount = computed(() => {
+    if (realtimeSellerNotifCount.value !== null) {
+        return Number(realtimeSellerNotifCount.value)
+    }
     return Number(page.props.sellerCounts?.notifications ?? page.props.unreadNotificationsCount ?? 0)
 })
 

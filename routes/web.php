@@ -311,6 +311,31 @@ require __DIR__ . '/payments.php';
 
 /*
 |--------------------------------------------------------------------------
+| REAL-TIME BROADCASTING AUTH & STATE SYNCHRONIZATION ROUTES
+|--------------------------------------------------------------------------
+*/
+Route::match(['get', 'post'], '/broadcasting/auth', [
+    \App\Http\Controllers\RealtimeSyncController::class,
+    'authenticate',
+])->name('broadcasting.auth');
+
+Route::match(['get', 'post'], '/realtime/sync', [
+    \App\Http\Controllers\RealtimeSyncController::class,
+    'sync',
+])->name('realtime.sync');
+
+Route::post('/realtime/presence/offline', [
+    \App\Http\Controllers\RealtimeSyncController::class,
+    'offline',
+])->name('realtime.presence.offline');
+
+Route::get('/realtime/catalog-state', [
+    \App\Http\Controllers\RealtimeSyncController::class,
+    'catalogState',
+])->name('realtime.catalog.state');
+
+/*
+|--------------------------------------------------------------------------
 | ARCHITECTURE & SECURITY SPECIFICATION DOWNLOAD ROUTES
 |--------------------------------------------------------------------------
 */

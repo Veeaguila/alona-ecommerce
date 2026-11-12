@@ -147,7 +147,7 @@
             <h3 class="font-semibold">{{ group.label }}</h3>
             <div class="overflow-x-auto"><table class="w-full text-left text-sm" :aria-label="`${group.label} parcel list`">
               <thead><tr><th>Tracking reference</th><th>City service area</th><th>Status</th><th>Sorted at</th></tr></thead>
-              <tbody><tr v-for="parcel in group.parcels" :key="parcel.id"><td>{{ parcel.order_id }}</td><td>{{ areas.find(area => area.id === parcel.sorted_area_id)?.city_name || 'Unmapped service area' }}</td><td>{{ parcel.status }}</td><td>{{ parcel.sorted_at || 'Time not recorded' }}</td></tr></tbody>
+              <tbody><tr v-for="parcel in group.parcels" :key="parcel.id"><td>{{ parcel.order_id }}</td><td>{{ areas.find(area => area.id === parcel.sorted_area_id)?.city_name || 'Unmapped service area' }}</td><td>{{ parcel.status }}</td><td>{{ parcel.sorted_at ? formatDate(parcel.sorted_at) : 'Time not recorded' }}</td></tr></tbody>
             </table></div>
           </section>
         </section>
@@ -157,7 +157,7 @@
 </template>
 
 <script>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import ScLayout from '@/Layouts/ScLayout.vue';
 import DeliveryCoverageSelector from '@/Components/DeliveryCoverageSelector.vue';
 
@@ -304,7 +304,35 @@ export default {
       ].filter(Boolean).join(', ');
     }
 
-    onMounted(loadData);
+    const handleRealtimeRefresh = () => {
+      if (!loading.value && !sortingId.value && !creatingArea.value) {
+        loadData();
+      }
+    };
+
+    onMounted(() => {
+      loadData();
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    function formatDate(value) {
+      if (!value) return 'Time not recorded';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
 
     return {
       coverageForm,
@@ -324,6 +352,7 @@ export default {
       areasForParcel,
       createCityArea,
       formatAddress,
+      formatDate,
     };
   },
 };

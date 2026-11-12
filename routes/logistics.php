@@ -66,4 +66,5 @@ Route::middleware('auth')->group(function () {
     Route::patch('/partner/profile', [PartnerProfileController::class, 'update'])->name('partner.profile.update');
     Route::get('/partner/documents/{user}/{document}', [PartnerProfileController::class, 'document'])->name('partner.documents');
     Route::get('/rider/dashboard', [PartnerProfileController::class, 'rider'])->middleware('rider.approved')->name('rider.dashboard');
+    Route::post('/rider/pickups/{parcel}/accept', [PartnerProfileController::class, 'acceptPickup'])->middleware('rider.approved')->name('rider.pickups.accept');
 });

@@ -22,9 +22,11 @@ class SellerConversationController extends Controller
     /**
      * Display seller conversations list with Customer Chats and Admin Support tabs.
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|\Illuminate\Http\JsonResponse
     {
         $sellerId = $request->user()->id;
+        $realtimeService = app(\App\Services\RealtimeBroadcastService::class);
+        $realtimeService->touchUserPresence($request->user());
 
         $conversations = Conversation::query()
             ->where('seller_id', $sellerId)
@@ -40,9 +42,15 @@ class SellerConversationController extends Controller
             ->orderByDesc('last_message_at')
             ->get();
 
-        $conversations->each(function ($conversation) {
+        $conversations->each(function ($conversation) use ($realtimeService) {
             if ($conversation->order && $conversation->buyer_id && (int) $conversation->order->user_id !== (int) $conversation->buyer_id) {
                 $conversation->setRelation('order', null);
+            }
+            if ($conversation->buyer) {
+                $presence = $realtimeService->getUserPresence((int) $conversation->buyer->id);
+                $conversation->buyer->is_online = $presence['is_online'];
+                $conversation->buyer->presence_label = $presence['presence_label'];
+                $conversation->buyer->last_seen_at = $presence['last_seen_at'];
             }
         });
 
@@ -51,6 +59,13 @@ class SellerConversationController extends Controller
             ->latest()
             ->limit(15)
             ->get(['id', 'order_number', 'total', 'status']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'conversations' => $conversations,
+                'sellerOrders' => $sellerOrders,
+            ]);
+        }
 
         return Inertia::render('Seller/Messages', [
             'conversations' => $conversations,
@@ -61,9 +76,12 @@ class SellerConversationController extends Controller
     /**
      * Display a specific conversation thread with full order snippets and media.
      */
-    public function show(Request $request, Conversation $conversation): Response
+    public function show(Request $request, Conversation $conversation): Response|\Illuminate\Http\JsonResponse
     {
         abort_unless((int) $conversation->seller_id === (int) $request->user()->id, 403);
+
+        $realtimeService = app(\App\Services\RealtimeBroadcastService::class);
+        $realtimeService->touchUserPresence($request->user());
 
         // Mark unread messages from other users as read
         $conversation->messages()
@@ -82,6 +100,13 @@ class SellerConversationController extends Controller
             ]),
         ]);
 
+        if ($conversation->buyer) {
+            $presence = $realtimeService->getUserPresence((int) $conversation->buyer->id);
+            $conversation->buyer->is_online = $presence['is_online'];
+            $conversation->buyer->presence_label = $presence['presence_label'];
+            $conversation->buyer->last_seen_at = $presence['last_seen_at'];
+        }
+
         // Eager load messages with attachments, order snippets, and sender profiles
         $messages = $conversation->messages()
             ->with([
@@ -94,6 +119,13 @@ class SellerConversationController extends Controller
             ])
             ->orderBy('created_at')
             ->get();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'conversation' => $conversation,
+                'messages' => $messages,
+            ]);
+        }
 
         // Recent orders by this seller (optionally filtered by buyer) for snippet attachment
         $sellerId = $request->user()->id;
@@ -119,9 +151,10 @@ class SellerConversationController extends Controller
     /**
      * Send a message with text, media attachments (SELLER-42, SEL-REV-005, SEL-REV-006, SEL-REV-007), and order snippets (SELLER-43).
      */
-    public function store(Request $request, Conversation $conversation): RedirectResponse
+    public function store(Request $request, Conversation $conversation): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         abort_unless((int) $conversation->seller_id === (int) $request->user()->id, 403);
+        app(\App\Services\RealtimeBroadcastService::class)->touchUserPresence($request->user());
 
         $hasAttachment = $request->hasFile('attachment');
         $hasOrder = ! empty($request->input('order_id'));
@@ -225,6 +258,20 @@ class SellerConversationController extends Controller
                     'action_url' => route('buyer.conversations.show', $conversation->id),
                 ]);
             } catch (\Throwable $e) {}
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message->load([
+                    'sender:id,name,usertype,avatar',
+                    'order' => fn ($q) => app(\App\Services\ConversationOrderAccess::class)->scope($q, $conversation)->with([
+                        'items.product:id,name,image_path,price',
+                        'items.variant:id,product_id,color,size,price',
+                        'items.parcel:id,order_item_id,order_id,status',
+                    ]),
+                ]),
+                'conversation_id' => $conversation->id,
+            ]);
         }
 
         return back()->with('status', 'Message sent successfully.');

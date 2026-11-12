@@ -1,9 +1,24 @@
 <script setup>
-import { ref } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { computed, onMounted, ref } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
-const props = defineProps({ rider: Object, parcels: Array })
+const props = defineProps({
+    rider: Object,
+    parcels: { type: Array, default: () => [] },
+    availablePickups: { type: Array, default: () => [] },
+    acceptedPickups: { type: Array, default: () => [] },
+    codRecords: { type: Array, default: () => [] },
+    earnings: {
+        type: Object,
+        default: () => ({ pending: 0, available: 0, settled: 0, paid_out: 0, items: [] }),
+    },
+    notifications: { type: Array, default: () => [] },
+})
+
+const page = usePage()
+const { listen, onReconnect, reloadProps } = useRealtime()
 
 const scanRef = ref('')
 const scanning = ref(false)
@@ -11,6 +26,82 @@ const scanResult = ref(null)
 const scanError = ref('')
 const photoFile = ref(null)
 const photoPreview = ref(null)
+
+const acceptingParcelId = ref(null)
+const pickupError = ref('')
+const pickupNotice = ref('')
+const takenParcelIds = ref(new Set())
+
+const visibleAvailablePickups = computed(() =>
+    (props.availablePickups || []).filter((job) => !takenParcelIds.value.has(Number(job.id)))
+)
+
+const formatMoney = (val) =>
+    '₱' + Number(val || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+onMounted(() => {
+    const userId = page.props.auth?.user?.id
+    const centerId = props.rider?.sorting_center_id || props.rider?.sorting_center?.id
+
+    if (userId) {
+        listen(`rider.${userId}`, '*', () => {
+            reloadProps()
+        })
+    }
+
+    if (centerId) {
+        listen(`riders.center.${centerId}`, '*', (eventName, payload) => {
+            if (
+                (eventName === 'parcel.pickup_assigned' || payload?.is_pickup_taken || payload?.is_exclusive_taken) &&
+                payload?.parcel_id
+            ) {
+                const nextSet = new Set(takenParcelIds.value)
+                nextSet.add(Number(payload.parcel_id))
+                takenParcelIds.value = nextSet
+            }
+            reloadProps()
+        })
+    }
+
+    onReconnect(() => {
+        reloadProps()
+    })
+})
+
+async function acceptPickupJob(parcelId) {
+    if (acceptingParcelId.value) return
+    acceptingParcelId.value = parcelId
+    pickupError.value = ''
+    pickupNotice.value = ''
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        const response = await fetch(`/rider/pickups/${parcelId}/accept`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+            },
+            credentials: 'same-origin',
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+            throw new Error(data.message || 'This pickup has already been accepted by another rider.')
+        }
+        const nextSet = new Set(takenParcelIds.value)
+        nextSet.add(Number(parcelId))
+        takenParcelIds.value = nextSet
+        pickupNotice.value = data.message || 'Pickup job accepted!'
+        reloadProps(['availablePickups', 'acceptedPickups', 'parcels', 'notifications'])
+    } catch (err) {
+        pickupError.value = err.message
+        reloadProps(['availablePickups', 'acceptedPickups'])
+    } finally {
+        acceptingParcelId.value = null
+    }
+}
 
 async function submitScan() {
     const refCode = scanRef.value.trim()
@@ -43,7 +134,7 @@ async function submitScan() {
         if (data.action_taken) {
             photoFile.value = null
             photoPreview.value = null
-            router.reload({ only: ['parcels'] })
+            router.reload({ only: ['parcels', 'availablePickups', 'acceptedPickups', 'codRecords', 'earnings'] })
         }
     } catch (err) {
         scanError.value = err.message
@@ -83,10 +174,10 @@ function quickScanItem(orderId) {
                 <div>
                     <div class="flex items-center gap-2">
                         <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                        <p class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Alona Rider Network</p>
+                        <p class="text-xs font-bold uppercase tracking-wider text-[#087F8C]">Alona Rider Network · Live</p>
                     </div>
-                    <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900">Welcome, {{ rider.name }}</h1>
-                    <p class="mt-1 text-sm text-slate-500 capitalize">{{ rider.vehicle_type }} · {{ rider.approval_status }} · {{ rider.company_name }}</p>
+                    <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900">Welcome, {{ rider?.name }}</h1>
+                    <p class="mt-1 text-sm text-slate-500 capitalize">{{ rider?.vehicle_type }} · {{ rider?.approval_status }} · {{ rider?.company_name }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('application.status')" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
@@ -97,6 +188,26 @@ function quickScanItem(orderId) {
                     </button>
                 </div>
             </div>
+
+            <!-- REAL-TIME EARNINGS SUMMARY (70% Shipping Share) -->
+            <section class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pending Earnings</p>
+                    <p class="mt-1 text-lg font-extrabold text-amber-600">{{ formatMoney(earnings?.pending) }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Available (70% Share)</p>
+                    <p class="mt-1 text-lg font-extrabold text-[#087F8C]">{{ formatMoney(earnings?.available) }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Settled</p>
+                    <p class="mt-1 text-lg font-extrabold text-emerald-700">{{ formatMoney(earnings?.settled) }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Paid Out</p>
+                    <p class="mt-1 text-lg font-extrabold text-slate-900">{{ formatMoney(earnings?.paid_out) }}</p>
+                </div>
+            </section>
 
             <!-- UNIVERSAL SMART SCANNER CARD -->
             <section class="mt-6 rounded-2xl border-2 border-teal-500/40 bg-gradient-to-br from-teal-950 via-slate-900 to-slate-950 p-6 text-white shadow-xl">
@@ -232,6 +343,85 @@ function quickScanItem(orderId) {
                 </div>
             </section>
 
+            <!-- AVAILABLE PICKUP JOBS (EXCLUSIVE ATOMIC ACCEPTANCE) -->
+            <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Available Pickup Jobs</h2>
+                        <p class="text-xs text-slate-500">Live seller pickups in your sorting center. Accepting a job immediately claims it exclusively.</p>
+                    </div>
+                    <span class="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-[#087F8C]">
+                        {{ visibleAvailablePickups.length }} available
+                    </span>
+                </div>
+
+                <div v-if="pickupError" class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                    {{ pickupError }}
+                </div>
+                <div v-if="pickupNotice" class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-700">
+                    {{ pickupNotice }}
+                </div>
+
+                <p v-if="!visibleAvailablePickups.length" class="mt-6 text-center py-6 text-sm text-slate-500">
+                    No unassigned pickup jobs right now. New pickup requests will appear here automatically.
+                </p>
+
+                <ul v-else class="mt-4 divide-y divide-slate-100">
+                    <li v-for="job in visibleAvailablePickups" :key="job.id" class="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="font-bold text-slate-900 text-sm">{{ job.order_id }}</p>
+                                <span class="rounded-lg bg-teal-100 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-800">
+                                    Ready for Pickup
+                                </span>
+                            </div>
+                            <p class="mt-1 text-xs text-slate-600">
+                                <strong>Collection:</strong> {{ job.collection_address || 'Seller Store' }}
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-500">
+                                <strong>Destination:</strong> {{ job.delivery_address }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-xl bg-[#087F8C] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#065A63] disabled:opacity-50 cursor-pointer"
+                            :disabled="acceptingParcelId === job.id"
+                            @click="acceptPickupJob(job.id)"
+                        >
+                            {{ acceptingParcelId === job.id ? 'Accepting…' : 'Accept Pickup' }}
+                        </button>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- ACCEPTED PICKUPS -->
+            <section v-if="acceptedPickups.length" class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Accepted Pickups</h2>
+                        <p class="text-xs text-slate-500">Pickups claimed by you awaiting collection or hub arrival.</p>
+                    </div>
+                    <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+                        {{ acceptedPickups.length }} active
+                    </span>
+                </div>
+                <ul class="mt-4 divide-y divide-slate-100">
+                    <li v-for="pickup in acceptedPickups" :key="pickup.id" class="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <p class="font-bold text-slate-900 text-sm">{{ pickup.order_id }} · <span class="text-xs font-semibold text-teal-700">{{ pickup.status }}</span></p>
+                            <p class="text-xs text-slate-500">{{ pickup.collection_address }} → {{ pickup.delivery_address }}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-lg border border-teal-600 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 cursor-pointer"
+                            @click="quickScanItem(pickup.order_id)"
+                        >
+                            📷 Scan Pickup
+                        </button>
+                    </li>
+                </ul>
+            </section>
+
             <!-- ASSIGNED DELIVERIES LIST -->
             <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -279,6 +469,34 @@ function quickScanItem(orderId) {
                     </li>
                 </ul>
             </section>
+
+            <!-- COD RECORDS & NOTIFICATIONS -->
+            <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-900">COD Collection Records</h2>
+                    <p v-if="!codRecords.length" class="mt-4 text-xs text-slate-500">No COD collections recorded yet.</p>
+                    <ul v-else class="mt-3 divide-y divide-slate-100 text-xs">
+                        <li v-for="cod in codRecords" :key="cod.id" class="py-2.5 flex items-center justify-between">
+                            <div>
+                                <span class="font-bold text-slate-800">Order #{{ cod.order_id || cod.parcel_id }}</span>
+                                <span class="ml-2 text-slate-500 capitalize">{{ cod.status || 'collected' }}</span>
+                            </div>
+                            <span class="font-bold text-[#087F8C]">{{ formatMoney(cod.amount || cod.amount_collected) }}</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-900">Recent Notifications</h2>
+                    <p v-if="!notifications.length" class="mt-4 text-xs text-slate-500">No notifications yet.</p>
+                    <ul v-else class="mt-3 divide-y divide-slate-100 text-xs">
+                        <li v-for="notif in notifications" :key="notif.id" class="py-2.5">
+                            <p class="font-bold text-slate-800">{{ notif.title }}</p>
+                            <p class="mt-0.5 text-slate-600">{{ notif.body || notif.message }}</p>
+                        </li>
+                    </ul>
+                </section>
+            </div>
         </main>
     </GuestLayout>
 </template>

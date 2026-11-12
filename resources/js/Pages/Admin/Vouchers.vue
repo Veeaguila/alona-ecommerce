@@ -65,10 +65,21 @@ const openEditModal = (v) => {
     form.max_discount = v.max_discount || ''
     form.usage_limit = v.usage_limit || 100
     form.per_customer_limit = v.per_customer_limit || 1
-    form.starts_at = v.starts_at || ''
-    form.expires_at = v.expires_at || ''
+    form.starts_at = v.starts_at ? String(v.starts_at).slice(0, 10) : ''
+    form.expires_at = v.expires_at ? String(v.expires_at).slice(0, 10) : ''
     form.is_active = Boolean(v.is_active)
     showModal.value = true
+}
+
+const formatDate = (value) => {
+    if (!value) return '—'
+    const parsed = new Date(String(value).includes('T') ? value : `${value}T00:00:00`)
+    if (Number.isNaN(parsed.getTime())) return String(value)
+    return parsed.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
 }
 
 const closeModal = () => {
@@ -201,7 +212,7 @@ const deleteVoucher = (v) => {
                                     {{ v.user_vouchers_count ?? 0 }} / {{ v.usage_limit ?? '∞' }}
                                 </td>
                                 <td class="px-5 py-4 text-[11px] text-[#64748B]">
-                                    {{ v.starts_at || '—' }} to {{ v.expires_at || '—' }}
+                                    {{ formatDate(v.starts_at) }} to {{ formatDate(v.expires_at) }}
                                 </td>
                                 <td class="px-5 py-4 text-center">
                                     <span

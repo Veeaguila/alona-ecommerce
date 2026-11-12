@@ -566,6 +566,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const props = defineProps({
     active: {
@@ -578,6 +579,17 @@ const sidebarOpen = ref(false)
 
 const form = useForm({})
 const page = usePage()
+const { listen, onReconnect, reloadProps } = useRealtime()
+
+onMounted(() => {
+    listen('admin.global', '*', () => {
+        reloadProps()
+    })
+
+    onReconnect(() => {
+        reloadProps()
+    })
+})
 
 const user = computed(() => page.props.auth?.user ?? {})
 

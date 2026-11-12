@@ -277,7 +277,22 @@ export default {
       return value ? new Date(value).toLocaleString() : 'Unknown';
     }
 
-    onMounted(() => loadParcels());
+    const handleRealtimeRefresh = () => {
+      if (!loading.value) {
+        loadParcels(pagination.current_page || 1);
+      }
+    };
+
+    onMounted(() => {
+      loadParcels();
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
 
     return {
       token,

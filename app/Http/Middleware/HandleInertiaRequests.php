@@ -31,6 +31,9 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        if ($user) {
+            app(\App\Services\RealtimeBroadcastService::class)->touchUserPresence($user);
+        }
 
         return [
             ...parent::share($request),
@@ -136,6 +139,21 @@ class HandleInertiaRequests extends Middleware
                             )
                             ->count()
                         : 0,
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | REAL-TIME CONFIGURATION & AUTHORITATIVE SERVER CLOCK
+            |--------------------------------------------------------------------------
+            */
+            'realtimeConfig' => fn () => [
+                'driver' => config('broadcasting.default', 'reverb'),
+                'key' => config('broadcasting.connections.reverb.key', 'alona-reverb-key'),
+                'host' => config('broadcasting.connections.reverb.options.host', '127.0.0.1'),
+                'port' => (int) config('broadcasting.connections.reverb.options.port', 8080),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme', 'http'),
+                'server_time' => now()->toIso8601String(),
+                'server_time_ms' => (int) round(microtime(true) * 1000),
             ],
         ];
     }

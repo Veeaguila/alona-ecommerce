@@ -24,6 +24,9 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        if ($request->user()) {
+            app(\App\Services\RealtimeBroadcastService::class)->touchUserPresence($request->user());
+        }
         if ($request->user()->usertype === 'sorting_center') {
             $request->session()->put(\App\Services\LogisticsSessionLifetime::ACTIVITY_KEY, now()->timestamp);
         }
@@ -41,6 +44,13 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        if ($request->user()) {
+            app(\App\Services\RealtimeBroadcastService::class)->markUserOffline(
+                (int) $request->user()->id,
+                (string) $request->user()->usertype
+            );
+        }
+
         $token = $request->session()->get('logistics.web_token');
         $accessToken = $token ? PersonalAccessToken::findToken($token) : null;
         if ($accessToken?->tokenable_id === $request->user()?->id) {

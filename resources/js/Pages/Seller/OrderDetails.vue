@@ -669,6 +669,17 @@ const formatDate = (date) => {
     )
 }
 
+const formatPickupDate = (date) => {
+    if (!date) return ''
+    const parsedDate = new Date(String(date).includes('T') ? date : `${date}T00:00:00`)
+    if (Number.isNaN(parsedDate.getTime())) return String(date)
+    return parsedDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
+}
+
 /*
 |--------------------------------------------------------------------------
 | Money Formatting
@@ -954,7 +965,7 @@ const formatMoney = (value) => {
                             <div class="font-bold text-sm text-teal-950 flex flex-wrap items-center gap-2">
                                 <span>Courier Pickup Scheduled:</span>
                                 <span class="rounded-md bg-teal-100 px-2 py-0.5 font-mono text-teal-900 border border-teal-300">
-                                    {{ item.scheduled_pickup_date }}
+                                    {{ formatPickupDate(item.scheduled_pickup_date) }}
                                 </span>
                                 <span class="font-semibold text-teal-700">({{ formatTimeSlot(item.pickup_time_slot) }})</span>
                             </div>

@@ -4,8 +4,33 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
 import PartnerAuthModal from '@/Components/PartnerAuthModal.vue'
 import AppFooter from '@/Components/AppFooter.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const page = usePage()
+const { listenPublic, onReconnect, reloadProps } = useRealtime()
+
+onMounted(() => {
+    listenPublic('catalog.global', 'inventory.updated', () => {
+        if (['Guest/Welcome', 'Guest/Products', 'Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show', 'Buyer/Store'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+    listenPublic('catalog.global', 'promotion.updated', () => {
+        if (['Guest/Welcome', 'Guest/Products', 'Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+    listenPublic('catalog.global', 'promotion.expired', () => {
+        if (['Guest/Welcome', 'Guest/Products', 'Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+    onReconnect(() => {
+        if (['Guest/Welcome', 'Guest/Products', 'Buyer/Dashboard', 'Buyer/Products', 'Buyer/Show', 'Rider/Dashboard'].includes(page.component)) {
+            reloadProps()
+        }
+    })
+})
 
 const mobileOpen = ref(false)
 const searchQuery = ref('')

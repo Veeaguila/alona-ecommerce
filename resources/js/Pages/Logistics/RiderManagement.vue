@@ -61,7 +61,7 @@
               <div><dt class="font-semibold">Completed today (Manila)</dt><dd>{{ selectedRider.completed_jobs_today ?? 'Unknown' }}</dd></div>
             </dl>
             <p class="mt-3 text-sm text-gray-600">Presence uses the Rider's explicit Online choice and recent heartbeats; no signal means Unknown. Jobs count shipments per leg; legacy parcels count individually.</p>
-            <p v-if="selectedRider.last_heartbeat_at" class="mt-1 text-sm text-gray-600">Last Rider heartbeat: {{ selectedRider.last_heartbeat_at }}</p>
+            <p v-if="selectedRider.last_heartbeat_at" class="mt-1 text-sm text-gray-600">Last Rider heartbeat: {{ formatAuditTime(selectedRider.last_heartbeat_at) }}</p>
             <p class="mt-4 text-sm text-gray-600">Account activity does not indicate whether a rider is Online.</p>
             <section class="mt-6 border-t border-[var(--app-border)] pt-5">
               <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">

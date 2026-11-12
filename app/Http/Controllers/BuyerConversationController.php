@@ -40,7 +40,7 @@ class BuyerConversationController extends Controller
         */
         $conversations = $buyer->conversationsAsBuyer()
             ->with([
-                'seller:id,name,store_name',
+                'seller:id,name,store_name,avatar',
                 'product:id,name,image_path,price',
                 'order' => fn ($query) => $query->where('user_id', $buyer->id)->select(['id', 'order_number', 'status']),
 
@@ -56,6 +56,17 @@ class BuyerConversationController extends Controller
             ])
             ->orderByDesc('last_message_at')
             ->get();
+
+        $realtimeService = app(\App\Services\RealtimeBroadcastService::class);
+        $realtimeService->touchUserPresence($buyer);
+        $conversations->each(function ($conv) use ($realtimeService) {
+            if ($conv->seller) {
+                $presence = $realtimeService->getUserPresence((int) $conv->seller->id);
+                $conv->seller->is_online = $presence['is_online'];
+                $conv->seller->presence_label = $presence['presence_label'];
+                $conv->seller->last_seen_at = $presence['last_seen_at'];
+            }
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -112,6 +123,13 @@ class BuyerConversationController extends Controller
                     'items.parcel:id,order_item_id,order_id,status',
                 ]),
             ]);
+
+            if ($selectedConversation->seller) {
+                $presence = $realtimeService->getUserPresence((int) $selectedConversation->seller->id);
+                $selectedConversation->seller->is_online = $presence['is_online'];
+                $selectedConversation->seller->presence_label = $presence['presence_label'];
+                $selectedConversation->seller->last_seen_at = $presence['last_seen_at'];
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -213,11 +231,21 @@ class BuyerConversationController extends Controller
             ]);
 
         if ($request->wantsJson() || $request->is('api/buyer/*')) {
+            $realtimeService = app(\App\Services\RealtimeBroadcastService::class);
+            $realtimeService->touchUserPresence($buyer);
+
             $conversation->load([
                 'seller:id,name,store_name,avatar',
                 'product:id,name,image_path,price',
                 'order' => fn ($query) => app(\App\Services\ConversationOrderAccess::class)->scope($query, $conversation)->select(['id', 'order_number', 'status', 'total', 'created_at']),
             ]);
+
+            if ($conversation->seller) {
+                $presence = $realtimeService->getUserPresence((int) $conversation->seller->id);
+                $conversation->seller->is_online = $presence['is_online'];
+                $conversation->seller->presence_label = $presence['presence_label'];
+                $conversation->seller->last_seen_at = $presence['last_seen_at'];
+            }
 
             $messages = $conversation
                 ->messages()

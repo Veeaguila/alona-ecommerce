@@ -110,7 +110,18 @@ const rates = reactive({ enabled: false, revision: 0, pickup: '', delivery: '', 
 const detail = ref(null), payment = reactive({ reference: '', file: null, confirmed: false, key: '' }), cancelReason = ref(''), neverSent = ref(false), proofUrls = reactive({});
 const network = ref(null), origin = ref(''), driver = ref(''), tripReference = ref(''), tripConfirmed = ref(false), tripIds = ref([]), tripKey = ref(createRequestKey()), tripJobs = ref({ data: [], current_page: 1, last_page: 1 });
 let disposed = false, revision = 0;
-onUnmounted(() => { disposed = true; revision++; Object.values(proofUrls).forEach(URL.revokeObjectURL); });
+const handleRealtimeRefresh = () => {
+  if (!disposed && !busy.value) {
+    read(data.value?.payouts?.current_page || 1).catch(() => {});
+  }
+};
+onUnmounted(() => {
+  disposed = true;
+  revision++;
+  Object.values(proofUrls).forEach(URL.revokeObjectURL);
+  window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+  window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+});
 const date = value => new Date(value).toLocaleString();
 const riderName = id => data.value?.riders.find(r => r.id === id)?.name || `Rider #${id}`;
 async function request(path = '', method = 'GET', body) {
@@ -147,5 +158,9 @@ async function proof(batch) { await action(async () => { const response = await 
 async function loadNetwork() { await action(async () => { const result = await request('hub-network'); if (!disposed) network.value = result.data; }, ''); }
 async function loadTripJobs(page = 1, keep = false) { await action(async () => { const result = await request('hub-journeys?' + new URLSearchParams({ hub_id: origin.value, stage: 'dispatch_ready', page })); if (disposed) return; tripJobs.value = result.data; if (!keep) { tripIds.value = []; driver.value = ''; tripConfirmed.value = false; tripKey.value = createRequestKey(); } }, ''); }
 async function dispatchTrip() { await action(async () => { await request('payroll/trips', 'POST', { rider_id: driver.value, hub_id: origin.value, parcel_ids: tripIds.value, transport_reference: tripReference.value, request_key: tripKey.value, physical_confirmation: tripConfirmed.value }); if (disposed) return; tripIds.value = []; tripConfirmed.value = false; tripKey.value = createRequestKey(); const result = await request('hub-journeys?' + new URLSearchParams({ hub_id: origin.value, stage: 'dispatch_ready', page: 1 })); if (!disposed) tripJobs.value = result.data; }, 'Trip dispatched. Its single transfer earning waits for complete destination receipt.'); }
-onMounted(() => load());
+onMounted(() => {
+  load();
+  window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+  window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+});
 </script>

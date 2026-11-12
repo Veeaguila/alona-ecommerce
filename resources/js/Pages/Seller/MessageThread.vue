@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import SellerLayout from '@/Layouts/SellerLayout.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const props = defineProps({
     conversation: { type: Object, required: true },
@@ -9,7 +10,47 @@ const props = defineProps({
     sellerOrders: { type: Array, default: () => [] },
 })
 
-const isSupportChat = computed(() => props.conversation.type === 'seller_admin')
+const page = usePage()
+const { listen, onReconnect } = useRealtime()
+const sellerUserId = computed(() => page.props.auth?.user?.id ?? props.conversation?.seller_id ?? null)
+
+const localConversation = ref({ ...props.conversation })
+const localMessages = ref([...props.messages])
+const messageContainer = ref(null)
+const isSending = ref(false)
+
+watch(
+    () => props.conversation,
+    (next) => {
+        if (next) localConversation.value = { ...next }
+    },
+    { deep: true }
+)
+
+watch(
+    () => props.messages,
+    (next) => {
+        if (Array.isArray(next)) {
+            localMessages.value = [...next]
+            scrollToBottom()
+        }
+    },
+    { deep: true }
+)
+
+const isSupportChat = computed(() => localConversation.value.type === 'seller_admin')
+const isBuyerOnline = computed(() => Boolean(localConversation.value?.buyer?.is_online))
+const buyerPresenceLabel = computed(() => {
+    if (localConversation.value?.buyer?.is_online) return 'Active now'
+    return localConversation.value?.buyer?.presence_label || 'Offline'
+})
+
+const scrollToBottom = async () => {
+    await nextTick()
+    if (messageContainer.value) {
+        messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+    }
+}
 
 const form = useForm({
     body: '',
@@ -22,7 +63,7 @@ const attachmentPreview = ref(null)
 const showOrderSelector = ref(false)
 const lightboxImage = ref(null)
 
-const isMine = (message) => message.sender_id === props.conversation.seller_id
+const isMine = (message) => Number(message.sender_id) === Number(localConversation.value.seller_id)
 
 const formatTime = (value) => {
     if (!value) return ''
@@ -87,17 +128,133 @@ const getSelectedOrderObject = computed(() => {
     return props.sellerOrders.find(o => o.id === form.order_id)
 })
 
-const submit = () => {
-    if (!form.body.trim() && !form.attachment && !form.order_id) return
+const getCsrfToken = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
 
-    form.post(route('seller.messages.store', props.conversation.id), {
-        preserveScroll: true,
-        onSuccess: () => {
+const refreshThread = async () => {
+    if (!localConversation.value?.id) return
+    try {
+        const res = await fetch(route('seller.messages.show', localConversation.value.id), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.conversation?.buyer && localConversation.value) {
+            localConversation.value.buyer = {
+                ...(localConversation.value.buyer || {}),
+                ...data.conversation.buyer,
+            }
+        }
+        const incoming = Array.isArray(data.messages) ? data.messages : []
+        const prevLastId = localMessages.value[localMessages.value.length - 1]?.id
+        const nextLastId = incoming[incoming.length - 1]?.id
+        if (incoming.length !== localMessages.value.length || prevLastId !== nextLastId) {
+            localMessages.value = incoming
+            scrollToBottom()
+        }
+    } catch (_) {
+        // Ignore transient network errors
+    }
+}
+
+const submit = async () => {
+    const text = form.body.trim()
+    if ((!text && !form.attachment && !form.order_id) || isSending.value || form.processing) return
+
+    isSending.value = true
+    form.processing = true
+
+    try {
+        const formData = new FormData()
+        if (text) formData.append('body', text)
+        if (form.attachment) formData.append('attachment', form.attachment)
+        if (form.order_id) formData.append('order_id', form.order_id)
+
+        const res = await fetch(route('seller.messages.store', localConversation.value.id), {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+
+        if (res.ok) {
+            const data = await res.json()
+            if (data.message) {
+                const exists = localMessages.value.some((m) => Number(m.id) === Number(data.message.id))
+                if (!exists) {
+                    localMessages.value.push(data.message)
+                }
+            }
             form.reset('body', 'order_id')
             removeAttachment()
-        },
-    })
+            scrollToBottom()
+        } else {
+            refreshThread()
+        }
+    } catch (_) {
+        refreshThread()
+    } finally {
+        isSending.value = false
+        form.processing = false
+    }
 }
+
+let pollTimer = null
+
+const handleIncomingMessagePayload = (payload) => {
+    const incoming = payload?.message
+    const convId = Number(payload?.conversation_id || incoming?.conversation_id || 0)
+    if (!incoming || Number(localConversation.value?.id) !== convId) return
+    const exists = localMessages.value.some((m) => Number(m.id) === Number(incoming.id))
+    if (!exists) {
+        localMessages.value.push(incoming)
+        scrollToBottom()
+    }
+}
+
+onMounted(() => {
+    scrollToBottom()
+
+    if (localConversation.value?.id) {
+        listen(`conversation.${localConversation.value.id}`, 'chat.message_sent', handleIncomingMessagePayload)
+    }
+    if (sellerUserId.value) {
+        listen(`seller.${sellerUserId.value}`, 'chat.message_sent', handleIncomingMessagePayload)
+    }
+
+    listen('catalog.global', 'presence.updated', (payload) => {
+        const targetId = Number(payload?.user_id || 0)
+        if (!targetId) return
+        if (Number(localConversation.value?.buyer_id || localConversation.value?.buyer?.id) === targetId) {
+            localConversation.value.buyer = {
+                ...(localConversation.value.buyer || {}),
+                is_online: Boolean(payload.is_online),
+                presence_label: payload.presence_label || (payload.is_online ? 'Active now' : 'Offline'),
+                last_seen_at: payload.last_seen_at || null,
+            }
+        }
+    }, { isPrivate: false })
+
+    onReconnect(() => {
+        refreshThread()
+    })
+
+    pollTimer = setInterval(() => {
+        refreshThread()
+    }, 2500)
+})
+
+onUnmounted(() => {
+    if (pollTimer) {
+        clearInterval(pollTimer)
+    }
+})
 
 const getStatusBadgeClass = (status) => {
     const s = (status || '').toLowerCase()
@@ -113,10 +270,10 @@ const getStatusBadgeClass = (status) => {
     <Head :title="isSupportChat ? `Support Ticket - ${conversation.subject || 'Admin Desk'}` : `Message - ${conversation.buyer?.name || 'Customer'}`" />
 
     <SellerLayout>
-        <div class="w-full space-y-6 pb-20">
+        <div class="flex h-[calc(100vh-116px)] w-full flex-col overflow-hidden">
 
                 <!-- Breadcrumb / Back Link -->
-                <div class="mb-3">
+                <div class="mb-2.5 shrink-0">
                     <Link
                         :href="route('seller.messages')"
                         class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64748B] hover:text-[#087F8C]"
@@ -129,10 +286,10 @@ const getStatusBadgeClass = (status) => {
                 </div>
 
                 <!-- Conversation Section -->
-                <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
 
                     <!-- Conversation Header (Customer vs Admin Support Desk) -->
-                    <div class="border-b border-[#E5E7EB] bg-white px-5 py-4">
+                    <div class="shrink-0 border-b border-[#E5E7EB] bg-white px-5 py-3.5">
                         <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
                                 <!-- Avatar / Icon -->
@@ -146,15 +303,21 @@ const getStatusBadgeClass = (status) => {
                                 </div>
                                 <div
                                     v-else
-                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E8F7F6] text-sm font-bold text-[#087F8C]"
+                                    class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E8F7F6] text-sm font-bold text-[#087F8C]"
                                 >
-                                    {{ (conversation.buyer?.name || 'C').charAt(0).toUpperCase() }}
+                                    {{ (localConversation.buyer?.name || 'C').charAt(0).toUpperCase() }}
+                                    <span
+                                        :class="[
+                                            'absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white transition-colors',
+                                            isBuyerOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                                        ]"
+                                    />
                                 </div>
 
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
                                         <h2 class="truncate text-base font-bold text-[#1F2937]">
-                                            {{ isSupportChat ? (conversation.subject || 'Platform Support Desk') : (conversation.buyer?.name || 'Customer') }}
+                                            {{ isSupportChat ? (localConversation.subject || 'Platform Support Desk') : (localConversation.buyer?.name || 'Customer') }}
                                         </h2>
                                         <span
                                             v-if="isSupportChat"
@@ -168,10 +331,20 @@ const getStatusBadgeClass = (status) => {
                                         >
                                             Customer
                                         </span>
+                                        <span
+                                            v-if="!isSupportChat"
+                                            :class="[
+                                                'inline-flex items-center gap-1 text-[10px] font-semibold',
+                                                isBuyerOnline ? 'text-emerald-600' : 'text-[#94A3B8]'
+                                            ]"
+                                        >
+                                            <span :class="['h-1.5 w-1.5 rounded-full', isBuyerOnline ? 'bg-emerald-500' : 'bg-slate-300']" />
+                                            {{ buyerPresenceLabel }}
+                                        </span>
                                     </div>
 
                                     <p class="mt-0.5 text-xs text-[#64748B]">
-                                        {{ isSupportChat ? 'Direct channel with Shopalona platform administrators' : (conversation.buyer?.email || 'Customer conversation') }}
+                                        {{ isSupportChat ? 'Direct channel with Shopalona platform administrators' : (localConversation.buyer?.email || 'Customer conversation') }}
                                     </p>
                                 </div>
                             </div>
@@ -225,9 +398,12 @@ const getStatusBadgeClass = (status) => {
                     </div>
 
                     <!-- Messages Timeline Area -->
-                    <div class="min-h-[360px] max-h-[600px] overflow-y-auto space-y-4 bg-[#F8FAF9] p-4 sm:p-5">
+                    <div
+                        ref="messageContainer"
+                        class="min-h-0 flex-1 overflow-y-auto space-y-4 bg-[#F8FAF9] p-4 sm:p-5"
+                    >
                         <!-- Empty Chat State -->
-                        <div v-if="!props.messages.length" class="flex min-h-[300px] items-center justify-center text-center">
+                        <div v-if="!localMessages.length" class="flex h-full min-h-[220px] items-center justify-center text-center">
                             <div>
                                 <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#94A3B8] shadow-sm">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +417,7 @@ const getStatusBadgeClass = (status) => {
 
                         <!-- Message List -->
                         <div
-                            v-for="msg in props.messages"
+                            v-for="msg in localMessages"
                             :key="msg.id"
                             :class="['flex w-full', isMine(msg) ? 'justify-end' : 'justify-start']"
                         >
@@ -393,7 +569,7 @@ const getStatusBadgeClass = (status) => {
                     <!-- Selected Attachment & Order Reference Chips (Above Composer) -->
                     <div
                         v-if="form.attachment || form.order_id"
-                        class="flex flex-wrap items-center gap-2 border-t border-[#E5E7EB] bg-slate-50 px-4 py-2.5 text-xs"
+                        class="flex shrink-0 flex-wrap items-center gap-2 border-t border-[#E5E7EB] bg-slate-50 px-4 py-2 text-xs"
                     >
                         <!-- Order Chip -->
                         <div
@@ -429,7 +605,7 @@ const getStatusBadgeClass = (status) => {
                     </div>
 
                     <!-- Message Composer Form -->
-                    <form class="border-t border-[#E5E7EB] bg-white p-4" @submit.prevent="submit">
+                    <form class="shrink-0 border-t border-[#E5E7EB] bg-white p-3.5" @submit.prevent="submit">
                         <input
                             ref="fileInput"
                             type="file"
@@ -442,10 +618,10 @@ const getStatusBadgeClass = (status) => {
                             <textarea
                                 id="message"
                                 v-model="form.body"
-                                rows="3"
+                                rows="2"
                                 maxlength="1000"
                                 :placeholder="isSupportChat ? 'Write your message to Shopalona Admin Support...' : 'Type a message to your customer...'"
-                                class="w-full resize-none rounded-xl border border-[#CBD5E1] bg-[#F8FAF9] p-3 text-sm text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
+                                class="w-full resize-none rounded-xl border border-[#CBD5E1] bg-[#F8FAF9] p-2.5 text-sm text-[#1F2937] placeholder:text-[#94A3B8] focus:border-[#087F8C] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#087F8C]"
                                 @keydown.enter.exact.prevent="submit"
                             ></textarea>
 

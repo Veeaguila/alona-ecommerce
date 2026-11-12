@@ -6,6 +6,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthModal from '@/Pages/Auth/AuthModal.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const props = defineProps({
     product: {
@@ -82,6 +83,9 @@ const claimProductVoucher = voucher => {
 }
 
 const page = usePage()
+const { listenPublic, reloadProps, getAuthoritativeNowMs } = useRealtime()
+const liveStockOverride = ref(null)
+const liveVariantStockMap = ref({})
 const user = computed(() => page.props.auth?.user ?? null)
 const isGuestUser = computed(() => Boolean(props.isGuest || !user.value))
 const product = computed(() => props.product || {})
@@ -323,11 +327,13 @@ watch(
 |--------------------------------------------------------------------------
 */
 
-const variants = computed(() =>
-    Array.isArray(product.value.variants)
-        ? product.value.variants
-        : []
-)
+const variants = computed(() => {
+    const list = Array.isArray(product.value.variants) ? product.value.variants : []
+    return list.map((v) => {
+        const override = liveVariantStockMap.value[Number(v.id)]
+        return override !== undefined ? { ...v, stock: Number(override) } : v
+    })
+})
 
 const hasVariants = computed(() =>
     variants.value.length > 0
@@ -611,7 +617,14 @@ const availableStock = computed(() => {
         if (selectedVariant.value) {
             return Number(selectedVariant.value.stock ?? 0)
         }
+        if (liveStockOverride.value !== null) {
+            return Number(liveStockOverride.value)
+        }
         return Number(product.value.stock ?? 0)
+    }
+
+    if (liveStockOverride.value !== null) {
+        return Number(liveStockOverride.value)
     }
 
     return Number(
@@ -639,6 +652,7 @@ const flashCountdown = ref({
 })
 
 let flashTimerInterval = null
+let flashExpiredReloaded = false
 
 function updateCountdown() {
     if (!product.value?.has_active_flash_sale || !product.value?.flash_ends_at) {
@@ -646,7 +660,7 @@ function updateCountdown() {
     }
 
     const end = new Date(product.value.flash_ends_at).getTime()
-    const now = Date.now()
+    const now = getAuthoritativeNowMs()
     const diff = Math.max(0, Math.floor((end - now) / 1000))
 
     if (diff <= 0) {
@@ -657,9 +671,14 @@ function updateCountdown() {
             totalSeconds: 0,
             isEnded: true,
         }
+        if (!flashExpiredReloaded) {
+            flashExpiredReloaded = true
+            reloadProps(['product', 'bundle_deals', 'vouchers'])
+        }
         return
     }
 
+    flashExpiredReloaded = false
     const hours = Math.floor(diff / 3600)
     const minutes = Math.floor((diff % 3600) / 60)
     const seconds = diff % 60
@@ -678,6 +697,32 @@ onMounted(() => {
         updateCountdown()
         flashTimerInterval = setInterval(updateCountdown, 1000)
     }
+
+    listenPublic('catalog.global', 'inventory.updated', (payload) => {
+        if (Number(payload?.product_id) === Number(product.value?.id)) {
+            if (payload.stock !== undefined && payload.stock !== null) {
+                liveStockOverride.value = Number(payload.stock)
+            }
+            if (Array.isArray(payload.variants)) {
+                const nextMap = { ...liveVariantStockMap.value }
+                payload.variants.forEach((v) => {
+                    if (v?.id) nextMap[Number(v.id)] = Number(v.stock ?? 0)
+                })
+                liveVariantStockMap.value = nextMap
+            }
+            reloadProps(['product', 'bundle_deals', 'vouchers'])
+        }
+    })
+
+    listenPublic('catalog.global', 'promotion.updated', (payload) => {
+        if (!payload?.product_id || Number(payload.product_id) === Number(product.value?.id)) {
+            reloadProps(['product', 'bundle_deals', 'vouchers'])
+        }
+    })
+
+    listenPublic('catalog.global', 'promotion.expired', () => {
+        reloadProps(['product', 'bundle_deals', 'vouchers'])
+    })
 })
 
 onUnmounted(() => {
@@ -1835,7 +1880,7 @@ const breadcrumbs = computed(() => {
                                     </p>
                                     <div v-if="bundle.seller_id" class="mt-2.5">
                                         <Link
-                                            :href="route('buyer.store', bundle.seller_id)"
+                                            :href="safeRoute('buyer.store.show', `/store/${bundle.seller_id}`, bundle.seller_id)"
                                             class="inline-flex items-center gap-1 text-[11px] font-bold text-[#087F8C] hover:underline"
                                         >
                                             View store bundle items →

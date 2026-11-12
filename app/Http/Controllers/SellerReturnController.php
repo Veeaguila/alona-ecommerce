@@ -498,23 +498,29 @@ class SellerReturnController extends Controller
             if (app(\App\Services\Payments\DistributionLedger::class)->manages($order->id)) {
                 \App\Models\Order::withoutEvents(fn () => \App\Models\Order::whereKey($order->id)->lockForUpdate()->firstOrFail());
             }
-            $refundAmount = (float) ($validated['refund_amount'] ?? $returnRequest->requested_amount);
+
+            $lockedReturn = OrderReturnRequest::whereKey($returnRequest->id)->lockForUpdate()->firstOrFail();
+            if ($lockedReturn->restocked || in_array($lockedReturn->status, ['refunded', 'completed'], true)) {
+                return;
+            }
+
+            $refundAmount = (float) ($validated['refund_amount'] ?? $lockedReturn->requested_amount);
             $restocked = false;
 
-            // Restock inventory if seller opted in (SELLER-40)
-            if ($request->boolean('restock_inventory') && $orderItem) {
+            // Restock inventory if seller opted in (SELLER-40) — idempotent & locked
+            if ($request->boolean('restock_inventory') && $orderItem && ! $lockedReturn->restocked) {
                 $qty = (int) $orderItem->quantity;
 
                 if ($orderItem->product_variant_id) {
-                    $variant = ProductVariant::find($orderItem->product_variant_id);
+                    $variant = ProductVariant::whereKey($orderItem->product_variant_id)->lockForUpdate()->first();
                     if ($variant) {
                         $beforeStock = $variant->stock;
                         $variant->increment('stock', $qty);
-                        $afterStock = $variant->stock;
+                        $afterStock = $variant->fresh()->stock;
 
                         if (Schema::hasTable('stock_adjustments')) {
                             StockAdjustment::create([
-                                'seller_id' => $returnRequest->seller_id,
+                                'seller_id' => $lockedReturn->seller_id,
                                 'user_id' => $request->user()->id,
                                 'product_id' => $orderItem->product_id,
                                 'product_variant_id' => $variant->id,
@@ -522,31 +528,37 @@ class SellerReturnController extends Controller
                                 'quantity' => $qty,
                                 'before_stock' => $beforeStock,
                                 'after_stock' => $afterStock,
-                                'notes' => "Restocked from Return #{$returnRequest->id} (Order #{$order->order_number})",
-                                'reference_number' => "RET-{$returnRequest->id}",
+                                'notes' => "Restocked from Return #{$lockedReturn->id} (Order #{$order->order_number})",
+                                'reference_number' => "RET-{$lockedReturn->id}",
                             ]);
                         }
                     }
-                }
 
-                if ($orderItem->product_id) {
-                    $product = Product::find($orderItem->product_id);
+                    if ($orderItem->product_id) {
+                        $product = Product::whereKey($orderItem->product_id)->lockForUpdate()->first();
+                        if ($product) {
+                            $totalVariantStock = (int) $product->variants()->sum('stock');
+                            $product->update(['stock' => $totalVariantStock]);
+                        }
+                    }
+                } elseif ($orderItem->product_id) {
+                    $product = Product::whereKey($orderItem->product_id)->lockForUpdate()->first();
                     if ($product) {
                         $beforeStock = $product->stock;
                         $product->increment('stock', $qty);
-                        $afterStock = $product->stock;
+                        $afterStock = $product->fresh()->stock;
 
-                        if (!$orderItem->product_variant_id && Schema::hasTable('stock_adjustments')) {
+                        if (Schema::hasTable('stock_adjustments')) {
                             StockAdjustment::create([
-                                'seller_id' => $returnRequest->seller_id,
+                                'seller_id' => $lockedReturn->seller_id,
                                 'user_id' => $request->user()->id,
                                 'product_id' => $product->id,
                                 'type' => 'return',
                                 'quantity' => $qty,
                                 'before_stock' => $beforeStock,
                                 'after_stock' => $afterStock,
-                                'notes' => "Restocked from Return #{$returnRequest->id} (Order #{$order->order_number})",
-                                'reference_number' => "RET-{$returnRequest->id}",
+                                'notes' => "Restocked from Return #{$lockedReturn->id} (Order #{$order->order_number})",
+                                'reference_number' => "RET-{$lockedReturn->id}",
                             ]);
                         }
                     }
@@ -556,7 +568,7 @@ class SellerReturnController extends Controller
             }
 
             // Update Return Request status
-            $returnRequest->update([
+            $lockedReturn->update([
                 'inspection_status' => $inspectionStatus,
                 'inspection_notes' => $validated['inspection_notes'] ?? null,
                 'refunded_amount' => $refundAmount,

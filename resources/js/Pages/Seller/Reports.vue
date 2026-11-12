@@ -88,12 +88,25 @@ const peso = (value) => {
 
 const formattedDate = (date) => {
     if (!date) return ''
-    const parsed = new Date(`${date}T00:00:00`)
+    const parsed = new Date(String(date).includes('T') ? date : `${date}T00:00:00`)
     if (Number.isNaN(parsed.getTime())) return date
-    return parsed.toLocaleDateString('en-PH', {
+    return parsed.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
+    })
+}
+
+const formatDateTime = (value) => {
+    if (!value) return '—'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return String(value)
+    return parsed.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
     })
 }
 
@@ -668,7 +681,7 @@ const highestDailyRevenue = computed(() => {
                                             {{ req.status }}
                                         </span>
                                     </td>
-                                    <td class="px-5 py-3.5 text-xs text-[#64748B]">{{ req.created_at }}</td>
+                                    <td class="px-5 py-3.5 text-xs text-[#64748B]">{{ formatDateTime(req.created_at) }}</td>
                                     <td class="px-5 py-3.5 text-right">
                                         <button
                                             v-if="req.status === 'pending'"

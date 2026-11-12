@@ -221,7 +221,7 @@
 </template>
 
 <script>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import ScLayout from '@/Layouts/ScLayout.vue';
 
 export default {
@@ -373,7 +373,25 @@ export default {
       });
     }
 
-    onMounted(loadConversations);
+    const handleRealtimeRefresh = () => {
+      if (!loadingConversations.value && !sending.value) {
+        loadConversations();
+        if (selectedConvId.value && !loadingMessages.value) {
+          openConversation(selectedConvId.value);
+        }
+      }
+    };
+
+    onMounted(() => {
+      loadConversations();
+      window.addEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.addEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('alona:logistics-realtime', handleRealtimeRefresh);
+      window.removeEventListener('alona:realtime-reconnected', handleRealtimeRefresh);
+    });
 
     return {
       token,

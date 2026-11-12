@@ -3,12 +3,14 @@ import {
     computed,
     nextTick,
     onMounted,
+    onUnmounted,
     ref,
     watch,
 } from 'vue'
 
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import { useRealtime } from '@/Composables/useRealtime'
 
 const props = defineProps({
     conversations: {
@@ -31,6 +33,36 @@ const props = defineProps({
         default: () => [],
     },
 })
+
+const page = usePage()
+const { listen, onReconnect } = useRealtime()
+const buyerUserId = computed(() => page.props.auth?.user?.id ?? null)
+
+const localSelectedConversation = ref(props.selectedConversation ? { ...props.selectedConversation } : null)
+const localMessages = ref([...props.messages])
+
+watch(
+    () => props.selectedConversation,
+    (next) => {
+        localSelectedConversation.value = next ? { ...next } : null
+    },
+    { deep: true }
+)
+
+watch(
+    () => props.messages,
+    (next) => {
+        localMessages.value = Array.isArray(next) ? [...next] : []
+        scrollToBottom()
+    },
+    { deep: true }
+)
+
+const isSellerOnline = (conversation) => Boolean(conversation?.seller?.is_online)
+const sellerPresenceLabel = (conversation) => {
+    if (conversation?.seller?.is_online) return 'Active now'
+    return conversation?.seller?.presence_label || 'Offline'
+}
 
 const messageArea = ref(null)
 const messageInput = ref(null)
@@ -227,14 +259,84 @@ const scrollToBottom = () => {
     })
 }
 
-watch(
-    () => props.messages,
-    () => scrollToBottom(),
-    { deep: true }
-)
+const refreshConversationData = async () => {
+    if (!localSelectedConversation.value?.id) return
+    try {
+        const res = await fetch(route('buyer.conversations.show', localSelectedConversation.value.id), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.conversation?.seller && localSelectedConversation.value) {
+            localSelectedConversation.value.seller = {
+                ...(localSelectedConversation.value.seller || {}),
+                ...data.conversation.seller,
+            }
+        }
+        const incoming = Array.isArray(data.messages) ? data.messages : []
+        const prevLastId = localMessages.value[localMessages.value.length - 1]?.id
+        const nextLastId = incoming[incoming.length - 1]?.id
+        if (incoming.length !== localMessages.value.length || prevLastId !== nextLastId) {
+            localMessages.value = incoming
+            scrollToBottom()
+        }
+    } catch (_) {
+        // Ignore transient network errors
+    }
+}
+
+let pollTimer = null
 
 onMounted(() => {
     scrollToBottom()
+
+    const handleChatEvent = (payload) => {
+        const incoming = payload?.message
+        const convId = Number(payload?.conversation_id || incoming?.conversation_id || 0)
+        if (!incoming || Number(localSelectedConversation.value?.id) !== convId) return
+        const exists = localMessages.value.some((m) => Number(m.id) === Number(incoming.id))
+        if (!exists) {
+            localMessages.value.push(incoming)
+            scrollToBottom()
+        }
+    }
+
+    if (localSelectedConversation.value?.id) {
+        listen(`conversation.${localSelectedConversation.value.id}`, 'chat.message_sent', handleChatEvent)
+    }
+    if (buyerUserId.value) {
+        listen(`buyer.${buyerUserId.value}`, 'chat.message_sent', handleChatEvent)
+    }
+
+    listen('catalog.global', 'presence.updated', (payload) => {
+        const targetId = Number(payload?.user_id || 0)
+        if (!targetId) return
+        if (Number(localSelectedConversation.value?.seller_id || localSelectedConversation.value?.seller?.id) === targetId) {
+            localSelectedConversation.value.seller = {
+                ...(localSelectedConversation.value.seller || {}),
+                is_online: Boolean(payload.is_online),
+                presence_label: payload.presence_label || (payload.is_online ? 'Active now' : 'Offline'),
+                last_seen_at: payload.last_seen_at || null,
+            }
+        }
+    }, { isPrivate: false })
+
+    onReconnect(() => {
+        refreshConversationData()
+    })
+
+    pollTimer = setInterval(() => {
+        refreshConversationData()
+    }, 2500)
+})
+
+onUnmounted(() => {
+    if (pollTimer) {
+        clearInterval(pollTimer)
+    }
 })
 </script>
 
@@ -458,21 +560,33 @@ onMounted(() => {
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2">
                                         <h2 class="truncate text-sm font-extrabold text-[#1F2937] sm:text-base">
-                                            {{ sellerName(selectedConversation) }}
+                                            {{ sellerName(localSelectedConversation) }}
                                         </h2>
-                                        <span class="hidden h-1.5 w-1.5 rounded-full bg-[#22A06B] sm:block"></span>
-                                        <span class="hidden text-[10px] font-semibold text-[#64748B] sm:block">Seller</span>
+                                        <span
+                                            :class="[
+                                                'hidden h-1.5 w-1.5 rounded-full sm:block transition-colors',
+                                                isSellerOnline(localSelectedConversation) ? 'bg-[#22A06B]' : 'bg-slate-300'
+                                            ]"
+                                        ></span>
+                                        <span
+                                            :class="[
+                                                'hidden text-[10px] font-semibold sm:block transition-colors',
+                                                isSellerOnline(localSelectedConversation) ? 'text-emerald-600' : 'text-[#64748B]'
+                                            ]"
+                                        >
+                                            {{ sellerPresenceLabel(localSelectedConversation) }}
+                                        </span>
                                     </div>
 
                                     <p class="truncate text-[10px] text-[#64748B] sm:text-xs">
-                                        {{ selectedConversation.product?.name || 'Seller conversation' }}
+                                        {{ localSelectedConversation?.product?.name || 'Seller conversation' }}
                                     </p>
                                 </div>
 
                                 <div class="hidden shrink-0 text-right sm:block">
                                     <p class="text-[10px] font-semibold text-[#94A3B8]">
-                                        {{ props.messages.length }}
-                                        {{ props.messages.length === 1 ? 'message' : 'messages' }}
+                                        {{ localMessages.length }}
+                                        {{ localMessages.length === 1 ? 'message' : 'messages' }}
                                     </p>
                                 </div>
                             </div>
@@ -519,7 +633,7 @@ onMounted(() => {
                             >
                                 <!-- EMPTY CHAT -->
                                 <div
-                                    v-if="!props.messages.length"
+                                    v-if="!localMessages.length"
                                     class="flex h-full min-h-[300px] items-center justify-center"
                                 >
                                     <div class="max-w-xs text-center">
@@ -534,7 +648,7 @@ onMounted(() => {
                                         </p>
 
                                         <p class="mt-1 text-xs text-[#64748B]">
-                                            Send a message to {{ sellerName(selectedConversation) }}.
+                                            Send a message to {{ sellerName(localSelectedConversation) }}.
                                         </p>
                                     </div>
                                 </div>
@@ -545,7 +659,7 @@ onMounted(() => {
                                     class="mx-auto flex w-full max-w-4xl flex-col gap-3"
                                 >
                                     <div
-                                        v-for="message in props.messages"
+                                        v-for="message in localMessages"
                                         :key="message.id"
                                         class="flex w-full"
                                         :class="isMine(message) ? 'justify-end' : 'justify-start'"
