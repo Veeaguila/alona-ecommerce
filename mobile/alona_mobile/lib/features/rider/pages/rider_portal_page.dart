@@ -47,6 +47,9 @@ class _RiderChatPageState extends State<RiderChatPage>
   late final riderSession = widget.session ?? RiderSession();
   late final api = RiderPortalApi(riderSession);
   final text = TextEditingController();
+  final recipientSearch = TextEditingController();
+  final recipientFocus = FocusNode();
+  bool showRecipientResults = false;
   List<Map<String, dynamic>> recipients = [], conversations = [], messages = [];
   int? recipientId, conversationId;
   int revision = 0;
@@ -55,12 +58,16 @@ class _RiderChatPageState extends State<RiderChatPage>
   @override
   void initState() {
     super.initState();
+    recipientFocus.addListener(recipientFocusChanged);
     load();
   }
 
   @override
   void dispose() {
     text.dispose();
+    recipientSearch.dispose();
+    recipientFocus.removeListener(recipientFocusChanged);
+    recipientFocus.dispose();
     super.dispose();
   }
 
@@ -79,7 +86,15 @@ class _RiderChatPageState extends State<RiderChatPage>
       if (!mounted) return;
       setState(() {
         recipients = List<Map<String, dynamic>>.from(result[0]['data'] as List);
-        if (!recipients.any((r) => r['id'] == recipientId)) recipientId = null;
+        if (recipientId != null) {
+          final selected = recipients.where((r) => r['id'] == recipientId);
+          if (selected.isEmpty) {
+            recipientId = null;
+            recipientSearch.clear();
+          } else {
+            recipientSearch.text = selected.first['name'].toString();
+          }
+        }
         conversations = List<Map<String, dynamic>>.from(
           result[1]['data'] as List,
         );
@@ -105,6 +120,7 @@ class _RiderChatPageState extends State<RiderChatPage>
       conversationId = id;
       messages = [];
       opening = true;
+      showRecipientResults = false;
       error = null;
     });
     try {
@@ -167,10 +183,54 @@ class _RiderChatPageState extends State<RiderChatPage>
     }
   }
 
+  void searchRecipients() {
+    setState(() {
+      showRecipientResults = true;
+      recipientId = null;
+      conversationId = null;
+      messages = [];
+      revision++;
+    });
+  }
+
+  void recipientFocusChanged() {
+    if (!recipientFocus.hasFocus) dismissRecipientSearch();
+  }
+
+  void dismissRecipientSearch() {
+    if (!showRecipientResults) return;
+    setState(() {
+      showRecipientResults = false;
+      if (recipientId == null) recipientSearch.clear();
+    });
+  }
+
+  Iterable<Map<String, dynamic>> get matchingRecipients {
+    final query = recipientSearch.text.trim().toLowerCase();
+    return recipients.where(
+      (recipient) => recipient['name'].toString().toLowerCase().contains(query),
+    );
+  }
+
+  void selectRecipient(Map<String, dynamic> recipient) {
+    setState(() {
+      recipientId = (recipient['id'] as num).toInt();
+      recipientSearch.text = recipient['name'].toString();
+      showRecipientResults = false;
+      conversationId = null;
+      messages = [];
+      revision++;
+    });
+    FocusScope.of(context).unfocus();
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: RiderColors.background,
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
+    backgroundColor: RiderColors.portalBackground,
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text('Messages'),
       actions: [
         IconButton(
@@ -192,9 +252,9 @@ class _RiderChatPageState extends State<RiderChatPage>
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: RiderColors.cardGradient,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: RiderColors.border),
+            border: Border.all(color: RiderColors.portalBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,11 +268,32 @@ class _RiderChatPageState extends State<RiderChatPage>
                 ),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                key: ValueKey('recipient-$recipientId-${recipients.length}'),
-                initialValue: recipientId,
-                isExpanded: true,
+              TextField(
+                key: const ValueKey('rider-recipient-search'),
+                groupId: recipientSearch,
+                controller: recipientSearch,
+                focusNode: recipientFocus,
+                enabled: !loading && !sending && !opening,
+                selectAllOnFocus: true,
+                textInputAction: TextInputAction.search,
+                style: const TextStyle(color: RiderColors.text),
+                cursorColor: RiderColors.teal,
                 decoration: InputDecoration(
+                  hintText: 'Search recipient name',
+                  prefixIcon: const Icon(Icons.search, color: RiderColors.teal),
+                  suffixIcon: recipientSearch.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear recipient search',
+                          icon: const Icon(Icons.close),
+                          onPressed: loading || sending || opening
+                              ? null
+                              : () {
+                                  recipientSearch.clear();
+                                  recipientFocus.requestFocus();
+                                  searchRecipients();
+                                },
+                        ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
@@ -226,26 +307,56 @@ class _RiderChatPageState extends State<RiderChatPage>
                     borderSide: const BorderSide(color: RiderColors.border),
                   ),
                 ),
-                items: recipients
-                    .map(
-                      (r) => DropdownMenuItem<int>(
-                        value: (r['id'] as num).toInt(),
-                        child: Text(
-                          r['name'].toString(),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: sending || opening
-                    ? null
-                    : (id) => setState(() {
-                        recipientId = id;
-                        conversationId = null;
-                        messages = [];
-                        revision++;
-                      }),
+                onTap: () => setState(() => showRecipientResults = true),
+                onChanged: (_) => searchRecipients(),
+                onTapOutside: (_) {
+                  recipientFocus.unfocus();
+                  dismissRecipientSearch();
+                },
+                onSubmitted: (_) {
+                  recipientFocus.unfocus();
+                  dismissRecipientSearch();
+                },
               ),
+              if (showRecipientResults && !loading)
+                TextFieldTapRegion(
+                  groupId: recipientSearch,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      children: [
+                        if (matchingRecipients.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              recipients.isEmpty
+                                  ? 'No available recipients'
+                                  : 'No matching recipients',
+                              style: const TextStyle(color: RiderColors.textSecondary),
+                            ),
+                          ),
+                        for (final recipient in matchingRecipients)
+                          ListTile(
+                            key: ValueKey('rider-recipient-${recipient['id']}'),
+                            leading: const Icon(
+                              Icons.person_outline,
+                              color: RiderColors.teal,
+                            ),
+                            title: Text(
+                              recipient['name'].toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: sending || opening
+                                ? null
+                                : () => selectRecipient(recipient),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -352,7 +463,7 @@ class _RiderChatPageState extends State<RiderChatPage>
                 ),
                 border: message['is_mine'] == true
                     ? null
-                    : Border.all(color: RiderColors.border),
+                    : Border.all(color: RiderColors.portalBorder),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -394,9 +505,9 @@ class _RiderChatPageState extends State<RiderChatPage>
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: RiderColors.cardGradient,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: RiderColors.border),
+            border: Border.all(color: RiderColors.portalBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -438,7 +549,10 @@ class _RiderChatPageState extends State<RiderChatPage>
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
-                  onPressed: sending || opening ? null : send,
+                  onPressed: loading || sending || opening ||
+                          (conversationId == null && recipientId == null)
+                      ? null
+                      : send,
                   icon: const Icon(Icons.send_rounded, size: 18),
                   label: Text(
                     sending ? 'Sending...' : 'Send message',
@@ -460,7 +574,7 @@ class _RiderChatPageState extends State<RiderChatPage>
         ),
       ],
     ),
-  );
+  ));
 }
 
 String portalError(Object failure) => failure is SessionFailure

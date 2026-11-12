@@ -19,7 +19,7 @@ class RiderNotificationBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: RiderColors.mintBanner,
+      color: RiderColors.card,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -27,8 +27,9 @@ class RiderNotificationBanner extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
+            gradient: RiderColors.cardGradient,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFB9E6E6)),
+            border: Border.all(color: RiderColors.portalBorder),
           ),
           child: Row(
             children: [
@@ -36,12 +37,12 @@ class RiderNotificationBanner extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: const BoxDecoration(
-                  color: RiderColors.teal,
+                  color: RiderColors.amber,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.notifications_none_rounded,
-                  color: Colors.white,
+                  color: RiderColors.tealDark,
                 ),
               ),
               const SizedBox(width: 14),
@@ -54,7 +55,7 @@ class RiderNotificationBanner extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
-                        color: RiderColors.text,
+                        color: RiderColors.tealDark,
                       ),
                     ),
                     const SizedBox(height: 2),

@@ -68,18 +68,22 @@ class _HeroBannerCarouselState extends State<HeroBannerCarousel> {
   List<Color> _getThemeGradient(String theme) {
     switch (theme.toLowerCase()) {
       case 'amber':
-        return const [Color(0xFF78350F), Color(0xFFD97706), Color(0xFFF59E0B)];
+        return const [Color(0xFF78350F), Color(0xFF9A3412), Color(0xFFB45309)];
       case 'indigo':
-        return const [Color(0xFF1E1B4B), Color(0xFF3730A3), Color(0xFF4F46E5)];
+        return const [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)];
+      case 'navy':
+        return const [Color(0xFF0A1128), Color(0xFF001F54), Color(0xFF034078)];
+      case 'purple':
+        return const [Color(0xFF3B0764), Color(0xFF581C87), Color(0xFF7E22CE)];
       case 'rose':
         return const [Color(0xFF881337), Color(0xFFBE123C), Color(0xFFE11D48)];
       case 'emerald':
-        return const [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF10B981)];
+        return const [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF059669)];
       case 'dark':
-        return const [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)];
+        return const [Color(0xFF111827), Color(0xFF18181B), Color(0xFF27272A)];
       case 'teal':
       default:
-        return const [Color(0xFF044D55), Color(0xFF087F8C), Color(0xFF139691)];
+        return AppColors.buyerBrandGradient.colors;
     }
   }
 
@@ -181,12 +185,12 @@ class _HeroBannerCarouselState extends State<HeroBannerCarousel> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withValues(alpha: 0.75),
-                    Colors.black.withValues(alpha: 0.35),
-                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.85),
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.black.withValues(alpha: 0.20),
                   ],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
               ),
               child: Column(
@@ -293,7 +297,10 @@ class _HeroBannerCarouselState extends State<HeroBannerCarousel> {
               height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  width: 28,
+                ),
               ),
             ),
           ),
@@ -305,7 +312,12 @@ class _HeroBannerCarouselState extends State<HeroBannerCarousel> {
               height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.accentGold.withValues(alpha: 0.22),
+                    AppColors.accentGold.withValues(alpha: 0),
+                  ],
+                ),
               ),
             ),
           ),

@@ -205,14 +205,15 @@ class AdminApplicationController extends Controller
         if (($user->partnerApplication?->details['registration_version'] ?? null) === 2) {
             abort_unless($user->hasVerifiedEmail() && $user->status === 'pending', 409, 'Only verified pending logistics applications can be approved.');
         }
+        if ($user->usertype === 'sorting_center') {
+            app(\App\Services\SortingCenterApproval::class)->approve($user);
+        }
         $user->update([
             'status' => 'approved',
             'rejection_reason' => null,
         ]);
 
-        if ($user->usertype === 'sorting_center') {
-            $user->sortingCenter()->update(['approval_status' => 'approved']);
-        } elseif ($user->usertype === 'rider') {
+        if ($user->usertype === 'rider') {
             $user->rider()->update(['approval_status' => 'approved']);
         }
         });

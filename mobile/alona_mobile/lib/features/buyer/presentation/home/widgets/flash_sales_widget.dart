@@ -126,7 +126,7 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
                   style: GoogleFonts.figtree(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF132228),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -137,7 +137,7 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.textPrimary,
+                  color: AppColors.primaryDark,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -220,9 +220,9 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
       child: Container(
         width: 160,
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: AppColors.buyerWarmGradient,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border, width: 1),
+          border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.45), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -303,11 +303,22 @@ class _FlashSalesWidgetState extends State<FlashSalesWidget> {
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: sale.progressPercent / 100,
-                      backgroundColor: AppColors.surfaceAlt,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentGold),
-                      minHeight: 5,
+                    child: Semantics(
+                      value: '${sale.progressPercent.clamp(0, 100)}%',
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: (sale.progressPercent / 100).clamp(0.0, 1.0),
+                          heightFactor: 1,
+                          child: const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: AppColors.saleProgressGradient,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

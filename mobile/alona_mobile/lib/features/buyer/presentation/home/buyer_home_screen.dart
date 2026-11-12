@@ -77,12 +77,15 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
         titleSpacing: 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+        ),
         automaticallyImplyLeading: false,
         title: Row(
           children: [
@@ -99,13 +102,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   height: 40,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.background,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.border, width: 1),
+                    border: Border.all(color: AppColors.buyerBorder, width: 1),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                      const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -113,7 +116,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.figtree(
-                            color: AppColors.textLight,
+                            color: AppColors.textMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -128,7 +131,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
             // Right side: Message and Cart icons
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
               tooltip: 'Messages',
               onPressed: () {
                 Navigator.push(
@@ -138,7 +141,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 24),
+              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
@@ -243,7 +246,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                     width: 8,
                                     height: 8,
                                     decoration: const BoxDecoration(
-                                      color: Color(0xFFF5A711),
+                                      color: AppColors.accentGold,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -448,7 +451,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                   width: 4,
                                   height: 4,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFFF5A711),
+                                    color: AppColors.accentGold,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -467,7 +470,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                   width: 4,
                                   height: 4,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFFF5A711),
+                                    color: AppColors.accentGold,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -494,7 +497,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                       width: 8,
                                       height: 8,
                                       decoration: const BoxDecoration(
-                                        color: Color(0xFFF5A711),
+                                        color: AppColors.accentGold,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -634,7 +637,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                         width: 8,
                                         height: 8,
                                         decoration: const BoxDecoration(
-                                          color: Color(0xFFF5A711),
+                                          color: AppColors.accentGold,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -710,9 +713,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                   width: 240,
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    gradient: AppColors.buyerWarmGradient,
                                     borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                                    border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.45)),
                                     boxShadow: const [
                                       BoxShadow(
                                         color: Color(0x08000000),
@@ -796,10 +799,11 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                             ),
                                             child: Text(
                                               v.code,
-                                              style: GoogleFonts.courierPrime(
+                                              style: const TextStyle(
+                                                fontFamily: 'monospace',
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w700,
-                                                color: const Color(0xFF1F2937),
+                                                color: AppColors.textPrimary,
                                               ),
                                             ),
                                           ),

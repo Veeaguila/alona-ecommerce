@@ -226,7 +226,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.buyerBackground,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.alonaTeal))
           : _error != null
@@ -394,23 +394,25 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                       child: Container(
                         height: 38,
                         decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.22),
+                          color: AppColors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.white.withValues(alpha: 0.35), width: 1),
+                          border: Border.all(color: AppColors.buyerBorder, width: 1),
                         ),
                         child: TextField(
                           controller: _searchController,
-                          style: GoogleFonts.figtree(color: AppColors.white, fontSize: 13),
+                          cursorColor: AppColors.primary,
+                          style: GoogleFonts.figtree(color: AppColors.textPrimary, fontSize: 13),
                           decoration: InputDecoration(
+                            filled: false,
                             hintText: 'Search in shop',
                             hintStyle: GoogleFonts.figtree(
-                              color: AppColors.white.withValues(alpha: 0.8),
+                              color: AppColors.textMuted,
                               fontSize: 13,
                             ),
-                            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.white, size: 19),
+                            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, color: AppColors.white, size: 16),
+                                    icon: const Icon(Icons.clear, color: AppColors.textMuted, size: 16),
                                     onPressed: () {
                                       _searchController.clear();
                                       setState(() => _searchQuery = '');
@@ -419,6 +421,8 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                   )
                                 : null,
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(vertical: 8),
                             isDense: true,
                           ),
@@ -784,12 +788,12 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFE8F7F6), Color(0xFFF0FDF4)],
+                      colors: [Color(0xFFFFFDF9), Colors.white, Color(0xFFF0FAF9)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFB2DFDB)),
+                    border: Border.all(color: const Color(0xCCFDE68A)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

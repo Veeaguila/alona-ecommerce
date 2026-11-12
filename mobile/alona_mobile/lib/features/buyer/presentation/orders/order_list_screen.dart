@@ -50,7 +50,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
   int _page = 1, _lastPage = 1;
 
   // Custom colors matching the design mockups
-  static const Color _bgScaffold = Color(0xFFF2F6F6);
+  static const Color _bgScaffold = AppColors.buyerBackground;
   static const Color _darkTeal = Color(0xFF087F8C);
   static const Color _lightTeal = Color(0xFFDFF3F0);
   static const Color _cardBorder = Color(0xFFE2EBE9);

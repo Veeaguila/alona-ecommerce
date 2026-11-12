@@ -360,9 +360,12 @@ class _RiderAccountPageState extends State<RiderAccountPage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: RiderColors.background,
+  Widget build(BuildContext context) => RiderTheme.wrap(Scaffold(
+    backgroundColor: RiderColors.portalBackground,
     appBar: AppBar(
+      flexibleSpace: const DecoratedBox(
+        decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+      ),
       title: const Text(
         'My account',
         style: TextStyle(fontWeight: FontWeight.bold),
@@ -494,9 +497,9 @@ class _RiderAccountPageState extends State<RiderAccountPage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: RiderColors.cardGradient,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: RiderColors.border),
+              border: Border.all(color: RiderColors.portalBorder),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
@@ -526,9 +529,9 @@ class _RiderAccountPageState extends State<RiderAccountPage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: RiderColors.cardGradient,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: RiderColors.border),
+              border: Border.all(color: RiderColors.portalBorder),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
@@ -611,9 +614,9 @@ class _RiderAccountPageState extends State<RiderAccountPage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: RiderColors.cardGradient,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: RiderColors.border),
+              border: Border.all(color: RiderColors.portalBorder),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
@@ -847,5 +850,5 @@ class _RiderAccountPageState extends State<RiderAccountPage>
         ],
       ],
     ),
-  );
+  ));
 }

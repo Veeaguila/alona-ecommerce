@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/rider_presence_session.dart';
 import '../services/rider_session.dart';
+import '../theme/rider_theme.dart';
 import 'rider_pickup_location.dart';
 
 class RiderPresenceControl extends StatefulWidget {
@@ -37,19 +38,20 @@ class _RiderPresenceControlState extends State<RiderPresenceControl> {
 
   @override
   Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
     child: Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
               IconButton(
                 tooltip: 'Pickup location sharing',
                 icon: const Icon(Icons.my_location),
+                color: RiderColors.teal,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
+                padding: EdgeInsets.zero,
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -66,11 +68,31 @@ class _RiderPresenceControlState extends State<RiderPresenceControl> {
                   ),
                 ),
               ),
-              Text(
-                'Availability: ${presence.presence}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Availability',
+                      style: TextStyle(fontSize: 11, color: RiderColors.textSecondary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      presence.presence,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 10),
               OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 onPressed: presence.busy
                     ? null
                     : () => presence.setOnline(presence.presence != 'Online'),
@@ -80,8 +102,10 @@ class _RiderPresenceControlState extends State<RiderPresenceControl> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
           const Text(
-            'Online is refreshed while this app is active. A lost connection expires after 90 seconds.',
+            'Online updates while this app is active. Connection expires after 90 seconds.',
+            style: TextStyle(fontSize: 11, height: 1.4, color: RiderColors.textSecondary),
           ),
           if (presence.error != null && !presence.error!.contains('no longer available'))
             Text(

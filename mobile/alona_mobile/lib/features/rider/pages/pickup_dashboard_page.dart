@@ -3,6 +3,7 @@ import '../widgets/rider_presence_control.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/rider_content.dart';
 
@@ -279,7 +280,7 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: RiderColors.cardGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -387,9 +388,7 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
                   ),
                   Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0F766E), Color(0xFF14A39A)],
-                      ),
+                      gradient: RiderColors.headerGradient,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -509,25 +508,8 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: RiderColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFFBBF24),
-        foregroundColor: const Color(0xFF1E293B),
-        icon: const Icon(Icons.qr_code_scanner, size: 24),
-        label: const Text(
-          'Scan to Pickup',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-        ),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ParcelScannerPage(session: riderSession),
-          ),
-        ).then((_) {
-          if (mounted) refresh();
-        }),
-      ),
+    return RiderTheme.wrap(Scaffold(
+      backgroundColor: RiderColors.portalBackground,
       body: Column(
         children: [
           _header(context),
@@ -538,7 +520,7 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
               onRefresh: refresh,
               child: ListView(
                 controller: scroll,
-                padding: riderPagePadding(context),
+                padding: riderPagePadding(context).copyWith(top: 16),
                 children: [
                   RiderPresenceControl(session: riderSession),
                   const SizedBox(height: 14),
@@ -647,216 +629,177 @@ class _PickupDashboardPageState extends State<PickupDashboardPage>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _scanHeroCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ParcelScannerPage(session: riderSession),
+          ),
+        ).then((_) {
+          if (mounted) refresh();
+        }),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(gradient: RiderColors.headerGradient),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: RiderColors.amber,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.qr_code_scanner,
+                  size: 22,
+                  color: RiderColors.tealDark,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Scan pickup',
+                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Scan the parcel waybill',
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFBBF24),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.qr_code_scanner,
-              size: 28,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Smart Barcode Scanner',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Scan the waybill at the store to confirm pickup instantly.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFBBF24),
-              foregroundColor: const Color(0xFF1E293B),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            ),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ParcelScannerPage(session: riderSession),
-              ),
-            ).then((_) {
-              if (mounted) refresh();
-            }),
-            child: const Text(
-              'Scan',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-            ),
-          ),
-        ],
       ),
     );
   }
-
   Widget _header(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B7A83), Color(0xFF0F766E), Color(0xFF0D9488)],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          gradient: RiderColors.headerGradient,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.of(context).padding.top + 10,
+          20,
+          18,
         ),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        MediaQuery.of(context).padding.top + 14,
-        20,
-        18,
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: -100,
-            right: -90,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: RiderColors.amber.withValues(alpha: 0.28),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -100,
+              right: -90,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: RiderColors.amber.withValues(alpha: 0.08),
+                ),
               ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  InkWell(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RiderNotificationsPage(session: riderSession),
-                      ),
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.notifications_outlined,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _greeting(),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _greeting(),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 1),
-                        const Text(
-                          'Pickups',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
+                          const SizedBox(height: 1),
+                          const Text(
+                            'Pickups',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: loading ? null : refresh,
-                    icon: const Icon(Icons.refresh, color: Colors.white),
-                    tooltip: 'Refresh',
-                  ),
-                  IconButton(
-                    onPressed: loggingOut ? null : logout,
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    tooltip: 'Sign out',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _summaryCount(
-                    pickupView == 'active'
-                        ? 'Available pickups'
-                        : pickupView == 'transit'
-                        ? 'In transit'
-                        : 'Completed handoffs',
-                    pickupView == 'active' ? available.length : mine.length,
-                  ),
-                  if (pickupView == 'active') ...[
                     const SizedBox(width: 12),
-                    _summaryCount('Accepted by you', mine.length),
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RiderNotificationsPage(session: riderSession),
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   ],
-                ],
-              ),
-            ],
-          ),
-        ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _summaryCount(
+                      pickupView == 'active'
+                          ? 'Available pickups'
+                          : pickupView == 'transit'
+                          ? 'In transit'
+                          : 'Completed handoffs',
+                      pickupView == 'active' ? available.length : mine.length,
+                    ),
+                    if (pickupView == 'active') ...[
+                      const SizedBox(width: 12),
+                      _summaryCount('Accepted by you', mine.length),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
