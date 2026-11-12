@@ -1,0 +1,261 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
+import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
+import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
+import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
+import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
+
+class ProductListScreen extends StatefulWidget {
+  final String? initialSearch;
+  final int? categoryId;
+  final String? categoryName;
+
+  const ProductListScreen({
+    super.key,
+    this.initialSearch,
+    this.categoryId,
+    this.categoryName,
+  });
+
+  @override
+  State<ProductListScreen> createState() => _ProductListScreenState();
+}
+
+class _ProductListScreenState extends State<ProductListScreen> {
+  late TextEditingController _searchController;
+  bool _isLoading = true;
+  String? _error;
+  List<ProductModel> _products = [];
+  String _selectedSort = 'latest';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: widget.initialSearch ?? '');
+    _fetchProducts();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchProducts() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final res = await BuyerService.getProducts(
+        search: _searchController.text.trim(),
+        categoryId: widget.categoryId,
+        sort: _selectedSort,
+      );
+      setState(() {
+        _products = res['products'] as List<ProductModel>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
+
+    return Scaffold(
+      backgroundColor: AppColors.buyerBackground,
+      appBar: AppBar(
+        titleSpacing: canPop ? 0 : 16,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
+        ),
+        automaticallyImplyLeading: false,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Row(
+          children: [
+            // Left side: Search Bar matching Home layout
+            Expanded(
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.buyerBorder, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        onSubmitted: (_) => _fetchProducts(),
+                        style: GoogleFonts.figtree(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: widget.categoryName != null
+                              ? 'Search in ${widget.categoryName}...'
+                              : 'Search products, brands...',
+                          hintStyle: GoogleFonts.figtree(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    if (_searchController.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() {});
+                          _fetchProducts();
+                        },
+                        child: const Icon(Icons.close_rounded, size: 18, color: AppColors.mutedText),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+
+            // Right side: Message and Cart icons
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
+              tooltip: 'Messages',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BuyerConversationsScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
+              tooltip: 'Cart',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          // Filter / Sort Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: AppColors.buyerBackground,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _sortChip('Latest', 'latest'),
+                  const SizedBox(width: 8),
+                  _sortChip('Price: Low to High', 'price_low'),
+                  const SizedBox(width: 8),
+                  _sortChip('Price: High to Low', 'price_high'),
+                  const SizedBox(width: 8),
+                  _sortChip('Top Rated', 'rating'),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : _error != null
+                    ? Center(child: Text(_error!))
+                    : _products.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: EmptyStateView(
+                              icon: Icons.search_off_rounded,
+                              title: 'No products found',
+                              message: 'Try searching with different keywords or removing filters.',
+                              buttonText: 'Reset Search',
+                              onButtonPressed: () {
+                                _searchController.clear();
+                                _fetchProducts();
+                              },
+                            ),
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.65,
+                            ),
+                            itemCount: _products.length,
+                            itemBuilder: (context, index) {
+                              return ProductCard(product: _products[index]);
+                            },
+                          ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sortChip(String label, String value) {
+    final isSelected = _selectedSort == value;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: GoogleFonts.figtree(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+          color: isSelected ? Colors.white : AppColors.primaryDark,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppColors.primaryDark,
+      backgroundColor: AppColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      side: BorderSide(
+        color: isSelected ? AppColors.primaryDark : AppColors.buyerBorder,
+        width: 1.0,
+      ),
+      checkmarkColor: Colors.white,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() => _selectedSort = value);
+          _fetchProducts();
+        }
+      },
+    );
+  }
+}

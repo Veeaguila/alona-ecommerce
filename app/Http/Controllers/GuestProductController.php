@@ -1,0 +1,171 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
+
+class GuestProductController extends Controller
+{
+    public function index(Request $request): Response|RedirectResponse
+    {
+        if ($request->user()?->usertype === 'buyer') {
+            return redirect()->route('buyer.products', $request->query());
+        }
+        $search = trim((string) $request->input('search', ''));
+        $category = $request->input('category', 'all');
+        $maxPrice = $request->input('max_price');
+        $sort = $request->input('sort', 'featured');
+        $categoryIds = $category !== 'all'
+            ? (Category::where('slug', $category)->first()?->getDescendantIds() ?? [])
+            : [];
+
+        $products = Product::query()
+            ->with('category:id,name,slug')
+            ->where('status', 'approved')
+
+            ->when(
+                $search !== '',
+                fn ($query) => $query->where(function ($query) use ($search) {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                })
+            )
+
+            ->when(
+                $category !== 'all',
+                fn ($query) => $query->whereIn('category_id', $categoryIds)
+            )
+
+            ->when(
+                is_numeric($maxPrice),
+                fn ($query) =>
+                    $query->where('price', '<=', (float) $maxPrice)
+            );
+
+        switch ($sort) {
+            case 'price-low':
+                $products->orderBy('price', 'asc');
+                break;
+
+            case 'price-high':
+                $products->orderBy('price', 'desc');
+                break;
+
+            case 'rating':
+                $products
+                    ->orderByDesc('rating')
+                    ->orderByDesc('reviews_count');
+                break;
+
+            case 'latest':
+                $products->latest();
+                break;
+
+            case 'featured':
+            default:
+                // Seeded random order to ensure cross-store product diversity with stable pagination
+                $seed = (int) $request->session()->remember('guest_catalog_seed', function () use ($request) {
+                    return abs(crc32($request->session()->getId() . date('YmdH')));
+                });
+                if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite') {
+                    $products->inRandomOrder($seed);
+                } else {
+                    $products->orderByRaw("RAND({$seed})");
+                }
+                break;
+        }
+
+        $products = $products
+            ->paginate(12)
+            ->withQueryString();
+
+        return Inertia::render('Guest/Products', [
+            'products' => $products,
+
+            'categories' => Category::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get([
+                    'name',
+                    'slug',
+                ]),
+
+            'filters' => [
+                'search' => $search,
+                'category' => $category,
+                'max_price' => is_numeric($maxPrice) ? (float) $maxPrice : null,
+                'sort' => $sort,
+            ],
+        ]);
+    }
+
+    public function show(Request $request, Product $product): Response|RedirectResponse
+    {
+        if ($request->user()?->usertype === 'buyer') {
+            return redirect()->route('buyer.product', $product);
+        }
+        abort_unless(
+            $product->status === 'approved',
+            404
+        );
+
+        $product->load([
+            'category:id,name,slug',
+            'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
+            'variants',
+            'images:id,product_id,image_path',
+            'reviews' => fn ($query) => $query
+                ->with('user:id,name')
+                ->latest(),
+            'questions' => fn ($query) => $query
+                ->where('is_public', true)
+                ->whereNotNull('answer')
+                ->with([
+                    'buyer:id,name',
+                    'answeredBy:id,name',
+                ])
+                ->latest()
+                ->limit(5),
+        ]);
+
+        $sellerStats = [
+            'total_products' => Product::where('seller_id', $product->seller_id)
+                ->where('status', 'approved')
+                ->count(),
+            'avg_rating' => Product::where('seller_id', $product->seller_id)
+                ->where('status', 'approved')
+                ->whereNotNull('rating')
+                ->avg('rating'),
+        ];
+
+        $relatedProducts = Product::query()
+            ->with('category:id,name')
+            ->where('status', 'approved')
+            ->where('id', '!=', $product->id)
+            ->when(
+                $product->category_id,
+                fn ($query) => $query->where('category_id', $product->category_id)
+            )
+            ->latest()
+            ->take(5)
+            ->get([
+                'id',
+                'category_id',
+                'name',
+                'price',
+                'image_path',
+            ]);
+
+        return Inertia::render('Guest/Show', [
+            'product' => $product,
+            'relatedProducts' => $relatedProducts,
+            'sellerStats' => $sellerStats,
+        ]);
+    }
+}

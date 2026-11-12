@@ -1,0 +1,1835 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../services/rider_finance_api.dart';
+import '../services/rider_quick_actions.dart';
+import '../services/rider_session.dart';
+import '../services/rider_session_guard.dart';
+import '../theme/rider_theme.dart';
+import '../widgets/rider_bottom_nav.dart';
+
+class CodAndEarningsTrackerPage extends StatefulWidget {
+  final RiderSession? session;
+  final bool active;
+  final int initialTabIndex;
+  final bool showBottomNavigation;
+
+  const CodAndEarningsTrackerPage({
+    super.key,
+    this.session,
+    this.active = true,
+    this.initialTabIndex = 0,
+    this.showBottomNavigation = true,
+  });
+
+  @override
+  State<CodAndEarningsTrackerPage> createState() =>
+      _CodAndEarningsTrackerPageState();
+}
+
+class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
+    with
+        SingleTickerProviderStateMixin,
+        WidgetsBindingObserver,
+        RiderSessionGuard<CodAndEarningsTrackerPage> {
+  @override
+  late final riderSession = widget.session ?? RiderSession();
+  late final api = RiderFinanceApi(riderSession);
+
+  late TabController _tabController;
+  bool loading = false;
+  String? error;
+
+  // Standard Rider Maximum Cash Holding Limit before Remittance is required
+  static const double kRiderCodRemittanceLimit = 10000.0;
+
+  // COD Data
+  Map<String, dynamic>? codData;
+  double expectedCodBalance = 0.0;
+  String hubName = '';
+  List<dynamic> codCollections = [];
+  List<dynamic> codRemittances = [];
+  String _historyFilter = 'all'; // 'all', 'collections', 'remittances'
+
+  // Earnings Data
+  Map<String, dynamic>? earningsData;
+  String totalEarned = '0.00';
+  String paidEarnings = '0.00';
+  String unpaidEarnings = '0.00';
+  List<dynamic> earningsRows = [];
+  String _earningsFilter = 'all'; // 'all', 'paid', 'unpaid'
+
+  // Denomination Counter State (Filipino Peso)
+  final Map<int, int> _denominations = {
+    1000: 0,
+    500: 0,
+    200: 0,
+    100: 0,
+    50: 0,
+    20: 0,
+    10: 0,
+    5: 0,
+    1: 0,
+  };
+  late final Map<int, TextEditingController> _countControllers;
+
+  double get countedCashTotal {
+    double sum = 0.0;
+    _denominations.forEach((denom, count) {
+      sum += denom * count.toDouble();
+    });
+    return sum;
+  }
+
+  double get billsTotal {
+    double sum = 0.0;
+    for (final denom in [1000, 500, 200, 100, 50, 20]) {
+      sum += denom * (_denominations[denom] ?? 0).toDouble();
+    }
+    return sum;
+  }
+
+  double get coinsTotal {
+    double sum = 0.0;
+    for (final denom in [10, 5, 1]) {
+      sum += denom * (_denominations[denom] ?? 0).toDouble();
+    }
+    return sum;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _countControllers = {
+      for (final denom in _denominations.keys)
+        denom: TextEditingController(text: '0'),
+    };
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
+    WidgetsBinding.instance.addObserver(this);
+    if (widget.active) loadAllData();
+  }
+
+  @override
+  void didUpdateWidget(covariant CodAndEarningsTrackerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active && !loading) {
+      loadAllData();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabController.dispose();
+    for (final controller in _countControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> loadAllData() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      final codRes = await sessionAction(() => api.getCodLedger());
+      final earnRes = await sessionAction(() => api.getEarnings());
+
+      if (!mounted) return;
+
+      // Parse COD
+      double balanceSum = 0.0;
+      String foundHub = '';
+      final balances = codRes['balances'];
+      if (balances is List) {
+        for (final b in balances) {
+          if (b is Map && b['balance'] != null) {
+            balanceSum += double.tryParse('${b['balance']}') ?? 0.0;
+            if (foundHub.isEmpty &&
+                b['name'] != null &&
+                b['name'].toString().trim().isNotEmpty) {
+              foundHub = b['name'].toString().trim();
+            }
+          }
+        }
+      }
+
+      final collections = codRes['collections'] is List
+          ? (codRes['collections'] as List)
+          : [];
+      final remittances = codRes['remittances'] is List
+          ? (codRes['remittances'] as List)
+          : [];
+
+      // Parse Earnings
+      final summary = earnRes['summary'] as Map?;
+      final rows = earnRes['data'] is List ? (earnRes['data'] as List) : [];
+
+      setState(() {
+        codData = codRes;
+        expectedCodBalance = balanceSum;
+        hubName = foundHub.isNotEmpty ? foundHub : 'Sorting Center Hub';
+        codCollections = collections;
+        codRemittances = remittances;
+
+        earningsData = earnRes;
+        totalEarned = summary?['total']?.toString() ?? '0.00';
+        paidEarnings = summary?['paid']?.toString() ?? '0.00';
+        unpaidEarnings = summary?['outstanding']?.toString() ?? '0.00';
+        earningsRows = rows;
+
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        loading = false;
+        error = e is SessionFailure
+            ? e.message
+            : 'Hindi ma-load ang financial data.';
+      });
+    }
+  }
+
+  void _adjustDenomination(int denom, int delta) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      final current = _denominations[denom] ?? 0;
+      final updated = (BigInt.from(current) + BigInt.from(delta)).toInt();
+      _denominations[denom] = updated < 0 ? 0 : updated;
+      _syncCountInput(denom);
+    });
+  }
+
+  void _syncCountInput(int denom) {
+    final text = '${_denominations[denom]}';
+    _countControllers[denom]!.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void _resetCashCounter() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _denominations.updateAll((key, value) => 0);
+      for (final denom in _denominations.keys) {
+        _syncCountInput(denom);
+      }
+    });
+  }
+
+  void _autoMatchExact() {
+    HapticFeedback.mediumImpact();
+    int remainingCents = (expectedCodBalance * 100).round();
+    final newDenoms = <int, int>{};
+    for (final denom in [1000, 500, 200, 100, 50, 20, 10, 5, 1]) {
+      final denomCents = denom * 100;
+      final count = remainingCents ~/ denomCents;
+      newDenoms[denom] = count;
+      remainingCents %= denomCents;
+    }
+    setState(() {
+      _denominations.addAll(newDenoms);
+      for (final denom in _denominations.keys) {
+        _syncCountInput(denom);
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('⚡ Na-match na ang eksaktong bilang ng bills at barya!'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RiderTheme.wrap(
+      Scaffold(
+        backgroundColor: RiderColors.portalBackground,
+        appBar: AppBar(
+          flexibleSpace: const DecoratedBox(
+            decoration: BoxDecoration(gradient: RiderColors.headerGradient),
+          ),
+          title: const Text('COD Cash & Earnings'),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: RiderColors.amber,
+            indicatorWeight: 3.5,
+            labelColor: RiderColors.amber,
+            unselectedLabelColor: Colors.white70,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.point_of_sale_rounded),
+                text: 'COD Cash & Remittance',
+              ),
+              Tab(
+                icon: Icon(Icons.account_balance_wallet_rounded),
+                text: 'Kinita / Earnings',
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh details',
+              onPressed: loading ? null : loadAllData,
+            ),
+          ],
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: RiderColors.danger,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: loadAllData,
+                        child: const Text('Subukan Muli'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [_buildCodCashTab(), _buildEarningsTab()],
+              ),
+        bottomNavigationBar:
+            widget.showBottomNavigation && widget.session != null
+            ? RiderBottomNav(currentIndex: 2, session: widget.session!)
+            : null,
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // TAB 1: COD Cash, Remittance Limit, & Interactive Denomination Counter
+  // -------------------------------------------------------------
+  Widget _buildCodCashTab() {
+    final counted = countedCashTotal;
+    final diff = counted - expectedCodBalance;
+    final isExact =
+        (diff.abs() < 0.01) && (expectedCodBalance > 0 || counted > 0);
+    final isShort = diff < -0.01;
+    final isOver = diff > 0.01;
+
+    // Remittance limit ratio calculation
+    final limitRatio = (expectedCodBalance / kRiderCodRemittanceLimit).clamp(
+      0.0,
+      1.0,
+    );
+    final isNearLimit = expectedCodBalance >= (kRiderCodRemittanceLimit * 0.8);
+    final isOverLimit = expectedCodBalance >= kRiderCodRemittanceLimit;
+
+    final filteredHistory = _getFilteredHistory();
+
+    return RefreshIndicator(
+      onRefresh: loadAllData,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
+          // -----------------------------------------------------------
+          // HERO SCORECARD: Cash on Hand, Remittance & Hub Status
+          // -----------------------------------------------------------
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isNearLimit
+                    ? const [Color(0xFF991B1B), Color(0xFFDC2626)]
+                    : RiderColors.headerGradient.colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: isNearLimit
+                      ? Colors.red.withValues(alpha: 0.3)
+                      : const Color(0xFF0F766E).withValues(alpha: 0.3),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.lock_clock_rounded,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Kailangang I-remit sa Hub (COD)',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        expectedCodBalance > 0
+                            ? (isNearLimit
+                                  ? '⚠️ Limit Alert'
+                                  : 'Pending Remittance')
+                            : 'Cleared / Zero Balance',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'PHP ${expectedCodBalance.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warehouse_rounded,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Designated Hub: $hubName',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Remittance Progress Bar vs Max Limit
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        children: [
+                          const Text(
+                            'Remittance Safe Limit:',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                          Text(
+                            '₱${expectedCodBalance.toStringAsFixed(0)} / ₱${kRiderCodRemittanceLimit.toStringAsFixed(0)} (${(limitRatio * 100).toStringAsFixed(0)}%)',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: limitRatio,
+                          minHeight: 8,
+                          backgroundColor: Colors.white24,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isOverLimit
+                                ? const Color(0xFFEF4444)
+                                : (isNearLimit
+                                      ? const Color(0xFFFBBF24)
+                                      : const Color(0xFF34D399)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isOverLimit
+                            ? '🚨 LUMAMPAS SA LIMIT! Mag-remit agad sa Hub bago tumanggap ng susunod na delivery batch.'
+                            : (isNearLimit
+                                  ? '⚠️ Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
+                                  : (expectedCodBalance > 0
+                                        ? '✅ Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
+                                        : '🎉 Walang pending remittance. Ligtas at handa sa biyahe!')),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isNearLimit
+                              ? Colors.amberAccent
+                              : Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // 1-Tap Shortcut: Navigate to Hub Cashier
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      RiderQuickActions.openMapNavigation(
+                        context,
+                        hubName.isNotEmpty ? hubName : 'Alona Logistics Hub',
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: isNearLimit
+                          ? const Color(0xFF991B1B)
+                          : const Color(0xFF0F766E),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.navigation_rounded, size: 18),
+                    label: const Text(
+                      'I-navigate sa Hub Cashier',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // -----------------------------------------------------------
+          // INTERACTIVE DENOMINATION CASH COUNTER (Ergonomic HUD)
+          // -----------------------------------------------------------
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: _sectionDecoration,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.calculate_rounded,
+                      color: RiderColors.teal,
+                      size: 22,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Denomination Cash Counter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'I-bilang ang iyong perang papel at barya para makasigurong eksakto bago ibigay sa hub cashier.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: RiderColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Live Count Display vs Target Disparity HUD
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isExact
+                        ? const Color(0xFFD1FAE5)
+                        : (isShort
+                              ? const Color(0xFFFEE2E2)
+                              : (isOver
+                                    ? const Color(0xFFFEF3C7)
+                                    : const Color(0xFFF1F5F9))),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isExact
+                          ? const Color(0xFF10B981)
+                          : (isShort
+                                ? const Color(0xFFEF4444)
+                                : (isOver
+                                      ? const Color(0xFFF59E0B)
+                                      : const Color(0xFFCBD5E1))),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text(
+                            'Kabuuang Nabilang sa Bulsa:',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'PHP ${counted.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: isExact
+                                  ? const Color(0xFF065F46)
+                                  : (isShort
+                                        ? const Color(0xFF991B1B)
+                                        : (isOver
+                                              ? const Color(0xFF92400E)
+                                              : const Color(0xFF334155))),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            isExact
+                                ? Icons.check_circle_rounded
+                                : (isShort
+                                      ? Icons.error_rounded
+                                      : (isOver
+                                            ? Icons.warning_rounded
+                                            : Icons.info_rounded)),
+                            size: 18,
+                            color: isExact
+                                ? const Color(0xFF059669)
+                                : (isShort
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFD97706)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isExact
+                                  ? 'TUGMA ANG PERA! Eksaktong PHP ${counted.toStringAsFixed(2)} (Handa nang i-remit)'
+                                  : (isShort
+                                        ? 'KULANG ng PHP ${(-diff).toStringAsFixed(2)} kumpara sa kailangang remit'
+                                        : (isOver
+                                              ? 'SOBRA ng PHP ${diff.toStringAsFixed(2)} kumpara sa kailangang remit'
+                                              : 'I-type ang bilang o gamitin ang mga button sa bawat denominasyon para magbilang')),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isExact
+                                    ? const Color(0xFF065F46)
+                                    : (isShort
+                                          ? const Color(0xFF991B1B)
+                                          : const Color(0xFF92400E)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Cash Summary Chips: Bills vs Coins
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDFA),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF99F6E4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('💵', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Papel (Bills)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F766E),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${billsTotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF0F766E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🪙', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Barya (Coins)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${coinsTotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF334155),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Counter actions
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (expectedCodBalance > 0)
+                      _buildCounterAction(
+                        icon: Icons.bolt_rounded,
+                        label: 'Auto-Match',
+                        color: RiderColors.teal,
+                        onPressed: _autoMatchExact,
+                      ),
+                    _buildCounterAction(
+                      icon: Icons.restart_alt,
+                      label: 'Reset',
+                      color: RiderColors.danger,
+                      onPressed: counted > 0 ? _resetCashCounter : null,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Section 1: Perang Papel (Banknotes)
+                _buildDenominationGroupLabel('Perang Papel', 'Bills'),
+                const SizedBox(height: 8),
+                _buildDenominationGroup([1000, 500, 200, 100, 50, 20]),
+
+                const SizedBox(height: 20),
+
+                // Section 2: Barya (Coins)
+                _buildDenominationGroupLabel('Barya', 'Coins'),
+                const SizedBox(height: 8),
+                _buildDenominationGroup([10, 5, 1]),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // -----------------------------------------------------------
+          // COD COLLECTIONS & REMITTANCES HISTORY SECTION
+          // -----------------------------------------------------------
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: _sectionDecoration,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.history_rounded,
+                          color: RiderColors.teal,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Talaan ng Transaksyon',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${codCollections.length} nakolekta',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: RiderColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Segmented Filter Bar
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildFilterChip(
+                      'all',
+                      'Lahat (${codCollections.length + codRemittances.length})',
+                    ),
+                    _buildFilterChip(
+                      'collections',
+                      'Koleksyon (${codCollections.length})',
+                    ),
+                    _buildFilterChip(
+                      'remittances',
+                      'Remit (${codRemittances.length})',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                if (filteredHistory.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Walang record sa napiling filter.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...filteredHistory.map((item) => _buildHistoryItem(item)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label) {
+    final isSelected = _historyFilter == key;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _historyFilter = key);
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF0F766E)
+                : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : RiderColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getFilteredHistory() {
+    final List<Map<String, dynamic>> list = [];
+
+    if (_historyFilter == 'all' || _historyFilter == 'collections') {
+      for (final c in codCollections) {
+        if (c is Map) {
+          list.add({'type': 'collection', ...Map<String, dynamic>.from(c)});
+        }
+      }
+    }
+
+    if (_historyFilter == 'all' || _historyFilter == 'remittances') {
+      for (final r in codRemittances) {
+        if (r is Map) {
+          list.add({'type': 'remittance', ...Map<String, dynamic>.from(r)});
+        }
+      }
+    }
+
+    // Sort by id descending
+    list.sort((a, b) {
+      final aId = int.tryParse('${a['id']}') ?? 0;
+      final bId = int.tryParse('${b['id']}') ?? 0;
+      return bId.compareTo(aId);
+    });
+
+    return list.take(20).toList();
+  }
+
+  Widget _buildHistoryItem(Map<String, dynamic> item) {
+    final isCollection = item['type'] == 'collection';
+    final amount = item['amount']?.toString() ?? '0.00';
+    final dateStr = (item['recorded_at'] ?? item['created_at'])?.toString();
+    final formattedDate = dateStr != null && dateStr.isNotEmpty
+        ? (DateTime.tryParse(dateStr)?.toLocal().toString().substring(0, 16) ??
+              dateStr)
+        : '';
+
+    final parcel = item['parcel'] as Map?;
+    final title = isCollection
+        ? (parcel?['order_id'] != null
+              ? 'Order #${parcel!['order_id']}'
+              : 'COD Parcel #${item['parcel_id'] ?? item['id']}')
+        : 'Remittance #${item['id']} to Hub';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isCollection
+              ? const Color(0xFFF0FDFA)
+              : const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCollection
+                ? const Color(0xFFCCFBF1)
+                : const Color(0xFFDBEAFE),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isCollection
+                    ? const Color(0xFFD1FAE5)
+                    : const Color(0xFFBFDBFE),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                isCollection
+                    ? Icons.payments_rounded
+                    : Icons.account_balance_rounded,
+                color: isCollection
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF1D4ED8),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (formattedDate.isNotEmpty)
+                    Text(
+                      formattedDate,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: RiderColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${isCollection ? "+" : "-"}₱$amount',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    color: isCollection
+                        ? const Color(0xFF065F46)
+                        : const Color(0xFF1E40AF),
+                  ),
+                ),
+                Text(
+                  isCollection ? 'Nakolekta' : 'I-remit sa Hub',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isCollection
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF2563EB),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static final BoxDecoration _sectionDecoration = BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: RiderColors.border),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.04),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
+
+  Widget _buildCounterAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(
+          color: onPressed == null
+              ? RiderColors.border
+              : color.withValues(alpha: 0.4),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: const StadiumBorder(),
+      ),
+    );
+  }
+
+  Widget _buildDenominationGroupLabel(String title, String subtitle) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: title.toUpperCase(),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: RiderColors.text,
+            ),
+          ),
+          TextSpan(
+            text: '  ·  $subtitle',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: RiderColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      style: const TextStyle(fontSize: 12, letterSpacing: 0.6),
+    );
+  }
+
+  Widget _buildDenominationGroup(List<int> denoms) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: RiderColors.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < denoms.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, thickness: 1, color: RiderColors.border),
+            _buildDenominationRow(denoms[i], _denominations[denoms[i]] ?? 0),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDenominationRow(int denom, int count) {
+    final hasCount = count > 0;
+    final rowTotal = denom * count.toDouble();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Denomination + live subtotal
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '₱$denom',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: RiderColors.text,
+                      ),
+                    ),
+                    if (hasCount)
+                      Text(
+                        'x $count piraso',
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: RiderColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (hasCount)
+                Text(
+                  '₱${rowTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: RiderColors.teal,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Stepper + quick add
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: hasCount
+                          ? RiderColors.teal
+                          : RiderColors.inputBorder,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 22),
+                        color: RiderColors.textSecondary,
+                        disabledColor: Colors.grey.shade300,
+                        onPressed: hasCount
+                            ? () => _adjustDenomination(denom, -1)
+                            : null,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Bawasan',
+                      ),
+                      Expanded(
+                        child: Semantics(
+                          label: 'Bilang ng ₱$denom',
+                          child: TextField(
+                            key: ValueKey('denomination-count-$denom'),
+                            controller: _countControllers[denom],
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            selectAllOnFocus: true,
+                            textAlign: TextAlign.center,
+                            cursorColor: RiderColors.teal,
+                            style: const TextStyle(
+                              color: RiderColors.text,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              TextInputFormatter.withFunction((
+                                oldValue,
+                                newValue,
+                              ) {
+                                return newValue.text.isEmpty ||
+                                        int.tryParse(newValue.text) != null
+                                    ? newValue
+                                    : oldValue;
+                              }),
+                            ],
+                            decoration: const InputDecoration(
+                              hintText: '0',
+                              isDense: true,
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _denominations[denom] =
+                                    int.tryParse(value) ?? 0;
+                              });
+                            },
+                            onSubmitted: (_) => _syncCountInput(denom),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, size: 22),
+                        color: RiderColors.teal,
+                        onPressed: () => _adjustDenomination(denom, 1),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Dagdagan',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildQuickAddChip(denom, 5),
+              const SizedBox(width: 6),
+              _buildQuickAddChip(denom, 10),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAddChip(int denom, int amount) {
+    return Material(
+      color: RiderColors.mintBanner,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => _adjustDenomination(denom, amount),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 44,
+          constraints: const BoxConstraints(minWidth: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          child: Text(
+            '+$amount',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: RiderColors.tealDark,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // TAB 2: Rider Earnings & Job Pay Tracker
+  // -------------------------------------------------------------
+  Widget _buildEarningsTab() {
+    final filteredRows = _getFilteredEarnings();
+
+    return RefreshIndicator(
+      onRefresh: loadAllData,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
+          // Total Earnings Hero Overview Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: RiderColors.headerGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Kabuuang Kinita (Total Earnings)',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Alona Verified',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'PHP $totalEarned',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  color: Colors.white70,
+                                  size: 14,
+                                ),
+                                SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Nabayaran Na',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PHP $paidEarnings',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  color: Colors.white70,
+                                  size: 14,
+                                ),
+                                SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Papasok / Unpaid',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PHP $unpaidEarnings',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Payout Schedule Information Advisory
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.event_available_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 24,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payout Cycle: Tuwing Miyerkules at Biyernes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E40AF),
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Awtomatikong nire-release ang delivery commission sa iyong bangko o e-wallet pagkatapos ma-audit ng Hub Cashier ang nai-remit na COD.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF1E3A8A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Earnings History Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: RiderColors.amberSurfaceGradient,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: RiderColors.portalBorder),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          color: Color(0xFF0F766E),
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Talaan ng Delivery Fee',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${earningsRows.length} delivery(s)',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: RiderColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Filter Chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildEarningsFilterChip(
+                      'all',
+                      'Lahat (${earningsRows.length})',
+                    ),
+                    _buildEarningsFilterChip('paid', 'Nabayaran Na'),
+                    _buildEarningsFilterChip('unpaid', 'Papasok Pa'),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                if (filteredRows.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Walang recorded delivery earnings sa filter na ito.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...filteredRows.map((row) => _buildEarningsRowItem(row)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsFilterChip(String key, String label) {
+    final isSelected = _earningsFilter == key;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _earningsFilter = key);
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF0F766E)
+                : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : RiderColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<dynamic> _getFilteredEarnings() {
+    if (_earningsFilter == 'all') return earningsRows;
+    return earningsRows.where((row) {
+      final status = (row['payout_status'] ?? '').toString().toLowerCase();
+      if (_earningsFilter == 'paid') return status == 'paid';
+      if (_earningsFilter == 'unpaid') return status != 'paid';
+      return true;
+    }).toList();
+  }
+
+  Widget _buildEarningsRowItem(dynamic row) {
+    final amount = row['amount'] ?? '0.00';
+    final status = (row['payout_status'] ?? 'pending').toString().toLowerCase();
+    final earnedAt = row['earned_at'] != null
+        ? DateTime.tryParse('${row['earned_at']}')
+              ?.toLocal()
+              .toString()
+              .substring(0, 16)
+        : '';
+    final isPaid = status == 'paid';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isPaid ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isPaid ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isPaid
+                    ? const Color(0xFFDCFCE7)
+                    : const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                isPaid
+                    ? Icons.check_circle_rounded
+                    : Icons.pending_actions_rounded,
+                color: isPaid
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFFD97706),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Delivery Commission #${row['id']}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (earnedAt != null && earnedAt.isNotEmpty)
+                    Text(
+                      earnedAt,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: RiderColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+PHP $amount',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    color: isPaid
+                        ? const Color(0xFF15803D)
+                        : const Color(0xFFB45309),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isPaid
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isPaid ? 'Nabayaran' : 'Pending Payout',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: isPaid
+                          ? const Color(0xFF166534)
+                          : const Color(0xFF92400E),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

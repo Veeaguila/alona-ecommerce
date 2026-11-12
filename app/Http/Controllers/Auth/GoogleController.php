@@ -1,0 +1,152 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\AccountDestination;
+use GuzzleHttp\Client;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
+
+class GoogleController extends Controller
+{
+    public function redirect(Request $request)
+    {
+        if (! config('services.google.client_id') || ! config('services.google.client_secret') || ! config('services.google.redirect')) {
+            return redirect('/?auth=login')->withErrors(['email' => 'Google sign-in is not configured yet. Please use email registration or contact support.']);
+        }
+        $role = $request->validate(['role' => ['nullable', 'in:buyer,seller,sorting_center,rider']])['role'] ?? 'buyer';
+        $request->session()->put('google.signup_role', $role);
+
+        return $this->googleDriver()->redirect();
+    }
+
+    public function callback(Request $request, AccountDestination $destinations)
+    {
+        try {
+            $google = $this->googleDriver()->user();
+        } catch (\Throwable $e) {
+            $responseBody = method_exists($e, 'getResponse') && $e->getResponse() ? (string) $e->getResponse()->getBody() : null;
+            Log::warning('Google authentication failed.', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+                'response' => $responseBody,
+            ]);
+
+            return redirect('/?auth=login')->withErrors(['email' => 'Google sign-in could not be completed. Please try again.']);
+        }
+        $email = strtolower((string) $google->getEmail());
+        if (! $email || ! ($google->user['email_verified'] ?? $google->user['verified_email'] ?? false)) {
+            return redirect('/?auth=login')->withErrors(['email' => 'Please use a verified Google email address.']);
+        }
+        $byIdentity = User::where('google_id', $google->getId())->first();
+        $byEmail = User::where('email', $email)->first();
+        if (($byIdentity && $byEmail && $byIdentity->id !== $byEmail->id)
+            || ($byEmail?->google_id && ! str_starts_with((string) $byEmail->google_id, 'google_') && $byEmail->google_id !== $google->getId())) {
+            return redirect('/?auth=login')->withErrors(['email' => 'This Google identity is already associated with another account. Please use your original sign-in method.']);
+        }
+        $user = $byIdentity ?? $byEmail;
+        $role = $request->session()->pull('google.signup_role', 'buyer');
+        if ($user) {
+            $request->session()->forget('onboarding.google');
+            $user = DB::transaction(function () use ($user, $google): User {
+                // Preserve explicitly uploaded avatar pictures for all users (buyer and rider).
+                $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                $changes = ['google_id' => $google->getId()];
+                $hasCustomUpload = is_string($locked->avatar) && (
+                    str_starts_with($locked->avatar, 'avatars/') ||
+                    str_starts_with($locked->avatar, 'rider-avatars/') ||
+                    str_starts_with($locked->avatar, 'public/avatars/')
+                );
+                if (! $hasCustomUpload && (! $locked->avatar || $google->getAvatar())) {
+                    $changes['avatar'] = $google->getAvatar() ?: $locked->avatar;
+                }
+                if ($locked->usertype === 'buyer' && $locked->status === 'unverified') {
+                    $changes['status'] = 'approved';
+                }
+                $locked->update($changes);
+                return $locked;
+            });
+            if (($user->partnerApplication?->details['registration_version'] ?? null) !== 2) {
+                $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
+            }
+            if ($user->usertype === 'buyer' && $user->status === 'unverified') {
+                $user->forceFill(['status' => 'approved'])->save();
+            }
+            Auth::login($user, true);
+            $request->session()->regenerate();
+            $request->session()->forget('url.intended');
+
+            return redirect()->route($destinations->route($user));
+        }
+
+        // Direct login / auto-creation for Buyer accounts
+        if ($role === 'buyer') {
+            $rawUser = is_array($google->user) ? $google->user : [];
+            $firstName = $rawUser['given_name'] ?? null;
+            $lastName = $rawUser['family_name'] ?? null;
+            $fullName = trim((string) $google->getName());
+
+            if (! $firstName && ! $lastName) {
+                $parts = explode(' ', $fullName, 2);
+                $firstName = $parts[0] ?: 'Buyer';
+                $lastName = $parts[1] ?? '';
+            }
+            if (! $fullName) {
+                $fullName = trim("$firstName $lastName") ?: 'Buyer';
+            }
+
+            $user = User::create([
+                'first_name' => $firstName ?: 'Buyer',
+                'last_name' => $lastName ?: '',
+                'name' => $fullName,
+                'email' => $email,
+                'google_id' => $google->getId(),
+                'avatar' => $google->getAvatar(),
+                'usertype' => 'buyer',
+                'status' => 'approved',
+                'password' => Hash::make(Str::random(32)),
+                'email_verified_at' => now(),
+            ]);
+
+            event(new Registered($user));
+            $request->session()->forget('onboarding.google');
+
+            Auth::login($user, true);
+            $request->session()->regenerate();
+            $request->session()->forget('url.intended');
+
+            return redirect()->route($destinations->route($user));
+        }
+
+        $request->session()->put('onboarding.google', ['id' => $google->getId(), 'email' => $email,
+            'name' => $google->getName(), 'role' => $role, 'expires_at' => now()->addHour()->timestamp]);
+
+        return match ($role) {
+            'sorting_center' => redirect()->route('register.logistics'),
+            'rider' => redirect()->route('register.rider'),
+            default => redirect('/?auth=register-'.$role.'&onboarding=1'),
+        };
+    }
+
+    private function googleDriver()
+    {
+        $verify = config('services.google.verify', true);
+        $caBundle = config('services.google.ca_bundle');
+
+        if ($verify !== false && $caBundle && file_exists($caBundle)) {
+            $verify = $caBundle;
+        } elseif ($verify !== false && file_exists(storage_path('certs/cacert.pem'))) {
+            $verify = storage_path('certs/cacert.pem');
+        }
+
+        return Socialite::driver('google')->setHttpClient(new Client(['verify' => $verify]));
+    }
+}

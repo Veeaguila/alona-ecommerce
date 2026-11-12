@@ -1,0 +1,542 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Models\Product;
+use App\Models\Voucher;
+use App\Models\UserVoucher;
+use App\Models\FlashSale;
+use App\Models\SellerPromotion;
+use Illuminate\Support\Facades\Schema;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class BuyerStoreController extends Controller
+{
+    public function show(Request $request, User $seller): Response|JsonResponse
+    {
+        abort_unless(
+            in_array($seller->usertype, ['seller', 'both'], true) &&
+            (in_array($seller->status, ['active', 'approved'], true) || is_null($seller->status)),
+            404
+        );
+
+        $sort = $request->input('sort', 'latest');
+        $search = trim((string) $request->input('search', ''));
+        $categorySlug = $request->input('category') ?: $request->input('store_category');
+
+        $productsQuery = Product::query()
+            ->where('seller_id', $seller->id)
+            ->where('status', 'approved')
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+            ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
+            ->when(
+                $search !== '',
+                fn ($query) => $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                })
+            );
+
+        if ($categorySlug && $categorySlug !== 'all') {
+            $matchedStoreCategory = \App\Models\StoreCategory::query()
+                ->where('seller_id', $seller->id)
+                ->where(function ($q) use ($categorySlug) {
+                    $q->where('slug', $categorySlug)
+                      ->orWhere('name', $categorySlug)
+                      ->orWhere('id', $categorySlug);
+                })
+                ->first();
+
+            if ($matchedStoreCategory) {
+                // SEL-SCAT-007: Hidden store category does not expose products on direct URL / 404s
+                if (! $matchedStoreCategory->is_visible) {
+                    abort(404, 'Category not found or unavailable');
+                }
+
+                $catIds = array_merge(
+                    [$matchedStoreCategory->id],
+                    $matchedStoreCategory->children()->where('is_visible', true)->pluck('id')->toArray()
+                );
+
+                $productsQuery->whereHas('storeCategories', fn ($q) => $q->whereIn('store_categories.id', $catIds));
+            } else {
+                $productsQuery->whereHas('category', function ($q) use ($categorySlug) {
+                    $q->where('slug', $categorySlug)
+                      ->orWhere('name', $categorySlug)
+                      ->orWhereHas('parent', fn ($pq) => $pq->where('slug', $categorySlug)->orWhere('name', $categorySlug));
+                });
+            }
+        }
+
+        switch ($sort) {
+            case 'price-low':
+                $productsQuery->orderBy('price', 'asc');
+                break;
+            case 'price-high':
+                $productsQuery->orderBy('price', 'desc');
+                break;
+            case 'rating':
+                $productsQuery->orderByDesc('rating')->orderByDesc('reviews_count');
+                break;
+            case 'popular':
+            case 'top_sales':
+            case 'top-sales':
+                $productsQuery->orderByDesc('sold_total')->orderByDesc('rating');
+                break;
+            default:
+                $productsQuery->latest();
+                break;
+        }
+
+        $products = (clone $productsQuery)->paginate(12)->withQueryString();
+
+        // Recommended / Featured Products
+        $recommendedProducts = Product::query()
+            ->where('seller_id', $seller->id)
+            ->where('status', 'approved')
+            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+            ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
+            ->where('is_featured', true)
+            ->limit(6)
+            ->get();
+
+        if ($recommendedProducts->isEmpty()) {
+            $recommendedProducts = Product::query()
+                ->where('seller_id', $seller->id)
+                ->where('status', 'approved')
+                ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+                ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
+                ->orderByDesc('rating')
+                ->orderByDesc('reviews_count')
+                ->limit(6)
+                ->get();
+        }
+
+        // Calculate seller stats
+        $totalProducts = Product::where('seller_id', $seller->id)
+            ->where('status', 'approved')
+            ->count();
+
+        // Product reviews & ratings
+        $productReviewStats = Product::where('seller_id', $seller->id)
+            ->where('status', 'approved')
+            ->whereNotNull('rating')
+            ->selectRaw('AVG(rating) as avg_rating, SUM(reviews_count) as total_reviews')
+            ->first();
+
+        // Direct seller reviews
+        $sellerReviewStats = $seller->sellerReviewsReceived()
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as total_reviews')
+            ->first();
+
+        $totalReviews = (int) (($productReviewStats->total_reviews ?? 0) + ($sellerReviewStats->total_reviews ?? 0));
+
+        $avgRating = null;
+        if ($sellerReviewStats && $sellerReviewStats->total_reviews > 0 && $productReviewStats && $productReviewStats->total_reviews > 0) {
+            $avgRating = round(
+                (($sellerReviewStats->avg_rating * $sellerReviewStats->total_reviews) + ($productReviewStats->avg_rating * $productReviewStats->total_reviews)) / $totalReviews,
+                1
+            );
+        } elseif ($sellerReviewStats && $sellerReviewStats->total_reviews > 0) {
+            $avgRating = round((float) $sellerReviewStats->avg_rating, 1);
+        } elseif ($productReviewStats && $productReviewStats->total_reviews > 0) {
+            $avgRating = round((float) $productReviewStats->avg_rating, 1);
+        } elseif ($productReviewStats && $productReviewStats->avg_rating) {
+            $avgRating = round((float) $productReviewStats->avg_rating, 1);
+        }
+
+        // Store categories: custom seller store categories (SEL-SCAT-001, SEL-SCAT-007, SEL-SCAT-008)
+        $sellerStoreCategories = \App\Models\StoreCategory::query()
+            ->where('seller_id', $seller->id)
+            ->where('is_visible', true)
+            ->whereNull('parent_id')
+            ->with(['children' => fn ($q) => $q->where('is_visible', true)->orderBy('sort_order')->select(['id', 'parent_id', 'name', 'slug'])])
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'slug']);
+
+        if ($sellerStoreCategories->isNotEmpty()) {
+            $categories = $sellerStoreCategories->map(fn ($sc) => [
+                'id' => $sc->id,
+                'name' => $sc->name,
+                'slug' => $sc->slug,
+                'subcategories' => $sc->children->map(fn ($ch) => [
+                    'id' => $ch->id,
+                    'name' => $ch->name,
+                    'slug' => $ch->slug,
+                ])->values(),
+            ])->values();
+        } else {
+            // Fallback to platform categories + subcategories of active seller products
+            $sellerProductsWithCats = Product::query()
+                ->where('seller_id', $seller->id)
+                ->where('status', 'approved')
+                ->with(['category.parent:id,name,slug', 'category.activeSubcategories:id,parent_id,name,slug'])
+                ->get();
+
+            $catMap = [];
+            foreach ($sellerProductsWithCats as $prod) {
+                $cat = $prod->category;
+                if (! $cat) {
+                    continue;
+                }
+                if ($cat->parent) {
+                    $parentId = $cat->parent->id;
+                    if (! isset($catMap[$parentId])) {
+                        $catMap[$parentId] = [
+                            'id' => $cat->parent->id,
+                            'name' => $cat->parent->name,
+                            'slug' => $cat->parent->slug,
+                            'subcategories' => [],
+                        ];
+                    }
+                    $catMap[$parentId]['subcategories'][$cat->id] = [
+                        'id' => $cat->id,
+                        'name' => $cat->name,
+                        'slug' => $cat->slug,
+                    ];
+                } else {
+                    if (! isset($catMap[$cat->id])) {
+                        $subs = [];
+                        if ($cat->relationLoaded('activeSubcategories')) {
+                            foreach ($cat->activeSubcategories as $sub) {
+                                $subs[$sub->id] = [
+                                    'id' => $sub->id,
+                                    'name' => $sub->name,
+                                    'slug' => $sub->slug,
+                                ];
+                            }
+                        }
+                        $catMap[$cat->id] = [
+                            'id' => $cat->id,
+                            'name' => $cat->name,
+                            'slug' => $cat->slug,
+                            'subcategories' => $subs,
+                        ];
+                    }
+                }
+            }
+
+            $categories = collect($catMap)->map(function ($item) {
+                $item['subcategories'] = array_values($item['subcategories']);
+                return $item;
+            })->values();
+        }
+
+        // Authentic store vouchers (SEL-VOU-001, SEL-VOU-003: exclude code-only vouchers)
+        $vouchers = Voucher::query()
+            ->where('seller_id', $seller->id)
+            ->where(function ($q) {
+                $q->where('is_active', true)
+                  ->orWhereNull('is_active');
+            })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+                $q->whereNull('ended_at');
+            })
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('display_mode')
+                        ->orWhere('display_mode', '!=', 'code_only');
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('starts_at')
+                  ->orWhereDate('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhereDate('expires_at', '>=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('usage_limit')
+                  ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->latest()
+            ->get();
+
+        $claimedVoucherIds = [];
+        if ($request->user()) {
+            $claimedVoucherIds = UserVoucher::where('user_id', $request->user()->id)
+                ->whereIn('voucher_id', $vouchers->pluck('id'))
+                ->where('status', 'claimed')
+                ->pluck('voucher_id')
+                ->toArray();
+        }
+
+        // Formatted joined duration
+        $joinedAgo = $seller->created_at
+            ? Carbon::parse($seller->created_at)->diffForHumans(null, true) . ' ago'
+            : null;
+
+        // Store followers calculation
+        $followersCount = \App\Models\StoreFollower::where('seller_id', $seller->id)->count();
+        $isFollowing = false;
+        if ($request->user()) {
+            $isFollowing = \App\Models\StoreFollower::where('seller_id', $seller->id)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+        }
+
+        $sellerProductIds = Product::where('seller_id', $seller->id)->pluck('id');
+        $ratingBreakdown = [];
+        $starTotal = 0;
+        for ($s = 5; $s >= 1; $s--) {
+            $countP = \App\Models\Review::whereIn('product_id', $sellerProductIds)->where('rating', $s)->count();
+            $countS = $seller->sellerReviewsReceived()->where('rating', $s)->count();
+            $cnt = $countP + $countS;
+            $starTotal += $cnt;
+            $ratingBreakdown[$s] = $cnt;
+        }
+
+        $formattedBreakdown = [];
+        for ($s = 5; $s >= 1; $s--) {
+            $cnt = $ratingBreakdown[$s];
+            $pct = $starTotal > 0 ? round($cnt / $starTotal, 2) : 0.0;
+            $formattedBreakdown[] = [
+                'stars' => $s,
+                'count' => $cnt,
+                'percentage' => $pct,
+            ];
+        }
+
+        $sellerReviews = \App\Models\Review::whereIn('product_id', $sellerProductIds)
+            ->with(['user:id,name,avatar', 'product:id,name'])
+            ->latest()
+            ->limit(25)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'user_name' => $r->user?->name ?? 'Verified Buyer',
+                'user_avatar' => $r->user?->avatar ? asset('storage/' . ltrim($r->user->avatar, '/')) : null,
+                'rating' => (int) $r->rating,
+                'comment' => $r->comment ?? '',
+                'created_at' => $r->created_at ? Carbon::parse($r->created_at)->diffForHumans() : 'Recently',
+                'product_name' => $r->product?->name,
+                'seller_reply' => $r->seller_reply,
+            ]);
+
+        // Flash sales for this store
+        $flashSales = collect();
+        $flashSaleEndTime = null;
+        if (Schema::hasTable('flash_sales')) {
+            $now = now();
+            $activeFlashSales = FlashSale::query()
+                ->whereHas('product', fn ($q) => $q->where('seller_id', $seller->id)->where('status', 'approved'))
+                ->whereNull('ended_at')
+                ->where('starts_at', '<=', $now)
+                ->where('ends_at', '>', $now)
+                ->whereRaw('flash_quantity > COALESCE(sold_quantity, 0)')
+                ->with(['product:id,name,slug,price,image_path,seller_id'])
+                ->orderBy('ends_at')
+                ->get();
+
+            if ($activeFlashSales->isNotEmpty()) {
+                $minEnd = $activeFlashSales->min('ends_at');
+                $flashSaleEndTime = $minEnd ? $minEnd->toIso8601String() : null;
+
+                $flashSales = $activeFlashSales->map(function ($fs) {
+                    $p = $fs->product;
+                    $origPrice = (float) $p->price;
+                    $flashPrice = (float) $fs->flash_price;
+                    $discountPct = $origPrice > $flashPrice && $origPrice > 0
+                        ? round((($origPrice - $flashPrice) / $origPrice) * 100)
+                        : 0;
+                    $totalQty = (int) $fs->flash_quantity;
+                    $soldQty = (int) ($fs->sold_quantity ?? 0);
+                    $percentSold = $totalQty > 0 ? min(100, round(($soldQty / $totalQty) * 100)) : 0;
+
+                    return [
+                        'id' => $fs->id,
+                        'product_id' => $p->id,
+                        'name' => $p->name,
+                        'slug' => $p->slug,
+                        'image' => $p->image_path
+                            ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                            : null,
+                        'original_price' => $origPrice,
+                        'flash_price' => $flashPrice,
+                        'discount_percentage' => $discountPct,
+                        'flash_quantity' => $totalQty,
+                        'sold_quantity' => $soldQty,
+                        'percent_sold' => $percentSold,
+                        'remaining' => max(0, $totalQty - $soldQty),
+                        'ends_at' => $fs->ends_at?->toIso8601String(),
+                    ];
+                })->values();
+            }
+        }
+
+        // Bundle deals for this store
+        $bundleDeals = collect();
+        if (Schema::hasTable('seller_promotions')) {
+            $now = now();
+            $bundleDeals = SellerPromotion::query()
+                ->where('seller_id', $seller->id)
+                ->where('type', 'bundle')
+                ->where('is_active', true)
+                ->whereNull('ended_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+                })
+                ->get()
+                ->map(function ($bundle) use ($seller) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 6))
+                        ->where('status', 'approved')
+                        ->get(['id', 'name', 'price', 'image_path']);
+
+                    return [
+                        'id' => $bundle->id,
+                        'name' => $bundle->name,
+                        'seller_id' => $bundle->seller_id,
+                        'store_name' => $seller->store_name ?: $seller->name,
+                        'min_quantity' => $bundle->min_quantity ?? 2,
+                        'discount_value' => (float) $bundle->discount_value,
+                        'discount_type' => $bundle->discount_type,
+                        'product_ids' => $productIds,
+                        'products' => $sampleProducts->map(fn ($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => (float) $p->price,
+                            'image' => $p->image_path
+                                ? (str_starts_with($p->image_path, 'http') ? $p->image_path : '/storage/' . ltrim($p->image_path, '/'))
+                                : null,
+                        ]),
+                    ];
+                })
+                ->values();
+        }
+
+        $responseData = [
+            'seller' => [
+                'id' => $seller->id,
+                'name' => $seller->name,
+                'store_name' => $seller->store_name ?: $seller->name,
+                'store_description' => $seller->store_description,
+                'store_logo_path' => $seller->store_logo_path,
+                'store_logo_url' => $seller->store_logo_path ? asset('storage/' . ltrim($seller->store_logo_path, '/')) : ($seller->avatar ? asset('storage/' . ltrim($seller->avatar, '/')) : null),
+                'store_banner_path' => $seller->store_banner_path,
+                'store_banner_url' => $seller->store_banner_path ? asset('storage/' . ltrim($seller->store_banner_path, '/')) : null,
+                'store_tagline' => $seller->store_tagline,
+                'operating_hours' => $seller->operating_hours ?: \App\Models\User::getDefaultOperatingHours(),
+                'response_time' => $seller->response_time ?: 'within_day',
+                'response_time_label' => $seller->getResponseTimeLabel(),
+                'store_status' => $seller->getStoreStatus(),
+                'shipping_policy' => $seller->shipping_policy,
+                'warranty_policy' => $seller->warranty_policy,
+                'return_policy' => $seller->return_policy,
+                'vacation_mode' => (bool) $seller->vacation_mode,
+                'vacation_message' => $seller->vacation_message,
+                'shipping_fee' => $seller->shipping_fee !== null ? (float) $seller->shipping_fee : null,
+                'return_policy_days' => $seller->return_policy_days ? (int) $seller->return_policy_days : 7,
+                'line_of_business' => $seller->line_of_business,
+                'has_business_permit' => !empty($seller->business_permit_path),
+                'business_permit_path' => $seller->business_permit_path,
+                'is_mall' => !empty($seller->business_permit_path),
+                'badge_label' => !empty($seller->business_permit_path) ? 'Alona Mall' : (!empty($seller->store_name) ? 'Official' : null),
+                'created_at' => $seller->created_at,
+                'status' => $seller->status,
+            ],
+            'products' => $products,
+            'recommended_products' => $recommendedProducts,
+            'categories' => $categories,
+            'vouchers' => $vouchers,
+            'claimed_voucher_ids' => $claimedVoucherIds,
+            'flash_sales' => $flashSales,
+            'flash_sale_end_time' => $flashSaleEndTime,
+            'bundle_deals' => $bundleDeals,
+            'is_following' => $isFollowing,
+            'reviews' => $sellerReviews,
+            'stats' => [
+                'total_products' => $totalProducts,
+                'avg_rating' => $avgRating,
+                'total_reviews' => $totalReviews,
+                'followers_count' => $followersCount,
+                'joined' => $joinedAgo,
+                'has_bir' => !empty($seller->business_permit_path),
+                'return_policy_days' => $seller->return_policy_days ? (int) $seller->return_policy_days : 7,
+                'shipping_fee' => $seller->shipping_fee !== null ? (float) $seller->shipping_fee : null,
+                'rating_breakdown' => $formattedBreakdown,
+            ],
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'category' => $categorySlug,
+            ],
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json($responseData);
+        }
+
+        return Inertia::render('Buyer/SellerStore', $responseData);
+    }
+
+    /**
+     * Toggle following a seller store (BUY-WISH-004 & BUY-WISH-005).
+     */
+    public function toggleFollow(Request $request, User $seller)
+    {
+        abort_unless(
+            $seller->usertype === 'seller' &&
+            in_array($seller->status, ['active', 'approved'], true),
+            404
+        );
+
+        if (!auth()->check()) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+            return redirect()->guest(route('login'));
+        }
+
+        $user = $request->user();
+
+        if ($user->id === $seller->id) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'You cannot follow your own store.'], 422);
+            }
+            return back()->with('error', 'You cannot follow your own store.');
+        }
+
+        $existing = \App\Models\StoreFollower::where('user_id', $user->id)
+            ->where('seller_id', $seller->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+            $isFollowing = false;
+            $message = 'Unfollowed store successfully.';
+        } else {
+            \App\Models\StoreFollower::firstOrCreate([
+                'user_id' => $user->id,
+                'seller_id' => $seller->id,
+            ]);
+            $isFollowing = true;
+            $message = 'Following store successfully.';
+        }
+
+        $followersCount = \App\Models\StoreFollower::where('seller_id', $seller->id)->count();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_following' => $isFollowing,
+                'followers_count' => $followersCount,
+                'message' => $message,
+            ]);
+        }
+
+        return back()->with('success', $message);
+    }
+}

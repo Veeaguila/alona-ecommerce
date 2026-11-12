@@ -1,0 +1,11 @@
+# Philippine addresses
+
+`psgc.json` contains the complete PSA Q2 2026 PSGC hierarchy plus the Q3 2026 published geographic name correction (released 12 October 2026): 18 regions, 82 provinces, 1,642 cities/municipalities (149 cities and 1,493 municipalities), and 42,010 barangays. Barangay `1001322005` in Cabanglasan, Bukidnon is corrected from Lambangan to Lambagan. The PSA Q3 release confirms unchanged geographic unit counts. Urban/rural classifications are outside this address-only schema.
+
+Source: [Philippine Statistics Authority and Q3 correction notice](https://psa.gov.ph/classification/psgc), [complete Q2 publication mirror](https://github.com/bendlikeabamboo/barangay-data-repository/tree/main/2026-07-13). PSA content is licensed CC BY 4.0. Downloaded 12 October 2026. The direct Q3 PSA workbook download returned HTTP 403 in this environment, so the complete Q2 mirror and explicit authoritative Q3 name correction were used. This derivation is recorded in the build script; no partial region list is used.
+
+The Laravel address API serves this versioned local dataset, cached server-side, so runtime provider availability and API keys are unnecessary. NCR, highly urbanized and independent cities have no required province, including ICCs which the publication groups statistically with a province. BARMM's Special Geographic Area and the Isabela statistical parent are traversed as groupings, not fictional provinces or additional cities. The actual City of Isabela remains selectable. Manila barangays are attached to Manila through their sub-municipalities.
+
+Refresh by downloading a complete `barangay_flat.json` publication, running `node scripts/build-psgc.mjs <file>`, reviewing counts and hierarchy tests, and updating `PhilippineAddressService::VERSION` and this provenance. Preserve historical stored codes/names; do not rewrite existing addresses automatically.
+
+The registration selector uses five custom UI groups from `PhilippineAddressService::GROUPS`. `/api/addresses/groups` exposes their fixed order; `group` filters province/city lookups while preserving official PSGC codes. These groups do not modify the source hierarchy. Coverage tests verify all 18 regions, 82 provinces and 1,642 cities/municipalities appear exactly once across the groups.

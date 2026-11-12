@@ -1,0 +1,3497 @@
+<script setup>
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import BuyerLayout from '@/Layouts/BuyerLayout.vue'
+import GuestLayout from '@/Layouts/GuestLayout.vue'
+import Icon from '@/Components/Icon.vue'
+import OfferCoverflow from '@/Components/OfferCoverflow.vue'
+
+const props = defineProps({
+    categories: {
+        type: Array,
+        default: () => [],
+    },
+
+    products: {
+        type: Array,
+        default: () => [],
+    },
+
+    flashSales: {
+        type: Array,
+        default: () => [],
+    },
+
+    flashSaleEndTime: {
+        type: String,
+        default: null,
+    },
+
+    bundleDeals: {
+        type: Array,
+        default: () => [],
+    },
+
+    featuredProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    recommendedProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    topSellingProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    promotions: {
+        type: Array,
+        default: () => [],
+    },
+
+    recentlyViewedProducts: {
+        type: Array,
+        default: () => [],
+    },
+
+    marketplaceStats: {
+        type: Object,
+        default: () => ({
+            products: 0,
+            sellers: 0,
+            categories: 0,
+            orders_delivered: 0,
+        }),
+    },
+
+    isGuest: {
+        type: Boolean,
+        default: false,
+    },
+
+    whyAlona: {
+        type: Object,
+        default: null,
+    },
+
+    heroBanners: {
+        type: Array,
+        default: () => [],
+    },
+
+    heroBanner: {
+        type: Object,
+        default: () => ({}),
+    },
+});
+
+const pageLayout = computed(() =>
+    props.isGuest ? GuestLayout : BuyerLayout
+)
+
+/*
+|--------------------------------------------------------------------------
+| Safe Routes
+|--------------------------------------------------------------------------
+*/
+
+const safeRoute = (name, fallback = '#', params = undefined) => {
+    try {
+        if (props.isGuest) {
+            const guestRoutes = {
+                'buyer.products': 'guest.products',
+                'buyer.product': 'guest.product',
+            }
+            name = guestRoutes[name] || name
+        }
+
+        return params === undefined
+            ? route(name)
+            : route(name, params)
+    } catch (error) {
+        return fallback
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Image Helpers
+|--------------------------------------------------------------------------
+*/
+
+const imageUrl = path => {
+    if (!path) {
+        return null
+    }
+
+    const value = String(path).trim()
+
+    if (!value) {
+        return null
+    }
+
+    if (
+        value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('/storage/') ||
+        value.startsWith('/images/') ||
+        value.startsWith('data:')
+    ) {
+        return value
+    }
+
+    return `/storage/${value.replace(/^\/+/, '')}`
+}
+
+const slugify = value => {
+    return String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+}
+
+/*
+|--------------------------------------------------------------------------
+| Promotions
+|--------------------------------------------------------------------------
+*/
+
+const formatPromotionValue = promotion => {
+    if (!promotion) return ''
+
+    if (promotion.type === 'free_shipping') return 'Free Shipping'
+
+    const value = Number(promotion.value ?? 0)
+
+    return promotion.type === 'percentage'
+        ? `${value}% OFF`
+        : `₱${value.toLocaleString('en-PH')} OFF`
+}
+
+const formatPromotionDate = date => {
+    if (!date) return null
+
+    const parsed = new Date(date)
+
+    if (Number.isNaN(parsed.getTime())) return null
+
+    return parsed.toLocaleDateString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
+}
+
+const promotionDaysLeft = expiresAt => {
+    if (!expiresAt) return null
+
+    const expiry = new Date(expiresAt)
+    const today = new Date()
+
+    if (Number.isNaN(expiry.getTime())) return null
+
+    return Math.max(
+        0,
+        Math.ceil(
+            (expiry.getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+    )
+}
+
+const claimingPromotionId = ref(null)
+
+const claimPromotion = voucherId => {
+    if (props.isGuest) {
+        router.visit(safeRoute('login'))
+        return
+    }
+
+    claimingPromotionId.value = voucherId
+    router.post(
+        safeRoute('buyer.vouchers.claim', '#', voucherId),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                claimingPromotionId.value = null
+            },
+        }
+    )
+}
+
+/*
+|--------------------------------------------------------------------------
+| Products
+|--------------------------------------------------------------------------
+*/
+
+const products = computed(() => {
+    if (!Array.isArray(props.products)) {
+        return []
+    }
+
+    return props.products
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+
+            const soldCount = Number(
+                product.sold_count ??
+                product.sales_count ??
+                product.order_items_count ??
+                product.total_sold ??
+                0
+            )
+
+            return {
+                ...product,
+
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
+
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+
+                categorySlug:
+                    product.category?.slug ??
+                    product.category_slug ??
+                    slugify(
+                        product.category?.name ??
+                        product.category_name ??
+                        ''
+                    ),
+
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                description:
+                    product.description ?? '',
+
+                soldCount,
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+/*
+|--------------------------------------------------------------------------
+| Recently Viewed Products
+|--------------------------------------------------------------------------
+*/
+
+const recentlyViewed = computed(() => {
+    if (!Array.isArray(props.recentlyViewedProducts)) {
+        return []
+    }
+
+    return props.recentlyViewedProducts
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+
+            const numericOldPrice = Number(
+                product.old_price ?? 0
+            )
+
+            return {
+                ...product,
+
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
+
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+/*
+|--------------------------------------------------------------------------
+| Top Selling
+|--------------------------------------------------------------------------
+*/
+
+const sortedBySales = computed(() => {
+    return [...products.value].sort(
+        (a, b) => b.soldCount - a.soldCount
+    )
+})
+
+const featuredProduct = computed(() => {
+    return props.featuredProducts?.[0] || null;
+});
+
+const featuredProductsList = computed(() => {
+    if (!Array.isArray(props.featuredProducts)) {
+        return []
+    }
+
+    return props.featuredProducts
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+
+            return {
+                ...product,
+                name: product.name ?? product.title ?? 'Product',
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+                price: `₱${numericPrice.toLocaleString()}`,
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+const topSellingProductsList = computed(() => {
+    return props.topSellingProducts || [];
+});
+
+/* Hero carousel: slide 0 is the original Discover hero; later slides are only sold products. */
+const topSellingCarouselProducts = computed(() => {
+    const source =
+        Array.isArray(props.topSellingProducts) && props.topSellingProducts.length
+            ? props.topSellingProducts
+            : products.value
+
+    return source
+        .filter(product => product && product.id)
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+            const soldCount = Number(
+                product.sold_count ??
+                product.sales_count ??
+                product.order_items_count ??
+                product.total_sold ??
+                product.soldCount ??
+                0
+            )
+
+            return {
+                ...product,
+                name: product.name ?? product.title ?? 'Product',
+                category: product.category?.name ?? product.category_name ?? 'Product',
+                price: `₱${numericPrice.toLocaleString()}`,
+                oldPrice: numericOldPrice > 0 ? `₱${numericOldPrice.toLocaleString()}` : null,
+                rating: Number(product.rating ?? product.average_rating ?? product.reviews_avg_rating ?? 0),
+                reviews: Number(product.reviews_count ?? product.review_count ?? product.reviews ?? 0),
+                image: imageUrl(product.image_path ?? product.image ?? product.image_url ?? product.thumbnail ?? product.photo),
+                description: product.description ?? '',
+                soldCount,
+                isSale: numericOldPrice > 0 && numericOldPrice > numericPrice,
+            }
+        })
+        .filter(product => product.soldCount > 0)
+        .sort((a, b) => b.soldCount - a.soldCount)
+})
+
+const defaultHeroBanner = {
+    id: 'banner_default',
+    is_active: true,
+    layout_type: 'split',
+    overlay_text: false,
+    theme: 'teal',
+    badge_text: '',
+    title: 'Welcome to',
+    title_highlight: 'Alona.',
+    description: 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.',
+    show_primary_button: true,
+    primary_button_text: 'Shop Now',
+    primary_button_url: '/products',
+    show_primary_button_arrow: true,
+    show_secondary_button: true,
+    secondary_button_text: 'Explore Categories',
+    secondary_button_url: '#categories',
+    show_image: true,
+    image_path: '/images/Alogo.png',
+    show_floating_cards: true,
+    card_1_title: 'Products',
+    card_1_subtitle: 'available',
+    card_2_title: 'CATEGORIES',
+    card_2_subtitle: 'to explore',
+}
+
+const activeBanners = computed(() => {
+    let list = []
+    if (Array.isArray(props.heroBanners) && props.heroBanners.length > 0) {
+        list = props.heroBanners.filter(b => b && b.is_active !== false)
+    } else if (props.heroBanner && Object.keys(props.heroBanner).length > 0) {
+        list = [props.heroBanner]
+    }
+    if (list.length === 0) {
+        list = [defaultHeroBanner]
+    }
+    return list.map(b => ({
+        ...defaultHeroBanner,
+        ...b,
+        layout_type: b.layout_type || 'split',
+        overlay_text: b.overlay_text ?? false,
+        show_primary_button: b.show_primary_button !== false && !!b.primary_button_text,
+        show_primary_button_arrow: b.show_primary_button_arrow !== false,
+        show_secondary_button: b.show_secondary_button !== false && !!b.secondary_button_text,
+        show_image: b.show_image !== false,
+    }))
+})
+
+const heroSlide = ref(0)
+const heroTimer = ref(null)
+const heroPaused = ref(false)
+
+const heroSlideCount = computed(() => activeBanners.value.length)
+
+const isBannerSlide = computed(() => true)
+
+const currentBanner = computed(() => {
+    return activeBanners.value[heroSlide.value] || activeBanners.value[0] || defaultHeroBanner
+})
+
+const getThemeClass = (theme) => {
+    switch (theme) {
+        case 'emerald':
+            return 'bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#059669]'
+        case 'indigo':
+            return 'bg-gradient-to-br from-[#0F172A] via-[#1E1B4B] to-[#312E81]'
+        case 'navy':
+            return 'bg-gradient-to-br from-[#0A1128] via-[#001F54] to-[#034078]'
+        case 'purple':
+            return 'bg-gradient-to-br from-[#3B0764] via-[#581C87] to-[#7E22CE]'
+        case 'rose':
+            return 'bg-gradient-to-br from-[#881337] via-[#BE123C] to-[#E11D48]'
+        case 'amber':
+            return 'bg-gradient-to-br from-[#78350F] via-[#9A3412] to-[#B45309]'
+        case 'dark':
+            return 'bg-gradient-to-br from-[#111827] via-[#18181B] to-[#27272A]'
+        case 'teal':
+        default:
+            return 'bg-[#087F8C]'
+    }
+}
+
+const goToHeroSlide = slide => {
+    const total = heroSlideCount.value
+    if (total <= 1) {
+        heroSlide.value = 0
+        return
+    }
+    heroSlide.value = ((Number(slide) % total) + total) % total
+}
+
+const nextHeroSlide = () => goToHeroSlide(heroSlide.value + 1)
+const previousHeroSlide = () => goToHeroSlide(heroSlide.value - 1)
+
+const clearHeroTimer = () => {
+    if (heroTimer.value) {
+        clearInterval(heroTimer.value)
+        heroTimer.value = null
+    }
+}
+
+const startHeroTimer = () => {
+    clearHeroTimer()
+    if (heroSlideCount.value <= 1) return
+
+    heroTimer.value = setInterval(() => {
+        if (!heroPaused.value) nextHeroSlide()
+    }, 6000)
+}
+
+const pauseHero = () => { heroPaused.value = true }
+const resumeHero = () => { heroPaused.value = false }
+
+/*
+|--------------------------------------------------------------------------
+| Recommended Products
+|--------------------------------------------------------------------------
+*/
+
+const recommendedProductsList = computed(() => {
+    if (!Array.isArray(props.recommendedProducts)) {
+        return []
+    }
+
+    // Recommended products must be different from Featured products.
+    const featuredIds = new Set(
+        (props.featuredProducts || [])
+            .filter(product => product && product.id)
+            .map(product => Number(product.id))
+    )
+
+    return props.recommendedProducts
+        .filter(product => {
+            if (!product || !product.id) {
+                return false
+            }
+
+            return !featuredIds.has(Number(product.id))
+        })
+        .map(product => {
+            const numericPrice = Number(product.price ?? 0)
+            const numericOldPrice = Number(product.old_price ?? 0)
+
+            return {
+                ...product,
+
+                name:
+                    product.name ??
+                    product.title ??
+                    'Product',
+
+                category:
+                    product.category?.name ??
+                    product.category_name ??
+                    'Product',
+
+                price:
+                    `₱${numericPrice.toLocaleString()}`,
+
+                oldPrice:
+                    numericOldPrice > 0
+                        ? `₱${numericOldPrice.toLocaleString()}`
+                        : null,
+
+                numericPrice,
+
+                numericOldPrice,
+
+                rating: Number(
+                    product.rating ??
+                    product.average_rating ??
+                    product.reviews_avg_rating ??
+                    0
+                ),
+
+                reviews: Number(
+                    product.reviews_count ??
+                    product.review_count ??
+                    product.reviews ??
+                    0
+                ),
+
+                image: imageUrl(
+                    product.image_path ??
+                    product.image ??
+                    product.image_url ??
+                    product.thumbnail ??
+                    product.photo
+                ),
+
+                soldCount: Number(
+                    product.sold_count ??
+                    product.sales_count ??
+                    product.total_sold ??
+                    0
+                ),
+
+                isSale:
+                    numericOldPrice > 0 &&
+                    numericOldPrice > numericPrice,
+            }
+        })
+})
+
+/*
+|--------------------------------------------------------------------------
+| Trending Products
+|--------------------------------------------------------------------------
+*/
+
+const trendingProducts = computed(() => {
+    return featuredProductsList.value
+        .filter((product) => product.id !== featuredProduct.value?.id)
+        .slice(0, 6);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Backend Category Lookup
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| The database is now the ONLY source of category names/slugs/IDs.
+|
+*/
+
+const backendCategoryMap = computed(() => {
+    const map = {}
+
+    if (!Array.isArray(props.categories)) {
+        return map
+    }
+
+    props.categories.forEach(category => {
+        if (!category) {
+            return
+        }
+
+        const name =
+            category.name ??
+            category.title ??
+            ''
+
+        const slug =
+            category.slug ??
+            slugify(name)
+
+        if (!slug) {
+            return
+        }
+
+        map[slug] = {
+            ...category,
+            slug,
+        }
+    })
+
+    return map
+})
+
+/*
+|--------------------------------------------------------------------------
+| Category Product Counts
+|--------------------------------------------------------------------------
+|
+| This is only a fallback for products already loaded on the page.
+| The database products_count remains authoritative when supplied.
+|
+*/
+
+const categoryProductCounts = computed(() => {
+    const counts = {}
+
+    products.value.forEach(product => {
+        const slug =
+            product.categorySlug ??
+            slugify(product.category)
+
+        if (!slug) {
+            return
+        }
+
+        counts[slug] =
+            (counts[slug] ?? 0) + 1
+    })
+
+    return counts
+})
+
+/*
+|--------------------------------------------------------------------------
+| Category Image Error Handling
+|--------------------------------------------------------------------------
+*/
+
+const categoryImageError = ref({})
+
+const categoryErrorKey = category => {
+    return (
+        category?.slug ||
+        category?.id ||
+        slugify(category?.name) ||
+        'category'
+    )
+}
+
+const handleCategoryImageError = category => {
+    const key = categoryErrorKey(category)
+
+    categoryImageError.value = {
+        ...categoryImageError.value,
+        [key]: true,
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Category Image Resolver
+|--------------------------------------------------------------------------
+*/
+
+const categoryImage = category => {
+    const slug =
+        category?.slug ??
+        slugify(category?.name)
+
+    if (!slug) {
+        return null
+    }
+
+    const databaseImage =
+        category?.image_url ??
+        category?.image_path ??
+        category?.image ??
+        category?.thumbnail ??
+        category?.photo ??
+        null
+
+    /*
+     * Database image takes priority.
+     */
+    if (databaseImage) {
+        return imageUrl(databaseImage)
+    }
+
+    return null
+}
+
+/*
+|--------------------------------------------------------------------------
+| Category List
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| DO NOT use fixedCategories here.
+|
+| props.categories comes directly from the database.
+|
+*/
+
+const categoriesList = computed(() => {
+    if (!Array.isArray(props.categories)) {
+        return []
+    }
+
+    return props.categories
+        .filter(category => category && category.id)
+        .map((category, index) => {
+            const slug =
+                category.slug ??
+                slugify(category.name)
+
+            const backendCount =
+                category.products_count ??
+                category.product_count ??
+                category.productsCount
+
+            const fallbackCount =
+                categoryProductCounts.value[slug] ?? 0
+
+            const productsCount =
+                backendCount !== undefined &&
+                backendCount !== null
+                    ? Number(backendCount)
+                    : Number(fallbackCount)
+
+            return {
+                ...category,
+
+                /*
+                 * Database values
+                 */
+                id: category.id,
+
+                name:
+                    category.name ??
+                    category.title ??
+                    'Category',
+
+                slug,
+
+                productsCount,
+
+                /*
+                 * Presentation values only
+                 */
+                image:
+                    categoryImage({
+                        ...category,
+                        slug,
+                    }),
+
+                key:
+                    `${category.id}-${slug}` ??
+                    `category-${index}`,
+            }
+        })
+})
+
+/*
+|--------------------------------------------------------------------------
+| Category Slider
+|--------------------------------------------------------------------------
+*/
+
+const categorySlider = ref(null)
+
+const scrollCategories = direction => {
+    const container =
+        categorySlider.value
+
+    if (!container) {
+        return
+    }
+
+    const firstCard =
+        container.querySelector('.category-card')
+
+    const cardWidth =
+        firstCard?.getBoundingClientRect().width ?? 220
+
+    const gap = 12
+
+    const amount =
+        Math.max(
+            (cardWidth + gap) * 4,
+            container.clientWidth * 0.72
+        )
+
+    container.scrollBy({
+        left: direction * amount,
+        behavior: 'smooth',
+    })
+}
+
+/*
+|--------------------------------------------------------------------------
+| Category Image State
+|--------------------------------------------------------------------------
+*/
+
+const hasCategoryImage = category => {
+    const key =
+        categoryErrorKey(category)
+
+    return Boolean(
+        category?.image &&
+        !categoryImageError.value[key]
+    )
+}
+
+/*
+|--------------------------------------------------------------------------
+| Category Navigation
+|--------------------------------------------------------------------------
+*/
+
+const goToCategory = category => {
+    const slug = category?.slug ?? slugify(category?.name)
+    if (!slug) return
+
+    try {
+        router.visit(route('buyer.category.show', slug))
+    } catch (e) {
+        const destination = safeRoute('buyer.products')
+        if (destination !== '#') {
+            router.get(destination, { category: slug })
+        }
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Stats (real data from the database)
+|--------------------------------------------------------------------------
+*/
+
+const totalProductsCount = computed(() => {
+    const val = Number(props.marketplaceStats?.products)
+    if (Number.isFinite(val) && val > 0) return val
+    return Array.isArray(props.products) ? props.products.length : 0
+})
+
+const totalCategoriesCount = computed(() => {
+    const val = Number(props.marketplaceStats?.categories)
+    if (Number.isFinite(val) && val > 0) return val
+    return Array.isArray(props.categories) ? props.categories.length : 0
+})
+
+const totalSellersCount = computed(() => {
+    return Number(props.marketplaceStats?.sellers ?? 0)
+})
+
+const marketplaceHighlights = computed(() => {
+    const stats = props.marketplaceStats ?? {}
+
+    return [
+        { key: 'products', icon: 'package', label: 'Approved products', value: totalProductsCount.value },
+        { key: 'sellers', icon: 'store', label: 'Active sellers', value: totalSellersCount.value },
+        { key: 'categories', icon: 'grid', label: 'Categories', value: totalCategoriesCount.value },
+        { key: 'orders', icon: 'truck', label: 'Orders delivered', value: Number(stats.orders_delivered ?? 0) },
+    ]
+})
+
+const whyAlonaData = computed(() => {
+    const data = props.whyAlona || {}
+    const defaultCards = [
+        {
+            number: '01',
+            title: 'Curated for you',
+            description: 'Discover products selected from different categories in one simple marketplace.',
+        },
+        {
+            number: '02',
+            title: 'Trusted sellers',
+            description: 'Shop from sellers who are part of the Alona marketplace community.',
+        },
+        {
+            number: '03',
+            title: 'Simple shopping',
+            description: 'Find products, compare choices, and shop without unnecessary steps.',
+        },
+    ]
+
+    return {
+        eyebrow: data.eyebrow || 'WHY ALONA',
+        title: data.title || 'Shopping should feel effortless.',
+        description: data.description || 'Alona brings products and sellers together through a marketplace designed to keep discovering simple.',
+        cards: Array.isArray(data.cards) && data.cards.length === 3 ? data.cards : defaultCards,
+    }
+})
+
+/*
+|--------------------------------------------------------------------------
+| Scroll Animation
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Flash Sale Countdown Timer
+|--------------------------------------------------------------------------
+*/
+const flashSaleCountdown = ref({
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+})
+let flashTimerInterval = null
+
+const tickFlashCountdown = () => {
+    const now = new Date().getTime()
+    let targetTime
+
+    if (props.flashSaleEndTime) {
+        targetTime = new Date(props.flashSaleEndTime).getTime()
+    } else {
+        const endOfDay = new Date()
+        endOfDay.setHours(23, 59, 59, 999)
+        targetTime = endOfDay.getTime()
+    }
+
+    const diff = Math.max(0, Math.floor((targetTime - now) / 1000))
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    const s = diff % 60
+
+    flashSaleCountdown.value = {
+        hours: String(h).padStart(2, '0'),
+        minutes: String(m).padStart(2, '0'),
+        seconds: String(s).padStart(2, '0'),
+    }
+}
+
+let observer = null
+
+onMounted(() => {
+    if (
+        typeof window === 'undefined' ||
+        typeof IntersectionObserver === 'undefined'
+    ) {
+        document
+            .querySelectorAll('.alona-reveal')
+            .forEach(element => {
+                element.classList.add('is-visible')
+            })
+
+        return
+    }
+
+    observer =
+        new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        return
+                    }
+
+                    entry.target.classList.add(
+                        'is-visible'
+                    )
+
+                    observer?.unobserve(
+                        entry.target
+                    )
+                })
+            },
+            {
+                threshold: 0.08,
+            }
+        )
+
+    document
+        .querySelectorAll('.alona-reveal')
+        .forEach(element => {
+            observer.observe(element)
+        })
+
+    startHeroTimer()
+    tickFlashCountdown()
+    flashTimerInterval = setInterval(tickFlashCountdown, 1000)
+})
+
+onUnmounted(() => {
+    observer?.disconnect()
+    observer = null
+    clearHeroTimer()
+    if (flashTimerInterval) {
+        clearInterval(flashTimerInterval)
+        flashTimerInterval = null
+    }
+})
+</script>
+
+<template>
+    <Head title="Alona" />
+
+    <component :is="pageLayout">
+        <div
+            class="alona-page min-h-screen overflow-hidden bg-[#F8FAF9] text-[#1F2937]"
+        >
+
+            <!-- HERO CAROUSEL: original Discover hero first, then actual sold products -->
+            <section class="relative">
+                <div class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#16A6A0]/10 blur-3xl"></div>
+                <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#F4B942]/10 blur-3xl"></div>
+
+                <div class="mx-auto w-full w-full px-4 pb-7 pt-5 sm:px-6 lg:px-8 2xl:px-10 lg:pb-10">
+                    <div
+                        class="alona-reveal hero-card relative overflow-hidden rounded-[30px] transition-colors duration-700 min-h-[280px] sm:min-h-[350px] md:min-h-[390px] lg:min-h-[430px]"
+                        :class="currentBanner && currentBanner.layout_type !== 'full' ? getThemeClass(currentBanner.theme) : 'bg-slate-900'"
+                        @mouseenter="pauseHero"
+                        @mouseleave="resumeHero"
+                    >
+                        <div v-if="!currentBanner || currentBanner.layout_type !== 'full'" class="absolute -right-24 -top-32 h-96 w-96 rounded-full border-[70px] border-white/[0.05]"></div>
+                        <div v-if="!currentBanner || currentBanner.layout_type !== 'full'" class="absolute -bottom-32 left-[40%] h-72 w-72 rounded-full bg-[#F4B942]/10 blur-2xl"></div>
+
+                        <Transition name="hero-fade">
+                            <!-- 1. FULL IMAGE BANNER (NO OVERLAY TEXT - PURE GRAPHIC BANNER) -->
+                            <div
+                                v-if="isBannerSlide && currentBanner && currentBanner.layout_type === 'full' && !currentBanner.overlay_text"
+                                :key="`banner-full-${currentBanner.id || heroSlide}`"
+                                class="relative w-full overflow-hidden"
+                            >
+                                <Link
+                                    :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                    class="group relative block w-full focus:outline-none"
+                                >
+                                    <img
+                                        :src="currentBanner.image_path || '/images/Alogo.png'"
+                                        :alt="currentBanner.title || 'Promotional Banner'"
+                                        class="h-[280px] sm:h-[350px] md:h-[390px] lg:h-[430px] w-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+                                        loading="eager"
+                                    />
+                                </Link>
+                            </div>
+
+                            <!-- 2. FULL IMAGE BANNER (WITH OVERLAY TEXT & BUTTONS) -->
+                            <div
+                                v-else-if="isBannerSlide && currentBanner && currentBanner.layout_type === 'full' && currentBanner.overlay_text"
+                                :key="`banner-full-overlay-${currentBanner.id || heroSlide}`"
+                                class="relative grid min-h-[390px] grid-cols-1 lg:grid-cols-[1.1fr_.9fr] overflow-hidden"
+                            >
+                                <!-- Background Image Cover -->
+                                <img
+                                    :src="currentBanner.image_path || '/images/Alogo.png'"
+                                    :alt="currentBanner.title || 'Hero Banner'"
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                    loading="eager"
+                                />
+                                <!-- Dark Gradient Scrim -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20"></div>
+
+                                <!-- Content Over Image -->
+                                <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+                                    <div v-if="currentBanner.badge_text" class="hero-item mb-5 flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C] shadow-sm"><Icon name="store" class="h-4 w-4" /></span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-white">
+                                            {{ currentBanner.badge_text }}
+                                        </span>
+                                    </div>
+
+                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl drop-shadow-md">
+                                        {{ currentBanner.title || 'Welcome to' }}
+                                        <span class="text-[#F4B942]">{{ currentBanner.title_highlight || 'Alona.' }}</span>
+                                    </h1>
+
+                                    <p v-if="currentBanner.description" class="hero-item mt-5 max-w-xl text-sm leading-6 text-white/90 sm:text-base sm:leading-7 drop-shadow-sm">
+                                        {{ currentBanner.description }}
+                                    </p>
+
+                                    <div
+                                        v-if="(currentBanner.show_primary_button && currentBanner.primary_button_text) || (currentBanner.show_secondary_button && currentBanner.secondary_button_text)"
+                                        class="hero-item mt-7 flex flex-wrap gap-3"
+                                    >
+                                        <Link
+                                            v-if="currentBanner.show_primary_button && currentBanner.primary_button_text"
+                                            :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
+                                        >
+                                            {{ currentBanner.primary_button_text }}
+                                            <span v-if="currentBanner.show_primary_button_arrow !== false" class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                        </Link>
+
+                                        <a
+                                            v-if="currentBanner.show_secondary_button && currentBanner.secondary_button_text"
+                                            :href="currentBanner.secondary_button_url || '#categories'"
+                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/60 bg-black/20 px-5 py-3.5 text-sm font-extrabold text-white backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
+                                        >
+                                            {{ currentBanner.secondary_button_text }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. SPLIT BANNER (TEXT LEFT + ILLUSTRATION RIGHT - DEFAULT) -->
+                            <div
+                                v-else-if="isBannerSlide && currentBanner"
+                                :key="`banner-${currentBanner.id || heroSlide}`"
+                                class="relative grid min-h-[390px] grid-cols-1"
+                                :class="currentBanner.show_image ? 'lg:grid-cols-[1.05fr_.95fr]' : 'lg:grid-cols-1'"
+                            >
+                                <div class="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+                                    <div class="hero-item mb-5 flex items-center gap-3">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4B942] text-[#087F8C] shadow-sm"><Icon name="store" class="h-4 w-4" /></span>
+                                        <span class="text-xs font-bold uppercase tracking-[0.2em] text-teal-50">
+                                            {{ currentBanner.badge_text || `${totalProductsCount.toLocaleString()} products • ${totalCategoriesCount.toLocaleString()} categories` }}
+                                        </span>
+                                    </div>
+
+                                    <h1 class="hero-item max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                                        {{ currentBanner.title || 'Welcome to' }}
+                                        <span class="text-[#F4B942]">{{ currentBanner.title_highlight || 'Alona.' }}</span>
+                                    </h1>
+
+                                    <p class="hero-item mt-5 max-w-xl text-sm leading-6 text-teal-50 sm:text-base sm:leading-7">
+                                        {{ currentBanner.description || 'Everything you love, all in one place. Discover quality products, trusted sellers, and great deals made for you.' }}
+                                    </p>
+
+                                    <div
+                                        v-if="(currentBanner.show_primary_button && currentBanner.primary_button_text) || (currentBanner.show_secondary_button && currentBanner.secondary_button_text)"
+                                        class="hero-item mt-7 flex flex-wrap gap-3"
+                                    >
+                                        <Link
+                                            v-if="currentBanner.show_primary_button && currentBanner.primary_button_text"
+                                            :href="currentBanner.primary_button_url || safeRoute('buyer.products')"
+                                            class="group inline-flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-extrabold text-[#087F8C] shadow-xl shadow-black/10 transition duration-300 hover:-translate-y-1 hover:bg-[#F4FBFA]"
+                                        >
+                                            {{ currentBanner.primary_button_text }}
+                                            <span v-if="currentBanner.show_primary_button_arrow !== false" class="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8F7F6] transition group-hover:bg-[#087F8C] group-hover:text-white">→</span>
+                                        </Link>
+
+                                        <a
+                                            v-if="currentBanner.show_secondary_button && currentBanner.secondary_button_text"
+                                            :href="currentBanner.secondary_button_url || '#categories'"
+                                            class="inline-flex items-center gap-3 rounded-2xl border border-white/50 px-5 py-3.5 text-sm font-extrabold text-white transition duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#087F8C]"
+                                        >
+                                            {{ currentBanner.secondary_button_text }}
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="currentBanner.show_image"
+                                    class="hero-visual relative flex min-h-[260px] items-center justify-center lg:min-h-0"
+                                >
+                                    <div class="absolute h-[250px] w-[250px] rounded-full bg-white/[0.08] sm:h-[360px] sm:w-[360px] lg:h-[420px] lg:w-[420px]"></div>
+                                    <div class="absolute h-[210px] w-[210px] rounded-full border border-white/10 sm:h-[300px] sm:w-[300px]"></div>
+                                    <img :src="currentBanner.image_path || '/images/Alogo.png'" alt="Alona" class="alona-floating relative z-10 w-[230px] max-w-[75%] object-contain drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)] sm:w-[310px] lg:w-[390px]" />
+
+                                    <div v-if="currentBanner.show_floating_cards !== false" class="absolute right-[7%] top-[12%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 p-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8F7F6] text-[#087F8C]"><Icon name="package" class="h-5 w-5" /></div>
+                                            <div>
+                                                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-400">{{ currentBanner.card_1_title || 'Products' }}</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalProductsCount.toLocaleString() }} {{ currentBanner.card_1_subtitle || 'available' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="currentBanner.show_floating_cards !== false" class="absolute bottom-[12%] left-[7%] z-20 hidden rounded-2xl border border-white/20 bg-white/95 px-4 py-3 shadow-xl backdrop-blur sm:block">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4B942] text-white"><Icon name="grid" class="h-4 w-4" /></div>
+                                            <div>
+                                                <p class="text-[9px] font-bold text-gray-400">{{ currentBanner.card_2_title || 'CATEGORIES' }}</p>
+                                                <p class="text-xs font-extrabold text-gray-900">{{ totalCategoriesCount.toLocaleString() }} {{ currentBanner.card_2_subtitle || 'to explore' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Transition>
+
+                        <template v-if="heroSlideCount > 1">
+                            <button type="button" aria-label="Previous hero slide" class="absolute left-4 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/10 text-white backdrop-blur transition hover:bg-white hover:text-[#087F8C] sm:left-6" @click="previousHeroSlide">←</button>
+                            <button type="button" aria-label="Next hero slide" class="absolute right-4 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/10 text-white backdrop-blur transition hover:bg-white hover:text-[#087F8C] sm:right-6" @click="nextHeroSlide">→</button>
+
+                            <div class="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 backdrop-blur">
+                                <button
+                                    v-for="index in heroSlideCount"
+                                    :key="`hero-dot-${index}`"
+                                    type="button"
+                                    :aria-label="`Go to hero slide ${index}`"
+                                    class="h-1.5 rounded-full transition-all duration-300"
+                                    :class="heroSlide === index - 1 ? 'w-5 bg-white' : 'w-1.5 bg-white/45 hover:bg-white/70'"
+                                    @click="goToHeroSlide(index - 1)"
+                                ></button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 SHOP BY CATEGORY
+            ====================================================== -->
+
+            <section
+                id="categories"
+                class="alona-reveal mx-auto w-full w-full scroll-mt-20 px-4 pb-9 sm:px-6 lg:px-8 2xl:px-10 lg:pb-12"
+            >
+
+                <div
+                    class="mb-5 flex items-end justify-between gap-4"
+                >
+
+                    <div>
+
+                        <div
+                            class="flex items-center gap-2"
+                        >
+
+                            <span
+                                class="h-1.5 w-1.5 rounded-full bg-[#F4B942]"
+                            ></span>
+
+                            <p
+                                class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                            >
+                                Explore Alona
+                            </p>
+
+                        </div>
+
+                        <h2
+                            class="mt-1.5 text-2xl font-black tracking-[-0.03em] text-[#1F2937] sm:text-3xl"
+                        >
+                            Categories
+                        </h2>
+
+                        <p
+                            class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm"
+                        >
+                            Browse popular categories and
+                            find something you'll love.
+                        </p>
+
+                    </div>
+
+                    <div
+                        v-if="categoriesList.length > 1"
+                        class="hidden items-center gap-2 sm:flex"
+                    >
+
+                        <button
+                            type="button"
+                            aria-label="Previous categories"
+                            class="category-nav-button"
+                            @click="scrollCategories(-1)"
+                        >
+
+                            <svg
+                                class="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="m15 18-6-6 6-6"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+
+                        </button>
+
+                        <button
+                            type="button"
+                            aria-label="Next categories"
+                            class="category-nav-button"
+                            @click="scrollCategories(1)"
+                        >
+
+                            <svg
+                                class="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+
+                                <path
+                                    d="m9 18 6-6-6-6"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+
+                            </svg>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DATABASE CATEGORIES -->
+
+                <div
+                    v-if="categoriesList.length"
+                    class="relative"
+                >
+
+                    <div
+                        class="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-r from-[#F8FAF9] to-transparent sm:block"
+                    ></div>
+
+                    <div
+                        ref="categorySlider"
+                        class="category-slider flex gap-3 overflow-x-auto scroll-smooth pb-4 snap-x snap-mandatory"
+                    >
+
+                        <button
+                            v-for="(category, index) in categoriesList"
+                            :key="category.key"
+                            type="button"
+                            class="category-card group relative isolate flex-none snap-start overflow-hidden rounded-[20px] bg-white text-left shadow-sm ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-[#087F8C]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087F8C]/40"
+                            :style="{
+                                animationDelay: `${index * 55}ms`,
+                            }"
+                            @click="goToCategory(category)"
+                        >
+
+                            <div
+                                class="relative aspect-[1.05] overflow-hidden bg-[#E8F7F6]"
+                            >
+
+                                <img
+                                    v-if="hasCategoryImage(category)"
+                                    :src="category.image"
+                                    :alt="category.name"
+                                    class="category-image h-full w-full object-cover transition duration-700 ease-out group-hover:scale-110"
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer"
+                                    @error="handleCategoryImageError(category)"
+                                />
+
+                                <div
+                                    v-else
+                                    class="flex h-full w-full items-center justify-center bg-[#E8F7F6] transition duration-500 group-hover:scale-105"
+                                >
+
+                                    <div
+                                        class="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-[#087F8C] shadow-sm backdrop-blur"
+                                    >
+                                        <Icon name="grid" class="h-7 w-7" />
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"
+                                ></div>
+
+                                <div
+                                    class="absolute inset-0 bg-[#087F8C]/0 transition duration-500 group-hover:bg-[#087F8C]/20"
+                                ></div>
+
+                                <div
+                                    class="absolute right-3 top-3 flex h-8 w-8 translate-y-1 items-center justify-center rounded-full border border-white/30 bg-white/95 text-[#087F8C] opacity-0 shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
+                                >
+
+                                    <svg
+                                        class="h-3.5 w-3.5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+
+                                        <path
+                                            d="M5 12h13"
+                                            stroke-linecap="round"
+                                        />
+
+                                        <path
+                                            d="m13 6 6 6-6 6"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        />
+
+                                    </svg>
+
+                                </div>
+
+                                <div
+                                    class="absolute inset-x-0 bottom-0 z-10 p-4"
+                                >
+
+                                    <h3
+                                        class="line-clamp-2 text-[13px] font-black leading-4 text-white drop-shadow-md sm:text-sm"
+                                    >
+                                        {{ category.name }}
+                                    </h3>
+
+                                    <div
+                                        class="mt-1.5 flex items-center gap-1.5"
+                                    >
+
+                                        <span
+                                            class="text-[10px] font-semibold text-white/80"
+                                        >
+                                            {{
+                                                category.productsCount.toLocaleString()
+                                            }}
+
+                                            {{
+                                                category.productsCount === 1
+                                                    ? 'product'
+                                                    : 'products'
+                                            }}
+                                        </span>
+
+                                        <span
+                                            class="h-1 w-1 rounded-full bg-white/50"
+                                        ></span>
+
+                                        <span
+                                            class="text-[10px] font-semibold text-white/70"
+                                        >
+                                            Explore
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="pointer-events-none absolute right-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-l from-[#F8FAF9] to-transparent sm:block"
+                    ></div>
+
+                </div>
+
+
+                <!-- EMPTY CATEGORY STATE -->
+
+                <div
+                    v-else
+                    class="rounded-[24px] border border-dashed border-gray-200 bg-white p-10 text-center"
+                >
+
+                    <div
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F7F6] text-2xl"
+                    >
+                        <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                    </div>
+
+                    <h3
+                        class="mt-4 text-sm font-extrabold text-gray-900"
+                    >
+                        Categories are coming soon
+                    </h3>
+
+                    <p
+                        class="mx-auto mt-1 max-w-sm text-xs leading-5 text-gray-500"
+                    >
+                        No active marketplace categories
+                        are currently available.
+                    </p>
+
+                </div>
+
+
+                <div
+                    v-if="categoriesList.length > 6"
+                    class="mt-1 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#64748B]"
+                >
+
+                    <span
+                        class="h-1 w-1 rounded-full bg-[#F4B942]"
+                    ></span>
+
+                    <span>
+                        Swipe or use the arrows to explore more categories
+                    </span>
+
+                    <span
+                        class="h-1 w-1 rounded-full bg-[#F4B942]"
+                    ></span>
+
+                </div>
+
+                <div class="mt-4 sm:hidden">
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        View all categories
+
+                        <span
+                            class="transition-transform duration-300 group-hover:translate-x-1"
+                        >
+                            →
+                        </span>
+
+                    </Link>
+
+                </div>
+
+            </section>
+
+            <!-- =====================================================
+                 FLASH SALES (LIMITED TIME OFFER WITH LIVE COUNTDOWN)
+            ====================================================== -->
+
+            <section
+                v-if="(flashSales && flashSales.length) || (bundleDeals && bundleDeals.length)"
+                class="alona-reveal relative overflow-hidden bg-[#F4B942]"
+            >
+                <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/20"></div>
+                <div aria-hidden="true" class="pointer-events-none absolute -bottom-28 left-[45%] h-64 w-64 rounded-full bg-[#087F8C]/10"></div>
+
+                <div class="relative mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
+                    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8 xl:gap-10">
+
+                        <!-- ==============================================
+                             LEFT HALF: FLASH SALES (COMPACT 1-ROW SLIDER)
+                        =============================================== -->
+                        <div v-if="flashSales && flashSales.length" class="flex flex-col">
+                            <!-- Flash Header -->
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#087F8C]">
+                                            Limited Time
+                                        </p>
+                                    </div>
+
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        <div class="flex items-center gap-1">
+                                            <Icon name="bolt" class="h-5 w-5 shrink-0 text-[#087F8C]" />
+                                            <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
+                                                Flash Sales
+                                            </h2>
+                                        </div>
+
+                                        <!-- Live Countdown Timer -->
+                                        <div class="flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-0.5 text-white shadow-2xs">
+                                            <span class="text-[8px] font-bold uppercase tracking-wider text-amber-400">Ends in</span>
+                                            <div class="flex items-center gap-0.5 font-mono text-[11px] font-black">
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.hours }}</span>
+                                                <span class="text-amber-400 font-bold">:</span>
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.minutes }}</span>
+                                                <span class="text-amber-400 font-bold">:</span>
+                                                <span class="rounded bg-white/10 px-1 py-0.2 text-white">{{ flashSaleCountdown.seconds }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <p class="mt-0.5 text-[11px] text-slate-700 truncate">
+                                Grab hot discounts before the timer expires. Limited quantities available!
+                            </p>
+
+                            <!-- 3D product card carousel -->
+                            <OfferCoverflow
+                                :items="flashSales"
+                                label="Flash sale offers"
+                                v-slot="{ item }"
+                            >
+                                <Link
+                                    :href="safeRoute('buyer.product', '#', item.product_id)"
+                                    class="product-card group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-white p-2.5"
+                                >
+                                    <!-- Image & Badges -->
+                                    <div class="relative h-32 sm:h-36 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
+                                        <img
+                                            v-if="item.image"
+                                            :src="item.image"
+                                            :alt="item.name"
+                                            class="h-full w-full object-contain transition duration-500 group-hover:scale-105"
+                                            loading="lazy"
+                                        />
+                                        <div v-else class="flex h-full items-center justify-center text-slate-300">
+                                            <Icon name="bag" class="h-6 w-6 text-[#087F8C]/40" />
+                                        </div>
+
+                                        <!-- Discount Badge -->
+                                        <span
+                                            v-if="item.discount_percentage > 0"
+                                            class="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                        >
+                                            <Icon name="bolt" class="h-3 w-3" />
+                                            <span>-{{ item.discount_percentage }}%</span>
+                                        </span>
+
+                                        <!-- Stock status badge -->
+                                        <span
+                                            v-if="item.remaining <= 5 && item.remaining > 0"
+                                            class="absolute right-1 top-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-amber-300 backdrop-blur-2xs"
+                                        >
+                                            {{ item.remaining }} left
+                                        </span>
+                                    </div>
+
+                                    <!-- Product Details -->
+                                    <div class="mt-1.5 flex flex-1 flex-col justify-between">
+                                        <p class="line-clamp-1 text-xs font-bold text-gray-900 transition group-hover:text-[#087F8C]">
+                                            {{ item.name }}
+                                        </p>
+
+                                        <div class="mt-1 space-y-1">
+                                            <div class="flex items-baseline gap-1 flex-wrap">
+                                                <span class="text-xs sm:text-sm font-black text-[#087F8C]">
+                                                    ₱{{ Number(item.flash_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                                </span>
+                                                <span
+                                                    v-if="item.original_price > item.flash_price"
+                                                    class="text-[10px] text-gray-400 line-through"
+                                                >
+                                                    ₱{{ Number(item.original_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                                </span>
+                                            </div>
+
+                                            <!-- Progress Bar -->
+                                            <div>
+                                                <div class="h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                                                    <div
+                                                        class="h-full rounded-full bg-gradient-to-r from-amber-400 to-[#087F8C] transition-all duration-500"
+                                                        :style="{ width: `${Math.max(12, item.percent_sold)}%` }"
+                                                    ></div>
+                                                </div>
+                                                <div class="mt-0.5 flex items-center justify-between text-[9px] text-gray-500">
+                                                    <span class="inline-flex items-center gap-0.5 font-bold text-amber-600"><Icon name="flame" class="h-3 w-3" /> {{ item.sold_quantity }} sold</span>
+                                                    <span>{{ item.remaining }} left</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </OfferCoverflow>
+                        </div>
+
+                        <!-- ==============================================
+                             RIGHT HALF: BUNDLE DEALS (UNIFIED SINGLE CARD)
+                        =============================================== -->
+                        <div
+                            v-if="bundleDeals && bundleDeals.length"
+                            class="flex flex-col border-t border-slate-200/80 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 xl:pl-8"
+                        >
+                            <!-- Bundle Header -->
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#087F8C]">
+                                            Store Specials
+                                        </p>
+                                    </div>
+
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <Icon name="gift" class="h-5 w-5 shrink-0 text-[#087F8C]" />
+                                        <h2 class="text-base font-black tracking-tight text-gray-900 sm:text-lg">
+                                            Bundle Deals
+                                        </h2>
+                                        <span class="rounded bg-teal-100 px-1.5 py-0.5 text-[9px] font-bold text-teal-800">
+                                            Save More
+                                        </span>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <p class="mt-0.5 text-[11px] text-slate-700 truncate">
+                                Buy multiple items from the same store and unlock instant percentage discounts at checkout!
+                            </p>
+
+                            <!-- 3D bundle card carousel -->
+                            <OfferCoverflow
+                                :items="bundleDeals"
+                                label="Bundle deals"
+                                v-slot="{ item: bundle }"
+                            >
+                                <div
+                                    class="group flex h-full flex-col justify-between gap-3 rounded-2xl bg-white p-3"
+                                >
+                                    <div class="min-w-0 flex-1">
+                                        <!-- Line 1: Badge + Store -->
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs">
+                                                BUY {{ bundle.min_quantity }} GET {{ Math.round(bundle.discount_value) }}% OFF
+                                            </span>
+                                            <span class="truncate text-[10px] font-semibold text-slate-500">
+                                                {{ bundle.store_name }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Line 2: Title -->
+                                        <h3 class="mt-3 line-clamp-2 text-sm font-extrabold text-slate-900 transition group-hover:text-[#087F8C]">
+                                            {{ bundle.name }}
+                                        </h3>
+
+                                        <!-- Line 3: Product Thumbnails -->
+                                        <div class="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+                                            <div
+                                                v-for="p in bundle.products.slice(0, 3)"
+                                                :key="p.id"
+                                                class="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs"
+                                                :title="p.name"
+                                            >
+                                                <img
+                                                    v-if="p.image"
+                                                    :src="p.image"
+                                                    :alt="p.name"
+                                                    class="h-full w-full rounded object-cover"
+                                                />
+                                                <div v-else class="flex h-full items-center justify-center text-[8px] text-slate-400">
+                                                    <Icon name="package" class="h-5 w-5" />
+                                                </div>
+                                            </div>
+                                            <span
+                                                v-if="bundle.products.length > 3"
+                                                class="rounded bg-teal-50 px-1.5 py-0.5 text-[9px] font-extrabold text-teal-700"
+                                            >
+                                                +{{ bundle.products.length - 3 }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action Button -->
+                                    <Link
+                                        :href="safeRoute('buyer.store.show', `/store/${bundle.seller_id}`, bundle.seller_id)"
+                                        class="shrink-0 inline-flex items-center justify-center gap-1 rounded-lg bg-[#087F8C] px-3 py-1.5 text-[11px] font-bold text-white shadow-2xs transition hover:bg-[#066B76] active:scale-95"
+                                    >
+                                        <span>View Store</span>
+                                        <Icon name="arrow-right" class="h-3 w-3" />
+                                    </Link>
+                                </div>
+                            </OfferCoverflow>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 TRENDING PRODUCTS
+            ====================================================== -->
+
+            <section
+                class="alona-reveal border-y border-gray-100 bg-white"
+            >
+
+                <div
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                >
+
+                    <div
+                        class="flex items-end justify-between gap-4"
+                    >
+
+                        <div>
+
+                            <div
+                                class="flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="h-2 w-2 rounded-full bg-[#F4B942]"
+                                ></span>
+
+                                <p
+                                    class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                                >
+                                    Trending now
+                                </p>
+
+                            </div>
+
+                            <h2
+                                class="mt-2 text-2xl font-black tracking-tight text-gray-900 sm:text-3xl"
+                            >
+                                People are looking
+                            </h2>
+
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                        >
+                            See everything →
+                        </Link>
+
+                    </div>
+
+                    <div
+                        v-if="trendingProducts.length"
+                        class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    >
+
+                        <Link
+                            v-for="(product, index) in trendingProducts"
+                            :key="product.id ?? `trending-${index}`"
+                            :href="safeRoute('buyer.product', '#', product.id)"
+                            class="product-card group"
+                        >
+
+                            <div
+                                class="relative aspect-[.92] overflow-hidden rounded-[22px] bg-[#F4F7F6]"
+                            >
+
+                                <img
+                                    v-if="product.image || product.image_path"
+                                    :src="product.image || imageUrl(product.image_path)"
+                                    :alt="product.name"
+                                    class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                />
+
+                                <div
+                                    v-else
+                                    class="flex h-full items-center justify-center text-4xl"
+                                >
+                                    <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                                </div>
+
+                                <span
+                                    class="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[10px] font-black text-[#087F8C] shadow-sm backdrop-blur"
+                                >
+                                    {{
+                                        String(
+                                            index + 1
+                                        ).padStart(
+                                            2,
+                                            '0'
+                                        )
+                                    }}
+                                </span>
+
+                                <span
+                                    v-if="product.isSale"
+                                    class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                                >
+                                    SALE
+                                </span>
+
+                            </div>
+
+                            <div
+                                class="px-1 pt-4"
+                            >
+
+                                <p
+                                    class="text-[10px] font-bold uppercase tracking-wider text-[#087F8C]"
+                                >
+                                    {{ typeof product.category === 'object' && product.category ? (product.category.name || 'PRODUCT') : (product.category_name || product.category || 'PRODUCT') }}
+                                </p>
+
+                                <h3
+                                    class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                                >
+                                    {{ product.name }}
+                                </h3>
+
+                                <div
+                                    class="mt-2 flex items-center gap-2"
+                                >
+
+                                    <span
+                                        class="text-sm font-black text-[#087F8C]"
+                                    >
+                                        {{ product.price }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.oldPrice"
+                                        class="text-[10px] text-gray-400 line-through"
+                                    >
+                                        {{ product.oldPrice }}
+                                    </span>
+
+                                </div>
+
+                                <div
+                                    class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                                >
+
+                                    <span
+                                        class="text-[#F4B942]"
+                                    >
+                                        ★
+                                    </span>
+
+                                    <span>
+                                        {{
+                                            product.rating.toFixed(
+                                                1
+                                            )
+                                        }}
+                                    </span>
+
+                                    <span v-if="product.reviews !== undefined && product.reviews !== null">
+                                        ({{ product.reviews }})
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </Link>
+
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-[#F8FAF9] p-12 text-center"
+                    >
+
+                        <div
+                            class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F7F6] text-2xl"
+                        >
+                            <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                        </div>
+
+                        <h3
+                            class="mt-4 text-sm font-extrabold text-gray-900"
+                        >
+                            Products are coming soon
+                        </h3>
+
+                        <p
+                            class="mx-auto mt-1 max-w-sm text-xs leading-5 text-gray-500"
+                        >
+                            Check back soon for new products
+                            from Alona sellers.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- =====================================================
+                 PROMOTIONS & VOUCHERS (CLAIMABLE)
+            ====================================================== -->
+
+            <section
+                class="alona-reveal border-y border-gray-100 bg-[#F8FAF9]"
+            >
+                <div
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                >
+                    <div class="flex items-end justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-[#F4B942]"></span>
+
+                                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]">
+                                    Deals & Vouchers
+                                </p>
+                            </div>
+
+                            <h2 class="mt-2 text-2xl font-black tracking-[-0.03em] text-gray-900 sm:text-3xl">
+                                Active Promotions
+                            </h2>
+
+                            <p class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm">
+                                Claim vouchers to your account and apply extra discounts at checkout.
+                            </p>
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.vouchers')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:gap-3 sm:flex"
+                        >
+                            View all vouchers →
+                        </Link>
+                    </div>
+
+                    <div
+                        v-if="props.promotions.length"
+                        class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+                    >
+                        <div
+                            v-for="promotion in props.promotions"
+                            :key="promotion.id"
+                            class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
+                        >
+                            <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#E8F7F6]/60"></div>
+
+                            <div>
+                                <!-- BADGES -->
+                                <div class="relative flex flex-wrap items-center justify-between gap-2">
+                                    <span
+                                        v-if="promotion.is_platform || !promotion.seller"
+                                        class="rounded-full bg-[#E8F7F6] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-[#087F8C]"
+                                    >
+                                        Platform Voucher
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="max-w-[170px] truncate rounded-full bg-[#FFF7E6] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-[#B47A08]"
+                                        :title="promotion.seller?.name"
+                                    >
+                                        Store: {{ promotion.seller?.name }}
+                                    </span>
+
+                                    <span
+                                        v-if="promotion.is_claimed"
+                                        class="inline-flex items-center gap-1 rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[9px] font-extrabold text-[#16A34A]"
+                                    >
+                                        Claimed
+                                    </span>
+                                    <span
+                                        v-else-if="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3"
+                                        class="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[9px] font-bold text-[#DC2626]"
+                                    >
+                                        Expiring Soon
+                                    </span>
+                                </div>
+
+                                <!-- VALUE & MIN SPEND -->
+                                <div class="relative mt-2">
+                                    <p class="text-lg font-black tracking-tight text-[#087F8C]">
+                                        {{ formatPromotionValue(promotion) }}
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-[#64748B]">
+                                        {{ Number(promotion.min_spend ?? 0) > 0 ? `Min. spend ₱${Number(promotion.min_spend).toLocaleString('en-PH')}` : 'No minimum spend' }}
+                                    </p>
+                                </div>
+
+                                <!-- EXPIRY INFO -->
+                                <div class="relative mt-3 flex items-center justify-between text-[10px] text-[#64748B]">
+                                    <span>Validity:</span>
+                                    <span :class="promotionDaysLeft(promotion.expires_at) !== null && promotionDaysLeft(promotion.expires_at) <= 3 ? 'font-bold text-[#DC2626]' : 'font-medium text-gray-700'">
+                                        {{ formatPromotionDate(promotion.expires_at) ? `Until ${formatPromotionDate(promotion.expires_at)}` : 'No expiration' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- CLAIM ACTION BUTTON -->
+                            <div class="relative mt-3 pt-2 border-t border-[#F1F5F9]">
+                                <button
+                                    v-if="promotion.is_claimed"
+                                    type="button"
+                                    disabled
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#DCFCE7] py-2 text-xs font-extrabold text-[#16A34A] cursor-default shadow-sm"
+                                >
+                                    <Icon name="check" class="h-4 w-4" />
+                                    <span>Claimed</span>
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    :disabled="claimingPromotionId === promotion.id"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#087F8C] py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#066B76] active:scale-[0.99] disabled:opacity-50"
+                                    @click="claimPromotion(promotion.id)"
+                                >
+                                    <span><Icon name="ticket" class="h-4 w-4" /></span>
+                                    <span>{{ claimingPromotionId === promotion.id ? 'Claiming...' : 'Claim Voucher' }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-white px-6 py-12 text-center"
+                    >
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF6DF] text-2xl">
+                            <Icon name="ticket" class="h-7 w-7" />
+                        </div>
+
+                        <h3 class="mt-4 text-sm font-extrabold text-gray-900">
+                            No active promotions right now
+                        </h3>
+
+                        <p class="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
+                            Check back soon for vouchers and special deals from Alona sellers.
+                        </p>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#087F8C] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#16A6A0]"
+                        >
+                            Browse products →
+                        </Link>
+                    </div>
+
+                    <div class="mt-5 sm:hidden">
+                        <Link
+                            :href="safeRoute('buyer.vouchers')"
+                            class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                        >
+                            View all vouchers
+                            <span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 FEATURED PRODUCTS
+            ====================================================== -->
+
+            <section
+                v-if="featuredProductsList.length"
+                class="alona-reveal mx-auto w-full w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                        >
+                            Featured for you
+                        </p>
+
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            Featured Products
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Handpicked products worth discovering.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        See all products →
+                    </Link>
+                </div>
+
+                <div
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                    <Link
+                        v-for="product in featuredProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-[#F4B942] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C]"
+                            >
+                                Featured
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">★</span>
+                                <span class="font-semibold text-gray-600">
+                                    {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
+                                </span>
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        See all products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                 RECOMMENDED PRODUCTS
+            ====================================================== -->
+
+            <section
+                v-if="recommendedProductsList.length"
+                class="alona-reveal mx-auto w-full w-full px-4 py-7 sm:px-6 lg:px-8 2xl:px-10 lg:py-9"
+            >
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                            <div
+                                class="flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="h-2 w-2 rounded-full bg-[#F4B942]"
+                                ></span>
+
+                                <p
+                                    class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                                >
+                                    Recommended For You
+                                </p>
+
+                            </div>
+                        <h2
+                            class="mt-1 text-xl font-black tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            You may also like
+                        </h2>
+
+                        <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                            Products selected based on your shopping activity.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] sm:flex"
+                    >
+                        Browse more →
+                    </Link>
+                </div>
+
+                <div
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                    <Link
+                        v-for="product in recommendedProductsList"
+                        :key="product.id"
+                        :href="safeRoute('buyer.product', '#', product.id)"
+                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                    >
+                        <div
+                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                        >
+                            <img
+                                v-if="product.image"
+                                :src="product.image"
+                                :alt="product.name"
+                                class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full items-center justify-center text-4xl"
+                            >
+                                <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                            </div>
+
+                            <span
+                                class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm"
+                            >
+                                Recommended
+                            </span>
+
+                            <span
+                                v-if="product.isSale"
+                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                            >
+                                SALE
+                            </span>
+                        </div>
+
+                        <div class="p-3.5">
+                            <p
+                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                            >
+                                {{ product.category }}
+                            </p>
+
+                            <h3
+                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
+                            >
+                                {{ product.name }}
+                            </h3>
+
+                            <div class="mt-2 flex items-center gap-2">
+                                <span
+                                    class="text-sm font-black text-[#087F8C]"
+                                >
+                                    {{ product.price }}
+                                </span>
+
+                                <span
+                                    v-if="product.oldPrice"
+                                    class="text-[10px] text-gray-400 line-through"
+                                >
+                                    {{ product.oldPrice }}
+                                </span>
+                            </div>
+
+                            <div
+                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                            >
+                                <span class="text-[#F4B942]">
+                                    ★
+                                </span>
+
+                                <span class="font-semibold text-gray-600">
+                                    {{
+                                        product.rating > 0
+                                            ? product.rating.toFixed(1)
+                                            : 'New'
+                                    }}
+                                </span>
+
+                                <span v-if="product.reviews > 0">
+                                    ({{ product.reviews }})
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="product.seller?.name"
+                                class="mt-2 truncate text-[10px] text-gray-400"
+                            >
+                                {{ product.seller.name }}
+                            </p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="mt-5 sm:hidden">
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                    >
+                        Browse more products
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                        </span>
+                    </Link>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                 RECENTLY VIEWED
+            ====================================================== -->
+
+            <section
+                v-if="recentlyViewed.length"
+                class="alona-reveal border-b border-gray-100 bg-[#F8FAF9]"
+            >
+
+                <div
+                    class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+                >
+
+                    <div
+                        class="flex items-end justify-between gap-4"
+                    >
+
+                        <div>
+
+                            <div
+                                class="flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="h-2 w-2 rounded-full bg-[#F4B942]"
+                                ></span>
+
+                                <p
+                                    class="text-[10px] font-black uppercase tracking-[0.22em] text-[#087F8C]"
+                                >
+                                    Pick up where you left off
+                                </p>
+
+                            </div>
+
+                            <h2
+                                class="mt-2 text-2xl font-black tracking-[-0.03em] text-gray-900 sm:text-3xl"
+                            >
+                                Recently Viewed
+                            </h2>
+
+                            <p
+                                class="mt-1 text-xs leading-5 text-[#64748B] sm:text-sm"
+                            >
+                                Products you've looked at recently.
+                            </p>
+
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="hidden items-center gap-2 text-xs font-bold text-[#087F8C] transition hover:gap-3 sm:flex"
+                        >
+                            Continue shopping
+                            →
+                        </Link>
+
+                    </div>
+
+                    <div
+                        class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    >
+
+                        <Link
+                            v-for="(product, index) in recentlyViewed"
+                            :key="product.id ?? `recent-${index}`"
+                            :href="safeRoute('buyer.product', '#', product.id)"
+                            class="recent-product-card group"
+                        >
+
+                            <div
+                                class="relative aspect-[.92] overflow-hidden rounded-[22px] bg-white ring-1 ring-black/[0.04]"
+                            >
+
+                                <img
+                                    v-if="product.image"
+                                    :src="product.image"
+                                    :alt="product.name"
+                                    class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-105"
+                                    loading="lazy"
+                                />
+
+                                <div
+                                    v-else
+                                    class="flex h-full items-center justify-center text-4xl"
+                                >
+                                    <Icon name="bag" class="h-9 w-9 text-[#087F8C]/60" />
+                                </div>
+
+                                <span
+                                    class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm backdrop-blur"
+                                >
+                                    Viewed
+                                </span>
+
+                                <span
+                                    v-if="product.isSale"
+                                    class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
+                                >
+                                    SALE
+                                </span>
+
+                            </div>
+
+                            <div
+                                class="px-1 pt-3.5"
+                            >
+
+                                <p
+                                    class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
+                                >
+                                    {{ product.category }}
+                                </p>
+
+                                <h3
+                                    class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition duration-300 group-hover:text-[#087F8C]"
+                                >
+                                    {{ product.name }}
+                                </h3>
+
+                                <div
+                                    class="mt-2 flex items-center gap-2"
+                                >
+
+                                    <span
+                                        class="text-sm font-black text-[#087F8C]"
+                                    >
+                                        {{ product.price }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.oldPrice"
+                                        class="text-[10px] text-gray-400 line-through"
+                                    >
+                                        {{ product.oldPrice }}
+                                    </span>
+
+                                </div>
+
+                                <div
+                                    class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
+                                >
+
+                                    <span
+                                        class="text-[#F4B942]"
+                                    >
+                                        ★
+                                    </span>
+
+                                    <span
+                                        class="font-semibold text-gray-600"
+                                    >
+                                        {{
+                                            product.rating > 0
+                                                ? product.rating.toFixed(1)
+                                                : 'New'
+                                        }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.reviews > 0"
+                                    >
+                                        ({{ product.reviews }})
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </Link>
+
+                    </div>
+
+                    <div class="mt-6 sm:hidden">
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="group flex w-full items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-extrabold text-[#087F8C] transition hover:border-[#087F8C]/20 hover:bg-[#E8F7F6]"
+                        >
+                            Continue shopping
+
+                            <span
+                                class="transition-transform duration-300 group-hover:translate-x-1"
+                            >
+                                →
+                            </span>
+
+                        </Link>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 DEAL BANNER
+            ====================================================== -->
+
+            <section
+                class="alona-reveal mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+            >
+
+                <div
+                    class="relative overflow-hidden rounded-[30px] bg-[#F4B942]"
+                >
+
+                    <div
+                        class="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/20"
+                    ></div>
+
+                    <div
+                        class="absolute -bottom-28 left-[45%] h-64 w-64 rounded-full bg-[#087F8C]/10"
+                    ></div>
+
+                    <div
+                        class="relative grid items-center gap-8 px-7 py-9 sm:px-10 lg:grid-cols-[1fr_auto] lg:px-14 lg:py-11"
+                    >
+
+                        <div>
+
+                            <span
+                                class="inline-flex rounded-full bg-white/70 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#087F8C]"
+                            >
+                                Alona finds
+                            </span>
+
+                            <h2
+                                class="mt-4 max-w-2xl text-3xl font-black leading-tight tracking-[-0.03em] text-[#087F8C] sm:text-4xl"
+                            >
+                                Good finds don't have
+                                to be complicated.
+                            </h2>
+
+                            <p
+                                class="mt-3 max-w-xl text-sm leading-6 text-[#087F8C]/75"
+                            >
+                                Browse products, discover
+                                new sellers, and find
+                                something that fits your
+                                everyday life.
+                            </p>
+
+                        </div>
+
+                        <Link
+                            :href="safeRoute('buyer.products')"
+                            class="inline-flex w-fit items-center gap-3 rounded-2xl bg-[#087F8C] px-5 py-3.5 text-xs font-extrabold text-white shadow-lg transition hover:-translate-y-1 hover:bg-[#066974]"
+                        >
+                            Explore deals →
+                        </Link>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 WHY ALONA
+            ====================================================== -->
+
+            <section
+                class="alona-reveal bg-[#087F8C]"
+            >
+
+                <div
+                    class="mx-auto w-full w-full px-4 py-12 sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
+                >
+
+                    <div
+                        class="grid items-center gap-8 lg:grid-cols-[1fr_1.8fr] xl:gap-12"
+                    >
+
+                        <div>
+
+                            <p
+                                class="text-xs font-black uppercase tracking-[0.22em] text-[#F4B942]"
+                            >
+                                {{ whyAlonaData.eyebrow }}
+                            </p>
+
+                            <h2
+                                class="mt-3 text-3xl font-black leading-tight tracking-[-0.03em] text-white sm:text-4xl lg:text-[40px]"
+                            >
+                                {{ whyAlonaData.title }}
+                            </h2>
+
+                            <p
+                                class="mt-4 max-w-xl text-sm leading-6 text-teal-50"
+                            >
+                                {{ whyAlonaData.description }}
+                            </p>
+
+                        </div>
+
+                        <div
+                            class="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:gap-5"
+                        >
+
+                            <div
+                                v-for="(card, index) in whyAlonaData.cards"
+                                :key="index"
+                                class="flex min-h-[175px] flex-col justify-between rounded-[26px] border border-white/10 bg-white/[0.07] p-6 transition duration-300 hover:-translate-y-1 hover:bg-white/10"
+                            >
+
+                                <span class="text-xs font-bold text-[#F4B942]">
+                                    {{ card.number || String(index + 1).padStart(2, '0') }}
+                                </span>
+
+                                <div class="mt-6">
+                                    <h3
+                                        class="text-sm font-bold text-white"
+                                    >
+                                        {{ card.title }}
+                                    </h3>
+
+                                    <p
+                                        class="mt-1.5 text-xs leading-relaxed text-teal-50/80"
+                                    >
+                                        {{ card.description }}
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 SELLER CTA
+            ====================================================== -->
+
+            <section
+                class="alona-reveal mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
+            >
+
+                <div
+                    class="relative overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
+                >
+
+                    <div
+                        class="absolute right-0 top-0 h-40 w-40 rounded-full bg-[#E8F7F6]"
+                    ></div>
+
+                    <div
+                        class="relative grid gap-8 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12"
+                    >
+
+                        <div>
+
+                            <span
+                                class="inline-flex rounded-full bg-[#FFF6DF] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-[#A87308]"
+                            >
+                                For sellers
+                            </span>
+
+                            <h2
+                                class="mt-4 text-2xl font-black tracking-tight text-gray-900 sm:text-3xl"
+                            >
+                                Have something worth
+                                selling?
+                            </h2>
+
+                            <p
+                                class="mt-2 max-w-xl text-sm leading-6 text-gray-500"
+                            >
+                                Put your products in front of
+                                new customers and grow your
+                                business with Alona.
+                            </p>
+
+                        </div>
+
+                        <Link
+                            :href="safeRoute('register.seller')"
+                            class="inline-flex w-fit items-center gap-3 rounded-2xl border border-[#087F8C] px-5 py-3.5 text-xs font-extrabold text-[#087F8C] transition hover:bg-[#087F8C] hover:text-white"
+                        >
+                            Start selling →
+                        </Link>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 FINAL CTA
+            ====================================================== -->
+
+            <section
+                class="alona-reveal border-t border-gray-100 bg-white"
+            >
+
+                <div
+                    class="mx-auto w-full w-full px-4 py-12 text-center sm:px-6 lg:px-8 2xl:px-10 lg:py-16"
+                >
+
+                    <p
+                        class="text-[10px] font-black uppercase tracking-[0.25em] text-[#087F8C]"
+                    >
+                        Your next find is waiting
+                    </p>
+
+                    <h2
+                        class="mx-auto mt-3 max-w-2xl text-3xl font-black tracking-[-0.04em] text-gray-900 sm:text-4xl"
+                    >
+                        Discover something you
+                        didn't know you needed.
+                    </h2>
+
+                    <p
+                        class="mx-auto mt-4 max-w-xl text-sm leading-6 text-gray-500"
+                    >
+                        Explore the Alona marketplace and
+                        find products from different
+                        categories in one place.
+                    </p>
+
+                    <Link
+                        :href="safeRoute('buyer.products')"
+                        class="mt-7 inline-flex items-center gap-3 rounded-2xl bg-[#087F8C] px-6 py-3.5 text-xs font-extrabold text-white shadow-lg shadow-[#087F8C]/10 transition hover:-translate-y-1 hover:bg-[#066974]"
+                    >
+                        Explore Alona →
+                    </Link>
+
+                </div>
+
+            </section>
+
+        </div>
+    </component>
+</template>
+
+
+<style scoped>
+
+/*
+|--------------------------------------------------------------------------
+| Alona Reveal
+|--------------------------------------------------------------------------
+*/
+
+.alona-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+
+    transition:
+        opacity 0.75s ease,
+        transform 0.75s cubic-bezier(.22, 1, .36, 1);
+}
+
+.alona-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hero
+|--------------------------------------------------------------------------
+*/
+
+.hero-card {
+    animation: heroEnter 0.9s ease both;
+}
+
+.hero-item {
+    animation: heroText 0.8s ease both;
+}
+
+.hero-item:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.hero-item:nth-child(3) {
+    animation-delay: 0.24s;
+}
+
+.hero-item:nth-child(4) {
+    animation-delay: 0.36s;
+}
+
+.hero-visual {
+    animation: visualEnter 1s ease both;
+}
+
+.alona-floating {
+    animation: gentleFloat 5s ease-in-out infinite;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CATEGORY SLIDER
+|--------------------------------------------------------------------------
+*/
+
+.category-slider {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    overscroll-behavior-x: contain;
+
+    scroll-behavior: smooth;
+
+    -webkit-overflow-scrolling: touch;
+
+    scroll-snap-type: x mandatory;
+}
+
+.category-slider::-webkit-scrollbar {
+    display: none;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Category Cards
+|--------------------------------------------------------------------------
+*/
+
+.category-card {
+    width: 205px;
+
+    animation:
+        categoryEnter
+        0.65s
+        cubic-bezier(.22, 1, .36, 1)
+        both;
+
+    animation-play-state: paused;
+
+    will-change:
+        transform,
+        opacity;
+
+    touch-action: manipulation;
+}
+
+.alona-reveal.is-visible .category-card {
+    animation-play-state: running;
+}
+
+.category-card img {
+    will-change: transform;
+}
+
+.category-image {
+    filter: saturate(.96);
+
+    backface-visibility: hidden;
+
+    transform: translateZ(0);
+}
+
+.category-card:hover .category-image {
+    filter: saturate(1.08);
+}
+
+.category-card:active {
+    transform:
+        translateY(0)
+        scale(.985);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Category Navigation Buttons
+|--------------------------------------------------------------------------
+*/
+
+.category-nav-button {
+    display: flex;
+
+    height: 40px;
+    width: 40px;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9999px;
+
+    border: 1px solid #E5E7EB;
+
+    background: #FFFFFF;
+
+    color: #087F8C;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.04);
+
+    transition:
+        transform .25s ease,
+        background-color .25s ease,
+        color .25s ease,
+        border-color .25s ease,
+        box-shadow .25s ease;
+}
+
+.category-nav-button:hover {
+    transform: translateY(-2px);
+
+    background: #087F8C;
+
+    color: #FFFFFF;
+
+    border-color: #087F8C;
+
+    box-shadow:
+        0 8px 20px rgba(8, 127, 140, 0.16);
+}
+
+.category-nav-button:active {
+    transform: scale(.94);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Product Cards
+|--------------------------------------------------------------------------
+*/
+
+.product-card {
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+.product-card:hover {
+    transform:
+        translateY(-5px);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Recently Viewed Cards
+|--------------------------------------------------------------------------
+*/
+
+.recent-product-card {
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+.recent-product-card:hover {
+    transform:
+        translateY(-5px);
+}
+
+.recent-product-card:active {
+    transform:
+        translateY(-1px)
+        scale(.99);
+}
+
+.recent-product-card img {
+    will-change: transform;
+
+    backface-visibility: hidden;
+
+    transform: translateZ(0);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hero Carousel Transition (Seamless Crossfade - No Blank Gap)
+|--------------------------------------------------------------------------
+*/
+
+.hero-fade-enter-active {
+    transition: opacity 0.5s ease-in-out;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+}
+
+.hero-fade-leave-active {
+    transition: opacity 0.5s ease-in-out;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.hero-fade-enter-from,
+.hero-fade-leave-to {
+    opacity: 0;
+}
+
+.hero-slide-enter-active,
+.hero-slide-leave-active {
+    transition:
+        opacity .35s ease,
+        transform .35s ease;
+}
+
+.hero-slide-enter-from {
+    opacity: 0;
+    transform: translateX(18px);
+}
+
+.hero-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-18px);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hero Animations
+|--------------------------------------------------------------------------
+*/
+
+@keyframes heroEnter {
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(22px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+@keyframes heroText {
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+@keyframes visualEnter {
+    from {
+        opacity: 0;
+
+        transform:
+            translateX(30px)
+            scale(.96);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateX(0)
+            scale(1);
+    }
+}
+
+@keyframes gentleFloat {
+    0%,
+    100% {
+        transform:
+            translateY(0);
+    }
+
+    50% {
+        transform:
+            translateY(-9px);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Category Animation
+|--------------------------------------------------------------------------
+*/
+
+@keyframes categoryEnter {
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(20px)
+            scale(.97);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0)
+            scale(1);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Reduced Motion
+|--------------------------------------------------------------------------
+*/
+
+@media (prefers-reduced-motion: reduce) {
+
+    .alona-page *,
+    .alona-page *::before,
+    .alona-page *::after {
+        animation-duration:
+            0.01ms !important;
+
+        animation-iteration-count:
+            1 !important;
+
+        transition-duration:
+            0.01ms !important;
+
+        scroll-behavior:
+            auto !important;
+    }
+
+    .alona-reveal {
+        opacity: 1;
+
+        transform: none;
+    }
+
+    .category-card {
+        animation-play-state:
+            running;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Tablet
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 640px) and (max-width: 1023px) {
+
+    .category-card {
+        width: 220px;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Desktop
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 1024px) {
+
+    .category-card {
+        width: 220px;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Mobile
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 639px) {
+
+    .alona-floating {
+        width: 220px;
+    }
+
+    .category-card {
+        width: 170px;
+
+        border-radius: 18px;
+    }
+
+    .category-card .category-image {
+        transform: scale(1.01);
+    }
+
+    .category-slider {
+        margin-right: -16px;
+
+        padding-right: 16px;
+
+        gap: 10px;
+
+        scroll-padding-left: 0;
+    }
+
+    .category-nav-button {
+        height: 38px;
+        width: 38px;
+    }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+</style>

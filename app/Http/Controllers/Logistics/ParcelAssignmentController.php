@@ -1,0 +1,192 @@
+<?php
+
+namespace App\Http\Controllers\Logistics;
+
+use App\Http\Controllers\Controller;
+use App\Models\Parcel;
+use App\Models\Rider;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class ParcelAssignmentController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
+
+        $parcels = Parcel::query()
+            ->with(['sortedArea:id,name', 'orderItem.order:id,shipping_method'])
+            ->where('sorting_center_id', $sortingCenterId)
+            ->where('status', 'AT_SORTING_CENTER')
+            ->whereNotNull('sorted_area_id')
+            ->whereNull('assigned_rider_id')
+            ->when($context['staff'] && $context['hub'], function ($query) use ($context) {
+                $hubId = (int) $context['hub']->id;
+                $query->whereHas('hubJourney', fn ($q) => $q->where('destination_hub_id', $hubId));
+            })
+            ->when(app(\App\Services\HubNetwork::class)->available(), fn ($query) => $query->where(fn ($query) => $query
+                ->whereDoesntHave('hubJourney')->orWhereHas('hubJourney', fn ($journey) => $journey->whereNotNull('destination_received_at'))))
+            ->orderByDesc('sorted_at')
+            ->get([
+                'id',
+                'order_id',
+                'status',
+                'sorted_area_id',
+                'sorted_at',
+                'assigned_rider_id',
+                'order_item_id',
+                'delivery_address',
+                'collection_address',
+                'delivery_province',
+                'delivery_municipality',
+                'delivery_barangay',
+                'delivery_street',
+                'delivery_house_number',
+            ]);
+
+        return response()->json([
+            'message' => 'Sorted unassigned parcels retrieved successfully.',
+            'data' => $parcels,
+        ]);
+    }
+
+    public function eligibleRiders(Request $request, int $id): JsonResponse
+    {
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
+        $parcel = Parcel::where('sorting_center_id', $sortingCenterId)->find($id);
+
+        if (! $parcel) {
+            return response()->json([
+                'message' => 'Parcel not found.',
+            ], 422);
+        }
+
+        $hubJourney = app(\App\Services\HubNetwork::class)->journey($parcel);
+        $riders = Rider::query()
+            ->with('user:id,name,email')
+            ->withCount([
+                'assignedParcels as active_assignments_count' => fn ($query) => $query->whereIn('status', [
+                    'AT_SORTING_CENTER',
+                    'OUT_FOR_DELIVERY',
+                ]),
+                'assignedParcels as deliveries_in_progress_count' => fn ($query) => $query->where('status', 'OUT_FOR_DELIVERY'),
+            ])
+            ->where('sorting_center_id', $sortingCenterId)
+            ->operationallyEligible()
+            ->when($hubJourney, fn ($query) => $query->where('logistics_hub_id', $hubJourney->destination_hub_id)
+                ->when(!$hubJourney->destination_received_at, fn ($query) => $query->whereRaw('1 = 0')))
+            ->whereHas('areas', function ($query) use ($parcel): void {
+                $query->where('areas.id', $parcel->sorted_area_id);
+            })
+            ->orderBy('name')
+            ->get([
+                'id',
+                'user_id',
+                'name',
+                'contact',
+                'vehicle_type',
+                'plate_number',
+                'approval_status',
+                'is_active',
+            ]);
+
+        app(\App\Services\RiderWorkload::class)->append($riders, (int) $sortingCenterId);
+        $riders = $riders->filter(fn ($rider) => $rider->presence !== 'Offline'
+            && ($rider->active_jobs_count < \App\Services\RiderAllocation::MAX_ACTIVE_JOBS
+                || app(\App\Services\RiderAllocation::class)->alreadyCounted($rider, $parcel, 'delivery')))->values();
+        $reason = null;
+        if ($riders->isEmpty()) {
+            $reason = !Rider::where('sorting_center_id', $sortingCenterId)->operationallyEligible()->exists()
+                ? 'No approved, active Riders with eligible accounts are available in your Logistics organization.'
+                : 'No eligible Rider covers this destination area. Use Rider Management → Manage Delivery Areas to configure coverage.';
+        }
+        return response()->json([
+            'message' => 'Eligible riders retrieved successfully.', 'data' => $riders,
+            'meta' => ['empty_reason' => $reason],
+        ]);
+    }
+
+    public function assign(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'rider_id' => ['required', 'integer'],
+        ]);
+        $context = app(\App\Services\HubAccess::class)->context($request->user());
+        $sortingCenterId = (int) $context['center']->id;
+
+        $parcel = app(\App\Services\RiderAllocation::class)->run([$validated['rider_id']], fn () => DB::transaction(function () use ($id, $validated, $sortingCenterId, $request): Parcel {
+            $jobMembers = app(\App\Services\RiderJobPay::class)->groupedMembers($id, (int) $sortingCenterId, 'delivery');
+            $finance = app(\App\Services\SellerShipmentFinance::class);
+            $shipment = $finance->lockParcel($id);
+            $parcel = Parcel::query()
+                ->where('sorting_center_id', $sortingCenterId)
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $parcel) {
+                abort(response()->json([
+                    'message' => 'Parcel not found.',
+                ], 422));
+            }
+
+            if ($parcel->status !== 'AT_SORTING_CENTER') {
+                abort(response()->json([
+                    'message' => 'Parcel cannot be assigned because its current status is '.$parcel->status.'. Expected AT_SORTING_CENTER.',
+                    'current_status' => $parcel->status,
+                ], 422));
+            }
+
+            if ($parcel->sorted_area_id === null) {
+                abort(response()->json([
+                    'message' => 'Parcel cannot be assigned because it has no sorting area.',
+                ], 422));
+            }
+
+            if ($parcel->assigned_rider_id !== null) {
+                abort(response()->json([
+                    'message' => 'Parcel has already been assigned to a rider.',
+                    'assigned_rider_id' => $parcel->assigned_rider_id,
+                ], 422));
+            }
+
+            $rider = Rider::whereKey($validated['rider_id'])
+                ->where('sorting_center_id', $sortingCenterId)
+                ->lockForUpdate()
+                ->operationallyEligible()
+                ->whereHas('areas', function ($query) use ($parcel): void {
+                    $query->where('areas.id', $parcel->sorted_area_id);
+                })
+                ->first();
+
+            if (! $rider) {
+                abort(response()->json([
+                    'message' => 'The selected rider does not cover this parcel area or is not eligible for operational access.',
+                    'rider_id' => $validated['rider_id'],
+                ], 422));
+            }
+
+            app(\App\Services\RiderAllocation::class)->assertCanReceive($rider, $parcel, 'delivery');
+            $finance->assign($shipment, $parcel, $rider->id, $sortingCenterId);
+            foreach ($jobMembers ?? collect([$parcel]) as $member) {
+                abort_unless($member->status === 'AT_SORTING_CENTER' && !$member->assigned_rider_id
+                    && (!$jobMembers || $member->sorted_at) && $member->sorted_area_id
+                    && $rider->areas()->where('areas.id', $member->sorted_area_id)->exists(), 422,
+                    'Every parcel in this Seller shipment must arrive, be sorted and share an eligible delivery Rider.');
+                app(\App\Services\HubNetwork::class)->assertRider($member, $rider, 'delivery');
+                $member->update(['assigned_rider_id' => $rider->id, 'assigned_at' => null]);
+            }
+            app(\App\Services\RiderJobPay::class)->assign($parcel->fresh(), (int) $rider->id, 'delivery', $request->user(), $jobMembers);
+
+            return $parcel->fresh(['sortedArea', 'assignedRider.user']);
+        }, 5));
+
+        return response()->json([
+            'message' => 'Rider assigned successfully. They can start the delivery from their app.',
+            'data' => $parcel,
+        ]);
+    }
+}
