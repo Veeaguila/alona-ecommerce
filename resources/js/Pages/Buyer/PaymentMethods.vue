@@ -44,7 +44,7 @@ const remove = method => {
     <Head title="Banks & Cards" />
 
     <BuyerAccountLayout active-menu="account" active-sub="banks">
-        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+        <div class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-6 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-8">
             <div class="flex items-center justify-between border-b border-[#EEF1F2] pb-5">
                 <div>
                     <div class="flex items-center gap-2">
@@ -70,7 +70,7 @@ const remove = method => {
 
             <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
                     <!-- LIST -->
-                    <section class="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                    <section class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                         <h2 class="text-sm font-extrabold text-[#1F2937]">Saved methods</h2>
 
                         <p v-if="!payment_methods.length" class="mt-4 text-xs text-[#64748B]">
@@ -114,7 +114,7 @@ const remove = method => {
 
                     <!-- ADD -->
                     <form
-                        class="space-y-3 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm"
+                        class="space-y-3 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                         autocomplete="off"
                         @submit.prevent="submit"
                     >

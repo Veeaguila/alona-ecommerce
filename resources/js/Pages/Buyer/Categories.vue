@@ -102,7 +102,7 @@ const categoryUrl = category => {
         <!-- ============================================================= -->
         <!-- FULL WIDTH CATEGORY PAGE -->
         <!-- ============================================================= -->
-        <main class="w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full min-w-0 px-4 py-7 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
                 <!-- ===================================================== -->
                 <!-- HEADER -->
@@ -131,7 +131,7 @@ const categoryUrl = category => {
                     <div
                         v-for="category in categories"
                         :key="category.id"
-                        class="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
                         <div>
                             <!-- Top Header: Icon + Category Name -->

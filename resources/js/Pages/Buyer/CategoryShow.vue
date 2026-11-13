@@ -145,6 +145,19 @@ const formatPrice = price => {
     })
 }
 
+const getDiscountPercent = product => {
+    const explicit = Number(product?.discount_percentage ?? product?.discount_percent ?? 0)
+    if (explicit > 0) return Math.round(explicit)
+    const badgeMatch = String(product?.discount_badge ?? '').match(/(\d+)\s*%/)
+    if (badgeMatch) return Number(badgeMatch[1])
+    const price = Number(product?.price ?? 0)
+    const oldPrice = Number(product?.old_price ?? 0)
+    if (oldPrice > price && oldPrice > 0) {
+        return Math.round(((oldPrice - price) / oldPrice) * 100)
+    }
+    return 0
+}
+
 const getStoreInitials = name => {
     return (name || 'Store').slice(0, 2).toUpperCase()
 }
@@ -159,7 +172,7 @@ const onCategoryImgError = () => {
     <Head :title="`${category.name} - Official Stores & Products`" />
 
     <component :is="layoutComponent">
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-5 pb-20 sm:px-6 sm:py-6 lg:px-8 2xl:px-10">
 
                 <!-- ===================================================== -->
@@ -198,7 +211,7 @@ const onCategoryImgError = () => {
                 <!-- ===================================================== -->
                 <!-- SECTION 1: OFFICIAL STORES CAROUSEL (SHOPEE MALL STYLE) -->
                 <!-- ===================================================== -->
-                <section class="rounded-2xl border border-gray-200/90 bg-white p-5 shadow-sm sm:p-6">
+                <section class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-6">
                     <div class="flex items-center justify-between pb-4 border-b border-gray-100">
                         <div class="flex items-center gap-3">
                             <span class="rounded bg-[#E8F7F6] px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-[#087F8C]">
@@ -296,7 +309,7 @@ const onCategoryImgError = () => {
                 <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
 
                     <!-- LEFT SIDEBAR: ALL CATEGORIES ACCORDION / TREE -->
-                    <aside class="hidden rounded-2xl border border-gray-200/90 bg-white p-5 shadow-sm lg:block">
+                    <aside class="hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] lg:block">
                         <div class="flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-extrabold text-gray-900">
                             <Icon name="grid" class="h-4 w-4 text-[#087F8C]" />
                             <span>All Categories</span>
@@ -547,7 +560,7 @@ const onCategoryImgError = () => {
                             </div>
                         </div>
 
-                        <!-- PRODUCTS GRID (SHOPEE STYLE CARDS) -->
+                        <!-- PRODUCTS GRID -->
                         <div
                             v-if="products.data?.length"
                             class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
@@ -556,10 +569,10 @@ const onCategoryImgError = () => {
                                 v-for="product in products.data"
                                 :key="product.id"
                                 :href="isGuest ? route('guest.product', product.id) : route('buyer.product', product.id)"
-                                class="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-md"
+                                class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-md"
                             >
                                 <!-- Product Image Container -->
-                                <div class="relative aspect-square overflow-hidden bg-[#F8FAF9]">
+                                <div class="relative aspect-square overflow-hidden rounded-t-[15px] bg-white">
                                     <img
                                         v-if="product.image_path"
                                         :src="imageUrl(product.image_path)"
@@ -574,18 +587,18 @@ const onCategoryImgError = () => {
                                         <Icon name="bag" class="h-10 w-10 text-[#087F8C]/50" />
                                     </div>
 
-                                    <!-- Discount Percent Badge (Top Right) -->
+                                    <!-- Discount Percent Badge (Top Left Pill) -->
                                     <span
-                                        v-if="product.old_price && Number(product.old_price) > Number(product.price)"
-                                        class="absolute right-0 top-0 bg-[#FFF1F0] px-2 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                        v-if="getDiscountPercent(product) > 0"
+                                        class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
                                     >
-                                        -{{ Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) }}%
+                                        {{ getDiscountPercent(product) }}% OFF
                                     </span>
 
-                                    <!-- Preferred Badge (Top Left) -->
+                                    <!-- Preferred Badge -->
                                     <span
-                                        v-if="product.is_featured"
-                                        class="absolute left-1.5 top-1.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[8px] font-black uppercase text-white shadow-sm"
+                                        v-else-if="product.is_featured"
+                                        class="absolute left-2.5 top-2.5 rounded-full bg-[#087F8C] px-2 py-0.5 text-[8px] font-black uppercase text-white shadow-xs"
                                     >
                                         Preferred
                                     </span>
@@ -594,45 +607,48 @@ const onCategoryImgError = () => {
                                 <!-- Product Info -->
                                 <div class="flex flex-1 flex-col justify-between p-3">
                                     <div>
+                                        <p class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">
+                                            {{ product.category?.name || category.name }}
+                                        </p>
                                         <h3
-                                            class="line-clamp-2 text-xs font-semibold leading-relaxed text-gray-900 group-hover:text-[#087F8C]"
+                                            class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] group-hover:text-[#087F8C]"
                                             :title="product.name"
                                         >
                                             {{ product.name }}
                                         </h3>
                                     </div>
 
-                                    <div class="mt-3">
-                                        <!-- Price -->
-                                        <div class="flex items-baseline gap-1.5">
-                                            <span class="text-sm font-black text-[#087F8C]">
-                                                ₱{{ formatPrice(product.price) }}
+                                    <div class="mt-2">
+                                        <!-- Ratings & Sold -->
+                                        <div class="flex items-center gap-1 text-[11px]">
+                                            <span class="text-[#F4B942]">★</span>
+                                            <span class="font-bold text-[#1F2937]">
+                                                {{ Number(product.rating ?? 0) > 0 ? Number(product.rating).toFixed(1) : 'New' }}
                                             </span>
-                                            <span
-                                                v-if="product.old_price"
-                                                class="text-[10px] text-gray-400 line-through"
-                                            >
-                                                ₱{{ formatPrice(product.old_price) }}
+                                            <span v-if="Number(product.reviews_count ?? 0) > 0" class="text-[10px] text-[#64748B]">
+                                                ({{ Number(product.reviews_count) }})
+                                            </span>
+                                            <span v-else-if="Number(product.sold_count ?? 0) > 0" class="text-[10px] text-[#64748B]">
+                                                • {{ product.sold_count }} sold
                                             </span>
                                         </div>
 
-                                        <!-- Ratings & Sold -->
-                                        <div class="mt-1.5 flex items-center justify-between text-[10px] text-gray-400">
-                                            <div class="flex items-center gap-0.5">
-                                                <span v-if="Number(product.rating ?? 0) > 0" class="text-[#F4B942]">★</span>
-                                                <span class="font-bold text-gray-700">
-                                                    {{ Number(product.rating ?? 0) > 0 ? Number(product.rating).toFixed(1) : 'New' }}
-                                                </span>
-                                            </div>
-
-                                            <span v-if="Number(product.sold_count ?? 0) > 0">
-                                                {{ product.sold_count }} sold
+                                        <!-- Price -->
+                                        <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                            <span class="text-[15px] font-extrabold text-[#087F8C]">
+                                                ₱{{ formatPrice(product.price) }}
                                             </span>
-                                            <span v-else-if="Number(product.reviews_count ?? 0) > 0">
-                                                {{ Number(product.reviews_count) }} reviews
+                                            <span
+                                                v-if="getDiscountPercent(product) > 0"
+                                                class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                            >
+                                                -{{ getDiscountPercent(product) }}%
                                             </span>
-                                            <span v-else class="text-gray-400">
-                                                0 sold
+                                            <span
+                                                v-else-if="product.old_price"
+                                                class="text-[10px] text-[#64748B] line-through"
+                                            >
+                                                ₱{{ formatPrice(product.old_price) }}
                                             </span>
                                         </div>
                                     </div>

@@ -236,7 +236,7 @@ const submitSellerReview = () => {
     <Head title="My Reviews" />
 
     <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
 
                 <!-- PAGE HEADER -->
@@ -317,7 +317,7 @@ const submitSellerReview = () => {
                         <article
                             v-for="review in reviews.data"
                             :key="review.id"
-                            class="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-5"
+                            class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex items-start gap-3">
@@ -435,7 +435,7 @@ const submitSellerReview = () => {
                         <article
                             v-for="item in awaiting_items.data"
                             :key="item.id"
-                            class="flex flex-col gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                            class="flex flex-col gap-3 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:flex-row sm:items-center sm:justify-between sm:p-5"
                         >
                             <div class="flex items-center gap-3">
                                 <div class="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#E8F7F6]">
@@ -490,7 +490,7 @@ const submitSellerReview = () => {
                         <div
                             v-for="order in orders_awaiting_seller_review"
                             :key="order.id"
-                            class="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm"
+                            class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                         >
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
@@ -528,7 +528,7 @@ const submitSellerReview = () => {
                             <article
                                 v-for="sr in seller_reviews.data"
                                 :key="sr.id"
-                                class="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-5"
+                                class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5"
                             >
                                 <div class="flex items-start justify-between gap-3">
                                     <div>

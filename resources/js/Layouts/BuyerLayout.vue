@@ -721,7 +721,7 @@ onUnmounted(() => {
 <template>
 
     <div
-        class="min-h-screen bg-[#F8FAF9] text-[#1F2937]"
+        class="min-h-screen bg-[#E8F7F6] text-[#1F2937]"
     >
 
         <!-- ========================================================= -->

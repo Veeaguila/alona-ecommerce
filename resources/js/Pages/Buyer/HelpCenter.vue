@@ -140,7 +140,7 @@ const filteredTopics = computed(() => {
     <Head title="Help Center & Customer Support" />
 
     <component :is="layoutComponent">
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
 
                 <!-- HERO SECTION -->
@@ -198,7 +198,7 @@ const filteredTopics = computed(() => {
                 <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
                     <Link
                         :href="safeRoute('buyer.orders')"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F7F6] text-xl transition group-hover:scale-110"><Icon name="package" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Track Orders</h2>
@@ -207,7 +207,7 @@ const filteredTopics = computed(() => {
 
                     <Link
                         :href="safeRoute('buyer.complaints')"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFF7E6] text-xl transition group-hover:scale-110"><Icon name="receipt" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">My Complaints</h2>
@@ -216,7 +216,7 @@ const filteredTopics = computed(() => {
 
                     <Link
                         :href="safeRoute('buyer.faq')"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EBF5FF] text-xl transition group-hover:scale-110"><Icon name="help" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Browse FAQs</h2>
@@ -225,7 +225,7 @@ const filteredTopics = computed(() => {
 
                     <Link
                         :href="safeRoute('buyer.vouchers')"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FDF2F8] text-xl transition group-hover:scale-110"><Icon name="ticket" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Vouchers & Deals</h2>
@@ -234,7 +234,7 @@ const filteredTopics = computed(() => {
 
                     <Link
                         :href="safeRoute('buyer.policies')"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F0FDF4] text-xl transition group-hover:scale-110"><Icon name="book" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Buyer Policies</h2>
@@ -243,7 +243,7 @@ const filteredTopics = computed(() => {
 
                     <a
                         href="#contact-support"
-                        class="group flex flex-col items-center rounded-2xl border border-[#E5E7EB] bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group flex flex-col items-center rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 text-center shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#087F8C] hover:shadow-md"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FEF2F2] text-xl transition group-hover:scale-110"><Icon name="message" class="h-5 w-5" /></span>
                         <h2 class="mt-2.5 text-xs font-extrabold text-gray-900">Direct Support</h2>
@@ -348,7 +348,7 @@ const filteredTopics = computed(() => {
                     <div id="contact-support" class="space-y-6 scroll-mt-24">
 
                         <!-- CONTACT FORM CARD -->
-                        <div class="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm sm:p-6">
+                        <div class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-6">
                             <div class="flex items-center gap-2">
                                 <span class="h-2 w-2 rounded-full bg-[#087F8C]"></span>
                                 <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-[#087F8C]">

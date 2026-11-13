@@ -254,7 +254,7 @@ const markOrderReceived = orderId => {
     <BuyerAccountLayout active-menu="purchase">
         
         <!-- STATUS TABS (SYSTEM ALIGNED) -->
-        <div class="overflow-x-auto rounded-2xl border border-[#E5E7EB] bg-white shadow-xs scrollbar-none">
+        <div class="overflow-x-auto rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] scrollbar-none">
             <div class="flex min-w-max border-b border-[#EEF1F2]">
                 <button
                     v-for="tab in tabs"
@@ -335,7 +335,7 @@ const markOrderReceived = orderId => {
             <div
                 v-for="order in orderList"
                 :key="order.id"
-                class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-xs transition hover:border-[#B9E7E4]"
+                class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:border-[#087F8C]"
             >
                 <!-- CARD HEADER: SHOP & STATUS -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3.5 sm:px-6">

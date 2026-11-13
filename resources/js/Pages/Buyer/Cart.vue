@@ -670,7 +670,7 @@ const checkoutButtonLabel = computed(() => {
 
     <BuyerLayout>
         <main
-            class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]"
+            class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]"
         >
             <div
                 class="mx-auto w-full w-full px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14"
@@ -813,7 +813,7 @@ const checkoutButtonLabel = computed(() => {
                     <!-- ================================================== -->
 
                     <section
-                        class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]"
+                        class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                     >
 
                         <!-- TOOLBAR -->
@@ -1284,7 +1284,7 @@ const checkoutButtonLabel = computed(() => {
                     <!-- ================================================== -->
 
                     <aside
-                        class="h-fit min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)] sm:p-5 lg:sticky lg:top-24"
+                        class="h-fit min-w-0 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5 lg:sticky lg:top-24"
                     >
                         <!-- TITLE -->
 

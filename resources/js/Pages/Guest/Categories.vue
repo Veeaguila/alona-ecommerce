@@ -104,7 +104,7 @@ const getStyle = slug => categoryStyles[slug] ?? defaultStyle
                 <div
                     v-for="category in categories"
                     :key="category.id"
-                    class="group flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                    class="group flex flex-col justify-between rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                 >
                     <div>
                         <!-- Header: Icon + Category Link -->

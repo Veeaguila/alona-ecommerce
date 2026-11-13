@@ -65,6 +65,19 @@ const formatPrice = price => {
     })
 }
 
+const getDiscountPercent = product => {
+    const explicit = Number(product?.discount_percentage ?? product?.discount_percent ?? 0)
+    if (explicit > 0) return Math.round(explicit)
+    const badgeMatch = String(product?.discount_badge ?? '').match(/(\d+)\s*%/)
+    if (badgeMatch) return Number(badgeMatch[1])
+    const price = Number(product?.price ?? 0)
+    const oldPrice = Number(product?.old_price ?? 0)
+    if (oldPrice > price && oldPrice > 0) {
+        return Math.round(((oldPrice - price) / oldPrice) * 100)
+    }
+    return 0
+}
+
 /*
 |--------------------------------------------------------------------------
 | CATEGORY FILTER
@@ -111,7 +124,7 @@ const changeCategory = category => {
         <!-- ============================================================= -->
 
         <main
-            class="w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]"
+            class="w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]"
         >
             <div
                 class="mx-auto w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10"
@@ -171,14 +184,14 @@ const changeCategory = category => {
                         v-for="product in products.data"
                         :key="product.id"
                         :href="route('guest.product', product.id)"
-                        class="group block min-w-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#E5E7EB] hover:shadow-md"
+                        class="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
                         <!-- ================================================= -->
                         <!-- IMAGE -->
                         <!-- ================================================= -->
 
                         <div
-                            class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-[#F8FAF9] p-2.5 sm:p-3"
+                            class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-t-[15px] bg-white p-2.5 sm:p-3"
                         >
                             <img
                                 v-if="product.image_path"
@@ -194,8 +207,14 @@ const changeCategory = category => {
                             ><Icon name="bag" class="h-4 w-4" /></span>
 
                             <span
-                                v-if="product.discount_badge"
-                                class="absolute right-2 top-2 rounded-full bg-[#FFF1F1] px-2 py-0.5 text-[10px] font-bold text-[#E85D5D] shadow-xs"
+                                v-if="getDiscountPercent(product) > 0"
+                                class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                            >
+                                {{ getDiscountPercent(product) }}% OFF
+                            </span>
+                            <span
+                                v-else-if="product.discount_badge"
+                                class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
                             >
                                 {{ product.discount_badge }}
                             </span>
@@ -205,79 +224,68 @@ const changeCategory = category => {
                         <!-- PRODUCT INFO -->
                         <!-- ================================================= -->
 
-                        <div class="min-w-0 p-3 sm:p-3.5">
-                            <!-- CATEGORY -->
-                            <p
-                                class="truncate text-[9px] font-semibold uppercase tracking-wide text-[#64748B] sm:text-[10px]"
-                            >
-                                {{ product.category?.name || 'Uncategorized' }}
-                            </p>
+                        <div class="flex min-w-0 flex-1 flex-col justify-between p-3 sm:p-3.5">
+                            <div>
+                                <!-- CATEGORY -->
+                                <p
+                                    class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]"
+                                >
+                                    {{ product.category?.name || 'Uncategorized' }}
+                                </p>
 
-                            <!-- PRODUCT NAME -->
-                            <h2
-                                class="mt-1 truncate text-[12px] font-semibold text-[#1F2937] sm:text-[13px]"
-                                :title="product.name"
-                            >
-                                {{ product.name }}
-                            </h2>
+                                <!-- PRODUCT NAME -->
+                                <h2
+                                    class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] transition group-hover:text-[#087F8C]"
+                                    :title="product.name"
+                                >
+                                    {{ product.name }}
+                                </h2>
+                            </div>
 
-                            <!-- RATING -->
-                            <div
-                                class="mt-1.5 flex min-w-0 items-center gap-1"
-                            >
-                                <div class="flex shrink-0 items-center">
+                            <div class="mt-2">
+                                <!-- RATING -->
+                                <div
+                                    class="flex min-w-0 items-center gap-1"
+                                >
+                                    <span class="text-xs leading-none text-[#F4B942]">★</span>
+
                                     <span
-                                        v-for="star in 5"
-                                        :key="star"
-                                        class="text-[11px] leading-none sm:text-xs"
-                                        :class="
-                                            star <= Math.round(Number(product.rating ?? 0))
-                                                ? 'text-[#F4B942]'
-                                                : 'text-[#CBD5E1]'
-                                        "
+                                        class="text-[11px] font-bold text-[#1F2937]"
                                     >
-                                        ★
+                                        {{ Number(product.rating ?? 0) > 0 ? Number(product.rating ?? 0).toFixed(1) : 'New' }}
+                                    </span>
+
+                                    <span
+                                        v-if="Number(product.reviews_count ?? 0) > 0"
+                                        class="truncate text-[10px] text-[#64748B]"
+                                    >
+                                        ({{ Number(product.reviews_count ?? 0) }})
                                     </span>
                                 </div>
 
-                                <span
-                                    class="text-[10px] font-medium text-[#64748B] sm:text-[11px]"
+                                <!-- PRICE -->
+                                <div
+                                    class="mt-1 flex min-w-0 flex-wrap items-center gap-1.5"
                                 >
-                                    {{ Number(product.rating ?? 0).toFixed(2) }}
-                                </span>
-
-                                <span
-                                    class="truncate text-[10px] text-[#94A3B8] sm:text-[11px]"
-                                >
-                                    ({{ Number(product.reviews_count ?? 0) }})
-                                </span>
-                            </div>
-
-                            <!-- PRICE -->
-                            <div
-                                class="mt-3 flex min-w-0 items-center justify-between gap-2"
-                            >
-                                <div class="min-w-0">
                                     <span
-                                        class="block truncate text-[12px] font-bold text-[#1F2937] sm:text-sm"
+                                        class="truncate text-[15px] font-extrabold text-[#087F8C]"
                                     >
                                         {{ product.price_range || `₱${formatPrice(product.price)}` }}
                                     </span>
 
                                     <span
-                                        v-if="product.old_price"
-                                        class="mt-0.5 block truncate text-[9px] text-[#64748B] line-through sm:text-[10px]"
+                                        v-if="getDiscountPercent(product) > 0"
+                                        class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                    >
+                                        -{{ getDiscountPercent(product) }}%
+                                    </span>
+                                    <span
+                                        v-else-if="product.old_price"
+                                        class="truncate text-[10px] text-[#64748B] line-through"
                                     >
                                         ₱{{ formatPrice(product.old_price) }}
                                     </span>
                                 </div>
-
-                                <!-- VIEW BUTTON -->
-                                <span
-                                    class="flex shrink-0 items-center justify-center rounded-lg bg-[#087F8C] px-2 py-1.5 text-[9px] font-semibold text-white transition group-hover:bg-[#16A6A0] sm:px-2.5 sm:text-[10px]"
-                                >
-                                    View
-                                </span>
                             </div>
                         </div>
                     </Link>

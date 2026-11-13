@@ -86,7 +86,7 @@ const handleSubClick = (subKey) => {
 
 <template>
     <BuyerLayout>
-        <div class="min-h-[calc(100vh-80px)] w-full bg-[#F8FAF9] py-6 sm:py-8 lg:py-10">
+        <div class="min-h-[calc(100vh-80px)] w-full bg-[#E8F7F6] py-6 sm:py-8 lg:py-10">
             <div class="w-full px-4 sm:px-6 lg:px-8 2xl:px-10">
                 
                 <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -94,7 +94,7 @@ const handleSubClick = (subKey) => {
                     <!-- LEFT SIDEBAR -->
                     <aside class="w-full shrink-0 lg:w-[250px] xl:w-[270px]">
                         
-                        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs">
+                        <div class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             
                             <!-- USER HEADER -->
                             <div class="flex items-center gap-3 border-b border-[#EEF1F2] pb-4">

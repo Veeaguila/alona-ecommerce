@@ -479,7 +479,7 @@ const submit = () => {
     <Head title="Checkout" />
 
     <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
 
                 <!-- HEADER -->
@@ -543,7 +543,7 @@ const submit = () => {
                     <div class="min-w-0 space-y-5">
 
                         <!-- ITEMS -->
-                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             <div class="flex min-w-0 items-start justify-between gap-3 border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
@@ -632,7 +632,7 @@ const submit = () => {
                         </section>
 
                         <!-- ADDRESS -->
-                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             <div class="flex min-w-0 items-start justify-between gap-4 border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
@@ -735,7 +735,7 @@ const submit = () => {
                         </section>
 
                         <!-- SHIPPING METHOD -->
-                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm"><Icon name="truck" class="h-4 w-4" /></span>
@@ -799,7 +799,7 @@ const submit = () => {
                         </section>
 
                         <!-- PAYMENT -->
-                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             <div class="border-b border-[#EEF1F2] px-4 py-4 sm:px-5">
                                 <div class="flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-2">
@@ -906,7 +906,7 @@ const submit = () => {
                     <aside class="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
 
                         <!-- SUMMARY -->
-                        <section class="h-fit min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.06)] sm:p-5">
+                        <section class="h-fit min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5">
                             <div class="flex min-w-0 items-center justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
@@ -1096,7 +1096,7 @@ const submit = () => {
                         </section>
 
                         <!-- PROMO -->
-                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-5">
+                        <section class="min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm"><Icon name="tag" class="h-4 w-4" /></span>
                                 <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-[#087F8C]">
@@ -1206,7 +1206,7 @@ const submit = () => {
                         </section>
 
                         <!-- TRUST -->
-                        <section class="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-5">
+                        <section class="min-w-0 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5">
                             <div class="grid grid-cols-3 gap-2 sm:gap-3">
                                 <div class="min-w-0 text-center">
                                     <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F7F6] text-sm"><Icon name="lock" class="h-4 w-4" /></div>

@@ -85,7 +85,7 @@ const formatDate = (value) => {
     <Head :title="`${activePolicy ? activePolicy.title : 'Policies'} - Alona Buyer Policies`" />
 
     <component :is="layoutComponent">
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
 
                 <!-- BREADCRUMBS -->

@@ -231,6 +231,23 @@ const claimPromotion = voucherId => {
 |--------------------------------------------------------------------------
 */
 
+const computeDiscountPercent = product => {
+    const explicit = Number(product?.discount_percentage ?? product?.discount_percent ?? 0)
+    if (explicit > 0) return Math.round(explicit)
+    const badgeMatch = String(product?.discount_badge ?? '').match(/(\d+)\s*%/)
+    if (badgeMatch) return Number(badgeMatch[1])
+    const price = Number(product?.price ?? 0)
+    const oldPrice = Number(product?.old_price ?? 0)
+    if (oldPrice > price && oldPrice > 0) {
+        return Math.round(((oldPrice - price) / oldPrice) * 100)
+    }
+    return 0
+}
+
+const formatCurrency = amount => {
+    return `₱${Number(amount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 const products = computed(() => {
     if (!Array.isArray(props.products)) {
         return []
@@ -241,6 +258,7 @@ const products = computed(() => {
         .map(product => {
             const numericPrice = Number(product.price ?? 0)
             const numericOldPrice = Number(product.old_price ?? 0)
+            const discountPercentage = computeDiscountPercent(product)
 
             const soldCount = Number(
                 product.sold_count ??
@@ -272,17 +290,18 @@ const products = computed(() => {
                         ''
                     ),
 
-                price:
-                    `₱${numericPrice.toLocaleString()}`,
+                price: formatCurrency(numericPrice),
 
                 oldPrice:
                     numericOldPrice > 0
-                        ? `₱${numericOldPrice.toLocaleString()}`
+                        ? formatCurrency(numericOldPrice)
                         : null,
 
                 numericPrice,
 
                 numericOldPrice,
+
+                discountPercentage,
 
                 reviews: Number(
                     product.reviews_count ??
@@ -312,8 +331,8 @@ const products = computed(() => {
                 soldCount,
 
                 isSale:
-                    numericOldPrice > 0 &&
-                    numericOldPrice > numericPrice,
+                    discountPercentage > 0 ||
+                    (numericOldPrice > 0 && numericOldPrice > numericPrice),
             }
         })
 })
@@ -337,6 +356,7 @@ const recentlyViewed = computed(() => {
             const numericOldPrice = Number(
                 product.old_price ?? 0
             )
+            const discountPercentage = computeDiscountPercent(product)
 
             return {
                 ...product,
@@ -351,17 +371,18 @@ const recentlyViewed = computed(() => {
                     product.category_name ??
                     'Product',
 
-                price:
-                    `₱${numericPrice.toLocaleString()}`,
+                price: formatCurrency(numericPrice),
 
                 oldPrice:
                     numericOldPrice > 0
-                        ? `₱${numericOldPrice.toLocaleString()}`
+                        ? formatCurrency(numericOldPrice)
                         : null,
 
                 numericPrice,
 
                 numericOldPrice,
+
+                discountPercentage,
 
                 rating: Number(
                     product.rating ??
@@ -386,8 +407,8 @@ const recentlyViewed = computed(() => {
                 ),
 
                 isSale:
-                    numericOldPrice > 0 &&
-                    numericOldPrice > numericPrice,
+                    discountPercentage > 0 ||
+                    (numericOldPrice > 0 && numericOldPrice > numericPrice),
             }
         })
 })
@@ -418,6 +439,7 @@ const featuredProductsList = computed(() => {
         .map(product => {
             const numericPrice = Number(product.price ?? 0)
             const numericOldPrice = Number(product.old_price ?? 0)
+            const discountPercentage = computeDiscountPercent(product)
 
             return {
                 ...product,
@@ -426,11 +448,12 @@ const featuredProductsList = computed(() => {
                     product.category?.name ??
                     product.category_name ??
                     'Product',
-                price: `₱${numericPrice.toLocaleString()}`,
+                price: formatCurrency(numericPrice),
                 oldPrice:
                     numericOldPrice > 0
-                        ? `₱${numericOldPrice.toLocaleString()}`
+                        ? formatCurrency(numericOldPrice)
                         : null,
+                discountPercentage,
                 rating: Number(
                     product.rating ??
                     product.average_rating ??
@@ -451,8 +474,8 @@ const featuredProductsList = computed(() => {
                     product.photo
                 ),
                 isSale:
-                    numericOldPrice > 0 &&
-                    numericOldPrice > numericPrice,
+                    discountPercentage > 0 ||
+                    (numericOldPrice > 0 && numericOldPrice > numericPrice),
             }
         })
 })
@@ -642,6 +665,7 @@ const recommendedProductsList = computed(() => {
         .map(product => {
             const numericPrice = Number(product.price ?? 0)
             const numericOldPrice = Number(product.old_price ?? 0)
+            const discountPercentage = computeDiscountPercent(product)
 
             return {
                 ...product,
@@ -656,17 +680,18 @@ const recommendedProductsList = computed(() => {
                     product.category_name ??
                     'Product',
 
-                price:
-                    `₱${numericPrice.toLocaleString()}`,
+                price: formatCurrency(numericPrice),
 
                 oldPrice:
                     numericOldPrice > 0
-                        ? `₱${numericOldPrice.toLocaleString()}`
+                        ? formatCurrency(numericOldPrice)
                         : null,
 
                 numericPrice,
 
                 numericOldPrice,
+
+                discountPercentage,
 
                 rating: Number(
                     product.rating ??
@@ -698,8 +723,8 @@ const recommendedProductsList = computed(() => {
                 ),
 
                 isSale:
-                    numericOldPrice > 0 &&
-                    numericOldPrice > numericPrice,
+                    discountPercentage > 0 ||
+                    (numericOldPrice > 0 && numericOldPrice > numericPrice),
             }
         })
 })
@@ -1173,7 +1198,7 @@ onUnmounted(() => {
 
     <component :is="pageLayout">
         <div
-            class="alona-page min-h-screen overflow-hidden bg-[#F8FAF9] text-[#1F2937]"
+            class="alona-page min-h-screen overflow-hidden bg-[#E8F7F6] text-[#1F2937]"
         >
 
             <!-- HERO CAROUSEL: original Discover hero first, then actual sold products -->
@@ -1479,7 +1504,7 @@ onUnmounted(() => {
                 >
 
                     <div
-                        class="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-r from-[#F8FAF9] to-transparent sm:block"
+                        class="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-r from-[#E8F7F6] to-transparent sm:block"
                     ></div>
 
                     <div
@@ -1609,7 +1634,7 @@ onUnmounted(() => {
                     </div>
 
                     <div
-                        class="pointer-events-none absolute right-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-l from-[#F8FAF9] to-transparent sm:block"
+                        class="pointer-events-none absolute right-0 top-0 z-20 hidden h-full w-10 bg-gradient-to-l from-[#E8F7F6] to-transparent sm:block"
                     ></div>
 
                 </div>
@@ -1747,10 +1772,10 @@ onUnmounted(() => {
                             >
                                 <Link
                                     :href="safeRoute('buyer.product', '#', item.product_id)"
-                                    class="product-card group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-white p-2.5"
+                                    class="product-card group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-2.5 shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                                 >
                                     <!-- Image & Badges -->
-                                    <div class="relative h-32 sm:h-36 w-full overflow-hidden rounded-lg bg-[#F8FAFA] p-1 flex items-center justify-center">
+                                    <div class="relative h-32 sm:h-36 w-full overflow-hidden rounded-lg bg-white p-1 flex items-center justify-center">
                                         <img
                                             v-if="item.image"
                                             :src="item.image"
@@ -1765,10 +1790,9 @@ onUnmounted(() => {
                                         <!-- Discount Badge -->
                                         <span
                                             v-if="item.discount_percentage > 0"
-                                            class="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                            class="absolute left-1.5 top-1.5 inline-flex items-center rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2 py-0.5 text-[9px] font-extrabold tracking-tight text-[#E85D5D] shadow-2xs"
                                         >
-                                            <Icon name="bolt" class="h-3 w-3" />
-                                            <span>-{{ item.discount_percentage }}%</span>
+                                            <span>{{ item.discount_percentage }}% OFF</span>
                                         </span>
 
                                         <!-- Stock status badge -->
@@ -1787,15 +1811,15 @@ onUnmounted(() => {
                                         </p>
 
                                         <div class="mt-1 space-y-1">
-                                            <div class="flex items-baseline gap-1 flex-wrap">
-                                                <span class="text-xs sm:text-sm font-black text-[#087F8C]">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
                                                     ₱{{ Number(item.flash_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
                                                 </span>
                                                 <span
-                                                    v-if="item.original_price > item.flash_price"
-                                                    class="text-[10px] text-gray-400 line-through"
+                                                    v-if="item.discount_percentage > 0"
+                                                    class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[9px] font-extrabold text-[#E85D5D]"
                                                 >
-                                                    ₱{{ Number(item.original_price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                                                    -{{ item.discount_percentage }}%
                                                 </span>
                                             </div>
 
@@ -1859,7 +1883,7 @@ onUnmounted(() => {
                                 v-slot="{ item: bundle }"
                             >
                                 <div
-                                    class="group flex h-full flex-col justify-between gap-3 rounded-2xl bg-white p-3"
+                                    class="group flex h-full flex-col justify-between gap-3 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-3 shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                                 >
                                     <div class="min-w-0 flex-1">
                                         <!-- Line 1: Badge + Store -->
@@ -1925,7 +1949,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal border-y border-gray-100 bg-white"
+                class="alona-reveal border-y border-[#B2DFDB]/60 bg-[#E8F7F6]"
             >
 
                 <div
@@ -1980,11 +2004,11 @@ onUnmounted(() => {
                             v-for="(product, index) in trendingProducts"
                             :key="product.id ?? `trending-${index}`"
                             :href="safeRoute('buyer.product', '#', product.id)"
-                            class="product-card group"
+                            class="product-card group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
                         >
 
                             <div
-                                class="relative aspect-[.92] overflow-hidden rounded-[22px] bg-[#F4F7F6]"
+                                class="relative aspect-square overflow-hidden rounded-t-[15px] bg-white"
                             >
 
                                 <img
@@ -2003,7 +2027,15 @@ onUnmounted(() => {
                                 </div>
 
                                 <span
-                                    class="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[10px] font-black text-[#087F8C] shadow-sm backdrop-blur"
+                                    v-if="product.discountPercentage > 0"
+                                    class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                >
+                                    {{ product.discountPercentage }}% OFF
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="absolute left-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[10px] font-black text-[#087F8C] shadow-xs backdrop-blur"
                                 >
                                     {{
                                         String(
@@ -2015,72 +2047,60 @@ onUnmounted(() => {
                                     }}
                                 </span>
 
-                                <span
-                                    v-if="product.isSale"
-                                    class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                                >
-                                    SALE
-                                </span>
-
                             </div>
 
                             <div
-                                class="px-1 pt-4"
+                                class="flex flex-1 flex-col justify-between p-3"
                             >
-
-                                <p
-                                    class="text-[10px] font-bold uppercase tracking-wider text-[#087F8C]"
-                                >
-                                    {{ typeof product.category === 'object' && product.category ? (product.category.name || 'PRODUCT') : (product.category_name || product.category || 'PRODUCT') }}
-                                </p>
-
-                                <h3
-                                    class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
-                                >
-                                    {{ product.name }}
-                                </h3>
-
-                                <div
-                                    class="mt-2 flex items-center gap-2"
-                                >
-
-                                    <span
-                                        class="text-sm font-black text-[#087F8C]"
+                                <div>
+                                    <p
+                                        class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]"
                                     >
-                                        {{ product.price }}
-                                    </span>
+                                        {{ typeof product.category === 'object' && product.category ? (product.category.name || 'PRODUCT') : (product.category_name || product.category || 'PRODUCT') }}
+                                    </p>
 
-                                    <span
-                                        v-if="product.oldPrice"
-                                        class="text-[10px] text-gray-400 line-through"
+                                    <h3
+                                        class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] transition group-hover:text-[#087F8C]"
                                     >
-                                        {{ product.oldPrice }}
-                                    </span>
-
+                                        {{ product.name }}
+                                    </h3>
                                 </div>
 
-                                <div
-                                    class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                                >
-
-                                    <span
-                                        class="text-[#F4B942]"
+                                <div class="mt-2">
+                                    <div
+                                        class="flex items-center gap-1 text-[11px]"
                                     >
-                                        ★
-                                    </span>
+                                        <span class="text-[#F4B942]">★</span>
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
+                                        </span>
+                                        <span v-if="product.reviews > 0" class="text-[10px] text-[#64748B]">
+                                            ({{ product.reviews }})
+                                        </span>
+                                    </div>
 
-                                    <span>
-                                        {{
-                                            product.rating.toFixed(
-                                                1
-                                            )
-                                        }}
-                                    </span>
+                                    <div
+                                        class="mt-1 flex flex-wrap items-center gap-1.5"
+                                    >
+                                        <span
+                                            class="text-[15px] font-extrabold text-[#087F8C]"
+                                        >
+                                            {{ product.price }}
+                                        </span>
 
-                                    <span v-if="product.reviews !== undefined && product.reviews !== null">
-                                        ({{ product.reviews }})
-                                    </span>
-
+                                        <span
+                                            v-if="product.discountPercentage > 0"
+                                            class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                        >
+                                            -{{ product.discountPercentage }}%
+                                        </span>
+                                        <span
+                                            v-else-if="product.oldPrice"
+                                            class="text-[10px] text-[#64748B] line-through"
+                                        >
+                                            {{ product.oldPrice }}
+                                        </span>
+                                    </div>
                                 </div>
 
                             </div>
@@ -2091,7 +2111,7 @@ onUnmounted(() => {
 
                     <div
                         v-else
-                        class="mt-7 rounded-[24px] border border-dashed border-gray-200 bg-[#F8FAF9] p-12 text-center"
+                        class="mt-7 rounded-[24px] border border-dashed border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-12 text-center"
                     >
 
                         <div
@@ -2124,7 +2144,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal border-y border-gray-100 bg-[#F8FAF9]"
+                class="alona-reveal border-y border-[#B2DFDB]/60 bg-[#E8F7F6]"
             >
                 <div
                     class="mx-auto w-full w-full px-4 py-10 sm:px-6 lg:px-8 2xl:px-10 lg:py-12"
@@ -2163,7 +2183,7 @@ onUnmounted(() => {
                         <div
                             v-for="promotion in props.promotions"
                             :key="promotion.id"
-                            class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
+                            class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-3.5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-300 hover:-translate-y-1 hover:border-[#087F8C]/40 hover:shadow-lg hover:shadow-[#087F8C]/5"
                         >
                             <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#E8F7F6]/60"></div>
 
@@ -2321,10 +2341,10 @@ onUnmounted(() => {
                         v-for="product in featuredProductsList"
                         :key="product.id"
                         :href="safeRoute('buyer.product', '#', product.id)"
-                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                        class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
                     >
                         <div
-                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                            class="relative aspect-square overflow-hidden rounded-t-[15px] bg-white"
                         >
                             <img
                                 v-if="product.image"
@@ -2342,65 +2362,68 @@ onUnmounted(() => {
                             </div>
 
                             <span
-                                class="absolute left-3 top-3 rounded-full bg-[#F4B942] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C]"
+                                v-if="product.discountPercentage > 0"
+                                class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                            >
+                                {{ product.discountPercentage }}% OFF
+                            </span>
+                            <span
+                                v-else
+                                class="absolute left-2.5 top-2.5 rounded-full bg-[#F4B942] px-2.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-[#087F8C]"
                             >
                                 Featured
                             </span>
-
-                            <span
-                                v-if="product.isSale"
-                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                            >
-                                SALE
-                            </span>
                         </div>
 
-                        <div class="p-3.5">
-                            <p
-                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
-                            >
-                                {{ product.category }}
-                            </p>
-
-                            <h3
-                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
-                            >
-                                {{ product.name }}
-                            </h3>
-
-                            <div class="mt-2 flex items-center gap-2">
-                                <span
-                                    class="text-sm font-black text-[#087F8C]"
+                        <div class="flex flex-1 flex-col justify-between p-3">
+                            <div>
+                                <p
+                                    class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]"
                                 >
-                                    {{ product.price }}
-                                </span>
+                                    {{ product.category }}
+                                </p>
 
-                                <span
-                                    v-if="product.oldPrice"
-                                    class="text-[10px] text-gray-400 line-through"
+                                <h3
+                                    class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] transition group-hover:text-[#087F8C]"
                                 >
-                                    {{ product.oldPrice }}
-                                </span>
+                                    {{ product.name }}
+                                </h3>
                             </div>
 
-                            <div
-                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                            >
-                                <span class="text-[#F4B942]">★</span>
-                                <span class="font-semibold text-gray-600">
-                                    {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
-                                </span>
-                                <span v-if="product.reviews > 0">
-                                    ({{ product.reviews }})
-                                </span>
-                            </div>
+                            <div class="mt-2">
+                                <div
+                                    class="flex items-center gap-1 text-[11px]"
+                                >
+                                    <span class="text-[#F4B942]">★</span>
+                                    <span class="font-bold text-[#1F2937]">
+                                        {{ product.rating > 0 ? product.rating.toFixed(1) : 'New' }}
+                                    </span>
+                                    <span v-if="product.reviews > 0" class="text-[10px] text-[#64748B]">
+                                        ({{ product.reviews }})
+                                    </span>
+                                </div>
 
-                            <p
-                                v-if="product.seller?.name"
-                                class="mt-2 truncate text-[10px] text-gray-400"
-                            >
-                                {{ product.seller.name }}
-                            </p>
+                                <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <span
+                                        class="text-[15px] font-extrabold text-[#087F8C]"
+                                    >
+                                        {{ product.price }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.discountPercentage > 0"
+                                        class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                    >
+                                        -{{ product.discountPercentage }}%
+                                    </span>
+                                    <span
+                                        v-else-if="product.oldPrice"
+                                        class="text-[10px] text-[#64748B] line-through"
+                                    >
+                                        {{ product.oldPrice }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </Link>
                 </div>
@@ -2470,10 +2493,10 @@ onUnmounted(() => {
                         v-for="product in recommendedProductsList"
                         :key="product.id"
                         :href="safeRoute('buyer.product', '#', product.id)"
-                        class="group overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.04] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
+                        class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
                     >
                         <div
-                            class="relative aspect-[.95] overflow-hidden bg-[#F4F7F6]"
+                            class="relative aspect-square overflow-hidden rounded-t-[15px] bg-white"
                         >
                             <img
                                 v-if="product.image"
@@ -2491,73 +2514,70 @@ onUnmounted(() => {
                             </div>
 
                             <span
-                                class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm"
+                                v-if="product.discountPercentage > 0"
+                                class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
                             >
-                                Recommended
-                            </span>
-
-                            <span
-                                v-if="product.isSale"
-                                class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                            >
-                                SALE
+                                {{ product.discountPercentage }}% OFF
                             </span>
                         </div>
 
-                        <div class="p-3.5">
-                            <p
-                                class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
-                            >
-                                {{ product.category }}
-                            </p>
-
-                            <h3
-                                class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition group-hover:text-[#087F8C]"
-                            >
-                                {{ product.name }}
-                            </h3>
-
-                            <div class="mt-2 flex items-center gap-2">
-                                <span
-                                    class="text-sm font-black text-[#087F8C]"
+                        <div class="flex flex-1 flex-col justify-between p-3">
+                            <div>
+                                <p
+                                    class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]"
                                 >
-                                    {{ product.price }}
-                                </span>
+                                    {{ product.category }}
+                                </p>
 
-                                <span
-                                    v-if="product.oldPrice"
-                                    class="text-[10px] text-gray-400 line-through"
+                                <h3
+                                    class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] transition group-hover:text-[#087F8C]"
                                 >
-                                    {{ product.oldPrice }}
-                                </span>
+                                    {{ product.name }}
+                                </h3>
                             </div>
 
-                            <div
-                                class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                            >
-                                <span class="text-[#F4B942]">
-                                    ★
-                                </span>
+                            <div class="mt-2">
+                                <div
+                                    class="flex items-center gap-1 text-[11px]"
+                                >
+                                    <span class="text-[#F4B942]">
+                                        ★
+                                    </span>
 
-                                <span class="font-semibold text-gray-600">
-                                    {{
-                                        product.rating > 0
-                                            ? product.rating.toFixed(1)
-                                            : 'New'
-                                    }}
-                                </span>
+                                    <span class="font-bold text-[#1F2937]">
+                                        {{
+                                            product.rating > 0
+                                                ? product.rating.toFixed(1)
+                                                : 'New'
+                                        }}
+                                    </span>
 
-                                <span v-if="product.reviews > 0">
-                                    ({{ product.reviews }})
-                                </span>
+                                    <span v-if="product.reviews > 0" class="text-[10px] text-[#64748B]">
+                                        ({{ product.reviews }})
+                                    </span>
+                                </div>
+
+                                <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <span
+                                        class="text-[15px] font-extrabold text-[#087F8C]"
+                                    >
+                                        {{ product.price }}
+                                    </span>
+
+                                    <span
+                                        v-if="product.discountPercentage > 0"
+                                        class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                    >
+                                        -{{ product.discountPercentage }}%
+                                    </span>
+                                    <span
+                                        v-else-if="product.oldPrice"
+                                        class="text-[10px] text-[#64748B] line-through"
+                                    >
+                                        {{ product.oldPrice }}
+                                    </span>
+                                </div>
                             </div>
-
-                            <p
-                                v-if="product.seller?.name"
-                                class="mt-2 truncate text-[10px] text-gray-400"
-                            >
-                                {{ product.seller.name }}
-                            </p>
                         </div>
                     </Link>
                 </div>
@@ -2582,7 +2602,7 @@ onUnmounted(() => {
 
             <section
                 v-if="recentlyViewed.length"
-                class="alona-reveal border-b border-gray-100 bg-[#F8FAF9]"
+                class="alona-reveal border-b border-[#B2DFDB]/60 bg-[#E8F7F6]"
             >
 
                 <div
@@ -2643,11 +2663,11 @@ onUnmounted(() => {
                             v-for="(product, index) in recentlyViewed"
                             :key="product.id ?? `recent-${index}`"
                             :href="safeRoute('buyer.product', '#', product.id)"
-                            class="recent-product-card group"
+                            class="recent-product-card group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#087F8C]/10"
                         >
 
                             <div
-                                class="relative aspect-[.92] overflow-hidden rounded-[22px] bg-white ring-1 ring-black/[0.04]"
+                                class="relative aspect-square overflow-hidden rounded-t-[15px] bg-white"
                             >
 
                                 <img
@@ -2666,81 +2686,83 @@ onUnmounted(() => {
                                 </div>
 
                                 <span
-                                    class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-sm backdrop-blur"
+                                    v-if="product.discountPercentage > 0"
+                                    class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                >
+                                    {{ product.discountPercentage }}% OFF
+                                </span>
+                                <span
+                                    v-else
+                                    class="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#087F8C] shadow-xs backdrop-blur"
                                 >
                                     Viewed
-                                </span>
-
-                                <span
-                                    v-if="product.isSale"
-                                    class="absolute bottom-3 left-3 rounded-full bg-[#E85D5D] px-2.5 py-1 text-[9px] font-black text-white"
-                                >
-                                    SALE
                                 </span>
 
                             </div>
 
                             <div
-                                class="px-1 pt-3.5"
+                                class="flex flex-1 flex-col justify-between p-3"
                             >
-
-                                <p
-                                    class="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-[#087F8C]"
-                                >
-                                    {{ product.category }}
-                                </p>
-
-                                <h3
-                                    class="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-gray-900 transition duration-300 group-hover:text-[#087F8C]"
-                                >
-                                    {{ product.name }}
-                                </h3>
-
-                                <div
-                                    class="mt-2 flex items-center gap-2"
-                                >
-
-                                    <span
-                                        class="text-sm font-black text-[#087F8C]"
+                                <div>
+                                    <p
+                                        class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]"
                                     >
-                                        {{ product.price }}
-                                    </span>
+                                        {{ product.category }}
+                                    </p>
 
-                                    <span
-                                        v-if="product.oldPrice"
-                                        class="text-[10px] text-gray-400 line-through"
+                                    <h3
+                                        class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] transition duration-300 group-hover:text-[#087F8C]"
                                     >
-                                        {{ product.oldPrice }}
-                                    </span>
-
+                                        {{ product.name }}
+                                    </h3>
                                 </div>
 
-                                <div
-                                    class="mt-2 flex items-center gap-1 text-[10px] text-gray-400"
-                                >
-
-                                    <span
-                                        class="text-[#F4B942]"
+                                <div class="mt-2">
+                                    <div
+                                        class="flex items-center gap-1 text-[11px]"
                                     >
-                                        ★
-                                    </span>
+                                        <span class="text-[#F4B942]">
+                                            ★
+                                        </span>
 
-                                    <span
-                                        class="font-semibold text-gray-600"
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{
+                                                product.rating > 0
+                                                    ? product.rating.toFixed(1)
+                                                    : 'New'
+                                            }}
+                                        </span>
+
+                                        <span
+                                            v-if="product.reviews > 0"
+                                            class="text-[10px] text-[#64748B]"
+                                        >
+                                            ({{ product.reviews }})
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="mt-1 flex flex-wrap items-center gap-1.5"
                                     >
-                                        {{
-                                            product.rating > 0
-                                                ? product.rating.toFixed(1)
-                                                : 'New'
-                                        }}
-                                    </span>
+                                        <span
+                                            class="text-[15px] font-extrabold text-[#087F8C]"
+                                        >
+                                            {{ product.price }}
+                                        </span>
 
-                                    <span
-                                        v-if="product.reviews > 0"
-                                    >
-                                        ({{ product.reviews }})
-                                    </span>
-
+                                        <span
+                                            v-if="product.discountPercentage > 0"
+                                            class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                        >
+                                            -{{ product.discountPercentage }}%
+                                        </span>
+                                        <span
+                                            v-else-if="product.oldPrice"
+                                            class="text-[10px] text-[#64748B] line-through"
+                                        >
+                                            {{ product.oldPrice }}
+                                        </span>
+                                    </div>
                                 </div>
 
                             </div>
@@ -2922,7 +2944,7 @@ onUnmounted(() => {
             >
 
                 <div
-                    class="relative overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
+                    class="relative overflow-hidden rounded-[30px] border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                 >
 
                     <div
@@ -2977,7 +2999,7 @@ onUnmounted(() => {
             ====================================================== -->
 
             <section
-                class="alona-reveal border-t border-gray-100 bg-white"
+                class="alona-reveal border-t border-[#B2DFDB]/60 bg-[#E8F7F6]"
             >
 
                 <div

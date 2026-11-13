@@ -419,7 +419,7 @@ const formatTime = (timeStr) => {
     <Head :title="`${seller.store_name || seller.name} - Storefront`" />
 
     <component :is="layoutComponent">
-        <div class="w-full min-w-0 overflow-x-hidden bg-[#F8FAF9] font-sans pb-16">
+        <div class="w-full min-w-0 overflow-x-hidden bg-[#E8F7F6] font-sans pb-16">
             <!-- Full width responsive container matching Products.vue and Show.vue -->
             <div class="mx-auto w-full w-full min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 2xl:px-10 space-y-6">
 
@@ -1155,9 +1155,9 @@ const formatTime = (timeStr) => {
                             v-for="product in recommended_products"
                             :key="`rec-${product.id}`"
                             :href="route('buyer.product', product.id)"
-                            class="group block min-w-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                            class="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                         >
-                            <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-[#F8FAF9] p-2.5 sm:p-3">
+                            <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-t-[15px] bg-white p-2.5 sm:p-3">
                                 <img
                                     v-if="product.image_path"
                                     :src="imageUrl(product.image_path)"
@@ -1169,47 +1169,61 @@ const formatTime = (timeStr) => {
                                     <Icon name="bag" class="h-6 w-6" />
                                 </span>
 
-                                <!-- Flash Sale or Bundle Badge -->
+                                <!-- Discount Pill / Flash Sale / Bundle Badge -->
                                 <span
-                                    v-if="product.has_active_flash_sale"
-                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                    v-if="product.old_price && Number(product.old_price) > Number(product.price)"
+                                    class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                >
+                                    {{ Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) }}% OFF
+                                </span>
+                                <span
+                                    v-else-if="product.has_active_flash_sale"
+                                    class="absolute left-2.5 top-2.5 flex items-center gap-0.5 rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                 >
                                     <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                     <span>Flash Sale</span>
                                 </span>
                                 <span
                                     v-else-if="isProductInBundle(product.id)"
-                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
+                                    class="absolute left-2.5 top-2.5 flex items-center gap-0.5 rounded-full bg-[#087F8C] px-2 py-0.5 text-[9px] font-bold text-white shadow-2xs"
                                 >
                                     <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                     <span>Bundle Promo</span>
                                 </span>
                             </div>
 
-                            <div class="min-w-0 p-3 sm:p-3.5">
-                                <h3 class="truncate text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-[#087F8C] transition">
-                                    {{ product.name }}
-                                </h3>
+                            <div class="flex min-w-0 flex-1 flex-col justify-between p-3 sm:p-3.5">
+                                <div>
+                                    <p class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">
+                                        {{ product.category?.name || seller.store_name || seller.name }}
+                                    </p>
+                                    <h3 class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] group-hover:text-[#087F8C] transition">
+                                        {{ product.name }}
+                                    </h3>
+                                </div>
 
-                                <div class="mt-2 flex items-baseline justify-between gap-1">
-                                    <div class="flex items-baseline gap-1.5 flex-wrap">
-                                        <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
+                                <div class="mt-2">
+                                    <div class="flex items-center gap-1 text-[11px]">
+                                        <span class="text-[#F4B942]">★</span>
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{ product.rating ? Number(product.rating).toFixed(1) : 'New' }}
+                                        </span>
+                                        <span v-if="product.reviews_count" class="text-[10px] text-[#64748B]">
+                                            ({{ product.reviews_count }})
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <p class="text-[15px] font-extrabold text-[#087F8C]">
                                             ₱{{ formatPrice(product.price) }}
                                         </p>
                                         <span
                                             v-if="product.old_price && Number(product.old_price) > Number(product.price)"
-                                            class="text-[10px] text-gray-400 line-through"
+                                            class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
                                         >
-                                            ₱{{ formatPrice(product.old_price) }}
+                                            -{{ Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) }}%
                                         </span>
                                     </div>
-                                    <span v-if="product.reviews_count" class="text-[10px] text-slate-400">
-                                        {{ product.reviews_count }} sold
-                                    </span>
-                                </div>
-
-                                <div v-if="product.rating" class="mt-1 flex items-center gap-1 text-[10px] text-amber-500 font-bold">
-                                    <span>★ {{ Number(product.rating).toFixed(1) }}</span>
                                 </div>
                             </div>
                         </Link>
@@ -1372,9 +1386,9 @@ const formatTime = (timeStr) => {
                             v-for="product in products.data"
                             :key="product.id"
                             :href="route('buyer.product', product.id)"
-                            class="group block min-w-0 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                            class="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                         >
-                            <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-[#F8FAF9] p-2.5 sm:p-3">
+                            <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-t-[15px] bg-white p-2.5 sm:p-3">
                                 <img
                                     v-if="product.image_path"
                                     :src="imageUrl(product.image_path)"
@@ -1386,56 +1400,61 @@ const formatTime = (timeStr) => {
                                     <Icon name="bag" class="h-6 w-6" />
                                 </span>
 
-                                <!-- Flash Sale or Bundle Badge -->
+                                <!-- Discount Pill / Flash Sale / Bundle Badge -->
                                 <span
-                                    v-if="product.has_active_flash_sale"
-                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-2xs"
+                                    v-if="product.old_price && Number(product.old_price) > Number(product.price)"
+                                    class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                >
+                                    {{ Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) }}% OFF
+                                </span>
+                                <span
+                                    v-else-if="product.has_active_flash_sale"
+                                    class="absolute left-2.5 top-2.5 flex items-center gap-0.5 rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-black text-white shadow-2xs"
                                 >
                                     <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                     <span>Flash Sale</span>
                                 </span>
                                 <span
                                     v-else-if="isProductInBundle(product.id)"
-                                    class="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-[#087F8C] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs"
+                                    class="absolute left-2.5 top-2.5 flex items-center gap-0.5 rounded-full bg-[#087F8C] px-2 py-0.5 text-[9px] font-bold text-white shadow-2xs"
                                 >
                                     <svg class="h-2.5 w-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                                     <span>Bundle Promo</span>
                                 </span>
                             </div>
 
-                            <div class="min-w-0 p-3 sm:p-3.5">
-                                <h3 class="truncate text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-[#087F8C] transition">
-                                    {{ product.name }}
-                                </h3>
+                            <div class="flex min-w-0 flex-1 flex-col justify-between p-3 sm:p-3.5">
+                                <div>
+                                    <p class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">
+                                        {{ product.category?.name || seller.store_name || seller.name }}
+                                    </p>
+                                    <h3 class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] group-hover:text-[#087F8C] transition">
+                                        {{ product.name }}
+                                    </h3>
+                                </div>
 
-                                <div class="mt-2 flex items-baseline justify-between gap-1">
-                                    <div class="flex items-baseline gap-1.5 flex-wrap">
-                                        <p class="text-xs sm:text-sm font-extrabold text-[#087F8C]">
+                                <div class="mt-2">
+                                    <div class="flex items-center gap-1 text-[11px]">
+                                        <span class="text-[#F4B942]">★</span>
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{ product.rating ? Number(product.rating).toFixed(1) : 'New' }}
+                                        </span>
+                                        <span v-if="product.reviews_count" class="text-[10px] text-[#64748B]">
+                                            ({{ product.reviews_count }})
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <p class="text-[15px] font-extrabold text-[#087F8C]">
                                             ₱{{ formatPrice(product.price) }}
                                         </p>
                                         <span
                                             v-if="product.old_price && Number(product.old_price) > Number(product.price)"
-                                            class="text-[10px] text-gray-400 line-through"
+                                            class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
                                         >
-                                            ₱{{ formatPrice(product.old_price) }}
+                                            -{{ Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100) }}%
                                         </span>
                                     </div>
-                                    <span v-if="product.reviews_count" class="text-[10px] text-slate-400">
-                                        {{ product.reviews_count }} sold
-                                    </span>
-                                </div>
-
-                                <div class="mt-1 flex items-center justify-between text-[10px]">
-                                    <span v-if="product.rating" class="text-amber-500 font-bold">
-                                        ★ {{ Number(product.rating).toFixed(1) }}
-                                    </span>
-                                    <span v-else class="text-slate-400">
-                                        No reviews
-                                    </span>
-
-                                    <span v-if="seller.shipping_fee === 0" class="text-emerald-600 font-bold">
-                                        Free Ship
-                                    </span>
                                 </div>
                             </div>
                         </Link>

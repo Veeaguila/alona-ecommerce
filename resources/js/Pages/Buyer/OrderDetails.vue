@@ -652,7 +652,7 @@ const getItemShopName = item => {
                 </div>
 
                 <!-- TRACKING PROGRESS (BUYER-19) -->
-                <section class="mt-4 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[0_6px_22px_rgba(15,23,42,0.04)] sm:p-6">
+                <section class="mt-4 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <div class="flex items-center gap-2">
@@ -718,7 +718,7 @@ const getItemShopName = item => {
                 <div class="mt-5 grid gap-5 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_390px]">
                     <!-- LEFT: ORDER ITEMS & RETURNS -->
                     <div class="space-y-4">
-                        <section class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
+                        <section class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF1F2] bg-[#FCFDFC] px-4 py-3.5 sm:px-5">
                                 <div class="flex items-center gap-2.5">
                                     <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E8F7F6] text-[#087F8C]">
@@ -1039,7 +1039,7 @@ const getItemShopName = item => {
                         <!-- FULFILLMENT ACTIVITY TIMELINE (BUYER-19) -->
                         <section
                             v-if="order.status_histories?.length"
-                            class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-5"
+                            class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5"
                         >
                             <h3 class="text-sm font-extrabold text-[#1F2937]">
                                 Fulfillment History & Activity Log
@@ -1068,7 +1068,7 @@ const getItemShopName = item => {
                     <!-- RIGHT: ORDER SUMMARY & SHIPPING DETAILS -->
                     <div class="space-y-4">
                         <!-- SUMMARY -->
-                        <section class="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-5">
+                        <section class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5">
                             <h3 class="text-sm font-extrabold text-[#1F2937]">Order Summary</h3>
 
                             <div class="mt-4 space-y-2 text-xs">
@@ -1097,7 +1097,7 @@ const getItemShopName = item => {
                         </section>
 
                         <!-- SHIPPING & PAYMENT DETAILS -->
-                        <section class="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-5">
+                        <section class="rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-4 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-5">
                             <h3 class="text-sm font-extrabold text-[#1F2937]">Delivery & Payment</h3>
 
                             <div class="mt-4 space-y-3.5 text-xs">

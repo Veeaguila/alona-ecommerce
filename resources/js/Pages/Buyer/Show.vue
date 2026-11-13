@@ -1294,7 +1294,7 @@ const breadcrumbs = computed(() => {
 
     <component :is="pageLayout">
         <main
-            class="min-h-screen bg-[#F8FAF9]"
+            class="min-h-screen bg-[#E8F7F6]"
         >
             <div
                 class="mx-auto w-full w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-10 lg:py-8"
@@ -1354,7 +1354,7 @@ const breadcrumbs = computed(() => {
                 <!-- ===================================================== -->
 
                 <div
-                    class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+                    class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]"
                 >
                     <div
                         class="grid lg:grid-cols-2"
@@ -1507,7 +1507,7 @@ const breadcrumbs = computed(() => {
 
                             <div
                                 v-if="product.seller?.id"
-                                class="mt-4 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F8FAF9]"
+                                class="mt-4 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-white shadow-xs"
                             >
                                 <div class="p-4">
                                     <div class="flex items-start gap-3">
@@ -2435,7 +2435,7 @@ const breadcrumbs = computed(() => {
                 <!-- ===================================================== -->
 
                 <section
-                    class="mt-10 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm sm:p-6"
+                    class="mt-10 rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-6"
                 >
                     <!-- HEADER -->
 
@@ -2703,12 +2703,12 @@ const breadcrumbs = computed(() => {
                                     related.id
                                 )
                             "
-                            class="group block overflow-hidden rounded-xl border border-[#E5E7EB] bg-white transition hover:-translate-y-0.5 hover:border-[#16A6A0] hover:shadow-md"
+                            class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:-translate-y-0.5 hover:border-[#16A6A0] hover:shadow-md"
                         >
                             <!-- IMAGE -->
 
                             <div
-                                class="flex h-28 items-center justify-center bg-[#F8FAF9]"
+                                class="relative flex aspect-square items-center justify-center rounded-t-[15px] bg-white overflow-hidden"
                             >
                                 <img
                                     v-if="
@@ -2751,37 +2751,69 @@ const breadcrumbs = computed(() => {
                                         />
                                     </svg>
                                 </div>
+
+                                <span
+                                    v-if="related.old_price && Number(related.old_price) > Number(related.price)"
+                                    class="absolute left-2.5 top-2.5 rounded-full border border-[#E85D5D]/30 bg-[#FFF1F1] px-2.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                >
+                                    {{ Math.round(((Number(related.old_price) - Number(related.price)) / Number(related.old_price)) * 100) }}% OFF
+                                </span>
                             </div>
 
                             <!-- INFO -->
 
                             <div
-                                class="p-3"
+                                class="flex flex-1 flex-col justify-between p-3"
                             >
-                                <h3
-                                    class="line-clamp-1 text-xs font-semibold text-[#1F2937]"
-                                >
-                                    {{
-                                        related.name
-                                    }}
-                                </h3>
+                                <div>
+                                    <p class="truncate text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">
+                                        {{ related.category?.name || product.category?.name || 'PRODUCT' }}
+                                    </p>
+                                    <h3
+                                        class="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-[#1F2937] group-hover:text-[#087F8C]"
+                                    >
+                                        {{
+                                            related.name
+                                        }}
+                                    </h3>
+                                </div>
 
-                                <p
-                                    class="mt-1 text-xs font-bold text-[#1F2937]"
-                                >
-                                    ₱{{
-                                        Number(
-                                            related.price ??
-                                                0
-                                        ).toLocaleString(
-                                            'en-PH',
-                                            {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            }
-                                        )
-                                    }}
-                                </p>
+                                <div class="mt-2">
+                                    <div class="flex items-center gap-1 text-[11px]">
+                                        <span class="text-[#F4B942]">★</span>
+                                        <span class="font-bold text-[#1F2937]">
+                                            {{ Number(related.rating ?? 0) > 0 ? Number(related.rating).toFixed(1) : 'New' }}
+                                        </span>
+                                        <span v-if="Number(related.reviews_count ?? 0) > 0" class="text-[10px] text-[#64748B]">
+                                            ({{ related.reviews_count }})
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                        <p
+                                            class="text-[15px] font-extrabold text-[#087F8C]"
+                                        >
+                                            ₱{{
+                                                Number(
+                                                    related.price ??
+                                                        0
+                                                ).toLocaleString(
+                                                    'en-PH',
+                                                    {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    }
+                                                )
+                                            }}
+                                        </p>
+                                        <span
+                                            v-if="related.old_price && Number(related.old_price) > Number(related.price)"
+                                            class="rounded bg-[#E85D5D]/12 px-1.5 py-0.5 text-[10px] font-extrabold text-[#E85D5D]"
+                                        >
+                                            -{{ Math.round(((Number(related.old_price) - Number(related.price)) / Number(related.old_price)) * 100) }}%
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </Link>
                     </div>

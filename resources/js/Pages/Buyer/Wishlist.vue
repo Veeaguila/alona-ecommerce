@@ -86,7 +86,7 @@ const addToCart = product => {
     <Head title="My Wishlist" />
 
     <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-12 sm:px-6 sm:py-7 lg:px-8 2xl:px-10 lg:py-8 lg:pb-14">
 
                 <!-- PAGE HEADER -->
@@ -157,12 +157,12 @@ const addToCart = product => {
                     <div
                         v-for="item in wishlist.data"
                         :key="item.id"
-                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
+                        class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-[#087F8C]/40 hover:shadow-md"
                     >
                         <!-- PRODUCT CARD TOP -->
                         <div>
                             <!-- IMAGE & BADGES -->
-                            <div class="relative aspect-square w-full overflow-hidden bg-[#F8FAF9] p-3">
+                            <div class="relative aspect-square w-full overflow-hidden rounded-t-[15px] bg-white p-3">
                                 <Link
                                     v-if="item.product"
                                     :href="route('buyer.product', item.product.id)"

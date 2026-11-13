@@ -344,7 +344,7 @@ onUnmounted(() => {
     <Head title="Messages" />
 
     <BuyerLayout>
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full min-w-0 w-full px-4 py-6 pb-10 sm:px-6 sm:py-6 sm:pb-12 lg:px-8 2xl:px-10 lg:py-7 lg:pb-14">
 
                 <!-- PAGE HEADER -->
@@ -377,7 +377,7 @@ onUnmounted(() => {
 
                 <!-- MESSAGING PANEL -->
                 <div
-                    class="grid w-full min-w-0 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] lg:h-[calc(100vh-250px)] lg:min-h-[560px] lg:grid-cols-[310px_minmax(0,1fr)] xl:grid-cols-[350px_minmax(0,1fr)]"
+                    class="grid w-full min-w-0 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-white shadow-[0_2px_6px_rgba(6,90,99,0.07)] lg:h-[calc(100vh-250px)] lg:min-h-[560px] lg:grid-cols-[310px_minmax(0,1fr)] xl:grid-cols-[350px_minmax(0,1fr)]"
                 >
 
                     <!-- CONVERSATION SIDEBAR -->

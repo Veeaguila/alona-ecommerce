@@ -253,7 +253,7 @@ const remove = address => {
     <Head title="My Addresses" />
 
     <BuyerAccountLayout active-menu="account" active-sub="addresses">
-        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+        <div class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-6 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-8">
             <!-- PAGE HEADER -->
             <div class="mb-6 flex flex-col justify-between gap-4 border-b border-[#EEF1F2] pb-5 sm:flex-row sm:items-center">
                 <div>
@@ -395,7 +395,7 @@ const remove = address => {
 
                     <!-- ADD / EDIT ADDRESS FORM -->
                     <form
-                        class="h-fit rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm sm:p-6"
+                        class="h-fit rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-5 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-6"
                         @submit.prevent="submit"
                     >
                         <div class="flex items-center justify-between">

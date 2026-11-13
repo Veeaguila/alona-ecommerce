@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
-import SellerLayout from '@/Layouts/SellerLayout.vue'
+import SellerLayout2 from '@/Layouts/SellerLayout.vue'
 import { generateBarcodeSvg } from '@/Utils/barcode'
 
 const props = defineProps({

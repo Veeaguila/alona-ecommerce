@@ -100,7 +100,7 @@ const filteredFaqs = computed(() => {
     <Head title="Frequently Asked Questions (FAQ) - Alona" />
 
     <component :is="layoutComponent">
-        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#F8FAF9]">
+        <main class="min-h-[calc(100vh-80px)] w-full min-w-0 overflow-x-hidden bg-[#E8F7F6]">
             <div class="mx-auto w-full w-full px-4 py-6 pb-16 sm:px-6 sm:py-8 lg:px-8 2xl:px-10 lg:py-10">
 
                 <!-- BREADCRUMBS -->
@@ -171,7 +171,7 @@ const filteredFaqs = computed(() => {
                     <div
                         v-for="faq in filteredFaqs"
                         :key="faq.id"
-                        class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white transition hover:border-[#087F8C]/40"
+                        class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)] transition hover:border-[#087F8C]"
                     >
                         <button
                             type="button"

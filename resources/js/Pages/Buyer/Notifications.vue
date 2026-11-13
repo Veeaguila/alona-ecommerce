@@ -149,7 +149,7 @@ const formatDate = dateStr => {
     <Head title="Notifications" />
 
     <BuyerAccountLayout active-menu="notifications" :active-sub="activeSub">
-        <div class="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xs sm:p-8">
+        <div class="overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] p-6 shadow-[0_2px_6px_rgba(6,90,99,0.07)] sm:p-8">
             <!-- HEADER -->
             <div class="flex flex-col gap-4 border-b border-[#EEF1F2] pb-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -210,7 +210,7 @@ const formatDate = dateStr => {
                 </div>
 
                 <!-- NOTIFICATIONS LIST -->
-                <section class="mt-6 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-xs">
+                <section class="mt-6 overflow-hidden rounded-2xl border border-[#B2DFDB] bg-[linear-gradient(180deg,#FFFFFF_50%,#E8F7F6_100%)] shadow-[0_2px_6px_rgba(6,90,99,0.07)]">
                     <div v-if="filteredNotifications.length" class="divide-y divide-[#EEF1F2]">
                         <div
                             v-for="item in filteredNotifications"
