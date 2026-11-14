@@ -40,6 +40,55 @@ class RiderManagementScopeTest extends TestCase
             ->assertJsonPath('data.approval_status', 'approved');
     }
 
+    public function test_browser_riders_link_opens_the_rider_management_page(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->sortingCenter('Browser Center'));
+
+        $this->get('/sorting-center/riders')
+            ->assertRedirect(route('sorting-center.rider-management'));
+
+        $this->get('/sorting-center/rider-management')
+            ->assertOk()
+            ->assertViewIs('sorting-center.rider-management')
+            ->assertSee('<rider-management>', false);
+    }
+
+    public function test_inertia_riders_navigation_redirects_to_the_page_instead_of_json(): void
+    {
+        $this->actingAs($this->sortingCenter('Inertia Center'));
+
+        $version = app(\App\Http\Middleware\HandleInertiaRequests::class)
+            ->version(\Illuminate\Http\Request::create('/sorting-center/riders'));
+
+        $this->get('/sorting-center/riders', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version,
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html, application/xhtml+xml',
+        ])->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('sorting-center.rider-management'));
+    }
+
+    public function test_web_and_api_json_lists_keep_status_filter_and_company_scope(): void
+    {
+        $center = $this->sortingCenter('JSON Center');
+        $foreignCenter = $this->sortingCenter('Foreign Center');
+        $pending = $this->rider($center->sortingCenter->id, 'pending-json@example.test');
+        $approved = $this->rider($center->sortingCenter->id, 'approved-json@example.test');
+        $approved->update(['approval_status' => 'approved']);
+        $this->rider($foreignCenter->sortingCenter->id, 'foreign-json@example.test');
+        $this->actingAs($center);
+
+        foreach (['/sorting-center/riders', '/api/sorting-center/riders'] as $url) {
+            $this->getJson($url.'?status=pending')
+                ->assertOk()
+                ->assertJsonPath('message', 'Riders retrieved successfully.')
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $pending->id);
+        }
+    }
+
     public function test_public_rider_registration_directory_only_lists_approved_centers(): void
     {
         $approvedCenter = $this->sortingCenter('Approved Center', 'approved');
