@@ -455,7 +455,7 @@ export default {
         items: [
           { path: '/sorting-center/hubs', label: 'Hubs & Routes', key: 'hubs' },
           { path: '/sorting-center/hub-staff', label: 'Hub Staff Accounts', key: 'rider-management' },
-          { path: '/sorting-center/riders', label: 'Rider Management', key: 'riders' },
+          { path: '/sorting-center/rider-management', label: 'Rider Management', key: 'riders' },
           { path: '/sorting-center/delivery-rates', label: 'Zones & Rates', key: 'delivery-rates' },
         ],
       },
