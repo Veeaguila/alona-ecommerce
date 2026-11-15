@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:alona_mobile/core/config/api_config.dart' as core_config;
 
 const _configuredBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -42,8 +43,15 @@ String resolveApiBaseUrl(
   return normalizeApiBaseUrl(value, requireHttps: release);
 }
 
-String get apiBaseUrl =>
-    resolveApiBaseUrl(_configuredBaseUrl, web: kIsWeb, release: kReleaseMode);
+String get apiBaseUrl {
+  const fromEnv = String.fromEnvironment('API_BASE_URL');
+  final configured = fromEnv.isNotEmpty
+      ? fromEnv
+      : (core_config.ApiConfig.baseUrl.isNotEmpty
+          ? '${core_config.ApiConfig.baseUrl}/api'
+          : _configuredBaseUrl);
+  return resolveApiBaseUrl(configured, web: kIsWeb, release: kReleaseMode);
+}
 
 String get apiUrl => '$apiBaseUrl/rider/register';
 String get sortingCentersUrl => '$apiBaseUrl/sorting-centers';

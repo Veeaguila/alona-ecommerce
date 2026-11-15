@@ -6,8 +6,11 @@ import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
+import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_otp_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_register_screen.dart';
+import 'package:alona_mobile/features/rider/pages/registration_page.dart';
 import 'package:alona_mobile/shared/widgets/alona_auth_scaffold.dart';
 
 class BuyerRegisterScreen extends StatefulWidget {
@@ -632,6 +635,19 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     );
   }
 
+  void _exitOrPop() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => BuyerMainScreen(authState: widget.authState),
+        ),
+        (route) => false,
+      );
+    }
+  }
+
   void _handleBackNavigation() {
     if (_currentStep > 1) {
       setState(() {
@@ -639,17 +655,18 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
         _currentStep--;
       });
     } else {
-      Navigator.pop(context);
+      _exitOrPop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlonaAuthScaffold(
+      showBackButton: true,
       onBack: _handleBackNavigation,
       trailing: IconButton(
         icon: const Icon(Icons.close, color: Colors.white, size: 22),
-        onPressed: () => Navigator.pop(context),
+        onPressed: _exitOrPop,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -1093,6 +1110,125 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RegistrationPage(),
+                      ),
+                    );
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.two_wheeler_rounded,
+                          size: 15,
+                          color: AlonaAuthColors.tealAccent,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Register as Rider',
+                          style: GoogleFonts.figtree(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AlonaAuthColors.tealAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    '•',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LogisticsRegisterScreen(
+                          authState: widget.authState,
+                        ),
+                      ),
+                    );
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_shipping_outlined,
+                          size: 15,
+                          color: AlonaAuthColors.tealAccent,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Apply as Logistics Hub',
+                          style: GoogleFonts.figtree(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AlonaAuthColors.tealAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Continue as guest button
+            Center(
+              child: GestureDetector(
+                onTap: () async {
+                  await widget.authState.switchModule('buyer');
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => BuyerMainScreen(authState: widget.authState),
+                    ),
+                    (route) => false,
+                  );
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    'Continue as guest',
+                    style: GoogleFonts.figtree(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.92),
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                      decorationThickness: 1.4,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

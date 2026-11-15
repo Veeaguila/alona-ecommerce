@@ -12,7 +12,8 @@ import 'package:alona_mobile/features/buyer/presentation/orders/order_list_scree
 import 'package:alona_mobile/features/buyer/presentation/vouchers/vouchers_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/profile/address_management_screen.dart';
 import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
-import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_register_screen.dart';
+import 'package:alona_mobile/features/rider/pages/registration_page.dart';
 import 'package:alona_mobile/features/rider/rider_entry_gate.dart';
 
 class BuyerSettingsScreen extends StatefulWidget {
@@ -2554,12 +2555,12 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const RiderEntryGate()),
+                    MaterialPageRoute(builder: (_) => const RegistrationPage()),
                   );
                 },
                 icon: const Icon(Icons.two_wheeler_rounded, size: 20),
                 label: Text(
-                  'Open Alona Rider Portal',
+                  'Register as a Rider',
                   style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -2571,26 +2572,44 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RiderEntryGate()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF087F8C),
+                  side: const BorderSide(color: Color(0xFF087F8C)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(
+                  'Already registered? Sign In',
+                  style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 13.5),
+                ),
+              ),
+            ),
           ] else if (partnerType == 'logistics') ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  await authState.switchModule('logistics');
-                  if (!context.mounted) return;
-                  final target = authState.isLogisticsAuthenticated
-                      ? LogisticsMainScreen(authState: authState)
-                      : LogisticsLoginScreen(authState: authState);
-                  Navigator.pushAndRemoveUntil(
+                onPressed: () {
+                  Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => target),
-                    (route) => false,
+                    MaterialPageRoute(
+                      builder: (_) => LogisticsRegisterScreen(authState: authState),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.local_shipping_outlined, size: 18),
                 label: Text(
-                  'Open Sorting Center Portal',
+                  'Apply as Sorting Center Hub',
                   style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -2599,6 +2618,42 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () async {
+                  if (authState.isLogisticsAuthenticated) {
+                    await authState.switchModule('logistics');
+                    if (!context.mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LogisticsMainScreen(authState: authState),
+                      ),
+                      (route) => false,
+                    );
+                    return;
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BuyerLoginScreen(authState: authState),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF087F8C),
+                  side: const BorderSide(color: Color(0xFF087F8C)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(
+                  'Already registered? Sign In',
+                  style: GoogleFonts.figtree(fontWeight: FontWeight.w800, fontSize: 13.5),
                 ),
               ),
             ),

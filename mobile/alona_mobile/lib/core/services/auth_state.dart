@@ -7,7 +7,12 @@ import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/services/session_store.dart';
 
 class AuthState extends ChangeNotifier {
-  AuthState({this.sessionStore = const SessionStore()});
+  static AuthState? _instance;
+  static AuthState get instance => _instance ??= AuthState();
+
+  AuthState({this.sessionStore = const SessionStore()}) {
+    _instance = this;
+  }
   final SessionStore sessionStore;
   int _sessionRevision = 0;
   int get sessionRevision => _sessionRevision;

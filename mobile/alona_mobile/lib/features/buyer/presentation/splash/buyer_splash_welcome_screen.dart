@@ -5,9 +5,11 @@ import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_register_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/buyer_main_screen.dart';
-import 'package:alona_mobile/features/logistics/presentation/auth/logistics_login_screen.dart';
+import 'package:alona_mobile/features/logistics/presentation/auth/logistics_register_screen.dart';
 import 'package:alona_mobile/features/logistics/presentation/logistics_main_screen.dart';
-import 'package:alona_mobile/features/rider/rider_entry_gate.dart';
+import 'package:alona_mobile/features/rider/pages/registration_page.dart';
+import 'package:alona_mobile/features/rider/pages/rider_shell_page.dart';
+import 'package:alona_mobile/features/rider/services/rider_session.dart';
 
 class BuyerSplashWelcomeScreen extends StatefulWidget {
   final AuthState authState;
@@ -216,23 +218,43 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
   }
 
   Future<void> _openLogistics() async {
-    await widget.authState.switchModule('logistics');
+    if (widget.authState.isLogisticsAuthenticated) {
+      await widget.authState.switchModule('logistics');
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LogisticsMainScreen(authState: widget.authState),
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => widget.authState.isLogisticsAuthenticated
-            ? LogisticsMainScreen(authState: widget.authState)
-            : LogisticsLoginScreen(authState: widget.authState),
+        builder: (_) => LogisticsRegisterScreen(authState: widget.authState),
       ),
     );
   }
 
   Future<void> _openRider() async {
+    final session = RiderSession();
+    final token = await session.tokens.read();
+    if (!mounted) return;
+    if (token != null && token.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RiderShellPage(session: session),
+        ),
+      );
+      return;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const RiderEntryGate(),
+        builder: (_) => const RegistrationPage(),
       ),
     );
   }
@@ -580,7 +602,7 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        'Logistics Hub',
+                                        'Apply as Hub',
                                         style: GoogleFonts.figtree(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w700,
@@ -616,7 +638,7 @@ class _BuyerSplashWelcomeScreenState extends State<BuyerSplashWelcomeScreen>
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        'Rider Portal',
+                                        'Register as Rider',
                                         style: GoogleFonts.figtree(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w700,

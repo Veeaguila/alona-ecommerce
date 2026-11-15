@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/registration_api.dart';
 import '../services/api_error.dart';
 import '../theme/rider_theme.dart';
+import 'login_page.dart';
 import '../../../shared/widgets/alona_auth_scaffold.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -993,7 +994,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           ),
                           const SizedBox(width: 6),
                           GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
+                            onTap: () => Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
+                            ),
                             child: Text(
                               'Sign In',
                               style: GoogleFonts.figtree(
