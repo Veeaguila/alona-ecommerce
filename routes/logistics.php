@@ -40,7 +40,18 @@ Route::prefix('sorting-center')->middleware(['auth', 'sorting_center.approved'])
             ]]);
         })->name('sorting-center.'.$page);
     }
-    Route::get('/riders', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'index'])->name('sorting-center.riders');
+    Route::get('/riders', function (Request $request) {
+        if ($request->header('X-Inertia')) {
+            return \Inertia\Inertia::location(route('sorting-center.rider-management'));
+        }
+
+        // Keep JSON clients compatible while browser links open the existing page.
+        if ($request->expectsJson()) {
+            return app(\App\Http\Controllers\Logistics\RiderManagementController::class)->index($request);
+        }
+
+        return redirect()->route('sorting-center.rider-management');
+    })->name('sorting-center.riders');
     Route::post('/riders', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'store'])->name('sorting-center.riders.store');
     Route::post('/riders/{id}/resend-activation', [\App\Http\Controllers\Logistics\RiderManagementController::class, 'resendActivation'])->name('sorting-center.riders.resend');
 });
