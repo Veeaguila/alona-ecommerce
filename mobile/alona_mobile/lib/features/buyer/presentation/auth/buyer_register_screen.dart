@@ -381,14 +381,14 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
         scopes: ['email', 'profile'],
       );
       try {
-        await googleSignIn.signOut().catchError((_) => null);
+        await googleSignIn.signOut();
       } on MissingPluginException {
         if (mounted) {
           setState(() => _isLoading = false);
           await _showGoogleAccountFallbackSheet();
         }
         return;
-      }
+      } catch (_) {}
 
       GoogleSignInAccount? account;
       try {
@@ -550,7 +550,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                 TextField(
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  autofocus: true,
+                  autofocus: false,
                   style: GoogleFonts.figtree(
                     fontSize: 14,
                     color: const Color(0xFF1F2937),

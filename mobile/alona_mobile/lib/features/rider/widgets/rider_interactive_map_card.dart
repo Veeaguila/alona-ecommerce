@@ -456,7 +456,7 @@ class _RiderInteractiveMapCardState extends State<RiderInteractiveMapCard> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
-                              'Ikaw (Rider)',
+                              'You (Rider)',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 9,
@@ -585,14 +585,14 @@ class _RiderInteractiveMapCardState extends State<RiderInteractiveMapCard> {
             children: [
               _mapActionButton(
                 icon: Icons.my_location_rounded,
-                tooltip: 'Puntahan ang Lokasyon Ko',
+                tooltip: 'Center on My Location',
                 color: const Color(0xFF0F766E),
                 onTap: _recenterOnRider,
               ),
               const SizedBox(width: 8),
               _mapActionButton(
                 icon: Icons.pin_drop_rounded,
-                tooltip: 'Puntahan ang Drop-off',
+                tooltip: 'Center on Drop-off',
                 color: const Color(0xFFDC2626),
                 onTap: _recenterOnDestination,
               ),

@@ -206,7 +206,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         batchItems[existingIndex].status == BatchItemStatus.success) {
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.heavyImpact();
-      _showScanNotice('Nai-scan na ito: $clean (Duplicate)', isError: true);
+      _showScanNotice('Already scanned: $clean (Duplicate)', isError: true);
       return;
     }
 
@@ -219,7 +219,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         batchItems.removeAt(existingIndex);
       }
       batchItems.insert(0, item);
-      _showScanNotice('Na-scan: $clean (Inaalam ang detalye...)');
+      _showScanNotice('Scanned: $clean (Loading details...)');
     });
 
     _processBatchScan(item);
@@ -251,17 +251,17 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
 
       SystemSound.play(SystemSoundType.click);
       HapticFeedback.mediumImpact();
-      _showScanNotice('Na-load: ${item.code} (${item.buyerName})');
+      _showScanNotice('Loaded: ${item.code} (${item.buyerName})');
     } catch (e) {
       if (!mounted) return;
-      final msg = e is SessionFailure ? e.message : 'Hindi ma-load ang parcel.';
+      final msg = e is SessionFailure ? e.message : 'Unable to load parcel.';
       setState(() {
         item.status = BatchItemStatus.error;
         item.message = msg;
       });
       SystemSound.play(SystemSoundType.alert);
       HapticFeedback.heavyImpact();
-      _showScanNotice('May issue sa ${item.code}: $msg', isError: true);
+      _showScanNotice('Issue with ${item.code}: $msg', isError: true);
       // Auto-clear _lastCode after 1s so rider can quickly retry without delay
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted && _lastCode == item.code) {
@@ -380,7 +380,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
       _lastCode = null;
       _lastScanTime = null;
     });
-    _showScanNotice('Nalinis na ang batch scanner.');
+    _showScanNotice('Batch scanner cleared.');
   }
 
   void _finishAndGoToDeliveries() {
@@ -397,20 +397,20 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('I-type ang Reference'),
+        title: const Text('Enter Reference'),
         content: TextField(
           controller: inputCtrl,
           textCapitalization: TextCapitalization.characters,
           autofocus: true,
           decoration: const InputDecoration(
-            hintText: 'Halimbawa: ITEM-12',
+            hintText: 'Example: ITEM-12',
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Kanselahin'),
+            child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
@@ -420,7 +420,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                 detected(val);
               }
             },
-            child: const Text('I-scan / Tanggapin'),
+            child: const Text('Scan / Accept'),
           ),
         ],
       ),
@@ -432,7 +432,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
     return Scaffold(
       backgroundColor: RiderColors.background,
       appBar: AppBar(
-        title: const Text('Rider Bodega Scanner'),
+        title: const Text('Rider Hub Scanner'),
         actions: [
           if (nativeCamera)
             IconButton(
@@ -465,7 +465,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                     segments: const [
                       ButtonSegment(
                         value: ScannerMode.continuousBatch,
-                        label: Text('Mabilisang Bodega (Batch)'),
+                        label: Text('Quick Batch Scan'),
                         icon: Icon(Icons.bolt_outlined, size: 18),
                       ),
                       ButtonSegment(
@@ -583,7 +583,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Text(
-                                'Itapat ang barcode o QR code',
+                                'Align the barcode or QR code',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -781,7 +781,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
             children: [
               Expanded(
                 child: Text(
-                  'Talaan ng Na-scan (${batchItems.length} kabuuan)',
+                  'Scanned List (${batchItems.length} total)',
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
               ),
@@ -789,7 +789,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                 TextButton.icon(
                   onPressed: _clearBatch,
                   icon: const Icon(Icons.delete_sweep, size: 16),
-                  label: const Text('Linisin', style: TextStyle(fontSize: 12)),
+                  label: const Text('Clear', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: RiderColors.danger),
                 ),
             ],
@@ -808,12 +808,12 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                         Icon(Icons.qr_code_scanner, size: 48, color: Colors.grey),
                         SizedBox(height: 12),
                         Text(
-                          'Mabilisang Pag-scan sa Bodega',
+                          'Quick Warehouse Batch Scan',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         SizedBox(height: 6),
                         Text(
-                          'Itapat ang camera sa mga barcode ng parcel nang sunod-sunod. Awtomatiko itong maia-assign sa iyong delivery run.',
+                          'Point the camera at parcel barcodes one after another. They will automatically be assigned to your delivery run.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
@@ -904,7 +904,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                                 Text(
                                   isSuccess
                                       ? '${item.buyerName ?? "Buyer"} · ${item.deliveryAddress ?? ""}'
-                                      : (item.message ?? 'Inaalam ang status...'),
+                                      : (item.message ?? 'Checking status...'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -947,8 +947,8 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
                 icon: const Icon(Icons.local_shipping, size: 20),
                 label: Text(
                   successfulCount > 0
-                      ? 'Tapusin at Simulan ang Delivery Run ($successfulCount Parcels)'
-                      : 'Mag-scan muna ng mga parcel',
+                      ? 'Finish & Start Delivery Run ($successfulCount Parcels)'
+                      : 'Scan parcels first',
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 style: FilledButton.styleFrom(
@@ -996,7 +996,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
         FilledButton.icon(
           onPressed: busy ? null : singleLookup,
           icon: const Icon(Icons.search),
-          label: const Text('Buksan ang Detalye ng Parcel'),
+          label: const Text('Open Parcel Details'),
           style: FilledButton.styleFrom(
             backgroundColor: RiderColors.teal,
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1008,7 +1008,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
           TextButton.icon(
             onPressed: scanAgain,
             icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Muling i-scan ang camera'),
+            label: const Text('Scan again with camera'),
           ),
         const SizedBox(height: 16),
         Center(
@@ -1017,7 +1017,7 @@ class _ParcelScannerPageState extends State<ParcelScannerPage>
               context,
               MaterialPageRoute(builder: (_) => DeliveryHistoryPage(session: riderSession)),
             ),
-            child: const Text('Tingnan ang Delivery History'),
+            child: const Text('View Delivery History'),
           ),
         ),
       ],

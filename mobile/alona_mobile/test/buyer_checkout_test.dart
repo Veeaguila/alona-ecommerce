@@ -283,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('123456'), findsNothing);
       expect(paths, ['/api/buyer/orders/1']);
-      await tester.tap(find.text('Show delivery OTP'));
+      await tester.tap(find.textContaining('View PIN'));
       await tester.pumpAndSettle();
       expect(find.text('123456'), findsOneWidget);
       expect(paths.last, '/api/buyer/orders/1/parcels/7/delivery-otp');

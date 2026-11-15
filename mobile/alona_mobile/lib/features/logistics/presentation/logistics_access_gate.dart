@@ -78,8 +78,9 @@ class _LogisticsAccessGateState extends State<LogisticsAccessGate>
     }
     if (_approved) return _staff ? widget.staff : widget.owner;
 
-    final isUnauthenticated = !widget.authState.isLogisticsAuthenticated ||
-        (_message != null && _message!.toLowerCase().contains('unauthenticated'));
+    final isUnauthenticated =
+        (_message != null && _message!.toLowerCase().contains('unauthenticated')) ||
+        (!widget.authState.isLogisticsAuthenticated && _message == null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Logistics account')),

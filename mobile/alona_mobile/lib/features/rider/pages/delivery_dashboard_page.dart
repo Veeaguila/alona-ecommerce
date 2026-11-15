@@ -825,7 +825,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              'Pumunta sa Sorting Hub upang mag-scan ng susunod na batch ng parcels.',
+                              'Head to the Sorting Hub to scan the next batch of parcels.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 13,
@@ -950,7 +950,7 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                                       SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
-                                          'Ito na ang huling delivery para sa batch na ito!',
+                                          'This is the final delivery for this batch!',
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
@@ -1327,8 +1327,8 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                               ),
                               Text(
                                 isCod
-                                    ? 'Pakihanda ang panukli bago lumapit kay buyer.'
-                                    : 'Ipa-verify ang OTP o kumuha ng photo proof.',
+                                    ? 'Prepare change before approaching the buyer.'
+                                    : 'Verify the OTP or capture photo proof.',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,

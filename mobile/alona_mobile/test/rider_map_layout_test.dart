@@ -49,7 +49,7 @@ void main() {
       await pumpMap(tester);
       await tester.tap(find.byTooltip('Zoom Out'));
       await pumpMap(tester);
-      await tester.tap(find.byTooltip('Puntahan ang Drop-off'));
+      await tester.tap(find.byTooltip('Center on Drop-off'));
       await pumpMap(tester);
       await tester.tap(find.byTooltip('Open Waze / Maps'));
       expect(navigationRequests, 1);

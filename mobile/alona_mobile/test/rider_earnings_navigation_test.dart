@@ -201,7 +201,12 @@ void main() {
           expect(tester.takeException(), isNull);
         }
 
-        await tester.tap(find.text('Kinita / Earnings'));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(TabBar),
+            matching: find.text('Earnings'),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
 
@@ -244,11 +249,16 @@ void main() {
     expect(find.text('Designated Hub: Sorting Center Hub'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
-    await tester.tap(find.text('Kinita / Earnings'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(TabBar),
+        matching: find.text('Earnings'),
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
-    expect(find.text('Kabuuang Kinita (Total Earnings)'), findsOneWidget);
+    expect(find.text('Total Earnings'), findsOneWidget);
 
     await tester.tap(find.text('Messages'));
     await tester.pump(const Duration(milliseconds: 100));
@@ -260,7 +270,7 @@ void main() {
       requests.where((path) => path == '/api/rider/earnings'),
       hasLength(2),
     );
-    expect(find.text('Kabuuang Kinita (Total Earnings)'), findsOneWidget);
+    expect(find.text('Total Earnings'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(BottomNavigationBar), findsOneWidget);
     expect(tester.takeException(), isNull);

@@ -185,8 +185,8 @@ void main() {
         find.byType(TextField).at(1),
         'Synthetic-password',
       );
-      await tester.ensureVisible(find.text('Log in'));
-      await tester.tap(find.text('Log in'));
+      await tester.ensureVisible(find.text('Sign In'));
+      await tester.tap(find.text('Sign In'));
       await tester.pump();
       await tester.pumpWidget(const MaterialApp(home: SizedBox()));
       pending.complete(response({'message': 'Try again'}, status: 503));
@@ -241,8 +241,8 @@ void main() {
       'synthetic@example.test',
     );
     await tester.enterText(find.byType(TextField).at(1), 'Synthetic-password');
-    await tester.ensureVisible(find.text('Log in'));
-    await tester.tap(find.text('Log in'));
+    await tester.ensureVisible(find.text('Sign In'));
+    await tester.tap(find.text('Sign In'));
     await tester.pump();
     expect(auth.saves, 1);
     final button = find.ancestor(

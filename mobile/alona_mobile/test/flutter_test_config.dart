@@ -33,6 +33,20 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
           }
         },
       );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+        const MethodChannel('online.shopalona.alona_mobile/google_picker'),
+        (call) async => throw MissingPluginException(
+          'Google picker channel is unavailable in tests.',
+        ),
+      );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/google_sign_in'),
+        (call) async => throw MissingPluginException(
+          'GoogleSignIn plugin is unavailable in tests.',
+        ),
+      );
   ApiClient.client = MockClient(
     (request) async => http.Response(
       jsonEncode({'data': []}),

@@ -647,7 +647,16 @@ class BuyerService {
     if (res is Map<String, dynamic> && res['user'] is Map) {
       return Map<String, dynamic>.from(res['user'] as Map);
     }
-    return res is Map<String, dynamic> ? res : {};
+    if (res is Map<String, dynamic> && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data'] as Map);
+    }
+    if (res is Map<String, dynamic> &&
+        (res.containsKey('id') ||
+            res.containsKey('email') ||
+            res.containsKey('name'))) {
+      return res;
+    }
+    return {};
   }
 
   static Future<Map<String, dynamic>> updateProfile({

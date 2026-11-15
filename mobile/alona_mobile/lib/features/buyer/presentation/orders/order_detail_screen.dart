@@ -260,7 +260,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Ipakita ang iyong delivery OTP PIN sa rider kapag dumating na ang iyong parcel.',
+                      'Show your delivery OTP PIN to the rider when your parcel arrives.',
                       style: GoogleFonts.figtree(
                         fontSize: 13,
                         color: const Color(0xFF78350F),
@@ -272,26 +272,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                       runSpacing: 8,
                       children: [
                         for (final p in _otpParcels)
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF59E0B),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            icon: const Icon(Icons.key, size: 16),
-                            label: Text('View PIN (#${p['tracking_number'] ?? p['id']})'),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => DeliveryOtpDialog(
-                                  orderId: widget.orderId,
-                                  parcelId: p['id'] as int,
+                          if (int.tryParse('${p['id'] ?? p['delivery_parcel_id'] ?? p['parcel_id'] ?? ''}') != null)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF59E0B),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                              icon: const Icon(Icons.key, size: 16),
+                              label: Text('View PIN (#${p['tracking_number'] ?? p['id'] ?? p['delivery_parcel_id'] ?? p['parcel_id']})'),
+                              onPressed: () {
+                                final parcelId = int.parse('${p['id'] ?? p['delivery_parcel_id'] ?? p['parcel_id']}');
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => DeliveryOtpDialog(
+                                    orderId: widget.orderId,
+                                    parcelId: parcelId,
+                                  ),
+                                );
+                              },
+                            ),
                       ],
                     ),
                   ],

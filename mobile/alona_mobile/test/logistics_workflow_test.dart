@@ -211,7 +211,7 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: HubWorkspaceScreen()));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'ITEM-7');
-      await tester.tap(find.text('Look up parcel'));
+      await tester.tap(find.byTooltip('Look up'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Dispatch to next hub'));
       await tester.pumpAndSettle();

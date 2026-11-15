@@ -7,7 +7,7 @@ class RiderQuickActions {
     final clean = address.trim();
     if (clean.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Walang available na address para sa navigation.')),
+        const SnackBar(content: Text('No address available for navigation.')),
       );
       return;
     }
@@ -31,7 +31,7 @@ class RiderQuickActions {
                   const Icon(Icons.navigation_rounded, color: Color(0xFF0F766E), size: 22),
                   const SizedBox(width: 8),
                   const Text(
-                    'Pumili ng Navigation App',
+                    'Choose Navigation App',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -117,7 +117,7 @@ class RiderQuickActions {
     final clean = rawPhone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
     if (clean.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Walang nakatalang contact number.')),
+        const SnackBar(content: Text('No contact number listed.')),
       );
       return;
     }
@@ -127,7 +127,7 @@ class RiderQuickActions {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hindi mabuksan ang phone dialer.')),
+          const SnackBar(content: Text('Unable to open the phone dialer.')),
         );
       }
     }
@@ -146,23 +146,23 @@ class RiderQuickActions {
     final clean = rawPhone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
     if (clean.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Walang nakatalang contact number.')),
+        const SnackBar(content: Text('No contact number listed.')),
       );
       return;
     }
 
     final String message;
     if (isPickup) {
-      message = 'Magandang araw po ${recipientName.isNotEmpty ? recipientName : "Seller"}! '
-          'Rider po ako mula sa Alona Express. Papunta na po ako para sa pickup ng parcel (Order #$orderId). '
-          'Pakihanda po ang item. Maraming salamat po!';
+      message = 'Good day ${recipientName.isNotEmpty ? recipientName : "Seller"}! '
+          'I am your rider from Alona Express. I am on my way to pick up the parcel (Order #$orderId). '
+          'Please prepare the item. Thank you!';
     } else {
       final paymentInfo = isCod
-          ? 'COD Amount: PHP ${codAmount.toStringAsFixed(2)}. Pakihanda po ang eksaktong bayad.'
-          : 'Status: PAID ONLINE na po.';
-      message = 'Magandang araw po ${recipientName.isNotEmpty ? recipientName : "Buyer"}! '
-          'Rider po ako mula sa Alona Express. May parcel po kayo for delivery today (Order #$orderId). '
-          '$paymentInfo Pakihanda po ang tatanggap. Maraming salamat po!';
+          ? 'COD Amount: PHP ${codAmount.toStringAsFixed(2)}. Please prepare the exact payment.'
+          : 'Status: PAID ONLINE.';
+      message = 'Good day ${recipientName.isNotEmpty ? recipientName : "Buyer"}! '
+          'I am your rider from Alona Express. You have a parcel for delivery today (Order #$orderId). '
+          '$paymentInfo Please make sure someone is available to receive it. Thank you!';
     }
 
     final uri = Uri(
@@ -176,7 +176,7 @@ class RiderQuickActions {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hindi mabuksan ang messaging app.')),
+          const SnackBar(content: Text('Unable to open the messaging app.')),
         );
       }
     }

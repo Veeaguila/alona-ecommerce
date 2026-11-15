@@ -192,7 +192,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
         loading = false;
         error = e is SessionFailure
             ? e.message
-            : 'Hindi ma-load ang financial data.';
+            : 'Unable to load financial data.';
       });
     }
   }
@@ -243,7 +243,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Na-match na ang eksaktong bilang ng bills at barya!'),
+        content: Text('Matched exact count of bills and coins!'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -276,7 +276,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
               ),
               Tab(
                 icon: Icon(Icons.account_balance_wallet_rounded),
-                text: 'Kinita / Earnings',
+                text: 'Earnings',
               ),
             ],
           ),
@@ -307,7 +307,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: loadAllData,
-                        child: const Text('Subukan Muli'),
+                        child: const Text('Try Again'),
                       ),
                     ],
                   ),
@@ -391,7 +391,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Kailangang I-remit sa Hub (COD)',
+                            'COD to Remit to Hub',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
@@ -511,12 +511,12 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       const SizedBox(height: 8),
                       Text(
                         isOverLimit
-                            ? 'LUMAMPAS SA LIMIT! Mag-remit agad sa Hub bago tumanggap ng susunod na delivery batch.'
+                            ? 'LIMIT EXCEEDED! Remit immediately at the Hub before accepting the next delivery batch.'
                             : (isNearLimit
-                                  ? 'Malapit na sa ₱10,000 threshold. Magplano na mag-remit sa Sorting Center.'
+                                  ? 'Approaching ₱10,000 threshold. Plan to remit at the Sorting Center.'
                                   : (expectedCodBalance > 0
-                                        ? 'Ligtas ang hawak na cash. Tiyaking i-remit bago mag-out sa shift.'
-                                        : 'Walang pending remittance. Ligtas at handa sa biyahe!')),
+                                        ? 'Cash on hand is within limit. Make sure to remit before ending your shift.'
+                                        : 'No pending remittance. Clear and ready for your route!')),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -554,7 +554,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     ),
                     icon: const Icon(Icons.navigation_rounded, size: 18),
                     label: const Text(
-                      'I-navigate sa Hub Cashier',
+                      'Navigate to Hub Cashier',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
@@ -599,7 +599,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'I-bilang ang iyong perang papel at barya para makasigurong eksakto bago ibigay sa hub cashier.',
+                  'Count your bills and coins to make sure the total is exact before handing over to the hub cashier.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -642,7 +642,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Text(
-                            'Kabuuang Nabilang sa Bulsa:',
+                            'Total Counted Cash:',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -686,12 +686,12 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           Expanded(
                             child: Text(
                               isExact
-                                  ? 'TUGMA ANG PERA! Eksaktong PHP ${counted.toStringAsFixed(2)} (Handa nang i-remit)'
+                                  ? 'EXACT MATCH! PHP ${counted.toStringAsFixed(2)} (Ready to remit)'
                                   : (isShort
-                                        ? 'KULANG ng PHP ${(-diff).toStringAsFixed(2)} kumpara sa kailangang remit'
+                                        ? 'SHORT by PHP ${(-diff).toStringAsFixed(2)} vs. amount to remit'
                                         : (isOver
-                                              ? 'SOBRA ng PHP ${diff.toStringAsFixed(2)} kumpara sa kailangang remit'
-                                              : 'I-type ang bilang o gamitin ang mga button sa bawat denominasyon para magbilang')),
+                                              ? 'OVER by PHP ${diff.toStringAsFixed(2)} vs. amount to remit'
+                                              : 'Type the count or use the buttons on each denomination to tally')),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -777,7 +777,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Barya (Coins)',
+                                    'Coins',
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -827,15 +827,15 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
 
                 const SizedBox(height: 20),
 
-                // Section 1: Perang Papel (Banknotes)
-                _buildDenominationGroupLabel('Perang Papel', 'Bills'),
+                // Section 1: Bills (Banknotes)
+                _buildDenominationGroupLabel('Bills', 'Banknotes'),
                 const SizedBox(height: 8),
                 _buildDenominationGroup([1000, 500, 200, 100, 50, 20]),
 
                 const SizedBox(height: 20),
 
-                // Section 2: Barya (Coins)
-                _buildDenominationGroupLabel('Barya', 'Coins'),
+                // Section 2: Coins
+                _buildDenominationGroupLabel('Coins', 'Change'),
                 const SizedBox(height: 8),
                 _buildDenominationGroup([10, 5, 1]),
               ],
@@ -866,7 +866,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Talaan ng Transaksyon',
+                            'Transaction History',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -876,7 +876,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       ],
                     ),
                     Text(
-                      '${codCollections.length} nakolekta',
+                      '${codCollections.length} collected',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -894,15 +894,15 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   children: [
                     _buildFilterChip(
                       'all',
-                      'Lahat (${codCollections.length + codRemittances.length})',
+                      'All (${codCollections.length + codRemittances.length})',
                     ),
                     _buildFilterChip(
                       'collections',
-                      'Koleksyon (${codCollections.length})',
+                      'Collections (${codCollections.length})',
                     ),
                     _buildFilterChip(
                       'remittances',
-                      'Remit (${codRemittances.length})',
+                      'Remitted (${codRemittances.length})',
                     ),
                   ],
                 ),
@@ -922,7 +922,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           ),
                           SizedBox(height: 8),
                           Text(
-                            'Walang record sa napiling filter.',
+                            'No records for the selected filter.',
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         ],
@@ -1088,7 +1088,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   ),
                 ),
                 Text(
-                  isCollection ? 'Nakolekta' : 'I-remit sa Hub',
+                  isCollection ? 'Collected' : 'Remitted to Hub',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -1265,11 +1265,11 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                             ? () => _adjustDenomination(denom, -1)
                             : null,
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Bawasan',
+                        tooltip: 'Decrease',
                       ),
                       Expanded(
                         child: Semantics(
-                          label: 'Bilang ng ₱$denom',
+                          label: 'Count of ₱$denom',
                           child: TextField(
                             key: ValueKey('denomination-count-$denom'),
                             controller: _countControllers[denom],
@@ -1395,7 +1395,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Kabuuang Kinita (Total Earnings)',
+                      'Total Earnings',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
@@ -1467,7 +1467,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                                 SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    'Nabayaran Na',
+                                    'Paid Out',
                                     style: TextStyle(
                                       color: Colors.white70,
                                       fontSize: 11,
@@ -1510,7 +1510,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                                 SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    'Papasok / Unpaid',
+                                    'Pending / Unpaid',
                                     style: TextStyle(
                                       color: Colors.white70,
                                       fontSize: 11,
@@ -1561,7 +1561,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Payout Cycle: Tuwing Miyerkules at Biyernes',
+                        'Payout Cycle: Every Wednesday and Friday',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1570,7 +1570,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Awtomatikong nire-release ang delivery commission sa iyong bangko o e-wallet pagkatapos ma-audit ng Hub Cashier ang nai-remit na COD.',
+                        'Delivery commissions are automatically released to your bank or e-wallet after the Hub Cashier audits your remitted COD.',
                         style: TextStyle(
                           fontSize: 11,
                           color: Color(0xFF1E3A8A),
@@ -1616,7 +1616,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Talaan ng Delivery Fee',
+                            'Delivery Fee Ledger',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -1644,10 +1644,10 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                   children: [
                     _buildEarningsFilterChip(
                       'all',
-                      'Lahat (${earningsRows.length})',
+                      'All (${earningsRows.length})',
                     ),
-                    _buildEarningsFilterChip('paid', 'Nabayaran Na'),
-                    _buildEarningsFilterChip('unpaid', 'Papasok Pa'),
+                    _buildEarningsFilterChip('paid', 'Paid'),
+                    _buildEarningsFilterChip('unpaid', 'Pending'),
                   ],
                 ),
 
@@ -1666,7 +1666,7 @@ class _CodAndEarningsTrackerPageState extends State<CodAndEarningsTrackerPage>
                           ),
                           SizedBox(height: 8),
                           Text(
-                            'Walang recorded delivery earnings sa filter na ito.',
+                            'No recorded delivery earnings for this filter.',
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         ],

@@ -322,7 +322,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
                           Text(
-                            "Gabay sa Magandang Proof of Delivery:",
+                            "Tips for a Clear Proof of Delivery:",
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
@@ -331,7 +331,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                           ),
                           SizedBox(height: 4),
                           Text(
-                            "• Isama sa kuha ang parcel at ang pinto/gate ng bahay.\n• Kung maaari, ipakita ang house number o landmark.",
+                            "• Include both the parcel and the house door or gate in the frame.\n• If possible, show the house number or a clear landmark.",
                             style: TextStyle(
                               fontSize: 12,
                               color: Color(0xFF134E4A),
@@ -446,7 +446,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                                 ),
                                 const SizedBox(height: 12),
                                 const Text(
-                                  "Wala pang delivery photo",
+                                  "No delivery photo yet",
                                   style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 15,
@@ -455,7 +455,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                                 ),
                                 const SizedBox(height: 3),
                                 const Text(
-                                  "Pindutin ang button sa ibaba para kumuha ng litrato",
+                                  "Tap the button below to take a photo",
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Color(0xFF64748B),
@@ -494,10 +494,10 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                                       ),
                                 label: Text(
                                   _isCapturing
-                                      ? 'Inihahanda...'
+                                      ? 'Preparing...'
                                       : _capturedImage == null
-                                      ? 'Buksan ang Camera'
-                                      : 'Kumuha Muli ng Photo',
+                                      ? 'Open Camera'
+                                      : 'Retake Photo',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 14,
@@ -518,7 +518,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                             if (!_nativeCamera) ...[
                               const SizedBox(width: 10),
                               IconButton.filledTonal(
-                                tooltip: 'Pumili sa Gallery',
+                                tooltip: 'Choose from Gallery',
                                 onPressed: _busy
                                     ? null
                                     : () => _capturePhoto(fromGallery: true),
@@ -575,7 +575,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
 
               // Notes Input
               const Text(
-                "Karagdagang Tala (Optional)",
+                "Additional Notes (Optional)",
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
@@ -588,7 +588,7 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                 maxLines: 2,
                 maxLength: 500,
                 decoration: InputDecoration(
-                  hintText: "Hal. Iniwan kay Nanay / Natanggap ng security guard...",
+                  hintText: "e.g., Left at front porch / Received by security guard...",
                   prefixIcon: const Icon(
                     Icons.edit_note_rounded,
                     color: Color(0xFF64748B),
@@ -622,8 +622,8 @@ class _ProofCapturePageState extends State<ProofCapturePage>
                       : const Icon(Icons.cloud_upload_rounded, size: 22),
                   label: Text(
                     _isUploading
-                        ? "Ipinapasa ang Litrato..."
-                        : "I-SUBMIT ANG DELIVERY PROOF",
+                        ? "Uploading Photo..."
+                        : "SUBMIT DELIVERY PROOF",
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 15,
