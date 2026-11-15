@@ -131,9 +131,14 @@ class BuyerCategoryController extends Controller
                 $totalReviews = (clone $sellerApprovedProducts)->sum('reviews_count');
 
                 // Get up to 3 preview products from this seller in this category/subcategories
+                $promoRels = array_values(array_filter([
+                    Product::hasTableCached('product_sales') ? 'sales' : null,
+                    Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+                ]));
                 $sampleProducts = Product::where('seller_id', $seller->id)
                     ->whereIn('category_id', $targetCategoryIds)
                     ->where('status', 'approved')
+                    ->with($promoRels)
                     ->latest('id')
                     ->take(3)
                     ->get(['id', 'name', 'price', 'image_path']);
@@ -159,11 +164,18 @@ class BuyerCategoryController extends Controller
         | 2. Recommended / Products Query for this category & subcategories
         |--------------------------------------------------------------------------
         */
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
         $productsQuery = Product::query()
-            ->with([
+            ->with(array_merge([
                 'category:id,parent_id,name,slug',
                 'seller:id,name,store_name,store_logo_path',
-            ])
+                'variants',
+                'images',
+            ], $promoRelations))
             ->select('products.*')
             ->selectSub($soldCountSubquery, 'sold_count')
             ->whereIn('category_id', $targetCategoryIds)

@@ -24,8 +24,13 @@ class GuestProductController extends Controller
             ? (Category::where('slug', $category)->first()?->getDescendantIds() ?? [])
             : [];
 
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
         $products = Product::query()
-            ->with('category:id,name,slug')
+            ->with(array_merge(['category:id,name,slug', 'variants', 'images'], $promoRelations))
             ->where('status', 'approved')
 
             ->when(
@@ -115,7 +120,12 @@ class GuestProductController extends Controller
             404
         );
 
-        $product->load([
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
+        $product->load(array_merge([
             'category:id,name,slug',
             'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
             'variants',
@@ -132,7 +142,7 @@ class GuestProductController extends Controller
                 ])
                 ->latest()
                 ->limit(5),
-        ]);
+        ], $promoRelations));
 
         $sellerStats = [
             'total_products' => Product::where('seller_id', $product->seller_id)
@@ -145,7 +155,7 @@ class GuestProductController extends Controller
         ];
 
         $relatedProducts = Product::query()
-            ->with('category:id,name')
+            ->with(array_merge(['category:id,name', 'images'], $promoRelations))
             ->where('status', 'approved')
             ->where('id', '!=', $product->id)
             ->when(

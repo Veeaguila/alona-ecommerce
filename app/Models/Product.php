@@ -66,10 +66,93 @@ class Product extends Model
         'effective_per_buyer_limit',
     ];
 
+    protected static array $schemaTableCache = [];
+    protected static array $schemaColumnCache = [];
+
+    protected bool $activeSaleResolved = false;
+    protected ?ProductSale $resolvedActiveSale = null;
+
+    protected bool $activeFlashSaleResolved = false;
+    protected ?FlashSale $resolvedActiveFlashSale = null;
+
+    protected bool $upcomingFlashSaleResolved = false;
+    protected ?FlashSale $resolvedUpcomingFlashSale = null;
+
+    public static function hasTableCached(string $table): bool
+    {
+        $key = \Illuminate\Support\Facades\DB::getDefaultConnection() . ':' . $table;
+        if (!empty(self::$schemaTableCache[$key])) {
+            return true;
+        }
+        if (array_key_exists($key, self::$schemaTableCache) && !app()->runningUnitTests()) {
+            return self::$schemaTableCache[$key];
+        }
+
+        $exists = \Illuminate\Support\Facades\Schema::hasTable($table);
+        if ($exists || !app()->runningUnitTests()) {
+            self::$schemaTableCache[$key] = $exists;
+        }
+
+        return $exists;
+    }
+
+    public static function hasColumnCached(string $table, string $column): bool
+    {
+        $key = \Illuminate\Support\Facades\DB::getDefaultConnection() . ':' . $table . '.' . $column;
+        if (!empty(self::$schemaColumnCache[$key])) {
+            return true;
+        }
+        if (array_key_exists($key, self::$schemaColumnCache) && !app()->runningUnitTests()) {
+            return self::$schemaColumnCache[$key];
+        }
+
+        $exists = \Illuminate\Support\Facades\Schema::hasColumn($table, $column);
+        if ($exists || !app()->runningUnitTests()) {
+            self::$schemaColumnCache[$key] = $exists;
+        }
+
+        return $exists;
+    }
+
+    public function clearResolvedPromotionsCache(): void
+    {
+        $this->activeSaleResolved = false;
+        $this->resolvedActiveSale = null;
+        $this->activeFlashSaleResolved = false;
+        $this->resolvedActiveFlashSale = null;
+        $this->upcomingFlashSaleResolved = false;
+        $this->resolvedUpcomingFlashSale = null;
+    }
+
+    public function refresh()
+    {
+        $this->clearResolvedPromotionsCache();
+
+        return parent::refresh();
+    }
+
+    public function setRelation($relation, $value)
+    {
+        if (in_array($relation, ['sales', 'flashSales'], true)) {
+            $this->clearResolvedPromotionsCache();
+        }
+
+        return parent::setRelation($relation, $value);
+    }
+
+    public function unsetRelation($relation)
+    {
+        if (in_array($relation, ['sales', 'flashSales'], true)) {
+            $this->clearResolvedPromotionsCache();
+        }
+
+        return parent::unsetRelation($relation);
+    }
+
     protected static function booted(): void
     {
         static::saving(function (self $product): void {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'sku')) {
+            if (self::hasColumnCached('products', 'sku')) {
                 if ($product->exists && !empty($product->getOriginal('sku'))) {
                     $product->sku = $product->getOriginal('sku');
                 } elseif (empty($product->sku)) {
@@ -92,7 +175,7 @@ class Product extends Model
         $maxId = (int) (self::max('id') ?? 0);
         $candidateNum = $maxId + 1;
 
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku')) {
+        if (! self::hasColumnCached('products', 'sku')) {
             return 'ALN-' . str_pad((string) $candidateNum, 6, '0', STR_PAD_LEFT);
         }
 
@@ -179,28 +262,42 @@ class Product extends Model
 
     public function activeSale(): ?ProductSale
     {
-        if (!$this->id || !\Illuminate\Support\Facades\Schema::hasTable('product_sales')) {
+        if (!$this->id) {
             return null;
         }
-
-        $now = now();
 
         if ($this->relationLoaded('sales')) {
             return $this->sales->first(fn (ProductSale $sale) => $sale->isActiveNow());
         }
 
-        return ProductSale::query()
+        if ($this->activeSaleResolved && !app()->runningUnitTests()) {
+            return $this->resolvedActiveSale;
+        }
+
+        if (!self::hasTableCached('product_sales')) {
+            $this->activeSaleResolved = true;
+            $this->resolvedActiveSale = null;
+
+            return null;
+        }
+
+        $now = now();
+
+        $this->resolvedActiveSale = ProductSale::query()
             ->where('product_id', $this->id)
             ->whereNull('ended_at')
             ->where('starts_at', '<=', $now)
             ->where('ends_at', '>', $now)
             ->latest('id')
             ->first();
+        $this->activeSaleResolved = true;
+
+        return $this->resolvedActiveSale;
     }
 
     public function activeFlashSale(): ?FlashSale
     {
-        if (!$this->id || !\Illuminate\Support\Facades\Schema::hasTable('flash_sales')) {
+        if (!$this->id) {
             return null;
         }
 
@@ -208,9 +305,20 @@ class Product extends Model
             return $this->flashSales->first(fn (FlashSale $fs) => $fs->isActiveNow());
         }
 
+        if ($this->activeFlashSaleResolved && !app()->runningUnitTests()) {
+            return $this->resolvedActiveFlashSale;
+        }
+
+        if (!self::hasTableCached('flash_sales')) {
+            $this->activeFlashSaleResolved = true;
+            $this->resolvedActiveFlashSale = null;
+
+            return null;
+        }
+
         $now = now();
 
-        return FlashSale::query()
+        $this->resolvedActiveFlashSale = FlashSale::query()
             ->where('product_id', $this->id)
             ->whereNull('ended_at')
             ->where('starts_at', '<=', $now)
@@ -218,11 +326,14 @@ class Product extends Model
             ->whereColumn('sold_quantity', '<', 'flash_quantity')
             ->latest('id')
             ->first();
+        $this->activeFlashSaleResolved = true;
+
+        return $this->resolvedActiveFlashSale;
     }
 
     public function upcomingFlashSale(): ?FlashSale
     {
-        if (!$this->id || !\Illuminate\Support\Facades\Schema::hasTable('flash_sales')) {
+        if (!$this->id) {
             return null;
         }
 
@@ -233,15 +344,29 @@ class Product extends Model
                 ->first();
         }
 
+        if ($this->upcomingFlashSaleResolved && !app()->runningUnitTests()) {
+            return $this->resolvedUpcomingFlashSale;
+        }
+
+        if (!self::hasTableCached('flash_sales')) {
+            $this->upcomingFlashSaleResolved = true;
+            $this->resolvedUpcomingFlashSale = null;
+
+            return null;
+        }
+
         $now = now();
 
-        return FlashSale::query()
+        $this->resolvedUpcomingFlashSale = FlashSale::query()
             ->where('product_id', $this->id)
             ->whereNull('ended_at')
             ->where('starts_at', '>', $now)
             ->whereColumn('sold_quantity', '<', 'flash_quantity')
             ->orderBy('starts_at')
             ->first();
+        $this->upcomingFlashSaleResolved = true;
+
+        return $this->resolvedUpcomingFlashSale;
     }
 
     public function nonFlashPriceFor(?float $regular = null): float
@@ -357,7 +482,7 @@ class Product extends Model
 
         $userId = auth()->id();
         $hasReminder = false;
-        if ($userId && \Illuminate\Support\Facades\Schema::hasTable('flash_sale_reminders')) {
+        if ($userId && self::hasTableCached('flash_sale_reminders')) {
             $hasReminder = FlashSaleReminder::query()
                 ->where('user_id', $userId)
                 ->where('flash_sale_id', $upcoming->id)

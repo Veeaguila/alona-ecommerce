@@ -29,10 +29,15 @@ class BuyerStoreController extends Controller
         $search = trim((string) $request->input('search', ''));
         $categorySlug = $request->input('category') ?: $request->input('store_category');
 
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
         $productsQuery = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
-            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+            ->with(array_merge(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'variants'], $promoRelations))
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->when(
                 $search !== '',
@@ -99,7 +104,7 @@ class BuyerStoreController extends Controller
         $recommendedProducts = Product::query()
             ->where('seller_id', $seller->id)
             ->where('status', 'approved')
-            ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+            ->with(array_merge(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'variants'], $promoRelations))
             ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
             ->where('is_featured', true)
             ->limit(6)
@@ -109,7 +114,7 @@ class BuyerStoreController extends Controller
             $recommendedProducts = Product::query()
                 ->where('seller_id', $seller->id)
                 ->where('status', 'approved')
-                ->with(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'flashSales'])
+                ->with(array_merge(['category.parent:id,name,slug', 'storeCategories.parent:id,name,slug', 'images', 'variants'], $promoRelations))
                 ->withSum(['orderItems as sold_total' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
                 ->orderByDesc('rating')
                 ->orderByDesc('reviews_count')

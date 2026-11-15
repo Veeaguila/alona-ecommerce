@@ -26,11 +26,17 @@ class BuyerProductController extends Controller
             ? (Category::where('slug', $category)->first()?->getDescendantIds() ?? [])
             : [];
 
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
         $products = Product::query()
-            ->with([
+            ->with(array_merge([
                 'category:id,name,slug',
                 'variants',
-            ])
+                'images',
+            ], $promoRelations))
             ->where('status', 'approved')
 
             /*
@@ -199,7 +205,12 @@ class BuyerProductController extends Controller
         | Load Product Relationships
         |--------------------------------------------------------------------------
         */
-        $product->load([
+        $promoRelations = array_values(array_filter([
+            Product::hasTableCached('product_sales') ? 'sales' : null,
+            Product::hasTableCached('flash_sales') ? 'flashSales' : null,
+        ]));
+
+        $product->load(array_merge([
             'category:id,name,slug',
 
             'seller:id,name,store_name,store_description,store_logo_path,return_policy_days',
@@ -221,10 +232,10 @@ class BuyerProductController extends Controller
                 ])
                 ->latest()
                 ->limit(5),
-        ]);
+        ], $promoRelations));
 
         $relatedProducts = Product::query()
-            ->with('category:id,name')
+            ->with(array_merge(['category:id,name', 'images'], $promoRelations))
             ->where('status', 'approved')
             ->where('id', '!=', $product->id)
             ->when(
@@ -268,10 +279,10 @@ class BuyerProductController extends Controller
         $vouchers = \App\Models\Voucher::query()
             ->where('seller_id', $product->seller_id)
             ->where('is_active', true)
-            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+            ->when(Product::hasColumnCached('vouchers', 'ended_at'), function ($q) {
                 $q->whereNull('ended_at');
             })
-            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+            ->when(Product::hasColumnCached('vouchers', 'display_mode'), function ($q) {
                 $q->where(function ($sub) {
                     $sub->whereNull('display_mode')
                         ->orWhere('display_mode', '!=', 'code_only');
@@ -295,7 +306,7 @@ class BuyerProductController extends Controller
             ->values();
 
         $claimedVoucherIds = [];
-        if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('user_vouchers')) {
+        if (auth()->check() && Product::hasTableCached('user_vouchers')) {
             $claimedVoucherIds = \App\Models\UserVoucher::where('user_id', auth()->id())
                 ->whereIn('voucher_id', $vouchers->pluck('id'))
                 ->where('status', 'claimed')
@@ -305,7 +316,7 @@ class BuyerProductController extends Controller
 
         // Active Bundle Deals for this Seller & Product
         $bundleDeals = collect();
-        if ($product->seller_id && \Illuminate\Support\Facades\Schema::hasTable('seller_promotions')) {
+        if ($product->seller_id && Product::hasTableCached('seller_promotions')) {
             $now = now();
             $bundleDeals = \App\Models\SellerPromotion::query()
                 ->where('seller_id', $product->seller_id)
@@ -320,13 +331,14 @@ class BuyerProductController extends Controller
                 })
                 ->get()
                 ->filter(fn (\App\Models\SellerPromotion $promo) => $promo->appliesToBundleProduct((int) $product->id))
-                ->map(function ($bundle) use ($product) {
+                ->map(function ($bundle) use ($promoRelations) {
                     $productIds = (array) ($bundle->product_ids ?? []);
                     if ($bundle->product_id) {
                         $productIds[] = $bundle->product_id;
                     }
                     $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 4))
                         ->where('status', 'approved')
+                        ->with($promoRelations)
                         ->get(['id', 'name', 'price', 'image_path']);
 
                     return [

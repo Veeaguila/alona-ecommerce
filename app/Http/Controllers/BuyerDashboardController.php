@@ -58,13 +58,21 @@ class BuyerDashboardController extends Controller
         | Only approved products are allowed onto the buyer marketplace.
         |
         */
+        $productRelations = [
+            'category:id,name,slug',
+            'seller:id,name',
+            'images',
+        ];
+        if (Product::hasTableCached('product_sales')) {
+            $productRelations[] = 'sales';
+        }
+        if (Product::hasTableCached('flash_sales')) {
+            $productRelations[] = 'flashSales';
+        }
+
         $approvedProductQuery = Product::query()
             ->where('status', 'approved')
-            ->with([
-                'category:id,name,slug',
-                'seller:id,name',
-                'images',
-            ]);
+            ->with($productRelations);
 
         /*
         |--------------------------------------------------------------------------
@@ -248,10 +256,10 @@ if ($topSellingIds->isNotEmpty()) {
                 'seller:id,name',
             ])
             ->where('is_active', true)
-            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'ended_at'), function ($q) {
+            ->when(Product::hasColumnCached('vouchers', 'ended_at'), function ($q) {
                 $q->whereNull('ended_at');
             })
-            ->when(\Illuminate\Support\Facades\Schema::hasColumn('vouchers', 'display_mode'), function ($q) {
+            ->when(Product::hasColumnCached('vouchers', 'display_mode'), function ($q) {
                 $q->where(function ($sub) {
                     $sub->whereNull('display_mode')
                         ->orWhere('display_mode', '!=', 'code_only');
@@ -308,14 +316,10 @@ if ($topSellingIds->isNotEmpty()) {
             ? RecentlyViewedProduct::query()
                 ->where('user_id', $user->id)
                 ->with([
-                    'product' => function ($query) {
+                    'product' => function ($query) use ($productRelations) {
                         $query
                             ->where('status', 'approved')
-                            ->with([
-                                'category:id,name,slug',
-                                'seller:id,name',
-                                'images',
-                            ]);
+                            ->with($productRelations);
                     },
                 ])
                 ->latest()
@@ -351,27 +355,38 @@ if ($topSellingIds->isNotEmpty()) {
         | Marketplace statistics (real data)
         |--------------------------------------------------------------------------
         */
+        $productStats = DB::table('products')
+            ->where('status', 'approved')
+            ->selectRaw('COUNT(*) as total_products, COUNT(DISTINCT seller_id) as total_sellers')
+            ->first();
+
         $marketplaceStats = [
-            'products' => Product::where('status', 'approved')->count(),
-            'sellers' => Product::where('status', 'approved')
-                ->distinct()
-                ->count('seller_id'),
+            'products' => (int) ($productStats->total_products ?? 0),
+            'sellers' => (int) ($productStats->total_sellers ?? 0),
             'categories' => $categories->count(),
             'orders_delivered' => (int) DB::table('order_items')
                 ->whereIn('status', ['delivered', 'completed'])
                 ->count(),
         ];
 
-        $heroBannersSetting = PlatformSetting::where('key', 'home.hero_banners')->where('is_active', true)->first();
+        $homeSettings = PlatformSetting::whereIn('key', [
+            'home.hero_banners',
+            'home.hero_banner',
+            'home.why_alona',
+        ])
+            ->where('is_active', true)
+            ->pluck('value', 'key');
+
+        $heroBannersValue = $homeSettings->get('home.hero_banners');
         $heroBanners = null;
-        if ($heroBannersSetting && $heroBannersSetting->value) {
-            $heroBanners = json_decode($heroBannersSetting->value, true);
+        if ($heroBannersValue) {
+            $heroBanners = json_decode($heroBannersValue, true);
         }
 
         if (empty($heroBanners) || !is_array($heroBanners)) {
-            $heroBannerSetting = PlatformSetting::where('key', 'home.hero_banner')->where('is_active', true)->first();
-            if ($heroBannerSetting && $heroBannerSetting->value) {
-                $single = json_decode($heroBannerSetting->value, true);
+            $heroBannerValue = $homeSettings->get('home.hero_banner');
+            if ($heroBannerValue) {
+                $single = json_decode($heroBannerValue, true);
                 if (is_array($single)) {
                     $heroBanners = [$single];
                 }
@@ -434,9 +449,9 @@ if ($topSellingIds->isNotEmpty()) {
 
         $heroBanner = $activeHeroBanners[0] ?? null;
 
-        $whyAlonaSetting = PlatformSetting::where('key', 'home.why_alona')->where('is_active', true)->first();
-        $whyAlona = $whyAlonaSetting && $whyAlonaSetting->value
-            ? json_decode($whyAlonaSetting->value, true)
+        $whyAlonaValue = $homeSettings->get('home.why_alona');
+        $whyAlona = $whyAlonaValue
+            ? json_decode($whyAlonaValue, true)
             : [
                 'eyebrow' => 'WHY ALONA',
                 'title' => 'Shopping should feel effortless.',
@@ -468,13 +483,13 @@ if ($topSellingIds->isNotEmpty()) {
         $flashSales = collect();
         $flashSaleEndTime = null;
 
-        if (Schema::hasTable('flash_sales')) {
+        if (Product::hasTableCached('flash_sales')) {
             $now = now();
             $activeSales = FlashSale::query()
                 ->with([
-                    'product' => function ($q) {
+                    'product' => function ($q) use ($productRelations) {
                         $q->where('status', 'approved')
-                            ->with(['category:id,name,slug', 'images', 'seller:id,name']);
+                            ->with($productRelations);
                     },
                 ])
                 ->whereHas('product', fn ($q) => $q->where('status', 'approved'))
@@ -537,9 +552,9 @@ if ($topSellingIds->isNotEmpty()) {
         }
 
         $bundleDeals = collect();
-        if (Schema::hasTable('seller_promotions')) {
+        if (Product::hasTableCached('seller_promotions')) {
             $now = now();
-            $bundleDeals = SellerPromotion::query()
+            $rawBundles = SellerPromotion::query()
                 ->where('type', 'bundle')
                 ->where('is_active', true)
                 ->whereNull('ended_at')
@@ -550,15 +565,39 @@ if ($topSellingIds->isNotEmpty()) {
                     $q->whereNull('ends_at')->orWhere('ends_at', '>', $now);
                 })
                 ->with(['seller:id,name,store_name'])
-                ->get()
-                ->map(function ($bundle) {
+                ->get();
+
+            $allBundleProductIds = $rawBundles
+                ->flatMap(function ($bundle) {
                     $productIds = (array) ($bundle->product_ids ?? []);
                     if ($bundle->product_id) {
                         $productIds[] = $bundle->product_id;
                     }
-                    $sampleProducts = Product::whereIn('id', array_slice($productIds, 0, 4))
-                        ->where('status', 'approved')
-                        ->get(['id', 'name', 'price', 'image_path']);
+
+                    return array_slice($productIds, 0, 4);
+                })
+                ->filter()
+                ->unique()
+                ->values();
+
+            $bundleProductsById = $allBundleProductIds->isNotEmpty()
+                ? Product::whereIn('id', $allBundleProductIds)
+                    ->where('status', 'approved')
+                    ->with(array_values(array_intersect($productRelations, ['sales', 'flashSales'])))
+                    ->get(['id', 'name', 'price', 'image_path'])
+                    ->keyBy('id')
+                : collect();
+
+            $bundleDeals = $rawBundles
+                ->map(function ($bundle) use ($bundleProductsById) {
+                    $productIds = (array) ($bundle->product_ids ?? []);
+                    if ($bundle->product_id) {
+                        $productIds[] = $bundle->product_id;
+                    }
+                    $sampleProducts = collect(array_slice($productIds, 0, 4))
+                        ->map(fn ($id) => $bundleProductsById->get($id))
+                        ->filter()
+                        ->values();
 
                     return [
                         'id' => $bundle->id,
@@ -633,8 +672,8 @@ if ($topSellingIds->isNotEmpty()) {
             'description' => $product->description,
 
             'price' => (float) $product->price,
-            'old_price' => $product->old_price !== null
-                ? (float) $product->old_price
+            'old_price' => ($oldPrice = $product->old_price) !== null
+                ? (float) $oldPrice
                 : null,
 
             'stock' => (int) $product->stock,
