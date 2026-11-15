@@ -5,6 +5,7 @@ import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -667,6 +668,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return Scaffold(
         backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           surfaceTintColor: Colors.transparent,
@@ -674,10 +676,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
           ),
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
         ),
         body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -689,6 +687,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return Scaffold(
         backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           surfaceTintColor: Colors.transparent,
@@ -696,10 +695,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
           ),
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
         ),
         body: Center(
           child: Padding(
@@ -740,17 +735,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        automaticallyImplyLeading: false,
+        backgroundColor: AlonaCurvedHeader.tealDark,
         foregroundColor: AppColors.white,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
-        ),
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 54),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
           p.name,
           maxLines: 1,
@@ -780,53 +770,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // BREADCRUMBS (Home > Category > Product)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.popUntil(context, (r) => r.isFirst),
-                    child: Text(
-                      'Home',
-                      style: GoogleFonts.figtree(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 54,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // BREADCRUMBS (Home > Category > Product)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.popUntil(context, (r) => r.isFirst),
+                      child: Text(
+                        'Home',
+                        style: GoogleFonts.figtree(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFFCBD5E1)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProductListScreen(categoryName: p.categoryName),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      p.categoryName ?? 'Marketplace',
-                      style: GoogleFonts.figtree(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w700),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded, size: 14, color: Colors.white54),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductListScreen(categoryName: p.categoryName),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        p.categoryName ?? 'Marketplace',
+                        style: GoogleFonts.figtree(fontSize: 11, color: AppColors.accentGold, fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFFCBD5E1)),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      p.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.figtree(fontSize: 11, color: const Color(0xFF1F2937), fontWeight: FontWeight.w700),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded, size: 14, color: Colors.white54),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.figtree(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // MAIN PRODUCT CONTAINER CARD (rounded-2xl border border-[#E5E7EB] bg-white)
             Container(
@@ -1960,6 +1952,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ],
             const SizedBox(height: 60),
           ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomActionBar(p),

@@ -5,6 +5,7 @@ import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
@@ -118,6 +119,9 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
         title: Text('Shopping Cart (${_items.length})'),
         actions: [
           if (_items.isNotEmpty)
@@ -140,13 +144,15 @@ class _CartScreenState extends State<CartScreen> {
                     : 'Select All',
                 style: GoogleFonts.figtree(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+                  color: Colors.white,
                 ),
               ),
             ),
         ],
       ),
-      body: _isLoading
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        child: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
@@ -367,6 +373,7 @@ class _CartScreenState extends State<CartScreen> {
                 );
               },
             ),
+      ),
       bottomNavigationBar: _items.isNotEmpty
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

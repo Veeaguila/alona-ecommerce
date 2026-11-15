@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/utils/date_formatter.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
@@ -106,26 +107,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
     final filtered = _filteredNotifications;
 
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        titleSpacing: canPop ? 0 : 16,
+        titleSpacing: 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppColors.primary,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
-        ),
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 54),
         automaticallyImplyLeading: false,
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
         title: Row(
           children: [
             // Left side: Search Bar matching Home layout
@@ -192,7 +184,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(
@@ -204,60 +196,62 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Notifications',
-                      style: GoogleFonts.figtree(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    if (_unreadCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F3F1),
-                          borderRadius: BorderRadius.circular(12),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 54,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Notifications',
+                        style: GoogleFonts.figtree(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
                         ),
-                        child: Text(
-                          '$_unreadCount new',
-                          style: GoogleFonts.figtree(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                      ),
+                      if (_unreadCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$_unreadCount new',
+                            style: GoogleFonts.figtree(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                if (_unreadCount > 0)
-                  TextButton(
-                    onPressed: _markAllRead,
-                    child: Text(
-                      'Mark all read',
-                      style: GoogleFonts.figtree(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                  ),
+                  if (_unreadCount > 0)
+                    TextButton(
+                      onPressed: _markAllRead,
+                      child: Text(
+                        'Mark all read',
+                        style: GoogleFonts.figtree(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
@@ -388,6 +382,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ),
           ),
         ],
+        ),
       ),
     );
   }

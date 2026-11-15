@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
+import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/products/product_list_screen.dart';
@@ -12,6 +14,7 @@ import 'package:alona_mobile/features/buyer/presentation/categories/buyer_catego
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/flash_sales_widget.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/hero_banner_carousel.dart';
 import 'package:alona_mobile/features/buyer/presentation/home/widgets/product_card.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 
 class BuyerHomeScreen extends StatefulWidget {
   final AuthState authState;
@@ -34,6 +37,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   List<FlashSaleModel> _flashSales = [];
   String? _flashSaleEndTime;
   List<VoucherModel> _promotions = [];
+  Set<int> _claimedVoucherIds = {};
+  final Set<int> _claimingVoucherIds = {};
   List<HeroBannerModel> _heroBanners = [];
   HeroStatsModel? _heroStats;
 
@@ -41,6 +46,70 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   void initState() {
     super.initState();
     _loadHomeData();
+  }
+
+  Future<void> _syncClaimedVouchers() async {
+    if (!ApiClient.isAuthenticated) return;
+    try {
+      final vRes = await BuyerService.getVouchers();
+      if (!mounted) return;
+      final claimedList = vRes['claimed'] as List<VoucherModel>? ?? [];
+      setState(() {
+        for (final cv in claimedList) {
+          _claimedVoucherIds.add(cv.id);
+        }
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _claimPromotionVoucher(VoucherModel v) async {
+    if (_claimedVoucherIds.contains(v.id) || _claimingVoucherIds.contains(v.id)) {
+      return;
+    }
+    if (!ApiClient.isAuthenticated) {
+      final loggedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BuyerLoginScreen(authState: widget.authState),
+        ),
+      );
+      if (loggedIn != true || !mounted) return;
+      await _syncClaimedVouchers();
+      if (_claimedVoucherIds.contains(v.id) || !mounted) return;
+    }
+
+    setState(() => _claimingVoucherIds.add(v.id));
+    try {
+      await BuyerService.claimVoucher(v.id);
+      if (!mounted) return;
+      setState(() {
+        _claimedVoucherIds.add(v.id);
+        _claimingVoucherIds.remove(v.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Voucher ${v.code} claimed! You can select it at checkout.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      setState(() {
+        _claimingVoucherIds.remove(v.id);
+        if (msg.toLowerCase().contains('already claimed')) {
+          _claimedVoucherIds.add(v.id);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: msg.toLowerCase().contains('already claimed')
+              ? AppColors.primary
+              : AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _loadHomeData() async {
@@ -52,6 +121,11 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     try {
       final res = await BuyerService.getHome();
       if (!mounted) return;
+      final promos = res['promotions'] as List<VoucherModel>;
+      final claimedIds = <int>{
+        ..._claimedVoucherIds,
+        ...promos.where((v) => v.isClaimed).map((v) => v.id),
+      };
       setState(() {
         _categories = res['categories'] as List<CategoryModel>;
         _featured = res['featured_products'] as List<ProductModel>;
@@ -60,11 +134,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         _trending = res['trending_products'] as List<ProductModel>? ?? [];
         _flashSales = res['flash_sales'] as List<FlashSaleModel>;
         _flashSaleEndTime = res['flash_sale_end_time'] as String?;
-        _promotions = res['promotions'] as List<VoucherModel>;
+        _promotions = promos;
+        _claimedVoucherIds = claimedIds;
         _heroBanners = res['hero_banners'] as List<HeroBannerModel>? ?? [];
         _heroStats = res['hero_stats'] as HeroStatsModel?;
         _isLoading = false;
       });
+      _syncClaimedVouchers();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -81,42 +157,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       appBar: AppBar(
         titleSpacing: 16,
         elevation: 0,
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppColors.primary,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
-        ),
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 54),
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            // Alona Brand Icon matching Web Header
-            Container(
-              width: 36,
-              height: 36,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(11),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Image.asset(
-                'assets/images/alona-icon.png',
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.shopping_bag_outlined,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Left side: Top Search Bar
+            // Left side: Top Search Bar (Logo removed as requested)
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -177,43 +225,45 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-                        const SizedBox(height: 16),
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.figtree(fontSize: 14, color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadHomeData,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            elevation: 0,
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 54,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.figtree(fontSize: 14, color: AppColors.textSecondary),
                           ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadHomeData,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadHomeData,
-                  color: AppColors.primary,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-                    child: Column(
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadHomeData,
+                    color: AppColors.primary,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Dynamic Hero Banners Carousel (synced with Admin Settings & web)
@@ -701,11 +751,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () {
-                                Navigator.push(
+                              onPressed: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(builder: (_) => const VouchersScreen()),
                                 );
+                                if (mounted) {
+                                  _syncClaimedVouchers();
+                                }
                               },
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -834,25 +887,57 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                               ),
                                             ),
                                           ),
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(builder: (_) => const VouchersScreen()),
+                                          Builder(
+                                            builder: (context) {
+                                              final isClaimed = v.isClaimed || _claimedVoucherIds.contains(v.id);
+                                              final isClaiming = _claimingVoucherIds.contains(v.id);
+                                              if (isClaimed) {
+                                                return Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFE8F7F6),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: const Color(0xFF087F8C).withValues(alpha: 0.4),
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.check_circle_rounded,
+                                                        size: 12,
+                                                        color: Color(0xFF087F8C),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'Claimed',
+                                                        style: GoogleFonts.figtree(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: const Color(0xFF087F8C),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }
+                                              return ElevatedButton(
+                                                onPressed: isClaiming ? null : () => _claimPromotionVoucher(v),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF087F8C),
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                ),
+                                                child: Text(
+                                                  isClaiming ? '...' : 'Claim',
+                                                  style: GoogleFonts.figtree(fontSize: 11, fontWeight: FontWeight.w800),
+                                                ),
                                               );
                                             },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFF087F8C),
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              minimumSize: Size.zero,
-                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                            ),
-                                            child: Text(
-                                              'Claim',
-                                              style: GoogleFonts.figtree(fontSize: 11, fontWeight: FontWeight.w800),
-                                            ),
                                           ),
                                         ],
                                       ),
@@ -1091,6 +1176,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                     ),
                   ),
                 ),
+      ),
     );
   }
 }

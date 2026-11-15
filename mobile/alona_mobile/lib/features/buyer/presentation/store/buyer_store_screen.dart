@@ -45,14 +45,39 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   Map<String, dynamic> _stats = {};
 
   String _currentSort = 'popular';
+  int _sortSlideDirection = 1;
+  bool _isFilteringProducts = false;
   String? _selectedCategory;
   String? _selectedSubcategory;
   String _searchQuery = '';
+  final Set<int> _claimedVoucherIds = {};
+  final Set<int> _claimingVoucherIds = {};
+
+  int _sortIndexFor(String sortKey) {
+    switch (sortKey) {
+      case 'popular':
+        return 0;
+      case 'latest':
+        return 1;
+      case 'top_sales':
+        return 2;
+      case 'price-low':
+      case 'price-high':
+        return 3;
+      default:
+        return 0;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: 1); // Shop, Products, Reviews, Categories
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: 1,
+      animationDuration: const Duration(milliseconds: 280),
+    ); // Shop, Products, Reviews, Categories
     _loadStoreData();
   }
 
@@ -63,9 +88,79 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
     super.dispose();
   }
 
-  Future<void> _loadStoreData() async {
+  Future<void> _syncClaimedVouchers() async {
+    if (!ApiClient.isAuthenticated) return;
+    try {
+      final vRes = await BuyerService.getVouchers();
+      if (!mounted) return;
+      final claimedList = vRes['claimed'] as List<VoucherModel>? ?? [];
+      setState(() {
+        for (final cv in claimedList) {
+          _claimedVoucherIds.add(cv.id);
+        }
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _claimStoreVoucher(int voucherId, String code) async {
+    if (_claimedVoucherIds.contains(voucherId) || _claimingVoucherIds.contains(voucherId)) {
+      return;
+    }
+    if (!ApiClient.isAuthenticated) {
+      final nav = Navigator.of(context);
+      final auth = AuthState();
+      await auth.init();
+      if (!mounted) return;
+      final loggedIn = await nav.push<bool>(
+        MaterialPageRoute(builder: (_) => BuyerLoginScreen(authState: auth)),
+      );
+      if (loggedIn != true || !mounted) return;
+      await _syncClaimedVouchers();
+      if (_claimedVoucherIds.contains(voucherId) || !mounted) return;
+    }
+
+    setState(() => _claimingVoucherIds.add(voucherId));
+    try {
+      await BuyerService.claimVoucher(voucherId);
+      if (!mounted) return;
+      setState(() {
+        _claimedVoucherIds.add(voucherId);
+        _claimingVoucherIds.remove(voucherId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Voucher $code claimed!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      setState(() {
+        _claimingVoucherIds.remove(voucherId);
+        if (msg.toLowerCase().contains('already claimed')) {
+          _claimedVoucherIds.add(voucherId);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: msg.toLowerCase().contains('already claimed')
+              ? AppColors.primary
+              : AppColors.sale,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadStoreData({bool silent = false}) async {
+    final bool showFullLoader = !silent && _seller == null;
     setState(() {
-      _isLoading = true;
+      if (showFullLoader) {
+        _isLoading = true;
+      } else {
+        _isFilteringProducts = true;
+      }
       _error = null;
     });
 
@@ -110,6 +205,18 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
             .toList();
       }
 
+      final rawVouchers = (res['vouchers'] as List?) ?? [];
+      for (final rv in rawVouchers) {
+        if (rv is Map && rv['is_claimed'] == true && rv['id'] != null) {
+          _claimedVoucherIds.add(parseInt(rv['id']));
+        }
+      }
+      if (res['claimed_voucher_ids'] is List) {
+        for (final cid in (res['claimed_voucher_ids'] as List)) {
+          _claimedVoucherIds.add(parseInt(cid));
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _seller = sellerData;
@@ -118,16 +225,21 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
         _recommendedProducts = recList;
         _reviews = reviewList;
         _categories = (res['categories'] as List?) ?? [];
-        _vouchers = (res['vouchers'] as List?) ?? [];
+        _vouchers = rawVouchers;
         _bundleDeals = (res['bundle_deals'] as List?) ?? [];
         _isFollowing = res['is_following'] == true;
         _isLoading = false;
+        _isFilteringProducts = false;
       });
+      _syncClaimedVouchers();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        if (showFullLoader) {
+          _error = e.toString();
+        }
         _isLoading = false;
+        _isFilteringProducts = false;
       });
     }
   }
@@ -273,35 +385,39 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                               controller: _tabController,
                               indicatorColor: AppColors.alonaTeal,
                               indicatorWeight: 3,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
                               labelColor: AppColors.alonaTeal,
                               unselectedLabelColor: AppColors.mutedText,
-                              labelStyle: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 13.5),
-                              unselectedLabelStyle: GoogleFonts.figtree(fontWeight: FontWeight.w500, fontSize: 13.5),
+                              labelStyle: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 13),
+                              unselectedLabelStyle: GoogleFonts.figtree(fontWeight: FontWeight.w500, fontSize: 13),
                               tabs: [
                                 const Tab(text: 'Shop'),
                                 Tab(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text('Products'),
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.sale,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'New',
-                                          style: GoogleFonts.figtree(
-                                            fontSize: 8.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                            height: 1.1,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text('Products'),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.sale,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'New',
+                                            style: GoogleFonts.figtree(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              height: 1.1,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const Tab(text: 'Reviews'),
@@ -315,6 +431,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                   },
                   body: TabBarView(
                     controller: _tabController,
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                     children: [
                       _buildShopTab(),
                       _buildProductsTab(),
@@ -380,16 +497,9 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top App Bar row: Back + Search In Shop + Overflow Menu
+        // Top App Bar row: Search In Shop + Icons (Back button removed)
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: AppColors.white),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: Container(
                         height: 38,
@@ -416,7 +526,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                     onPressed: () {
                                       _searchController.clear();
                                       setState(() => _searchQuery = '');
-                                      _loadStoreData();
+                                      _loadStoreData(silent: true);
                                     },
                                   )
                                 : null,
@@ -429,9 +539,9 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                           onSubmitted: (val) {
                             setState(() {
                               _searchQuery = val.trim();
-                              _tabController.index = 1;
                             });
-                            _loadStoreData();
+                            _tabController.animateTo(1);
+                            _loadStoreData(silent: true);
                           },
                         ),
                       ),
@@ -956,44 +1066,212 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   }
 
   Widget _buildVoucherCard(dynamic v) {
+    final voucherId = parseInt(v is Map ? v['id'] : null);
     final code = v['code']?.toString() ?? '';
     final desc = v['description']?.toString() ?? (v['name']?.toString() ?? 'Store Voucher');
+    final isClaimed = (v is Map && v['is_claimed'] == true) || _claimedVoucherIds.contains(voucherId);
+    final isClaiming = _claimingVoucherIds.contains(voucherId);
 
     return Container(
-      width: 170,
+      width: 210,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppColors.lightTeal,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.oceanTeal.withValues(alpha: 0.35)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.confirmation_number_outlined, size: 14, color: AppColors.alonaTeal),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  code,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.confirmation_number_outlined, size: 14, color: AppColors.alonaTeal),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        code,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.figtree(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.alonaTeal),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.figtree(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.alonaTeal),
+                  style: GoogleFonts.figtree(fontSize: 11, color: AppColors.textPrimary),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            desc,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.figtree(fontSize: 11, color: AppColors.textPrimary),
-          ),
+          const SizedBox(width: 8),
+          if (voucherId > 0)
+            isClaimed
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.alonaTeal.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      'Claimed',
+                      style: GoogleFonts.figtree(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.alonaTeal,
+                      ),
+                    ),
+                  )
+                : InkWell(
+                    onTap: isClaiming ? null : () => _claimStoreVoucher(voucherId, code),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.alonaTeal,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isClaiming ? '...' : 'Claim',
+                        style: GoogleFonts.figtree(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSlidingSortBar() {
+    final activeIdx = _sortIndexFor(_currentSort);
+    final alignX = -1.0 + (activeIdx * (2.0 / 3.0));
+
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: SizedBox(
+        height: 36,
+        child: Stack(
+          children: [
+            AnimatedAlign(
+              alignment: Alignment(alignX, 0),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: FractionallySizedBox(
+                widthFactor: 0.25,
+                heightFactor: 1.0,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightTeal,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.alonaTeal.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(child: _buildSortItem('Popular', 'popular')),
+                Expanded(child: _buildSortItem('Latest', 'latest', showDot: true)),
+                Expanded(child: _buildSortItem('Top Sales', 'top_sales')),
+                Expanded(
+                  child: _buildSortItem(
+                    _currentSort == 'price-high'
+                        ? 'Price ↓'
+                        : (_currentSort == 'price-low' ? 'Price ↑' : 'Price ⇅'),
+                    _currentSort == 'price-low' ? 'price-high' : 'price-low',
+                    isActive: _currentSort == 'price-low' || _currentSort == 'price-high',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedProductsGrid({required String emptyTitle, required String emptyMessage}) {
+    final switchKey = ValueKey<String>(
+      '${_currentSort}_${_selectedCategory ?? 'all'}_${_selectedSubcategory ?? 'all'}_$_searchQuery',
+    );
+    return Stack(
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final offsetTween = Tween<Offset>(
+              begin: Offset(0.10 * _sortSlideDirection, 0),
+              end: Offset.zero,
+            );
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: offsetTween.animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: _products.isEmpty
+              ? KeyedSubtree(
+                  key: switchKey,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: EmptyStateView(
+                      icon: Icons.inventory_2_outlined,
+                      title: emptyTitle,
+                      message: emptyMessage,
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  key: switchKey,
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _products.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.68,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemBuilder: (context, index) {
+                    return ProductCard(
+                      product: _products[index],
+                      isMall: _isMall,
+                    );
+                  },
+                ),
+        ),
+        if (_isFilteringProducts)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(
+              minHeight: 2,
+              color: AppColors.alonaTeal,
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+      ],
     );
   }
 
@@ -1001,24 +1279,8 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
   Widget _buildProductsTab() {
     return Column(
       children: [
-        // Sub-filter Sort Bar: Popular | Latest | Top Sales | Price ⇅
-        Container(
-          color: AppColors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSortItem('Popular', 'popular'),
-              _buildSortItem('Latest', 'latest', showDot: true),
-              _buildSortItem('Top Sales', 'top_sales'),
-              _buildSortItem(
-                'Price ⇅',
-                _currentSort == 'price-low' ? 'price-high' : 'price-low',
-                isActive: _currentSort == 'price-low' || _currentSort == 'price-high',
-              ),
-            ],
-          ),
-        ),
+        // Smooth sliding sub-filter Sort Bar: Popular | Latest | Top Sales | Price ⇅
+        _buildSlidingSortBar(),
         const Divider(height: 1, thickness: 0.8, color: AppColors.border),
 
         // Selected Category Pill (if filtered)
@@ -1036,7 +1298,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                 InkWell(
                   onTap: () {
                     setState(() => _selectedCategory = null);
-                    _loadStoreData();
+                    _loadStoreData(silent: true);
                   },
                   child: const Icon(Icons.close, size: 16, color: AppColors.mutedText),
                 ),
@@ -1044,33 +1306,12 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
             ),
           ),
 
-        // Product Grid using identical ProductCard component
+        // Product Grid with smooth slide transition
         Expanded(
-          child: _products.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: EmptyStateView(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'No products found',
-                    message: 'Try searching for another keyword or filter',
-                  ),
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _products.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.68,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemBuilder: (context, index) {
-                    return ProductCard(
-                      product: _products[index],
-                      isMall: _isMall,
-                    );
-                  },
-                ),
+          child: _buildAnimatedProductsGrid(
+            emptyTitle: 'No products found',
+            emptyMessage: 'Try searching for another keyword or filter',
+          ),
         ),
       ],
     );
@@ -1080,21 +1321,30 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
     final selected = isActive ?? (_currentSort == sortKey);
 
     return InkWell(
+      borderRadius: BorderRadius.circular(18),
       onTap: () {
-        setState(() => _currentSort = sortKey);
-        _loadStoreData();
+        final oldIdx = _sortIndexFor(_currentSort);
+        final newIdx = _sortIndexFor(sortKey);
+        setState(() {
+          _sortSlideDirection = newIdx >= oldIdx ? 1 : -1;
+          _currentSort = sortKey;
+        });
+        _loadStoreData(silent: true);
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Center(
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.figtree(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.alonaTeal : AppColors.textPrimary,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.figtree(
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? AppColors.alonaTeal : AppColors.textPrimary,
+                ),
               ),
             ),
             if (showDot) ...[
@@ -1445,10 +1695,11 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                         selected: _selectedCategory == null,
                         onTap: () {
                           setState(() {
+                            _sortSlideDirection = -1;
                             _selectedCategory = null;
                             _selectedSubcategory = null;
                           });
-                          _loadStoreData();
+                          _loadStoreData(silent: true);
                         },
                       ),
                       ...categoryItems.map((cat) {
@@ -1460,10 +1711,11 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                           selected: selected,
                           onTap: () {
                             setState(() {
+                              _sortSlideDirection = 1;
                               _selectedCategory = selected ? null : slug;
                               _selectedSubcategory = null;
                             });
-                            _loadStoreData();
+                            _loadStoreData(silent: true);
                           },
                         );
                       }),
@@ -1497,7 +1749,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                 selected: _selectedSubcategory == null,
                                 onTap: () {
                                   setState(() => _selectedSubcategory = null);
-                                  _loadStoreData();
+                                  _loadStoreData(silent: true);
                                 },
                               ),
                               ...activeSubcategories.map((sub) {
@@ -1511,7 +1763,7 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
                                     setState(() {
                                       _selectedSubcategory = selected ? null : subSlug;
                                     });
-                                    _loadStoreData();
+                                    _loadStoreData(silent: true);
                                   },
                                 );
                               }),
@@ -1526,53 +1778,16 @@ class _BuyerStoreScreenState extends State<BuyerStoreScreen> with SingleTickerPr
             ),
           ),
 
-        // 3. Sort Bar: Popular | Latest | Top Sales | Price ⇅
-        Container(
-          color: AppColors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSortItem('Popular', 'popular'),
-              _buildSortItem('Latest', 'latest', showDot: true),
-              _buildSortItem('Top Sales', 'top_sales'),
-              _buildSortItem(
-                'Price ⇅',
-                _currentSort == 'price-low' ? 'price-high' : 'price-low',
-                isActive: _currentSort == 'price-low' || _currentSort == 'price-high',
-              ),
-            ],
-          ),
-        ),
+        // 3. Smooth Sliding Sort Bar: Popular | Latest | Top Sales | Price ⇅
+        _buildSlidingSortBar(),
         const Divider(height: 1, thickness: 0.8, color: AppColors.border),
 
-        // 4. Products Grid inside Categories Tab
+        // 4. Products Grid inside Categories Tab with smooth slide transition
         Expanded(
-          child: _products.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: EmptyStateView(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'No products in this category',
-                    message: 'Try selecting another category or subcategory filter above.',
-                  ),
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _products.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.68,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemBuilder: (context, index) {
-                    return ProductCard(
-                      product: _products[index],
-                      isMall: _isMall,
-                    );
-                  },
-                ),
+          child: _buildAnimatedProductsGrid(
+            emptyTitle: 'No products in this category',
+            emptyMessage: 'Try selecting another category or subcategory filter above.',
+          ),
         ),
       ],
     );

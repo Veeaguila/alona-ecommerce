@@ -1,10 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/alona_text_field.dart';
+import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
 import 'package:alona_mobile/features/buyer/presentation/messages/buyer_conversations_screen.dart';
@@ -307,25 +311,23 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 40),
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Account Settings',
           style: GoogleFonts.figtree(
             fontSize: 19,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF1F2937),
+            color: Colors.white,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF087F8C), size: 22),
+            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
             tooltip: 'Messages',
             onPressed: () {
               Navigator.push(
@@ -336,16 +338,14 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
           ),
           const SizedBox(width: 6),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 36),
-        children: [
-          // SECTION 1: MY ACCOUNT (Matching Buyer Website Sidebar: Profile, Banks & Cards, Addresses, Change Password, Privacy Settings)
-          _buildSectionHeader('My Account'),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 40,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 36),
+          children: [
+            // SECTION 1: MY ACCOUNT (Matching Buyer Website Sidebar: Profile, Banks & Cards, Addresses, Change Password, Privacy Settings)
+            _buildSectionHeader('My Account', isTopSection: true),
           _buildSettingsGroup([
             _SettingsRowItem(
               label: 'Profile',
@@ -483,11 +483,12 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
             ),
           ],
         ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {bool isTopSection = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
@@ -495,7 +496,7 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
         style: GoogleFonts.figtree(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF6B7280),
+          color: isTopSection ? Colors.white : const Color(0xFF6B7280),
         ),
       ),
     );
@@ -764,11 +765,8 @@ class _BuyerHelpCenterPageState extends State<_BuyerHelpCenterPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           widget.initialFocusContact ? 'Contact Us' : 'Help Center',
           style: GoogleFonts.figtree(
@@ -1403,11 +1401,8 @@ class _BuyerFaqPageState extends State<_BuyerFaqPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Frequently Asked Questions',
           style: GoogleFonts.figtree(
@@ -1815,11 +1810,8 @@ class _BuyerComplaintsPageState extends State<_BuyerComplaintsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Complaints & Ticket Status',
           style: GoogleFonts.figtree(
@@ -2109,11 +2101,8 @@ class _BuyerProtectionPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Buyer Protection',
           style: GoogleFonts.figtree(
@@ -2375,11 +2364,8 @@ class _BuyerPartnerInfoPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           title,
           style: GoogleFonts.figtree(
@@ -2694,11 +2680,8 @@ class _BuyerAccountDetailsPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'My Account',
           style: GoogleFonts.figtree(
@@ -2875,10 +2858,15 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
   final _emailCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
   final _birthdayCtrl = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
 
   String _sex = '';
+  String? _avatarUrl;
+  Uint8List? _avatarBytes;
+  String? _avatarFilename;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingAvatar = false;
 
   @override
   void initState() {
@@ -2899,7 +2887,7 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
 
   void _applyUserMap(Map<String, dynamic> u) {
     var first = (u['first_name'] ?? '').toString().trim();
-    var middle = (u['middle_initial'] ?? '').toString().trim();
+    var middle = (u['middle_name'] ?? u['middle_initial'] ?? '').toString().trim();
     var last = (u['last_name'] ?? '').toString().trim();
     final fullName = (u['name'] ?? '').toString().trim();
 
@@ -2928,6 +2916,10 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     if (['Male', 'Female', 'Other'].contains(rawSex)) {
       _sex = rawSex;
     }
+    final rawAvatar = (u['avatar_url'] ?? '').toString().trim();
+    if (rawAvatar.isNotEmpty) {
+      _avatarUrl = rawAvatar;
+    }
   }
 
   Future<void> _populateFromLocalAndRemote() async {
@@ -2954,6 +2946,147 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     }
   }
 
+  Future<void> _pickProfilePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Update Profile Picture',
+                style: GoogleFonts.figtree(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F7F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_outlined, color: Color(0xFF087F8C)),
+                ),
+                title: Text(
+                  'Choose from Gallery',
+                  style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14.5),
+                ),
+                onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
+              ),
+              const SizedBox(height: 6),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F7F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined, color: Color(0xFF087F8C)),
+                ),
+                title: Text(
+                  'Take a Photo',
+                  style: GoogleFonts.figtree(fontWeight: FontWeight.w700, fontSize: 14.5),
+                ),
+                onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+
+      setState(() {
+        _avatarBytes = bytes;
+        _avatarFilename = picked.name.isNotEmpty ? picked.name : 'profile_photo.jpg';
+        _isUploadingAvatar = true;
+      });
+
+      final first = _firstNameCtrl.text.trim().isNotEmpty ? _firstNameCtrl.text.trim() : 'Buyer';
+      final last = _lastNameCtrl.text.trim();
+      final contact = _contactCtrl.text.trim();
+      final validContact = RegExp(r'^09\d{9}$').hasMatch(contact) ? contact : null;
+
+      final res = await BuyerService.updateProfile(
+        firstName: first,
+        middleInitial: _middleNameCtrl.text.trim(),
+        lastName: last,
+        sex: _sex.isNotEmpty ? _sex : null,
+        email: _emailCtrl.text.trim(),
+        contactNo: validContact,
+        birthday: _birthdayCtrl.text.trim().isNotEmpty ? _birthdayCtrl.text.trim() : null,
+        avatarBytes: _avatarBytes,
+        avatarFilename: _avatarFilename,
+      );
+
+      if (!mounted) return;
+      if (res['user'] is Map) {
+        final userMap = Map<String, dynamic>.from(res['user'] as Map);
+        setState(() {
+          _applyUserMap(userMap);
+          _isUploadingAvatar = false;
+        });
+        if (widget.authState.buyerToken != null) {
+          await widget.authState.updateBuyerUser(userMap);
+        }
+      } else {
+        setState(() => _isUploadingAvatar = false);
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile picture updated!'),
+          backgroundColor: Color(0xFF087F8C),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not update photo: $e'),
+          backgroundColor: AppColors.sale,
+        ),
+      );
+    }
+  }
+
   Future<void> _pickBirthday() async {
     final initial = DateTime.tryParse(_birthdayCtrl.text.trim()) ?? DateTime(2000, 1, 1);
     final picked = await showDatePicker(
@@ -2977,10 +3110,10 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     final last = _lastNameCtrl.text.trim();
     final contact = _contactCtrl.text.trim();
 
-    if (first.isEmpty || last.isEmpty) {
+    if (first.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('First name and last name are required.'),
+          content: Text('First name is required.'),
           backgroundColor: AppColors.sale,
         ),
       );
@@ -3007,12 +3140,14 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
         email: _emailCtrl.text.trim(),
         contactNo: contact.isNotEmpty ? contact : null,
         birthday: _birthdayCtrl.text.trim().isNotEmpty ? _birthdayCtrl.text.trim() : null,
+        avatarBytes: _avatarBytes,
+        avatarFilename: _avatarFilename,
       );
       if (!mounted) return;
       if (res['user'] is Map && widget.authState.buyerToken != null) {
-        await widget.authState.updateBuyerUser(
-          Map<String, dynamic>.from(res['user'] as Map),
-        );
+        final userMap = Map<String, dynamic>.from(res['user'] as Map);
+        _applyUserMap(userMap);
+        await widget.authState.updateBuyerUser(userMap);
       }
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -3031,6 +3166,47 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     }
   }
 
+  Widget _buildAvatarPreview(String fullName) {
+    if (_avatarBytes != null) {
+      return Image.memory(
+        _avatarBytes!,
+        width: 88,
+        height: 88,
+        fit: BoxFit.cover,
+      );
+    }
+    final resolvedUrl = (_avatarUrl != null && _avatarUrl!.trim().isNotEmpty)
+        ? ApiConfig.imageUrl(_avatarUrl!)
+        : '';
+    if (resolvedUrl.isNotEmpty) {
+      return NetworkImageBox(
+        imageUrl: resolvedUrl,
+        width: 88,
+        height: 88,
+        fit: BoxFit.cover,
+        borderRadius: BorderRadius.circular(44),
+      );
+    }
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0A9396), Color(0xFF06565E)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.person_rounded,
+        size: 46,
+        color: Colors.white,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fullName = [
@@ -3042,95 +3218,161 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 40),
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'My Profile',
           style: GoogleFonts.figtree(
             fontSize: 18,
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF1F2937),
+            color: Colors.white,
           ),
         ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF087F8C)))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'My Profile',
-                      style: GoogleFonts.figtree(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1F2937),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 40,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF087F8C)))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Profile',
+                        style: GoogleFonts.figtree(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1F2937),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage and protect your account',
-                      style: GoogleFonts.figtree(
-                        fontSize: 13,
-                        color: const Color(0xFF6B7280),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Manage and protect your account',
+                        style: GoogleFonts.figtree(
+                          fontSize: 13,
+                          color: const Color(0xFF6B7280),
+                        ),
                       ),
-                    ),
-                    const Divider(height: 28, color: Color(0xFFF1F5F9)),
+                      const Divider(height: 28, color: Color(0xFFF1F5F9)),
 
-                    // Avatar & Display Name summary
-                    Center(
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F7F6),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF087F8C).withValues(alpha: 0.25), width: 2),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
-                              style: GoogleFonts.figtree(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF087F8C),
+                      // Editable Avatar & Display Name summary
+                      Center(
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: _isUploadingAvatar ? null : _pickProfilePhoto,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 88,
+                                    height: 88,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE8F7F6),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFF087F8C).withValues(alpha: 0.35),
+                                        width: 2.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF087F8C).withValues(alpha: 0.12),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          _buildAvatarPreview(fullName),
+                                          if (_isUploadingAvatar)
+                                            Container(
+                                              color: Colors.black.withValues(alpha: 0.38),
+                                              alignment: Alignment.center,
+                                              child: const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.4,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: -2,
+                                    bottom: -2,
+                                    child: Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF087F8C),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2),
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt_rounded,
+                                        size: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            fullName.isNotEmpty ? fullName : 'Alona Buyer',
-                            style: GoogleFonts.figtree(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF1F2937),
+                            const SizedBox(height: 10),
+                            Text(
+                              fullName.isNotEmpty ? fullName : 'Alona Buyer',
+                              style: GoogleFonts.figtree(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1F2937),
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 6),
+                            TextButton.icon(
+                              onPressed: _isUploadingAvatar ? null : _pickProfilePhoto,
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF087F8C),
+                                backgroundColor: const Color(0xFFE8F7F6),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              icon: const Icon(Icons.photo_camera_outlined, size: 15),
+                              label: Text(
+                                _isUploadingAvatar ? 'Uploading photo...' : 'Edit Profile Picture',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
                     _buildInputField('First Name *', _firstNameCtrl, hint: 'First Name'),
                     const SizedBox(height: 12),
@@ -3222,16 +3464,17 @@ class _BuyerEditProfilePageState extends State<_BuyerEditProfilePage> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 0,
                         ),
-                        child: Text(
-                          _isSaving ? 'Saving...' : 'Save Profile',
-                          style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w800),
+                          child: Text(
+                            _isSaving ? 'Saving...' : 'Save Profile',
+                            style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -3422,11 +3665,8 @@ class _BuyerBanksAndCardsPageState extends State<_BuyerBanksAndCardsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Banks & Cards',
           style: GoogleFonts.figtree(
@@ -3826,11 +4066,8 @@ class _BuyerChangePasswordPageState extends State<_BuyerChangePasswordPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Change Password',
           style: GoogleFonts.figtree(
@@ -3997,11 +4234,8 @@ class _BuyerPrivacySettingsPageState extends State<_BuyerPrivacySettingsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           'Privacy Settings',
           style: GoogleFonts.figtree(
@@ -4192,11 +4426,8 @@ class _BuyerPoliciesPageState extends State<_BuyerPoliciesPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF087F8C)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
         title: Text(
           activePolicy?['title']?.toString() ?? 'Policies & Information',
           style: GoogleFonts.figtree(

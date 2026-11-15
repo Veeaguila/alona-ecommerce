@@ -41,6 +41,9 @@ class ApiClient {
     if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
   };
 
+  static bool _isGatewayOrTunnelDown(int statusCode) =>
+      const {502, 503, 504, 521, 522, 524, 530}.contains(statusCode);
+
   static Future<http.Response> _send(
     String endpoint,
     String method, {
@@ -49,36 +52,63 @@ class ApiClient {
   }) async {
     final role = _role(endpoint);
     final token = _token(role);
-    final server = ApiConfig.baseUrl;
-    try {
-      var uri = Uri.parse(ApiConfig.url(endpoint));
-      if (queryParameters != null) {
-        uri = uri.replace(
-          queryParameters: queryParameters.map(
-            (k, v) => MapEntry(k, v.toString()),
-          ),
+    final candidates = ApiConfig.candidateBaseUrls;
+    Object? lastError;
+
+    for (var i = 0; i < candidates.length; i++) {
+      final candidateBase = candidates[i];
+      final isFallbackAttempt = i > 0;
+      try {
+        var uri = Uri.parse(
+          ApiConfig.url(endpoint, baseOverride: candidateBase),
         );
+        if (queryParameters != null) {
+          uri = uri.replace(
+            queryParameters: queryParameters.map(
+              (k, v) => MapEntry(k, v.toString()),
+            ),
+          );
+        }
+        final request = http.Request(method, uri)
+          ..headers.addAll(_headers(token));
+        if (body != null) request.body = jsonEncode(body);
+        final response = await client
+            .send(request)
+            .then(http.Response.fromStream)
+            .timeout(Duration(seconds: isFallbackAttempt ? 8 : 20));
+
+        if (_isGatewayOrTunnelDown(response.statusCode) &&
+            i + 1 < candidates.length) {
+          continue;
+        }
+
+        if (candidateBase != ApiConfig.baseUrl) {
+          ApiConfig.adoptReachableBaseUrl(candidateBase);
+        }
+        await _check(response, role, token, ApiConfig.baseUrl);
+        return response;
+      } on ApiException {
+        rethrow;
+      } on TimeoutException catch (e) {
+        lastError = e;
+        if (i + 1 < candidates.length) continue;
+      } on http.ClientException catch (e) {
+        lastError = e;
+        if (i + 1 < candidates.length) continue;
+      } catch (e) {
+        lastError = e;
+        if (i + 1 < candidates.length) continue;
       }
-      final request = http.Request(method, uri)
-        ..headers.addAll(_headers(token));
-      if (body != null) request.body = jsonEncode(body);
-      final response = await client
-          .send(request)
-          .then(http.Response.fromStream)
-          .timeout(const Duration(seconds: 25));
-      await _check(response, role, token, server);
-      return response;
-    } on ApiException {
-      rethrow;
-    } on TimeoutException {
+    }
+
+    if (lastError is TimeoutException) {
       throw ApiException(
         'The server took too long to respond. Refresh before retrying an action.',
       );
-    } on http.ClientException {
-      throw ApiException(
-        'Unable to connect to the server. Check your connection.',
-      );
     }
+    throw ApiException(
+      'Unable to connect to the server. Check your connection.',
+    );
   }
 
   static Future<void> _check(
@@ -155,9 +185,13 @@ class ApiClient {
           .timeout(const Duration(seconds: 45));
       await _check(response, role, token, server);
       return _json(response);
+    } on ApiException {
+      rethrow;
     } on TimeoutException {
       throw ApiException('Upload timed out. Refresh before retrying.');
     } on http.ClientException {
+      throw ApiException('Unable to connect to the server.');
+    } catch (_) {
       throw ApiException('Unable to connect to the server.');
     }
   }

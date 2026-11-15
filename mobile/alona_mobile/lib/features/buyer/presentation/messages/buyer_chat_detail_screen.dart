@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -34,7 +35,8 @@ class BuyerChatDetailScreen extends StatefulWidget {
   State<BuyerChatDetailScreen> createState() => _BuyerChatDetailScreenState();
 }
 
-class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
+class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -42,6 +44,8 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
   bool _isLoading = true;
   bool _isConnecting = false;
   bool _isSending = false;
+  bool _loadingMessages = false, _paused = false;
+  int _messageRevision = 0;
   String? _error;
   Timer? _pollTimer;
 
@@ -51,6 +55,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.sellerId != null && widget.sellerId! > 0) {
       _sellerId = widget.sellerId!;
     }
@@ -60,10 +65,22 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _paused = state != AppLifecycleState.resumed;
+    if (_paused) {
+      _pollTimer?.cancel();
+    } else {
+      _loadMessages();
+      _startPolling();
+    }
   }
 
   void _startPolling() {
@@ -76,6 +93,9 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
   }
 
   Future<void> _loadMessages({bool initial = false}) async {
+    if (!mounted || _loadingMessages || _isSending || _paused) return;
+    _loadingMessages = true;
+    final revision = ++_messageRevision;
     if (initial) {
       setState(() {
         _isLoading = true;
@@ -89,7 +109,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
       final newMessages = res['messages'] as List<ConversationMessageModel>;
       final conv = res['conversation'] as ConversationModel?;
 
-      if (!mounted) return;
+      if (!mounted || revision != _messageRevision) return;
       final hadFewerMessages = newMessages.length > _messages.length;
 
       setState(() {
@@ -106,7 +126,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || revision != _messageRevision) return;
       if (initial) {
         setState(() {
           _error = e.toString();
@@ -114,6 +134,8 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
           _isConnecting = false;
         });
       }
+    } finally {
+      _loadingMessages = false;
     }
   }
 
@@ -133,6 +155,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
     final text = explicitText ?? _textController.text.trim();
     if ((text.isEmpty && orderId == null) || _isSending) return;
 
+    _messageRevision++;
     setState(() => _isSending = true);
     if (explicitText == null) {
       _textController.clear();
@@ -146,13 +169,19 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
       );
 
       if (!mounted) return;
+      _messageRevision++;
       setState(() {
-        _messages.add(sent);
+        if (!_messages.any((m) => m.id == sent.id)) {
+          _messages.add(sent);
+        }
         _isSending = false;
       });
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
+      if (explicitText == null && _textController.text.isEmpty) {
+        _textController.text = text;
+      }
       setState(() => _isSending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -241,14 +270,12 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        elevation: 0.5,
-        backgroundColor: AppColors.white,
-        foregroundColor: AppColors.textPrimary,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        elevation: 0,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 40),
+        foregroundColor: Colors.white,
+        titleSpacing: 16,
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             // Avatar Stack matching reference screenshot with tag badge
@@ -288,7 +315,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
                         decoration: BoxDecoration(
-                          color: AppColors.alonaTeal,
+                          color: AppColors.accentGold,
                           borderRadius: BorderRadius.circular(3),
                           border: Border.all(color: AppColors.white, width: 0.8),
                         ),
@@ -297,7 +324,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                           style: GoogleFonts.figtree(
                             fontSize: 7.5,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.white,
+                            color: AppColors.buyerDeepTeal,
                             height: 1.1,
                           ),
                         ),
@@ -335,7 +362,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                       style: GoogleFonts.figtree(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Colors.white,
                       ),
                     ),
                     Row(
@@ -344,7 +371,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                           width: 6,
                           height: 6,
                           decoration: const BoxDecoration(
-                            color: AppColors.success,
+                            color: Color(0xFF4ADE80),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -354,7 +381,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
                           style: GoogleFonts.figtree(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.mutedText,
+                            color: Colors.white70,
                           ),
                         ),
                       ],
@@ -367,7 +394,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.storefront_outlined, color: AppColors.textPrimary),
+            icon: const Icon(Icons.storefront_outlined, color: Colors.white),
             tooltip: 'Visit Store',
             onPressed: () {
               if (_sellerId > 0) {
@@ -391,17 +418,15 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onPressed: _showQuickActionsSheet,
           ),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 0.8, color: AppColors.border),
-        ),
       ),
-      body: Column(
-        children: [
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 40,
+        child: Column(
+          children: [
           // Sticky Product Header Banner (if referenced)
           if (widget.productName != null && widget.productName!.isNotEmpty)
             Container(
@@ -556,12 +581,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
 
           // Bottom Bar matching reference screenshot layout
           Container(
-            padding: EdgeInsets.only(
-              left: 6,
-              right: 6,
-              top: 6,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-            ),
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
             decoration: const BoxDecoration(
               color: AppColors.white,
               border: Border(top: BorderSide(color: AppColors.border, width: 0.8)),
@@ -649,6 +669,7 @@ class _BuyerChatDetailScreenState extends State<BuyerChatDetailScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

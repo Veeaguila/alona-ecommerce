@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/cart/cart_screen.dart';
@@ -80,7 +81,6 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
     final departments = _departments;
     final isSearching = _searchQuery.trim().isNotEmpty;
     final searchResults = _searchResults;
@@ -88,17 +88,12 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        titleSpacing: canPop ? 0 : 16,
-        backgroundColor: Colors.white,
+        titleSpacing: 16,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1F2937)),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
         title: Row(
           children: [
             // Left side: Search Bar matching Home layout
@@ -107,13 +102,13 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  border: Border.all(color: AppColors.buyerBorder, width: 1),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.mutedText, size: 19),
+                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
@@ -127,7 +122,7 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
                         decoration: InputDecoration(
                           hintText: 'Search categories...',
                           hintStyle: GoogleFonts.figtree(
-                            color: AppColors.textLight,
+                            color: AppColors.textMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -155,7 +150,7 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
 
             // Right side: Message and Cart icons
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.textPrimary, size: 22),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 22),
               tooltip: 'Messages',
               onPressed: () {
                 Navigator.push(
@@ -165,7 +160,7 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textPrimary, size: 23),
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(
@@ -177,11 +172,14 @@ class _BuyerCategoriesScreenState extends State<BuyerCategoriesScreen> {
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF087F8C)))
-          : isSearching
-              ? _buildSearchResultsView(searchResults)
-              : _buildTwoPaneDepartmentView(departments),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF087F8C)))
+            : isSearching
+                ? _buildSearchResultsView(searchResults)
+                : _buildTwoPaneDepartmentView(departments),
+      ),
     );
   }
 

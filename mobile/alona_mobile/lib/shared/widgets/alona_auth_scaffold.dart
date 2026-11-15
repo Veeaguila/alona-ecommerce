@@ -65,20 +65,13 @@ class AlonaAuthScaffold extends StatelessWidget {
           SafeArea(
             child: Column(
               children: [
-                // Top navigation bar
-                if (showBackButton || trailing != null)
+                // Top navigation bar (no back button per global UI design)
+                if (trailing != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (showBackButton)
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                            onPressed: onBack ?? () => Navigator.pop(context),
-                          )
-                        else
-                          const SizedBox(width: 48),
                         ?trailing,
                       ],
                     ),

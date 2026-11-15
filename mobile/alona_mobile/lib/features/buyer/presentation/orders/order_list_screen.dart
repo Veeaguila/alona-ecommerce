@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/shared/widgets/status_badge.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
@@ -162,46 +163,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bgScaffold,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Title with optional back button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-              child: Row(
-                children: [
-                  if (Navigator.canPop(context)) ...[
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _cardBorder),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 16,
-                          color: _headingColor,
-                        ),
+      body: AlonaCurvedHeaderBody(
+        includeTopSafeArea: true,
+        overlapHeight: 118,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: Title
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                child: Row(
+                  children: [
+                    Text(
+                      'My Orders',
+                      style: GoogleFonts.figtree(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
-                  Text(
-                    'My Orders',
-                    style: GoogleFonts.figtree(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: _headingColor,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
 
             // Horizontal Filter Chips
             _buildFilterChips(),
@@ -288,6 +273,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -6,41 +6,58 @@ class ApiConfig {
   static const String googleServerClientId =
       '205454384304-bfdpb445o92v968jlgf3jesi4hvoc280.apps.googleusercontent.com';
 
-  /// Automatically resolves the correct backend URL:
-  /// - In Release mode (Production APK/Live): Always connects to https://shopalona.online
-  /// - In Debug mode (Development): Connects to local dev server (10.0.2.2:8000 for Android, 127.0.0.1:8000 for Desktop/Web)
-  static String get defaultBaseUrl {
-    const fromEnv = String.fromEnvironment('API_BASE_URL');
-    if (fromEnv.isNotEmpty) return fromEnv;
+  // Configure the target explicitly; opening the app must not target production in isolated contract tests.
+  static const String fallbackBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
 
-    if (kReleaseMode) {
-      return liveProductionUrl;
-    }
+  /// Default backend URL for mobile app runtime:
+  /// Uses API_BASE_URL if passed via --dart-define, otherwise defaults to
+  /// https://shopalona.online (which works on physical devices, emulators, and desktop),
+  /// with automatic fallback to local dev servers in ApiClient when offline/local.
+  static String get defaultBaseUrl =>
+      fallbackBaseUrl.isNotEmpty ? fallbackBaseUrl : liveProductionUrl;
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
-    }
-    return 'http://127.0.0.1:8000';
-  }
-
-  static const String fallbackBaseUrl = liveProductionUrl;
-  static String _baseUrl = fallbackBaseUrl;
+  static String _baseUrl = defaultBaseUrl;
+  static bool _allowAutoFailover = false;
 
   static String get baseUrl => _baseUrl;
+  static bool get allowAutoFailover => _allowAutoFailover;
   static Future<void> Function()? onServerChanged;
+
+  /// Ordered list of candidate servers to try if the primary baseUrl cannot be reached.
+  static List<String> get candidateBaseUrls {
+    if (!_allowAutoFailover) {
+      return [_baseUrl];
+    }
+    final raw = <String>[
+      _baseUrl,
+      liveProductionUrl,
+      if (!kReleaseMode) ...[
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+          'http://10.0.2.2:8000',
+          'http://127.0.0.1:8000',
+        ] else ...[
+          'http://127.0.0.1:8000',
+          'http://localhost:8000',
+        ],
+      ],
+    ];
+    final unique = <String>[];
+    for (final item in raw) {
+      final cleaned = _cleanBaseUrl(item);
+      if (cleaned.isNotEmpty && !unique.contains(cleaned)) {
+        unique.add(cleaned);
+      }
+    }
+    return unique;
+  }
 
   static String _cleanBaseUrl(String url) {
     var cleaned = url.trim().replaceAll(RegExp(r'/+$'), '');
     if (cleaned.endsWith('/api')) {
       cleaned = cleaned.substring(0, cleaned.length - 4);
-    }
-    // On Android debug emulator, translate 127.0.0.1/localhost to 10.0.2.2
-    if (!kReleaseMode && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      if (cleaned.contains('127.0.0.1:8000')) {
-        cleaned = cleaned.replaceAll('127.0.0.1:8000', '10.0.2.2:8000');
-      } else if (cleaned.contains('localhost:8000')) {
-        cleaned = cleaned.replaceAll('localhost:8000', '10.0.2.2:8000');
-      }
     }
     return cleaned;
   }
@@ -51,18 +68,30 @@ class ApiConfig {
 
     String target;
     if (kReleaseMode) {
-      // In live release mode, default to official live production URL
-      target = (saved != null && saved.trim().isNotEmpty && !saved.contains('127.0.0.1') && !saved.contains('10.0.2.2'))
+      target = (saved != null &&
+              saved.trim().isNotEmpty &&
+              saved.trim().startsWith('https://'))
           ? saved
           : liveProductionUrl;
     } else {
-      // In debug mode, default to local development server unless custom specified
-      target = (saved != null && saved.trim().isNotEmpty && saved != liveProductionUrl)
+      target = (saved != null && saved.trim().isNotEmpty)
           ? saved
           : defaultBaseUrl;
     }
 
     _baseUrl = _cleanBaseUrl(target);
+    _allowAutoFailover = true;
+  }
+
+  /// Updates the active baseUrl in memory when automatic failover finds a reachable server
+  /// without clearing the user's authentication session.
+  static void adoptReachableBaseUrl(String url) {
+    final cleaned = _cleanBaseUrl(url);
+    if (cleaned.isEmpty) return;
+    try {
+      validate(cleaned);
+      _baseUrl = cleaned;
+    } catch (_) {}
   }
 
   static Future<void> setBaseUrl(String url) async {
@@ -70,19 +99,21 @@ class ApiConfig {
     validate(cleaned);
     if (cleaned != _baseUrl) await onServerChanged?.call();
     _baseUrl = cleaned;
+    _allowAutoFailover = false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('custom_base_url', _baseUrl);
   }
 
-  static String url(String path) {
-    validate(_baseUrl);
+  static String url(String path, {String? baseOverride}) {
+    final targetBase = baseOverride != null ? _cleanBaseUrl(baseOverride) : _baseUrl;
+    validate(targetBase);
     if (path.contains('://') || path.startsWith('//') || path.contains('..')) {
       throw const FormatException(
         'Only API paths on the configured server are allowed.',
       );
     }
     final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$_baseUrl$cleanPath';
+    return '$targetBase$cleanPath';
   }
 
   static void validate(String value) {
@@ -109,10 +140,14 @@ class ApiConfig {
     }
     final value = path.trim();
     if (value.startsWith('http://') || value.startsWith('https://')) {
-      if (_baseUrl.contains('10.0.2.2') || !_baseUrl.contains('127.0.0.1')) {
-        return value
-            .replaceFirst('http://127.0.0.1:8000', _baseUrl)
-            .replaceFirst('http://localhost:8000', _baseUrl);
+      final parsed = Uri.tryParse(value);
+      if (parsed != null &&
+          ['127.0.0.1', 'localhost', '10.0.2.2', 'shopalona.online']
+              .contains(parsed.host) &&
+          (parsed.path.startsWith('/storage/') ||
+              parsed.path.startsWith('/images/'))) {
+        final query = parsed.hasQuery ? '?${parsed.query}' : '';
+        return '$_baseUrl${parsed.path}$query';
       }
       return value;
     }

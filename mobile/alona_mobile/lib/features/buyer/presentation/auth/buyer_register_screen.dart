@@ -337,9 +337,14 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     final user = Map<String, dynamic>.from(res['user'] as Map);
 
     await widget.authState.setBuyerSession(token, user);
-    if (mounted) {
-      Navigator.pop(context, true);
-    }
+    await widget.authState.switchModule('buyer');
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => BuyerMainScreen(authState: widget.authState),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _handleGoogleSignUp() async {
@@ -375,11 +380,25 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
         serverClientId: ApiConfig.googleServerClientId,
         scopes: ['email', 'profile'],
       );
-      await googleSignIn.signOut().catchError((_) => null);
+      try {
+        await googleSignIn.signOut().catchError((_) => null);
+      } on MissingPluginException {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          await _showGoogleAccountFallbackSheet();
+        }
+        return;
+      }
 
       GoogleSignInAccount? account;
       try {
         account = await googleSignIn.signIn();
+      } on MissingPluginException {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          await _showGoogleAccountFallbackSheet();
+        }
+        return;
       } on PlatformException catch (pe) {
         if (pe.code == 'sign_in_failed' ||
             (pe.message?.contains('10:') ?? false) ||
@@ -497,7 +516,7 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                             ),
                           ),
                           Text(
-                            'Confirm your selected Google email to sign up',
+                            'Google sign-in is not available through Google Play Services on this device. Confirm your Google email below to sign up.',
                             style: GoogleFonts.figtree(
                               fontSize: 12,
                               color: const Color(0xFF64748B),
@@ -623,6 +642,20 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
                       style: GoogleFonts.figtree(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(modalCtx),
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.figtree(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
                   ),

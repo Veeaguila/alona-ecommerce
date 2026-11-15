@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -64,87 +65,84 @@ class _BuyerConversationsScreenState extends State<BuyerConversationsScreen> {
       return Scaffold(
         backgroundColor: AppColors.buyerBackground,
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          automaticallyImplyLeading: false,
           title: Text(
             'Chats',
             style: GoogleFonts.figtree(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: Colors.white,
             ),
           ),
-          backgroundColor: AppColors.white,
+          backgroundColor: AlonaCurvedHeader.tealDark,
+          flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
           elevation: 0,
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(1),
-            child: Divider(height: 1, thickness: 1, color: AppColors.border),
-          ),
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: const BoxDecoration(
-                    color: AppColors.lightTeal,
-                    shape: BoxShape.circle,
+        body: AlonaCurvedHeaderBody(
+          overlapHeight: 48,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: const BoxDecoration(
+                      color: AppColors.lightTeal,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: AppColors.alonaTeal,
+                      size: 38,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    color: AppColors.alonaTeal,
-                    size: 38,
+                  const SizedBox(height: 20),
+                  Text(
+                    'Sign In to Chat',
+                    style: GoogleFonts.figtree(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Sign In to Chat',
-                  style: GoogleFonts.figtree(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Log in to communicate with sellers, ask product questions, and track orders.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.figtree(
+                      fontSize: 13,
+                      color: AppColors.mutedText,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Log in to communicate with sellers, ask product questions, and track orders.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.figtree(
-                    fontSize: 13,
-                    color: AppColors.mutedText,
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final nav = Navigator.of(context);
+                      final auth = AuthState();
+                      await auth.init();
+                      if (!mounted) return;
+                      final loggedIn = await nav.push<bool>(
+                        MaterialPageRoute(builder: (_) => BuyerLoginScreen(authState: auth)),
+                      );
+                      if (loggedIn == true && mounted) _loadConversations();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.alonaTeal,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Sign In Now',
+                      style: GoogleFonts.figtree(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () async {
-                    final nav = Navigator.of(context);
-                    final auth = AuthState();
-                    await auth.init();
-                    if (!mounted) return;
-                    final loggedIn = await nav.push<bool>(
-                      MaterialPageRoute(builder: (_) => BuyerLoginScreen(authState: auth)),
-                    );
-                    if (loggedIn == true && mounted) _loadConversations();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.alonaTeal,
-                    foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Sign In Now',
-                    style: GoogleFonts.figtree(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -154,114 +152,112 @@ class _BuyerConversationsScreenState extends State<BuyerConversationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           'Chats',
           style: GoogleFonts.figtree(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: AppColors.white,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
         elevation: 0,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 0.8, color: AppColors.border),
-        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.alonaTeal))
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sale)),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _loadConversations,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.alonaTeal,
-                            foregroundColor: AppColors.white,
-                          ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _conversations.isEmpty
-                  ? RefreshIndicator(
-                      onRefresh: _loadConversations,
-                      color: AppColors.alonaTeal,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.alonaTeal))
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: MediaQuery.of(context).size.height * 0.25),
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 72,
-                                  height: 72,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.lightTeal,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    color: AppColors.alonaTeal,
-                                    size: 36,
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  'No conversations yet',
-                                  style: GoogleFonts.figtree(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                                  child: Text(
-                                    'When you message sellers about products or orders, your chats will appear here.',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.figtree(fontSize: 13, color: AppColors.mutedText),
-                                  ),
-                                ),
-                              ],
+                          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.sale)),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: _loadConversations,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.alonaTeal,
+                              foregroundColor: AppColors.white,
                             ),
+                            child: const Text('Retry'),
                           ),
                         ],
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadConversations,
-                      color: AppColors.alonaTeal,
-                      child: ListView.separated(
-                        itemCount: _conversations.length,
-                        separatorBuilder: (_, index) => const Divider(
-                          height: 1,
-                          thickness: 0.6,
-                          indent: 76,
-                          color: AppColors.border,
-                        ),
-                        itemBuilder: (context, index) {
-                          final conv = _conversations[index];
-                          return _buildConversationTile(conv, index);
-                        },
-                      ),
                     ),
+                  )
+                : _conversations.isEmpty
+                    ? RefreshIndicator(
+                        onRefresh: _loadConversations,
+                        color: AppColors.alonaTeal,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.lightTeal,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.chat_bubble_outline_rounded,
+                                      color: AppColors.alonaTeal,
+                                      size: 36,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'No conversations yet',
+                                    style: GoogleFonts.figtree(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                                    child: Text(
+                                      'When you message sellers about products or orders, your chats will appear here.',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.figtree(fontSize: 13, color: AppColors.mutedText),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadConversations,
+                        color: AppColors.alonaTeal,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                          itemCount: _conversations.length,
+                          separatorBuilder: (_, index) => const Divider(
+                            height: 1,
+                            thickness: 0.6,
+                            indent: 76,
+                            color: AppColors.border,
+                          ),
+                          itemBuilder: (context, index) {
+                            final conv = _conversations[index];
+                            return _buildConversationTile(conv, index);
+                          },
+                        ),
+                      ),
+      ),
     );
   }
 

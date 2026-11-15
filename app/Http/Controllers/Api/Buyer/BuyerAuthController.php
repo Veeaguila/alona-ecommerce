@@ -288,30 +288,50 @@ class BuyerAuthController extends Controller
     {
         $user = $request->user();
 
+        if ($request->filled('middle_initial') && ! $request->filled('middle_name')) {
+            $request->merge(['middle_name' => $request->input('middle_initial')]);
+        }
+
         $validated = $request->validate([
-            'first_name' => ['required', 'string', 'min:2', 'max:50'],
-            'last_name' => ['required', 'string', 'min:2', 'max:50'],
+            'first_name' => ['nullable', 'string', 'min:1', 'max:50'],
+            'last_name' => ['nullable', 'string', 'max:50'],
             'middle_name' => ['nullable', 'string', 'max:50'],
             'suffix' => ['nullable', 'string', 'max:20'],
             'sex' => ['nullable', 'in:Male,Female,Other'],
-            'contact_no' => ['required', 'string', 'regex:/^09\d{9}$/', Rule::unique('users', 'contact_no')->ignore($user->id)],
+            'contact_no' => ['nullable', 'string', 'regex:/^09\d{9}$/', Rule::unique('users', 'contact_no')->ignore($user->id)],
             'birthday' => ['nullable', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'avatar' => ['nullable', 'image', 'max:5120'],
         ]);
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            if (
+                $user->avatar &&
+                ! Str::startsWith($user->avatar, ['http://', 'https://']) &&
+                Storage::disk('public')->exists($user->avatar)
+            ) {
                 Storage::disk('public')->delete($user->avatar);
             }
             $user->avatar = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $user->first_name = $validated['first_name'];
-        $user->last_name = $validated['last_name'];
-        $user->middle_name = $validated['middle_name'] ?? null;
-        $user->suffix = $validated['suffix'] ?? null;
-        $user->sex = $validated['sex'] ?? $user->sex;
-        $user->contact_no = $validated['contact_no'];
+        if (array_key_exists('first_name', $validated) && filled($validated['first_name'])) {
+            $user->first_name = $validated['first_name'];
+        }
+        if (array_key_exists('last_name', $validated)) {
+            $user->last_name = $validated['last_name'] ?? '';
+        }
+        if ($request->has('middle_name')) {
+            $user->middle_name = $validated['middle_name'] ?? null;
+        }
+        if ($request->has('suffix')) {
+            $user->suffix = $validated['suffix'] ?? null;
+        }
+        if (! empty($validated['sex'])) {
+            $user->sex = $validated['sex'];
+        }
+        if (! empty($validated['contact_no'])) {
+            $user->contact_no = $validated['contact_no'];
+        }
 
         if (! empty($validated['birthday'])) {
             $user->birthday = $validated['birthday'];
@@ -324,7 +344,9 @@ class BuyerAuthController extends Controller
             $user->last_name,
             $user->suffix,
         ]);
-        $user->name = implode(' ', $nameParts);
+        if (! empty($nameParts)) {
+            $user->name = implode(' ', $nameParts);
+        }
         $user->save();
 
         return response()->json([
@@ -396,8 +418,8 @@ class BuyerAuthController extends Controller
             ->first();
 
         if (! $user) {
-            $firstName = $validated['first_name'] ?? 'Buyer';
-            $lastName = $validated['last_name'] ?? '';
+            $firstName = trim((string) ($validated['first_name'] ?? '')) ?: 'Buyer';
+            $lastName = trim((string) ($validated['last_name'] ?? ''));
             $fullName = trim("$firstName $lastName") ?: 'Buyer';
 
             $user = new User([
@@ -426,12 +448,26 @@ class BuyerAuthController extends Controller
                 ], 403);
             }
 
+            $firstName = $user->first_name ?: (trim((string) ($validated['first_name'] ?? '')) ?: 'Buyer');
+            $lastName = $user->last_name ?: trim((string) ($validated['last_name'] ?? ''));
+            $fullName = $user->name ?: (trim("$firstName $lastName") ?: 'Buyer');
+
             $user->forceFill([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'name' => $fullName,
                 'google_id' => $user->google_id ?: $googleId,
                 'email_verified_at' => $user->email_verified_at ?: now(),
                 'status' => $user->status === 'unverified' ? 'approved' : $user->status,
                 'avatar' => $user->avatar ?: ($validated['avatar'] ?? null),
             ])->save();
+        }
+
+        if (empty($user->avatar)) {
+            $generatedAvatar = $this->generateDefaultGoogleAvatar($user);
+            if ($generatedAvatar) {
+                $user->forceFill(['avatar' => $generatedAvatar])->save();
+            }
         }
 
         $token = $user->createToken('buyer-mobile-token')->plainTextToken;
@@ -484,6 +520,7 @@ class BuyerAuthController extends Controller
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'middle_name' => $user->middle_name,
+            'middle_initial' => $user->middle_name,
             'suffix' => $user->suffix,
             'email' => $user->email,
             'contact_no' => $user->contact_no,
@@ -497,6 +534,43 @@ class BuyerAuthController extends Controller
             'status' => $user->status,
             'role' => $user->usertype,
         ];
+    }
+
+    private function generateDefaultGoogleAvatar(User $user): ?string
+    {
+        try {
+            if (function_exists('imagecreatetruecolor')) {
+                $size = 240;
+                $im = imagecreatetruecolor($size, $size);
+                imagesavealpha($im, true);
+                $tealBg = imagecolorallocate($im, 8, 127, 140);
+                $lightCircle = imagecolorallocate($im, 232, 247, 246);
+                $goldAccent = imagecolorallocate($im, 245, 167, 17);
+                imagefill($im, 0, 0, $tealBg);
+                // Decorative ring & user silhouette
+                imagefilledellipse($im, 120, 120, 224, 224, $tealBg);
+                imageellipse($im, 120, 120, 216, 216, $goldAccent);
+                // Head
+                imagefilledellipse($im, 120, 92, 74, 74, $lightCircle);
+                // Shoulders
+                imagefilledellipse($im, 120, 205, 148, 110, $lightCircle);
+
+                ob_start();
+                imagepng($im);
+                $pngData = ob_get_clean();
+                imagedestroy($im);
+
+                if ($pngData) {
+                    $path = 'avatars/google_user_' . $user->id . '.png';
+                    Storage::disk('public')->put($path, $pngData);
+                    return $path;
+                }
+            }
+        } catch (\Throwable) {
+            // Fall through
+        }
+
+        return null;
     }
 
     private function verifyGoogleToken(?string $idToken, string $email, string $googleId): bool

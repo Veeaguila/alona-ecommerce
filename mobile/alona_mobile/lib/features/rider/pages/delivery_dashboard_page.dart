@@ -1632,10 +1632,6 @@ class _DeliveryDashboardPageState extends State<DeliveryDashboardPage>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    if (widget.parcelId != null) ...[
-                      const BackButton(color: Colors.white),
-                      const SizedBox(width: 4),
-                    ],
                     Expanded(
                       child: Text(
                         widget.parcelId == null

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/alona_text_field.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
@@ -203,101 +204,107 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
         title: Text('My Addresses (${_addresses.length}/10)'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _error != null
-              ? Center(child: Text(_error!))
-              : _addresses.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: EmptyStateView(
-                        icon: Icons.location_off_outlined,
-                        title: 'No addresses saved',
-                        message: 'Save a delivery address to checkout faster.',
-                        buttonText: 'Add Address',
-                        onButtonPressed: () => _showAddressDialog(),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _addresses.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final addr = _addresses[index];
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: addr.isDefault ? AppColors.primary : AppColors.border,
-                              width: addr.isDefault ? 1.5 : 1,
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _error != null
+                ? Center(child: Text(_error!))
+                : _addresses.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: EmptyStateView(
+                          icon: Icons.location_off_outlined,
+                          title: 'No addresses saved',
+                          message: 'Save a delivery address to checkout faster.',
+                          buttonText: 'Add Address',
+                          onButtonPressed: () => _showAddressDialog(),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _addresses.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final addr = _addresses[index];
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: addr.isDefault ? AppColors.primary : AppColors.border,
+                                width: addr.isDefault ? 1.5 : 1,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    addr.recipientName,
-                                    style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '(${addr.phone})',
-                                    style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textMuted),
-                                  ),
-                                  const Spacer(),
-                                  if (addr.isDefault)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryLight,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Default',
-                                        style: GoogleFonts.figtree(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      addr.recipientName,
+                                      style: GoogleFonts.figtree(fontSize: 15, fontWeight: FontWeight.w700),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '(${addr.phone})',
+                                      style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textMuted),
+                                    ),
+                                    const Spacer(),
+                                    if (addr.isDefault)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Default',
+                                          style: GoogleFonts.figtree(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                addr.fullAddress,
-                                style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textSecondary, height: 1.3),
-                              ),
-                              const Divider(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (!addr.isDefault)
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  addr.fullAddress,
+                                  style: GoogleFonts.figtree(fontSize: 13, color: AppColors.textSecondary, height: 1.3),
+                                ),
+                                const Divider(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (!addr.isDefault)
+                                      TextButton(
+                                        onPressed: () => _setDefault(addr.id),
+                                        child: const Text('Set as Default'),
+                                      ),
                                     TextButton(
-                                      onPressed: () => _setDefault(addr.id),
-                                      child: const Text('Set as Default'),
+                                      onPressed: () => _showAddressDialog(addr),
+                                      child: const Text('Edit'),
                                     ),
-                                  TextButton(
-                                    onPressed: () => _showAddressDialog(addr),
-                                    child: const Text('Edit'),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
-                                    onPressed: () => _deleteAddress(addr.id),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                                      onPressed: () => _deleteAddress(addr.id),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+      ),
       floatingActionButton: _addresses.length < 10
           ? FloatingActionButton.extended(
               onPressed: () => _showAddressDialog(),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:alona_mobile/core/network/api_client.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 
@@ -360,6 +362,9 @@ class BuyerService {
     final res = renew
         ? await ApiClient.post(endpoint)
         : await ApiClient.get(endpoint);
+    if (res is Map && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data'] as Map);
+    }
     return res as Map<String, dynamic>;
   }
 
@@ -653,9 +658,39 @@ class BuyerService {
     String? email,
     String? contactNo,
     String? birthday,
+    Uint8List? avatarBytes,
+    String? avatarFilename,
   }) async {
+    if (avatarBytes != null && avatarBytes.isNotEmpty) {
+      final fields = <String, String>{
+        'first_name': firstName,
+        'last_name': lastName,
+        'middle_name': ?middleInitial,
+        'middle_initial': ?middleInitial,
+        if (sex != null && sex.isNotEmpty) 'sex': sex,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (contactNo != null && contactNo.isNotEmpty) 'contact_no': contactNo,
+        if (birthday != null && birthday.isNotEmpty) 'birthday': birthday,
+      };
+      final file = http.MultipartFile.fromBytes(
+        'avatar',
+        avatarBytes,
+        filename: (avatarFilename != null && avatarFilename.isNotEmpty)
+            ? avatarFilename
+            : 'avatar.jpg',
+      );
+      final res = await ApiClient.multipart(
+        'api/buyer/profile',
+        method: 'POST',
+        fields: fields,
+        files: [file],
+      );
+      return res is Map<String, dynamic> ? res : {};
+    }
+
     final res = await ApiClient.post('api/buyer/profile', body: {
       'first_name': firstName,
+      'middle_name': ?middleInitial,
       'middle_initial': ?middleInitial,
       'last_name': lastName,
       if (sex != null && sex.isNotEmpty) 'sex': sex,

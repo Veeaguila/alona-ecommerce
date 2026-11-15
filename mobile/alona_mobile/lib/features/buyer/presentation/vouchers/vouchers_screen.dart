@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -76,26 +77,39 @@ class _VouchersScreenState extends State<VouchersScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(
+          overlapHeight: 48,
+          bottomBarHeight: kTextTabBarHeight,
+        ),
         title: const Text('Discounts & Vouchers'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: AppColors.accentGold,
           tabs: [
             Tab(text: 'My Vouchers (${_claimed.length})'),
             Tab(text: 'Discover (${_available.length})'),
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _error != null
-              ? Center(child: Text(_error!))
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildVoucherList(_claimed, isClaimedTab: true),
-                    _buildVoucherList(_available, isClaimedTab: false),
-                  ],
-                ),
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        bottomBarHeight: kTextTabBarHeight,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _error != null
+                ? Center(child: Text(_error!))
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildVoucherList(_claimed, isClaimedTab: true),
+                      _buildVoucherList(_available, isClaimedTab: false),
+                    ],
+                  ),
+      ),
     );
   }
 
@@ -175,20 +189,55 @@ class _VouchersScreenState extends State<VouchersScreen> with SingleTickerProvid
                   child: const Text('Claim'),
                 )
               else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    v.code,
-                    style: GoogleFonts.figtree(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F7F6),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            size: 13,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Claimed',
+                            style: GoogleFonts.figtree(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        v.code,
+                        style: GoogleFonts.figtree(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),

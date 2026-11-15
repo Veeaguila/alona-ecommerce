@@ -4,6 +4,7 @@ import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/utils/currency_formatter.dart';
 import 'package:alona_mobile/core/utils/date_formatter.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/shared/widgets/status_badge.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
@@ -152,7 +153,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
 
     if (_error != null || _order == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(automaticallyImplyLeading: false),
         body: Center(child: Text(_error ?? 'Order not found')),
       );
     }
@@ -161,6 +162,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 48),
         title: const Text('Order Details'),
         actions: [
           IconButton(
@@ -170,11 +174,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 48,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Status Header
             Container(
               padding: const EdgeInsets.all(16),
@@ -595,6 +601,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             ],
             const SizedBox(height: 40),
           ],
+        ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -98,26 +99,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
     final filtered = _filteredItems;
 
     return Scaffold(
       backgroundColor: _bgScaffold,
       appBar: AppBar(
-        titleSpacing: canPop ? 0 : 16,
+        titleSpacing: 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppColors.primary,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
-        ),
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 54),
         automaticallyImplyLeading: false,
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
         title: Row(
           children: [
             // Left side: Search Bar matching Home layout
@@ -184,7 +176,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 24),
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 23),
               tooltip: 'Cart',
               onPressed: () {
                 Navigator.push(
@@ -196,32 +188,34 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ],
         ),
       ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: _darkTeal))
-            : RefreshIndicator(
-                onRefresh: _loadWishlist,
-                color: _darkTeal,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, right: 4, bottom: 12),
-                        child: Row(
-                          children: [
-                            Text(
-                              'My Wishlist',
-                              style: GoogleFonts.figtree(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: _headingColor,
-                                letterSpacing: -0.5,
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 54,
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: _darkTeal))
+              : RefreshIndicator(
+                  onRefresh: _loadWishlist,
+                  color: _darkTeal,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, right: 4, bottom: 16),
+                          child: Row(
+                            children: [
+                              Text(
+                                'My Wishlist',
+                                style: GoogleFonts.figtree(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
-                            ),
                             if (_items.isNotEmpty) ...[
                               const SizedBox(width: 8),
                               Container(
@@ -415,6 +409,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                 ),
               ),
+        ),
       ),
     );
   }

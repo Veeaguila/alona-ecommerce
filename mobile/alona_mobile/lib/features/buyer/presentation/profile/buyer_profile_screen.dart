@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:alona_mobile/core/config/api_config.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
 import 'package:alona_mobile/core/services/auth_state.dart';
 import 'package:alona_mobile/shared/widgets/alona_button.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
+import 'package:alona_mobile/shared/widgets/network_image_box.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
 import 'package:alona_mobile/features/buyer/presentation/auth/buyer_login_screen.dart';
@@ -37,10 +40,22 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _refreshUserProfile();
     _loadRecommendations();
   }
 
+  Future<void> _refreshUserProfile() async {
+    if (!widget.authState.isBuyerAuthenticated) return;
+    try {
+      final fresh = await BuyerService.getMe();
+      if (!mounted || fresh.isEmpty) return;
+      await widget.authState.updateBuyerUser(fresh);
+      if (mounted) setState(() {});
+    } catch (_) {}
+  }
+
   Future<void> _loadRecommendations() async {
+    _refreshUserProfile();
     setState(() => _isLoadingRecommended = true);
     try {
       final items = await BuyerService.getYouMayAlsoLike(limit: 8);
@@ -77,49 +92,52 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
 
     return Scaffold(
       backgroundColor: _bgScaffold,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadRecommendations,
-          color: _darkTeal,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-              // Header Title + Settings Icon
-              Padding(
-                padding: const EdgeInsets.only(left: 4, top: 8, bottom: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'My Account',
-                      style: GoogleFonts.figtree(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: _headingColor,
-                        letterSpacing: -0.5,
+      body: AlonaCurvedHeaderBody(
+        includeTopSafeArea: true,
+        overlapHeight: 120,
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadRecommendations,
+            color: _darkTeal,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                // Header Title + Settings Icon
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 8, bottom: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'My Account',
+                        style: GoogleFonts.figtree(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _cardBorder),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _cardBorder),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.settings_outlined, size: 22, color: _headingColor),
+                          tooltip: 'Account Settings',
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _openSettings(),
+                        ),
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.settings_outlined, size: 22, color: _headingColor),
-                        tooltip: 'Account Settings',
-                        padding: EdgeInsets.zero,
-                        onPressed: () => _openSettings(),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
               // Card 1: User Profile Header Card
               Container(
@@ -138,25 +156,59 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 child: isAuth
                     ? Row(
                         children: [
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: const BoxDecoration(
-                              color: AppColors.accentGold,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              user?['name'] != null && user!['name'].toString().isNotEmpty
-                                  ? user['name'][0].toUpperCase()
-                                  : (user?['username'] != null && user!['username'].toString().isNotEmpty
-                                      ? user['username'][0].toUpperCase()
-                                      : 'A'),
-                              style: GoogleFonts.figtree(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.buyerDeepTeal,
-                              ),
+                          GestureDetector(
+                            onTap: () => _openSettings(initialPage: 'profile'),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentGold,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  alignment: Alignment.center,
+                                  child: (user?['avatar_url'] != null &&
+                                          user!['avatar_url'].toString().trim().isNotEmpty)
+                                      ? NetworkImageBox(
+                                          imageUrl: ApiConfig.imageUrl(
+                                            user['avatar_url'].toString(),
+                                          ),
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                          borderRadius: BorderRadius.circular(30),
+                                        )
+                                      : const Icon(
+                                          Icons.person_rounded,
+                                          size: 34,
+                                          color: AppColors.buyerDeepTeal,
+                                        ),
+                                ),
+                                Positioned(
+                                  bottom: -2,
+                                  right: -2,
+                                  child: Container(
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.buyerDeepTeal.withValues(alpha: 0.25),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 12,
+                                      color: AppColors.buyerDeepTeal,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -481,6 +533,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
             ],
           ),
         ),
+      ),
       ),
       ),
     );

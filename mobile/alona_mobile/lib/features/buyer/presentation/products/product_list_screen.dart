@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:alona_mobile/core/config/app_theme.dart';
+import 'package:alona_mobile/shared/widgets/alona_curved_header.dart';
 import 'package:alona_mobile/shared/widgets/empty_state_view.dart';
 import 'package:alona_mobile/features/buyer/models/buyer_models.dart';
 import 'package:alona_mobile/features/buyer/services/buyer_service.dart';
@@ -70,25 +71,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
-
     return Scaffold(
       backgroundColor: AppColors.buyerBackground,
       appBar: AppBar(
-        titleSpacing: canPop ? 0 : 16,
+        titleSpacing: 16,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppColors.primary,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppColors.buyerBrandGradient),
-        ),
+        backgroundColor: AlonaCurvedHeader.tealDark,
+        flexibleSpace: const AlonaCurvedHeaderSurface(overlapHeight: 54),
         automaticallyImplyLeading: false,
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
         title: Row(
           children: [
             // Left side: Search Bar matching Home layout
@@ -171,61 +162,64 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // Filter / Sort Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: AppColors.buyerBackground,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _sortChip('Latest', 'latest'),
-                  const SizedBox(width: 8),
-                  _sortChip('Price: Low to High', 'price_low'),
-                  const SizedBox(width: 8),
-                  _sortChip('Price: High to Low', 'price_high'),
-                  const SizedBox(width: 8),
-                  _sortChip('Top Rated', 'rating'),
-                ],
+      body: AlonaCurvedHeaderBody(
+        overlapHeight: 54,
+        child: Column(
+          children: [
+            // Filter / Sort Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.transparent,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _sortChip('Latest', 'latest'),
+                    const SizedBox(width: 8),
+                    _sortChip('Price: Low to High', 'price_low'),
+                    const SizedBox(width: 8),
+                    _sortChip('Price: High to Low', 'price_high'),
+                    const SizedBox(width: 8),
+                    _sortChip('Top Rated', 'rating'),
+                  ],
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : _error != null
-                    ? Center(child: Text(_error!))
-                    : _products.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: EmptyStateView(
-                              icon: Icons.search_off_rounded,
-                              title: 'No products found',
-                              message: 'Try searching with different keywords or removing filters.',
-                              buttonText: 'Reset Search',
-                              onButtonPressed: () {
-                                _searchController.clear();
-                                _fetchProducts();
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : _error != null
+                      ? Center(child: Text(_error!))
+                      : _products.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: EmptyStateView(
+                                icon: Icons.search_off_rounded,
+                                title: 'No products found',
+                                message: 'Try searching with different keywords or removing filters.',
+                                buttonText: 'Reset Search',
+                                onButtonPressed: () {
+                                  _searchController.clear();
+                                  _fetchProducts();
+                                },
+                              ),
+                            )
+                          : GridView.builder(
+                              padding: const EdgeInsets.all(16),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.65,
+                              ),
+                              itemCount: _products.length,
+                              itemBuilder: (context, index) {
+                                return ProductCard(product: _products[index]);
                               },
                             ),
-                          )
-                        : GridView.builder(
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.65,
-                            ),
-                            itemCount: _products.length,
-                            itemBuilder: (context, index) {
-                              return ProductCard(product: _products[index]);
-                            },
-                          ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

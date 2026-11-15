@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
@@ -55,11 +56,11 @@ class AppColors {
 
   static const Color buyerBackground = lightTeal;
   static const Color buyerBorder = Color(0xFFB2DFDB);
-  static const Color buyerDeepTeal = Color(0xFF044D55);
+  static const Color buyerDeepTeal = Color(0xFF005C66);
   static const LinearGradient buyerBrandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryDark, primary, buyerDeepTeal],
+    colors: [Color(0xFF005C66), Color(0xFF007A87), Color(0xFF005C66)],
   );
   static const LinearGradient buyerNavigationGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -106,7 +107,24 @@ class AppTheme {
         surfaceTint: Colors.transparent,
       ),
       appBarTheme: theme.appBarTheme.copyWith(
+        backgroundColor: const Color(0xFF005C66),
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemStatusBarContrastEnforced: false,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: GoogleFonts.figtree(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
       ),
       inputDecorationTheme: theme.inputDecorationTheme.copyWith(
         focusedBorder: OutlineInputBorder(
@@ -309,6 +327,9 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
       fontFamily: GoogleFonts.figtree().fontFamily,
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) => const SizedBox.shrink(),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,

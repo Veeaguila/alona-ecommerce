@@ -164,6 +164,13 @@ class BuyerCatalogController extends Controller
 
         // Active Promotions / Vouchers
         $today = now()->startOfDay();
+        $claimedVoucherIds = $user
+            ? \App\Models\UserVoucher::query()
+                ->where('user_id', $user->id)
+                ->pluck('voucher_id')
+                ->all()
+            : [];
+
         $promotions = Voucher::query()
             ->with('seller:id,name')
             ->where('is_active', true)
@@ -182,6 +189,7 @@ class BuyerCatalogController extends Controller
                 'value' => (float) $v->value,
                 'min_spend' => (float) ($v->min_spend ?? 0),
                 'expires_at' => $v->expires_at?->format('Y-m-d'),
+                'is_claimed' => in_array($v->id, $claimedVoucherIds, true),
                 'is_platform' => (bool) ($v->is_platform || $v->seller_id === null),
                 'seller_name' => $v->seller?->name ?? 'Platform',
             ]);
