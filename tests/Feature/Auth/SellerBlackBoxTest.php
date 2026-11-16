@@ -449,8 +449,8 @@ class SellerBlackBoxTest extends TestCase
     public function test_tc_sel_018_password_is_hidden_while_typing(): void
     {
         $authModalContent = file_get_contents(resource_path('js/Pages/Auth/AuthModal.vue'));
-        $this->assertStringContainsString('showRegisterPassword', $authModalContent);
-        $this->assertStringContainsString("showRegisterPassword ? 'text' : 'password'", $authModalContent);
+        $this->assertStringContainsString('showRegisterPasswords', $authModalContent);
+        $this->assertStringContainsString("showRegisterPasswords ? 'text' : 'password'", $authModalContent);
     }
 
     public function test_tc_sel_020_click_register_several_times_quickly(): void

@@ -17,12 +17,12 @@ function loadPage(name, fetch, DateImpl = Date, runtime = {}) {
   const ScLayout = { setup: (_, { slots }) => () => Vue.h('main', slots.default?.()) };
   const events = { addEventListener() {}, removeEventListener() {} };
   const component = new Function('ref', 'reactive', 'onMounted', 'onUnmounted', 'computed', 'ScLayout', 'fetch', 'localStorage', 'Date',
-    'window', 'document', 'setInterval', 'clearInterval', 'nextTick', 'onBeforeUnmount', 'Chart', 'URL', 'AbortController', 'DeliveryCoverageSelector', 'ParcelOperationsPanel', 'PickupDispatchPanel', 'ParcelHandoverPanel', 'CodCashPanel', 'ReturnToSellerPanel', script)(
+    'window', 'document', 'setInterval', 'clearInterval', 'nextTick', 'onBeforeUnmount', 'Chart', 'URL', 'AbortController', 'DeliveryCoverageSelector', 'ParcelOperationsPanel', 'PickupDispatchPanel', 'ParcelHandoverPanel', 'CodCashPanel', 'ReturnToSellerPanel', 'watch', script)(
     Vue.ref, Vue.reactive, callback => mountCallbacks.push(callback), callback => unmountCallbacks.push(callback), Vue.computed,
     ScLayout, fetch, { getItem: () => 'test-token' }, DateImpl,
     runtime.window ?? { ...events, location: { search: '' } }, runtime.document ?? { ...events, visibilityState: 'visible' },
     runtime.setInterval ?? setInterval, runtime.clearInterval ?? clearInterval,
-    Vue.nextTick, callback => unmountCallbacks.push(callback), class { destroy() {} }, runtime.URL ?? URL, AbortController, {}, {}, {}, {}, {}, {},
+    Vue.nextTick, callback => unmountCallbacks.push(callback), class { destroy() {} }, runtime.URL ?? URL, AbortController, {}, {}, {}, {}, {}, {}, Vue.watch,
   );
   component.render = new Function('Vue', compile(descriptor.template.content, { prefixIdentifiers: true }).code)(Vue);
   return { component, state: component.setup(), mount: () => mountCallbacks.forEach(fn => fn()), unmount: () => unmountCallbacks.forEach(fn => fn()) };

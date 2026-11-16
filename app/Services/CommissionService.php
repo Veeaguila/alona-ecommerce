@@ -33,7 +33,8 @@ class CommissionService
                 return;
             }
 
-            $order->loadMissing(['items.product']);
+            // Always reload: relations cached before items existed (e.g. right after create) would be stale.
+            $order->load(['items.product']);
 
             if ($order->items->isEmpty()) {
                 return;

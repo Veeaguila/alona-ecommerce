@@ -1461,8 +1461,10 @@ class SellerProductController extends Controller
         $copy = $product->replicate([
             'rating',
             'reviews_count',
+            'sku',
         ]);
         $copy->slug = $this->uniqueSlug($product->name);
+        $copy->sku = Product::generateUniqueSku();
         $copy->status = 'draft';
         $copy->save();
 

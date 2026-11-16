@@ -19,8 +19,9 @@ function loader(name, fetch, crypto = globalThis.crypto) {
   const script = descriptor.script.content.replace(/^import .*;\r?\n/gm, '').replace('export default', 'return');
   const dispose = [];
   const layout = { setup: (_, { slots }) => () => Vue.h('main', slots.default?.()) };
-  const component = new Function('ref', 'reactive', 'computed', 'onMounted', 'onUnmounted', 'ScLayout', 'fetch', 'localStorage', 'createRequestKey', script)(
-    Vue.ref, Vue.reactive, Vue.computed, () => {}, fn => dispose.push(fn), layout, fetch, { getItem: () => 'synthetic-token' }, () => createRequestKey(crypto));
+  const windowStub = { addEventListener() {}, removeEventListener() {}, location: { search: '' } };
+  const component = new Function('ref', 'reactive', 'computed', 'onMounted', 'onUnmounted', 'ScLayout', 'fetch', 'localStorage', 'createRequestKey', 'window', script)(
+    Vue.ref, Vue.reactive, Vue.computed, () => {}, fn => dispose.push(fn), layout, fetch, { getItem: () => 'synthetic-token' }, () => createRequestKey(crypto), windowStub);
   component.render = new Function('Vue', compile(descriptor.template.content, { prefixIdentifiers: true }).code)(Vue);
   const state = component.setup();
   return { state, dispose: () => dispose.forEach(fn => fn()), html: () => renderToString(Vue.createSSRApp({ ...component, setup: () => state })) };

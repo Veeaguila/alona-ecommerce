@@ -9,8 +9,9 @@ const payload = () => ({ data: { summary: { unpaid: '65.00', processing: '0.00',
 const reply = data => ({ ok: true, json: async () => data });
 function screen(fetch) {
   let cleanup;
-  const result = new Function('ref', 'reactive', 'onMounted', 'onUnmounted', 'createRequestKey', 'localStorage', 'fetch', source + '\nreturn {load,loadReview,prepare,payBatch,details,review,reviewKey,selectedRider,destination,reviewed,payment,rates,fresh,data,busy,error};')(
-    ref, reactive, () => {}, fn => { cleanup = fn; }, () => 'synthetic-request-key', { getItem: () => 'synthetic-token' }, fetch,
+  const windowStub = { addEventListener() {}, removeEventListener() {}, location: { search: '' } };
+  const result = new Function('ref', 'reactive', 'onMounted', 'onUnmounted', 'createRequestKey', 'localStorage', 'fetch', 'window', source + '\nreturn {load,loadReview,prepare,payBatch,details,review,reviewKey,selectedRider,destination,reviewed,payment,rates,fresh,data,busy,error};')(
+    ref, reactive, () => {}, fn => { cleanup = fn; }, () => 'synthetic-request-key', { getItem: () => 'synthetic-token' }, fetch, windowStub,
   );
   return { ...result, dispose: () => cleanup() };
 }

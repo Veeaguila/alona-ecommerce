@@ -195,9 +195,11 @@ function partnerModal(role) {
 }
 test('Logistics popup opens session-bound registration instead of posting the legacy contract', () => {
     const { state, visits, posts, stop } = partnerModal('logistics');
+    const before = { started: state.registrationStarted.value, step: state.currentStep.value };
     state.startRegistration();
     assert.deepEqual(visits, ['register.logistics']);
-    assert.equal(state.registrationStarted.value, false);
+    assert.equal(state.registrationStarted.value, before.started);
+    assert.equal(state.currentStep.value, before.step);
     state.submitApplication();
     assert.deepEqual(visits, ['register.logistics', 'register.logistics']);
     assert.deepEqual(posts, []); stop();

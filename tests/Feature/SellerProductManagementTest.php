@@ -54,11 +54,10 @@ class SellerProductManagementTest extends TestCase
             'contact_no' => '09193334455',
         ]);
 
-        $this->category = Category::create([
-            'name' => 'Home & Living',
-            'slug' => 'home-living',
-            'is_active' => true,
-        ]);
+        $this->category = Category::firstOrCreate(
+            ['slug' => 'home-living'],
+            ['name' => 'Home & Living', 'is_active' => true],
+        );
 
         $this->storeCategory = StoreCategory::create([
             'seller_id' => $this->seller1->id,

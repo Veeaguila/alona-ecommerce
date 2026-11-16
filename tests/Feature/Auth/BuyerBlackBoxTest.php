@@ -346,10 +346,11 @@ class BuyerBlackBoxTest extends TestCase
 
     public function test_tc_buy_020_password_is_hidden_while_typing(): void
     {
-        // Password fields are dynamic :type="showRegisterPassword ? 'text' : 'password'" by default hidden
+        // Password fields are dynamic :type="showRegisterPasswords ? 'text' : 'password'" and hidden by default
         $view = file_get_contents(resource_path('js/Pages/Auth/AuthModal.vue'));
-        $this->assertStringContainsString("showRegisterPassword ? 'text' : 'password'", $view);
-        $this->assertStringContainsString("showRegisterPassword = !showRegisterPassword", $view);
+        $this->assertStringContainsString("const showRegisterPasswords = ref(false)", $view);
+        $this->assertStringContainsString("showRegisterPasswords ? 'text' : 'password'", $view);
+        $this->assertStringContainsString('v-model="showRegisterPasswords"', $view);
     }
 
     public function test_tc_buy_021_register_without_accepting_the_terms(): void
